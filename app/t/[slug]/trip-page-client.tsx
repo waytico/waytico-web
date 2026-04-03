@@ -138,7 +138,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                     </div>
                   )}
                   {day.accommodation && (
-                    <p className="pl-[52px] text-xs text-muted-foreground">🏨 {day.accommodation}</p>
+                    <p className="pl-[52px] text-xs text-muted-foreground">🏨 {typeof day.accommodation === 'string' ? day.accommodation : day.accommodation.name}</p>
                   )}
                 </div>
               ))}
