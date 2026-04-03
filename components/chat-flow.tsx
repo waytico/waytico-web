@@ -15,6 +15,7 @@ export default function ChatFlow() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [slug, setSlug] = useState<string | null>(null)
+  const [projectId, setProjectId] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
@@ -23,16 +24,18 @@ export default function ChatFlow() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Poll public endpoint after generation starts
+  // Poll by projectId after generation starts
   useEffect(() => {
-    if (phase !== 'generating' || !slug) return
+    if (phase !== 'generating' || !projectId) return
     let active = true
     const poll = async () => {
       while (active) {
         try {
-          const res = await fetch(`${API_URL}/api/public/projects/${slug}`)
+          const res = await fetch(`${API_URL}/api/public/projects/${projectId}`)
           if (res.ok) {
-            router.push(`/t/${slug}`)
+            const data = await res.json()
+            const realSlug = data.project?.slug || slug
+            router.push(`/t/${realSlug}`)
             return
           }
         } catch {}
@@ -41,7 +44,7 @@ export default function ChatFlow() {
     }
     poll()
     return () => { active = false }
-  }, [phase, slug, router, API_URL])
+  }, [phase, projectId, slug, router, API_URL])
 
   const send = async () => {
     const text = input.trim()
@@ -69,6 +72,7 @@ export default function ChatFlow() {
 
       if (data.briefConfirmed && data.projectSlug) {
         setSlug(data.projectSlug)
+        setProjectId(data.projectId || null)
         setPhase('generating')
       } else {
         setPhase('chatting')
