@@ -1,5 +1,6 @@
 import Header from '@/components/header'
 import ChatFlow from '@/components/chat-flow'
+import Footer from '@/components/footer'
 
 export default function Home() {
   return (
@@ -9,15 +10,16 @@ export default function Home() {
         <div className="w-full max-w-2xl text-center space-y-8">
           <div className="space-y-4">
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold tracking-tight leading-tight text-balance">
-              Describe your trip. Get a page your clients will love.
+              Set the schedule. Get the quote page.
             </h1>
             <p className="text-lg md:text-xl text-foreground/60 text-balance">
-              Just type what you know — AI builds the rest
+              Describe your trip — AI builds a client-ready proposal
             </p>
           </div>
           <ChatFlow />
         </div>
       </main>
+      <Footer />
     </div>
   )
 }
