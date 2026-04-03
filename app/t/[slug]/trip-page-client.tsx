@@ -17,7 +17,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onre
 
 export default function TripPageClient({ slug, initialData }: Props) {
   const [data, setData] = useState(initialData)
-  const [polling, setPolling] = useState(!initialData)
+  const needsPolling = !initialData || initialData.project?.status === 'generating'
+  const [polling, setPolling] = useState(needsPolling)
 
   useEffect(() => {
     if (!polling) return
@@ -28,9 +29,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
           const res = await fetch(`${API_URL}/api/public/projects/${slug}`)
           if (res.ok) {
             const d = await res.json()
-            setData(d)
-            setPolling(false)
-            return
+            if (d.project?.status !== 'generating') {
+              setData(d)
+              setPolling(false)
+              return
+            }
           }
         } catch {}
         await new Promise(r => setTimeout(r, 3000))
@@ -42,7 +45,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
     return () => { active = false; clearTimeout(timeout) }
   }, [polling, slug])
 
-  if (!data) {
+  const isReady = data && data.project?.status !== 'generating'
+
+  if (!isReady) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         {polling ? (

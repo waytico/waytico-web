@@ -34,9 +34,12 @@ export default function ChatFlow() {
           const res = await fetch(`${API_URL}/api/public/projects/${projectId}`)
           if (res.ok) {
             const data = await res.json()
-            const realSlug = data.project?.slug || slug
-            router.push(`/t/${realSlug}`)
-            return
+            const status = data.project?.status
+            if (status === 'quoted' || status === 'active' || status === 'completed') {
+              const realSlug = data.project?.slug || slug
+              router.push(`/t/${realSlug}`)
+              return
+            }
           }
         } catch {}
         await new Promise(r => setTimeout(r, 3000))
