@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import { Cormorant_Garamond, DM_Sans } from 'next/font/google'
+import { ClerkProvider } from '@clerk/nextjs'
+import { Toaster } from 'sonner'
 import './globals.css'
 
 const cormorant = Cormorant_Garamond({
@@ -23,8 +25,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${cormorant.variable} ${dmSans.variable}`}>
-      <body className="font-sans antialiased">{children}</body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`${cormorant.variable} ${dmSans.variable}`}>
+        <body className="font-sans antialiased">
+          {children}
+          <Toaster position="top-center" />
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

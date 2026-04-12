@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useAuth } from '@clerk/nextjs'
+import { toast } from 'sonner'
 
 type Location = {
   id: string; name: string; type: string
@@ -14,12 +17,21 @@ type Props = {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://waytico-web.onrender.com'
 
 export default function TripPageClient({ slug, initialData }: Props) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { isSignedIn, getToken, isLoaded } = useAuth()
+
   const [data, setData] = useState(initialData)
+  const [showModal, setShowModal] = useState(false)
+  const [projectIdForClaim, setProjectIdForClaim] = useState<string | null>(null)
+
   const needsPolling = !initialData || initialData.project?.status === 'generating'
   const [polling, setPolling] = useState(needsPolling)
 
+  // Polling for generation
   useEffect(() => {
     if (!polling) return
     let active = true
@@ -40,10 +52,43 @@ export default function TripPageClient({ slug, initialData }: Props) {
       }
     }
     poll()
-    // Stop polling after 2 minutes
     const timeout = setTimeout(() => { active = false; setPolling(false) }, 120_000)
     return () => { active = false; clearTimeout(timeout) }
   }, [polling, slug])
+
+  // Show modal if just created (sessionStorage flag)
+  useEffect(() => {
+    try {
+      const justCreated = sessionStorage.getItem('waytico:just-created')
+      if (justCreated && data?.project) {
+        setProjectIdForClaim(justCreated)
+        setShowModal(true)
+        sessionStorage.removeItem('waytico:just-created')
+      }
+    } catch {}
+  }, [data])
+
+  // Claim flow: after sign-up, redirect back with ?claim=projectId
+  useEffect(() => {
+    const claimId = searchParams.get('claim')
+    if (!claimId || !isLoaded || !isSignedIn) return
+
+    ;(async () => {
+      try {
+        const token = await getToken()
+        if (!token) return
+        const res = await fetch(`${API_URL}/api/projects/${claimId}/claim`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          toast.success('Saved to your account')
+        }
+      } catch {}
+      // Remove ?claim from URL
+      router.replace(`/t/${slug}`)
+    })()
+  }, [searchParams, isSignedIn, isLoaded, getToken, slug, router])
 
   const isReady = data && data.project?.status !== 'generating'
 
@@ -69,9 +114,58 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const p = data.project
   const locations = data.locations || []
   const itinerary: any[] = p.itinerary || []
+  const shareUrl = `${APP_URL}/t/${slug}`
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Post-creation modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-background rounded-2xl max-w-md w-full p-6 space-y-5 shadow-xl">
+            <h2 className="text-2xl font-serif font-bold">Your quote is ready</h2>
+
+            {/* Share link */}
+            <div className="space-y-2">
+              <p className="text-sm text-foreground/60">Share this link with your client:</p>
+              <div className="flex items-center gap-2 bg-secondary rounded-lg p-3">
+                <span className="text-sm truncate flex-1 text-foreground/80">{shareUrl}</span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareUrl)
+                    toast.success('Link copied!')
+                  }}
+                  className="text-xs font-medium text-accent hover:text-accent/80 flex-shrink-0"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+
+            <p className="text-sm text-foreground/60">
+              This quote is available for 3 days. Sign up to edit, add photos, and save to your account.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
+                  router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
+                }}
+                className="flex-1 bg-accent text-accent-foreground font-semibold py-2.5 px-4 rounded-full hover:bg-accent/90 transition-colors"
+              >
+                Sign up
+              </button>
+              <button
+                onClick={() => setShowModal(false)}
+                className="flex-1 bg-secondary text-secondary-foreground font-medium py-2.5 px-4 rounded-full hover:bg-secondary/80 transition-colors"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero */}
       <section className="relative bg-secondary py-16 md:py-24">
         <div className="max-w-3xl mx-auto px-4 text-center space-y-6">
@@ -84,11 +178,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
             {p.title}
           </h1>
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-foreground/60 text-sm">
-            {p.region && <span>📍 {p.region}{p.country ? `, ${p.country}` : ''}</span>}
-            {p.duration_days && <span>📅 {p.duration_days} days</span>}
-            {p.group_size && <span>👥 {p.group_size} people</span>}
+            {p.region && <span>{p.region}{p.country ? `, ${p.country}` : ''}</span>}
+            {p.duration_days && <span>{p.duration_days} days</span>}
+            {p.group_size && <span>{p.group_size} people</span>}
             {p.dates_start && (
-              <span>🗓 {new Date(p.dates_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              <span>{new Date(p.dates_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 {p.dates_end && ` – ${new Date(p.dates_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
               </span>
             )}
@@ -105,17 +199,13 @@ export default function TripPageClient({ slug, initialData }: Props) {
       </section>
 
       <div className="max-w-3xl mx-auto px-4 py-12 space-y-16">
-        {/* Overview */}
         {p.description && (
           <section>
             <h2 className="text-2xl font-serif font-bold mb-4">Overview</h2>
-            <div className="text-foreground/80 leading-relaxed whitespace-pre-line">
-              {p.description}
-            </div>
+            <div className="text-foreground/80 leading-relaxed whitespace-pre-line">{p.description}</div>
           </section>
         )}
 
-        {/* Itinerary */}
         {itinerary.length > 0 && (
           <section>
             <h2 className="text-2xl font-serif font-bold mb-6">Day-by-Day Itinerary</h2>
@@ -136,14 +226,14 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   {day.highlights?.length > 0 && (
                     <div className="pl-[52px] flex flex-wrap gap-2">
                       {day.highlights.map((h: string, i: number) => (
-                        <span key={i} className="inline-block px-3 py-1 text-xs bg-secondary rounded-full text-foreground/70">
-                          {h}
-                        </span>
+                        <span key={i} className="inline-block px-3 py-1 text-xs bg-secondary rounded-full text-foreground/70">{h}</span>
                       ))}
                     </div>
                   )}
                   {day.accommodation && (
-                    <p className="pl-[52px] text-xs text-muted-foreground">🏨 {typeof day.accommodation === 'string' ? day.accommodation : day.accommodation.name}</p>
+                    <p className="pl-[52px] text-xs text-muted-foreground">
+                      {typeof day.accommodation === 'string' ? day.accommodation : day.accommodation.name}
+                    </p>
                   )}
                 </div>
               ))}
@@ -151,7 +241,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
           </section>
         )}
 
-        {/* Included / Not Included */}
         {(p.included || p.not_included) && (
           <section>
             <h2 className="text-2xl font-serif font-bold mb-6">What's Included</h2>
@@ -164,9 +253,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   </h3>
                   <ul className="space-y-2">
                     {p.included.split('\n').filter(Boolean).map((item: string, i: number) => (
-                      <li key={i} className="text-sm text-foreground/70 pl-8">
-                        {item.replace(/^[-•]\s*/, '')}
-                      </li>
+                      <li key={i} className="text-sm text-foreground/70 pl-8">{item.replace(/^[-•]\s*/, '')}</li>
                     ))}
                   </ul>
                 </div>
@@ -179,9 +266,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   </h3>
                   <ul className="space-y-2">
                     {p.not_included.split('\n').filter(Boolean).map((item: string, i: number) => (
-                      <li key={i} className="text-sm text-foreground/50 pl-8">
-                        {item.replace(/^[-•]\s*/, '')}
-                      </li>
+                      <li key={i} className="text-sm text-foreground/50 pl-8">{item.replace(/^[-•]\s*/, '')}</li>
                     ))}
                   </ul>
                 </div>
@@ -190,7 +275,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
           </section>
         )}
 
-        {/* Locations */}
         {locations.length > 0 && (
           <section>
             <h2 className="text-2xl font-serif font-bold mb-6">Locations</h2>
@@ -198,18 +282,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
               {locations.map((loc) => (
                 <div key={loc.id} className="flex items-center gap-3 p-3 border border-border rounded-lg">
                   <span className="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-bold">
-                    {loc.day_number || '•'}
+                    {loc.day_number || '·'}
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{loc.name}</p>
                     <p className="text-xs text-muted-foreground">{loc.type}{loc.notes ? ` · ${loc.notes}` : ''}</p>
                   </div>
-                  <a
-                    href={`https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-accent hover:underline flex-shrink-0"
-                  >
+                  <a href={`https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-xs text-accent hover:underline flex-shrink-0">
                     Map ↗
                   </a>
                 </div>
@@ -218,7 +299,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
           </section>
         )}
 
-        {/* Pricing / Terms */}
         {p.terms && (
           <section>
             <h2 className="text-2xl font-serif font-bold mb-4">Terms</h2>
@@ -226,7 +306,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
           </section>
         )}
 
-        {/* What to Bring */}
         {p.what_to_bring?.length > 0 && (
           <section>
             <h2 className="text-2xl font-serif font-bold mb-6">What to Bring</h2>
@@ -248,7 +327,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
           </section>
         )}
 
-        {/* Footer */}
         <footer className="border-t border-border pt-8 pb-12 text-center">
           <p className="text-sm text-muted-foreground">
             Powered by <a href="/" className="text-accent hover:underline">Waytico</a>

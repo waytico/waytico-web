@@ -2,14 +2,18 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@clerk/nextjs'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 
 type Message = { role: 'user' | 'assistant'; text: string }
 type Phase = 'idle' | 'sending' | 'chatting' | 'generating'
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
+
 export default function ChatFlow() {
   const router = useRouter()
+  const { getToken, isLoaded } = useAuth()
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -17,8 +21,6 @@ export default function ChatFlow() {
   const [slug, setSlug] = useState<string | null>(null)
   const [projectId, setProjectId] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
-
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -37,6 +39,10 @@ export default function ChatFlow() {
             const status = data.project?.status
             if (status === 'quoted' || status === 'active' || status === 'completed') {
               const realSlug = data.project?.slug || slug
+              // Set flag so trip page shows modal
+              try {
+                sessionStorage.setItem('waytico:just-created', projectId)
+              } catch {}
               router.push(`/t/${realSlug}`)
               return
             }
@@ -47,7 +53,7 @@ export default function ChatFlow() {
     }
     poll()
     return () => { active = false }
-  }, [phase, projectId, slug, router, API_URL])
+  }, [phase, projectId, slug, router])
 
   const send = async () => {
     const text = input.trim()
@@ -58,12 +64,18 @@ export default function ChatFlow() {
     setPhase('sending')
 
     try {
+      // Get Clerk token if signed in (optional)
+      let token: string | null = null
+      if (isLoaded) {
+        try { token = await getToken() } catch {}
+      }
+
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
       const res = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': '00000000-0000-0000-0000-000000000001',
-        },
+        headers,
         body: JSON.stringify({ message: text, ...(sessionId && { sessionId }) }),
       })
 
@@ -107,7 +119,6 @@ export default function ChatFlow() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Messages */}
       {messages.length > 0 && (
         <div className="w-full max-h-[40vh] overflow-y-auto space-y-3 text-left">
           {messages.map((msg, i) => (
@@ -136,7 +147,6 @@ export default function ChatFlow() {
         </div>
       )}
 
-      {/* Input */}
       <div className="relative">
         <Textarea
           value={input}
