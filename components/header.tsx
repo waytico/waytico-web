@@ -20,6 +20,12 @@ export default function Header() {
             </Link>
           </SignedOut>
           <SignedIn>
+            <Link
+              href="/dashboard"
+              className="text-foreground/70 hover:text-foreground transition-colors font-medium"
+            >
+              Dashboard
+            </Link>
             <UserButton afterSignOutUrl="/" />
           </SignedIn>
         </div>
