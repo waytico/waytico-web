@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import ChatFlow from '@/components/chat-flow'
 import ProjectCard, { type Project, type ProjectStatus } from '@/components/project-card'
 import { apiFetch } from '@/lib/api'
@@ -14,8 +15,7 @@ type SortOption =
   | 'title_desc'
   | 'region_asc'
 
-const VISIBLE_STATUSES: ProjectStatus[] = ['quoted', 'active', 'completed']
-const GROUP_ORDER: ProjectStatus[] = ['quoted', 'active', 'completed']
+const ACTIVE_GROUP_ORDER: ProjectStatus[] = ['draft', 'quoted', 'active', 'completed']
 const GROUP_LABEL: Record<ProjectStatus, string> = {
   draft: 'Draft',
   quoted: 'Quoted',
@@ -77,6 +77,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const [projects, setProjects] = useState<Project[] | null>(null)
   const [sort, setSort] = useState<SortOption>('updated_desc')
+  const [archivedOpen, setArchivedOpen] = useState(false)
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.replace('/sign-in')
@@ -111,10 +112,13 @@ export default function DashboardPage() {
     )
   }
 
+  function handleDelete(id: string) {
+    setProjects((prev) => (prev ? prev.filter((p) => p.id !== id) : prev))
+  }
+
   const groups = useMemo(() => {
     if (!projects) return null
-    const visible = projects.filter((p) => VISIBLE_STATUSES.includes(p.status))
-    const sorted = sortProjects(visible, sort)
+    const sorted = sortProjects(projects, sort)
     const g: Record<ProjectStatus, Project[]> = {
       draft: [],
       quoted: [],
@@ -122,13 +126,16 @@ export default function DashboardPage() {
       completed: [],
       archived: [],
     }
-    for (const p of sorted) g[p.status].push(p)
+    for (const p of sorted) {
+      if (g[p.status]) g[p.status].push(p)
+    }
     return g
   }, [projects, sort])
 
-  const hasAnyVisible = groups
-    ? GROUP_ORDER.some((s) => groups[s].length > 0)
+  const hasAnyActive = groups
+    ? ACTIVE_GROUP_ORDER.some((s) => groups[s].length > 0)
     : false
+  const archivedCount = groups ? groups.archived.length : 0
 
   return (
     <div className="min-h-[calc(100vh-73px)] bg-background text-foreground">
@@ -160,14 +167,20 @@ export default function DashboardPage() {
               </label>
             </div>
 
-            {!hasAnyVisible && (
+            {!hasAnyActive && archivedCount === 0 && (
               <p className="text-foreground/60 text-sm">
-                No trips yet in Quoted, Active or Completed.
+                No trips yet.
+              </p>
+            )}
+
+            {!hasAnyActive && archivedCount > 0 && (
+              <p className="text-foreground/60 text-sm mb-4">
+                No active trips. Only archived below.
               </p>
             )}
 
             <div className="space-y-10">
-              {GROUP_ORDER.map((status) => {
+              {ACTIVE_GROUP_ORDER.map((status) => {
                 const items = groups[status]
                 if (items.length === 0) return null
                 return (
@@ -184,6 +197,7 @@ export default function DashboardPage() {
                           key={p.id}
                           project={p}
                           onUpdate={handleUpdate}
+                          onDelete={handleDelete}
                         />
                       ))}
                     </div>
@@ -191,6 +205,43 @@ export default function DashboardPage() {
                 )
               })}
             </div>
+
+            {archivedCount > 0 && (
+              <section className="mt-10 pt-6 border-t border-border/50">
+                <button
+                  type="button"
+                  onClick={() => setArchivedOpen((v) => !v)}
+                  className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors group"
+                  aria-expanded={archivedOpen}
+                  aria-controls="archived-list"
+                >
+                  {archivedOpen ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                  <span className="font-serif text-xl tracking-tight">
+                    Archived
+                  </span>
+                  <span className="text-foreground/40 text-sm font-sans">
+                    {archivedCount}
+                  </span>
+                </button>
+
+                {archivedOpen && (
+                  <div id="archived-list" className="space-y-3 mt-4">
+                    {groups.archived.map((p) => (
+                      <ProjectCard
+                        key={p.id}
+                        project={p}
+                        onUpdate={handleUpdate}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
           </>
         )}
       </main>
