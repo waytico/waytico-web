@@ -33,7 +33,7 @@ export default function ActivateButton({ projectId, publicStatus }: Props) {
       try {
         const token = await getToken()
         if (!token) return
-        const res = await apiFetch(`/api/projects/${projectId}`, { token })
+        const res = await apiFetch(`/api/projects/by-id/${projectId}`, { token })
         if (!cancelled && res.ok) setIsOwner(true)
       } catch {
         /* ignore — not owner */
