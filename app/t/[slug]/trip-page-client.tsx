@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
+import ActivateButton from '@/components/activate-button'
+import ActivationToast from '@/components/activation-toast'
 
 type Location = {
   id: string; name: string; type: string
@@ -118,6 +120,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Stripe return flow (?activated=1 / ?cancelled=1) */}
+      <ActivationToast />
+
       {/* Post-creation modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -193,6 +198,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 {p.currency === 'USD' ? '$' : p.currency === 'EUR' ? '€' : ''}{Number(p.price_per_person).toLocaleString()}
               </span>
               <span className="text-foreground/50 ml-1">per person</span>
+            </div>
+          )}
+          {p.id && (
+            <div className="pt-4 flex justify-center">
+              <ActivateButton projectId={p.id} publicStatus={p.status} />
             </div>
           )}
         </div>
