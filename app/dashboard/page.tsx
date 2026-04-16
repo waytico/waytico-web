@@ -94,4 +94,106 @@ export default function DashboardPage() {
           return
         }
         const data = await res.json()
-        const list: Project[] = data.projects ?? da
+        const list: Project[] = data.projects ?? data ?? []
+        if (active) setProjects(list)
+      } catch {
+        if (active) setProjects([])
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [isLoaded, isSignedIn, getToken])
+
+  function handleUpdate(updated: Project) {
+    setProjects((prev) =>
+      prev ? prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)) : prev,
+    )
+  }
+
+  const groups = useMemo(() => {
+    if (!projects) return null
+    const visible = projects.filter((p) => VISIBLE_STATUSES.includes(p.status))
+    const sorted = sortProjects(visible, sort)
+    const g: Record<ProjectStatus, Project[]> = {
+      draft: [],
+      quoted: [],
+      active: [],
+      completed: [],
+      archived: [],
+    }
+    for (const p of sorted) g[p.status].push(p)
+    return g
+  }, [projects, sort])
+
+  const hasAnyVisible = groups
+    ? GROUP_ORDER.some((s) => groups[s].length > 0)
+    : false
+
+  return (
+    <div className="min-h-[calc(100vh-73px)] bg-background text-foreground">
+      <main className="max-w-4xl mx-auto px-4 py-10">
+        {(!isLoaded || projects === null) && <SkeletonList />}
+
+        {isLoaded && projects !== null && projects.length === 0 && <EmptyState />}
+
+        {isLoaded && projects !== null && projects.length > 0 && groups && (
+          <>
+            <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+              <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight">
+                Your trips
+              </h1>
+              <label className="flex items-center gap-2 text-sm text-foreground/70">
+                <span className="sr-only sm:not-sr-only">Sort:</span>
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as SortOption)}
+                  className="bg-card border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                  aria-label="Sort projects"
+                >
+                  <option value="updated_desc">Newest updated</option>
+                  <option value="updated_asc">Oldest updated</option>
+                  <option value="title_asc">Title A–Z</option>
+                  <option value="title_desc">Title Z–A</option>
+                  <option value="region_asc">Region A–Z</option>
+                </select>
+              </label>
+            </div>
+
+            {!hasAnyVisible && (
+              <p className="text-foreground/60 text-sm">
+                No trips yet in Quoted, Active or Completed.
+              </p>
+            )}
+
+            <div className="space-y-10">
+              {GROUP_ORDER.map((status) => {
+                const items = groups[status]
+                if (items.length === 0) return null
+                return (
+                  <section key={status}>
+                    <h2 className="font-serif text-2xl tracking-tight mb-3">
+                      {GROUP_LABEL[status]}
+                      <span className="text-foreground/50 text-base font-sans ml-2">
+                        {items.length}
+                      </span>
+                    </h2>
+                    <div className="space-y-3">
+                      {items.map((p) => (
+                        <ProjectCard
+                          key={p.id}
+                          project={p}
+                          onUpdate={handleUpdate}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </main>
+    </div>
+  )
+}
