@@ -191,29 +191,18 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
   const handleTripUpdated = useCallback(async () => {
     // Re-fetch public data to reflect agent's tool-call changes.
-    // Also re-fetch owner media list (day-id links may have shifted if itinerary changed).
+    // Public endpoint returns all media (tour-level + per-day), so it's enough.
     try {
       const res = await fetch(`${API_URL}/api/public/projects/${slug}`, { cache: 'no-store' })
       if (res.ok) {
         const d = await res.json()
         setData(d)
-      }
-      const projectId = data?.project?.id
-      if (projectId) {
-        const token = await getToken()
-        if (token) {
-          try {
-            const full = await fetchOwnerMedia(projectId, token)
-            setMedia(full)
-          } catch {
-            /* ignore */
-          }
-        }
+        if (Array.isArray(d.media)) setMedia(d.media as MediaRecord[])
       }
     } catch {
       /* ignore */
     }
-  }, [slug, data?.project?.id, getToken])
+  }, [slug])
 
   const handleShare = useCallback(() => {
     const url = `${APP_URL}/t/${slug}`
