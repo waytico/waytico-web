@@ -283,41 +283,62 @@ export default function TripPageClient({ slug, initialData }: Props) {
       )}
 
       {/* Hero */}
-      <section className="relative bg-secondary py-16 md:py-24">
-        <div className="max-w-3xl mx-auto px-4 text-center space-y-6">
-          {p.activity_type && (
-            <span className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-accent/10 text-accent rounded-full">
-              {p.activity_type}
-            </span>
-          )}
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight leading-tight">
-            {p.title}
-          </h1>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-foreground/60 text-sm">
-            {p.region && <span>{p.region}{p.country ? `, ${p.country}` : ''}</span>}
-            {p.duration_days && <span>{p.duration_days} days</span>}
-            {p.group_size && <span>{p.group_size} people</span>}
-            {p.dates_start && (
-              <span>{new Date(p.dates_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                {p.dates_end && ` – ${new Date(p.dates_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
-              </span>
+      {(() => {
+        const heroPhoto = media.filter((m) => !m.day_id)[0]
+        const hasBg = !!heroPhoto
+        return (
+          <section
+            className={`relative overflow-hidden py-16 md:py-24 ${hasBg ? 'bg-foreground' : 'bg-secondary'}`}
+          >
+            {hasBg && (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={heroPhoto.url}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                {/* Dark gradient overlay for text legibility */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/70" />
+              </>
             )}
-          </div>
-          {p.price_per_person && (
-            <div className="pt-2">
-              <span className="text-3xl font-serif font-bold text-accent">
-                {p.currency === 'USD' ? '$' : p.currency === 'EUR' ? '€' : ''}{Number(p.price_per_person).toLocaleString()}
-              </span>
-              <span className="text-foreground/50 ml-1">per person</span>
+            <div className={`relative max-w-3xl mx-auto px-4 text-center space-y-6 ${hasBg ? 'text-white' : ''}`}>
+              {p.activity_type && (
+                <span className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${hasBg ? 'bg-white/15 text-white backdrop-blur-sm' : 'bg-accent/10 text-accent'}`}>
+                  {p.activity_type}
+                </span>
+              )}
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight leading-tight">
+                {p.title}
+              </h1>
+              <div className={`flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm ${hasBg ? 'text-white/85' : 'text-foreground/60'}`}>
+                {p.region && <span>{p.region}{p.country ? `, ${p.country}` : ''}</span>}
+                {p.duration_days && <span>{p.duration_days} days</span>}
+                {p.group_size && <span>{p.group_size} people</span>}
+                {p.dates_start && (
+                  <span>{new Date(p.dates_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {p.dates_end && ` – ${new Date(p.dates_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                  </span>
+                )}
+              </div>
+              {p.price_per_person && (
+                <div className="pt-2">
+                  <span className={`text-3xl font-serif font-bold ${hasBg ? 'text-white' : 'text-accent'}`}>
+                    {p.currency === 'USD' ? '$' : p.currency === 'EUR' ? '€' : ''}{Number(p.price_per_person).toLocaleString()}
+                  </span>
+                  <span className={`ml-1 ${hasBg ? 'text-white/75' : 'text-foreground/50'}`}>per person</span>
+                </div>
+              )}
+              {p.id && (
+                <div className="pt-4 flex justify-center">
+                  <ActivateButton projectId={p.id} publicStatus={p.status} />
+                </div>
+              )}
             </div>
-          )}
-          {p.id && (
-            <div className="pt-4 flex justify-center">
-              <ActivateButton projectId={p.id} publicStatus={p.status} />
-            </div>
-          )}
-        </div>
-      </section>
+          </section>
+        )
+      })()}
 
       <div className="max-w-3xl mx-auto px-4 py-12 space-y-16">
         {p.description && (
