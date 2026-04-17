@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
+import { ImagePlus } from 'lucide-react'
 import ActivateButton from '@/components/activate-button'
 import ActivationToast from '@/components/activation-toast'
 import PhotosBlock from '@/components/photos-block'
@@ -108,6 +109,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
   )
   const [uploadingByDay, setUploadingByDay] = useState<Record<string, number>>({})
   const [lightbox, setLightbox] = useState<MediaRecord | null>(null)
+  const [heroDragOver, setHeroDragOver] = useState(false)
+  const heroInputRef = useRef<HTMLInputElement | null>(null)
 
   // Owner-detect (показываем кнопки upload/delete только владельцу)
   useEffect(() => {
@@ -286,9 +289,44 @@ export default function TripPageClient({ slug, initialData }: Props) {
       {(() => {
         const heroPhoto = media.filter((m) => !m.day_id)[0]
         const hasBg = !!heroPhoto
+        const uploadingHero = uploadingByDay['tour'] || 0
+        const heroDropHandlers = isOwner
+          ? {
+              onDragEnter: (e: React.DragEvent) => {
+                e.preventDefault()
+                if (e.dataTransfer?.types?.includes('Files')) setHeroDragOver(true)
+              },
+              onDragOver: (e: React.DragEvent) => {
+                e.preventDefault()
+                if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+              },
+              onDragLeave: (e: React.DragEvent) => {
+                if (e.currentTarget === e.target) setHeroDragOver(false)
+              },
+              onDrop: (e: React.DragEvent) => {
+                e.preventDefault()
+                setHeroDragOver(false)
+                const files = e.dataTransfer?.files
+                if (files && files.length > 0) {
+                  const list = Array.from(files).filter(
+                    (f) =>
+                      ['image/jpeg', 'image/png', 'image/webp'].includes(f.type) &&
+                      f.size <= 15 * 1024 * 1024,
+                  )
+                  if (list.length !== files.length) {
+                    toast.error('Some files skipped — use JPEG/PNG/WebP, max 15MB')
+                  }
+                  if (list.length) handleUpload(list, null)
+                }
+              },
+            }
+          : {}
         return (
           <section
-            className={`relative overflow-hidden py-16 md:py-24 ${hasBg ? 'bg-foreground' : 'bg-secondary'}`}
+            {...heroDropHandlers}
+            className={`relative overflow-hidden py-16 md:py-24 ${
+              hasBg ? 'bg-foreground' : 'bg-secondary'
+            } ${heroDragOver ? 'ring-4 ring-accent ring-inset' : ''}`}
           >
             {hasBg && (
               <>
@@ -303,39 +341,128 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/70" />
               </>
             )}
-            <div className={`relative max-w-3xl mx-auto px-4 text-center space-y-6 ${hasBg ? 'text-white' : ''}`}>
+
+            {/* Top-right: Activate (owner/quoted only — handled inside component) */}
+            {p.id && (
+              <div className="absolute top-4 right-4 z-10">
+                <ActivateButton projectId={p.id} publicStatus={p.status} />
+              </div>
+            )}
+
+            {/* Drop indicator when dragging files */}
+            {heroDragOver && (
+              <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/40">
+                <div className="rounded-full bg-white/95 px-5 py-2 text-sm font-medium text-foreground shadow-lg">
+                  Drop photo to set as hero
+                </div>
+              </div>
+            )}
+
+            <div
+              className={`relative max-w-3xl mx-auto px-4 text-center space-y-6 ${hasBg ? 'text-white' : ''}`}
+            >
               {p.activity_type && (
-                <span className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${hasBg ? 'bg-white/15 text-white backdrop-blur-sm' : 'bg-accent/10 text-accent'}`}>
+                <span
+                  className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${
+                    hasBg
+                      ? 'bg-white/15 text-white backdrop-blur-sm'
+                      : 'bg-accent/10 text-accent'
+                  }`}
+                >
                   {p.activity_type}
                 </span>
               )}
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight leading-tight">
                 {p.title}
               </h1>
-              <div className={`flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm ${hasBg ? 'text-white/85' : 'text-foreground/60'}`}>
-                {p.region && <span>{p.region}{p.country ? `, ${p.country}` : ''}</span>}
+              <div
+                className={`flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm ${
+                  hasBg ? 'text-white/85' : 'text-foreground/60'
+                }`}
+              >
+                {p.region && (
+                  <span>
+                    {p.region}
+                    {p.country ? `, ${p.country}` : ''}
+                  </span>
+                )}
                 {p.duration_days && <span>{p.duration_days} days</span>}
                 {p.group_size && <span>{p.group_size} people</span>}
                 {p.dates_start && (
-                  <span>{new Date(p.dates_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    {p.dates_end && ` – ${new Date(p.dates_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                  <span>
+                    {new Date(p.dates_start).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                    {p.dates_end &&
+                      ` – ${new Date(p.dates_end).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}`}
                   </span>
                 )}
               </div>
               {p.price_per_person && (
                 <div className="pt-2">
-                  <span className={`text-3xl font-serif font-bold ${hasBg ? 'text-white' : 'text-accent'}`}>
-                    {p.currency === 'USD' ? '$' : p.currency === 'EUR' ? '€' : ''}{Number(p.price_per_person).toLocaleString()}
+                  <span
+                    className={`text-3xl font-serif font-bold ${hasBg ? 'text-white' : 'text-accent'}`}
+                  >
+                    {p.currency === 'USD' ? '$' : p.currency === 'EUR' ? '€' : ''}
+                    {Number(p.price_per_person).toLocaleString()}
                   </span>
-                  <span className={`ml-1 ${hasBg ? 'text-white/75' : 'text-foreground/50'}`}>per person</span>
-                </div>
-              )}
-              {p.id && (
-                <div className="pt-4 flex justify-center">
-                  <ActivateButton projectId={p.id} publicStatus={p.status} />
+                  <span className={`ml-1 ${hasBg ? 'text-white/75' : 'text-foreground/50'}`}>
+                    per person
+                  </span>
                 </div>
               )}
             </div>
+
+            {/* Bottom-right: Add photo (tap for mobile; also drop target zone) */}
+            {isOwner && (
+              <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2">
+                {uploadingHero > 0 && (
+                  <span className={`text-xs ${hasBg ? 'text-white/80' : 'text-foreground/60'}`}>
+                    Uploading {uploadingHero}…
+                  </span>
+                )}
+                <input
+                  ref={heroInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = e.target.files
+                    if (files && files.length > 0) {
+                      const list = Array.from(files).filter(
+                        (f) =>
+                          ['image/jpeg', 'image/png', 'image/webp'].includes(f.type) &&
+                          f.size <= 15 * 1024 * 1024,
+                      )
+                      if (list.length !== files.length) {
+                        toast.error('Some files skipped — use JPEG/PNG/WebP, max 15MB')
+                      }
+                      if (list.length) handleUpload(list, null)
+                    }
+                    e.target.value = ''
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => heroInputRef.current?.click()}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium shadow-sm backdrop-blur-sm transition-colors ${
+                    hasBg
+                      ? 'bg-white/90 text-foreground hover:bg-white'
+                      : 'bg-foreground/5 text-foreground hover:bg-foreground/10'
+                  }`}
+                  aria-label={hasBg ? 'Change hero photo' : 'Add hero photo'}
+                >
+                  <ImagePlus className="h-4 w-4" />
+                  {hasBg ? 'Change photo' : 'Add photo'}
+                </button>
+              </div>
+            )}
           </section>
         )
       })()}

@@ -43,27 +43,26 @@ export default function PhotosBlock({
     if (valid.length) onUpload(valid, dayId)
   }
 
-  // Нативный file-drop с диска (только для owner; на мобиле нет — используется клик).
+  // Нативный file-drop с диска. preventDefault в dragover обязателен
+  // во всех случаях — иначе браузер отменит drop. Файлы проверяем в onDrop.
   const dropHandlers = owner
     ? {
         onDragEnter: (e: React.DragEvent) => {
-          if (!e.dataTransfer?.types.includes('Files')) return
           e.preventDefault()
-          setIsDragOver(true)
+          if (e.dataTransfer?.types?.includes('Files')) setIsDragOver(true)
         },
         onDragOver: (e: React.DragEvent) => {
-          if (!e.dataTransfer?.types.includes('Files')) return
           e.preventDefault()
-          e.dataTransfer.dropEffect = 'copy'
+          if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
         },
         onDragLeave: (e: React.DragEvent) => {
           if (e.currentTarget === e.target) setIsDragOver(false)
         },
         onDrop: (e: React.DragEvent) => {
-          if (!e.dataTransfer?.types.includes('Files')) return
           e.preventDefault()
           setIsDragOver(false)
-          if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files)
+          const files = e.dataTransfer?.files
+          if (files && files.length > 0) handleFiles(files)
         },
       }
     : {}
