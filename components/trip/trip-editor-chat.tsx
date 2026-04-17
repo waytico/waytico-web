@@ -55,7 +55,7 @@ export function TripEditorChat({
   const [isDragging, setIsDragging] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = useCallback((file: File | null) => {
@@ -166,15 +166,46 @@ export function TripEditorChat({
     }
   }, [isOpen, messages.length])
 
+  // Auto-scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isTyping])
 
+  // Focus textarea when opened
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 300)
+      setTimeout(() => textareaRef.current?.focus(), 150)
     }
   }, [isOpen])
+
+  // Lock body scroll while open
+  useEffect(() => {
+    if (!isOpen) return
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = original
+    }
+  }, [isOpen])
+
+  // Close on Escape
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isOpen, onClose])
+
+  // Textarea auto-grow
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    const maxHeight = 200 // ~8 lines
+    el.style.height = Math.min(el.scrollHeight, maxHeight) + 'px'
+  }, [input])
 
   const handleSend = () => {
     if (!input.trim() && !selectedFile) return
@@ -186,64 +217,54 @@ export function TripEditorChat({
   if (!isOpen) return null
 
   return (
-    <>
-      {/* Backdrop (mobile) */}
-      <div
-        className="fixed inset-0 z-40 md:hidden"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      <div className="fixed inset-x-0 bottom-0 z-50 flex h-[75vh] max-h-[640px] flex-col rounded-t-2xl bg-background shadow-2xl border border-border md:inset-x-auto md:right-4 md:bottom-4 md:left-auto md:h-[70vh] md:w-[420px] md:rounded-2xl">
-        {/* Header */}
-        <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-accent-foreground">
-            <Pencil className="h-4 w-4" />
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-background"
+      onDragOver={(e) => {
+        e.preventDefault()
+        setIsDragging(true)
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault()
+        // Only reset when leaving the whole overlay
+        if (e.currentTarget === e.target) setIsDragging(false)
+      }}
+      onDrop={(e) => {
+        e.preventDefault()
+        setIsDragging(false)
+        const file = e.dataTransfer.files[0]
+        if (file) handleFileSelect(file)
+      }}
+    >
+      {/* Header */}
+      <header className="shrink-0 border-b border-border bg-background">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3 md:px-6 md:py-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
+            <Pencil className="h-5 w-5" />
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-foreground">Trip Editor</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-semibold text-foreground">Trip Editor</p>
             <p className="text-xs text-muted-foreground">Edit your trip via chat</p>
           </div>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             aria-label="Close editor"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
+      </header>
 
-        {/* Messages */}
-        <div
-          className="flex-1 overflow-y-auto px-4 py-4 space-y-4 relative"
-          onDragOver={(e) => {
-            e.preventDefault()
-            setIsDragging(true)
-          }}
-          onDragLeave={(e) => {
-            e.preventDefault()
-            setIsDragging(false)
-          }}
-          onDrop={(e) => {
-            e.preventDefault()
-            setIsDragging(false)
-            const file = e.dataTransfer.files[0]
-            if (file) handleFileSelect(file)
-          }}
-        >
-          {isDragging && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-accent/10 border-2 border-dashed border-accent rounded-xl pointer-events-none">
-              <p className="text-accent font-medium">Drop file here</p>
-            </div>
-          )}
-
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-3xl px-4 py-6 md:px-6 md:py-8 space-y-5">
           {messages.map((msg, i) => (
             <div
               key={i}
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${
                   msg.role === 'user'
                     ? 'bg-accent text-accent-foreground rounded-br-md'
                     : 'bg-secondary text-foreground rounded-bl-md'
@@ -265,7 +286,7 @@ export function TripEditorChat({
           {isTyping && (
             <div className="flex justify-start">
               {isParsing ? (
-                <div className="rounded-2xl rounded-bl-md bg-secondary px-4 py-2.5 text-sm">
+                <div className="rounded-2xl rounded-bl-md bg-secondary px-4 py-3 text-[15px]">
                   🔄 Parsing document…
                 </div>
               ) : (
@@ -282,14 +303,16 @@ export function TripEditorChat({
 
           <div ref={messagesEndRef} />
         </div>
+      </div>
 
-        {/* Input */}
-        <div className="shrink-0 border-t border-border px-4 py-3">
+      {/* Input area */}
+      <div className="shrink-0 border-t border-border bg-background">
+        <div className="mx-auto max-w-3xl px-4 py-3 md:px-6 md:py-4">
           {selectedFile && (
             <div className="mb-2 flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 border border-accent/30 px-3 py-1.5 text-xs text-foreground">
                 <span>{getFileIcon(selectedFile.type)}</span>
-                <span className="max-w-[200px] truncate">{selectedFile.name}</span>
+                <span className="max-w-[240px] truncate">{selectedFile.name}</span>
                 <button
                   onClick={() => setSelectedFile(null)}
                   className="ml-1 text-muted-foreground hover:text-foreground"
@@ -301,7 +324,7 @@ export function TripEditorChat({
             </div>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-end gap-2 rounded-2xl border border-border bg-background px-3 py-2 focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-colors">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -322,9 +345,8 @@ export function TripEditorChat({
                 e.target.value = ''
               }}
             />
-            <input
-              ref={inputRef}
-              type="text"
+            <textarea
+              ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -333,25 +355,34 @@ export function TripEditorChat({
                   handleSend()
                 }
               }}
+              rows={1}
               placeholder="Tell me what to change..."
-              className="flex-1 rounded-full border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+              className="flex-1 resize-none bg-transparent py-2 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[36px]"
+              style={{ maxHeight: 200 }}
             />
             <button
               type="button"
               onClick={handleSend}
               disabled={(!input.trim() && !selectedFile) || isTyping}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-foreground transition-opacity disabled:opacity-40"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground transition-opacity disabled:opacity-40"
               aria-label="Send message"
             >
               <Send className="h-4 w-4" />
             </button>
           </div>
-          <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
+          <p className="mt-2 text-center text-[11px] text-muted-foreground">
             AI-powered trip editor. Changes are applied immediately.
           </p>
         </div>
       </div>
-    </>
+
+      {/* Drop overlay */}
+      {isDragging && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-accent/10 border-4 border-dashed border-accent">
+          <p className="text-accent font-semibold text-lg">Drop file to attach</p>
+        </div>
+      )}
+    </div>
   )
 }
 
