@@ -30,15 +30,48 @@ export default function PhotoLightbox({
   const [mode, setMode] = useState<Mode>('view')
   const [crop, setCrop] = useState<Crop>()
   const [saving, setSaving] = useState(false)
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
+  const [loadingEdit, setLoadingEdit] = useState(false)
 
-  // Reset mode when opening a different photo / closing
+  // Reset when opening a different photo
   useEffect(() => {
     setMode('view')
     setCrop(undefined)
     setSaving(false)
   }, [media?.id])
 
-  // Esc to close (view) or cancel crop (edit)
+  // Load image as blob URL when entering edit mode — avoids tainted-canvas / cache quirks
+  useEffect(() => {
+    if (mode !== 'edit' || !media) return
+    let revoke: string | null = null
+    let cancelled = false
+    setLoadingEdit(true)
+    ;(async () => {
+      try {
+        const res = await fetch(media.url, { mode: 'cors', cache: 'reload' })
+        if (!res.ok) throw new Error(`Fetch failed ${res.status}`)
+        const b = await res.blob()
+        if (cancelled) return
+        const u = URL.createObjectURL(b)
+        revoke = u
+        setBlobUrl(u)
+      } catch (e: any) {
+        if (!cancelled) {
+          toast.error('Could not load image for editing')
+          setMode('view')
+        }
+      } finally {
+        if (!cancelled) setLoadingEdit(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+      if (revoke) URL.revokeObjectURL(revoke)
+      setBlobUrl(null)
+    }
+  }, [mode, media?.url, media])
+
+  // Esc: cancel crop or close
   useEffect(() => {
     if (!media) return
     const onKey = (e: KeyboardEvent) => {
@@ -54,7 +87,6 @@ export default function PhotoLightbox({
 
   const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const { naturalWidth: w, naturalHeight: h } = e.currentTarget
-    // Default crop: 80% of the image, free aspect, centered
     const initial = centerCrop(
       makeAspectCrop({ unit: '%', width: 80 }, w / h, w, h),
       w,
@@ -72,8 +104,6 @@ export default function PhotoLightbox({
     setSaving(true)
     try {
       const img = imgRef.current
-      const scaleX = img.naturalWidth / img.width
-      const scaleY = img.naturalHeight / img.height
       const unit = crop.unit || 'px'
       const pxCrop =
         unit === '%'
@@ -84,10 +114,10 @@ export default function PhotoLightbox({
               height: (crop.height / 100) * img.naturalHeight,
             }
           : {
-              x: crop.x * scaleX,
-              y: crop.y * scaleY,
-              width: crop.width * scaleX,
-              height: crop.height * scaleY,
+              x: (crop.x * img.naturalWidth) / img.width,
+              y: (crop.y * img.naturalHeight) / img.height,
+              width: (crop.width * img.naturalWidth) / img.width,
+              height: (crop.height * img.naturalHeight) / img.height,
             }
 
       const canvas = document.createElement('canvas')
@@ -107,7 +137,6 @@ export default function PhotoLightbox({
         canvas.height,
       )
 
-      // Preserve original format when possible; default to JPEG for smaller size
       const srcMime = media.mime_type || 'image/jpeg'
       const outMime = srcMime === 'image/png' ? 'image/png' : 'image/jpeg'
       const quality = outMime === 'image/jpeg' ? 0.9 : undefined
@@ -170,7 +199,7 @@ export default function PhotoLightbox({
             <>
               <button
                 type="button"
-                disabled={saving}
+                disabled={saving || loadingEdit || !blobUrl}
                 onClick={applyCrop}
                 className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground hover:bg-accent/90 disabled:opacity-60"
               >
@@ -209,28 +238,31 @@ export default function PhotoLightbox({
       </div>
 
       {/* Content */}
-      <div
-        className="max-h-[85vh] max-w-[95vw]"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="max-h-[85vh] max-w-[95vw]" onClick={(e) => e.stopPropagation()}>
         {mode === 'edit' ? (
-          <ReactCrop
-            crop={crop}
-            onChange={(_, pct) => setCrop(pct)}
-            keepSelection
-            className="max-h-[85vh]"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              ref={imgRef}
-              src={media.url}
-              alt={media.caption || media.file_name || 'Trip photo'}
-              onLoad={onImageLoad}
-              crossOrigin="anonymous"
-              className="max-h-[85vh] max-w-full object-contain"
-              draggable={false}
-            />
-          </ReactCrop>
+          loadingEdit || !blobUrl ? (
+            <div className="flex flex-col items-center gap-3 text-white/80">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="text-sm">Loading image…</span>
+            </div>
+          ) : (
+            <ReactCrop
+              crop={crop}
+              onChange={(_, pct) => setCrop(pct)}
+              keepSelection
+              className="max-h-[85vh]"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                ref={imgRef}
+                src={blobUrl}
+                alt={media.caption || media.file_name || 'Trip photo'}
+                onLoad={onImageLoad}
+                className="max-h-[85vh] max-w-full object-contain"
+                draggable={false}
+              />
+            </ReactCrop>
+          )
         ) : (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
