@@ -335,10 +335,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   src={heroPhoto.url}
                   alt=""
                   aria-hidden="true"
-                  className="absolute inset-0 h-full w-full object-cover"
+                  draggable={false}
+                  className="pointer-events-none absolute inset-0 h-full w-full object-cover"
                 />
                 {/* Dark gradient overlay for text legibility */}
-                <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/70" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/70" />
               </>
             )}
 
