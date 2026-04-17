@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 
 /**
  * Handles Stripe Checkout return redirects.
- *   ?activated=1 → success toast + strip query
+ *   ?activated=1 → success toast + strip query + poll refresh (prep pipeline ~15s)
  *   ?cancelled=1 → info toast   + strip query
  */
 export default function ActivationToast() {
@@ -23,14 +23,22 @@ export default function ActivationToast() {
 
     fired.current = true
 
+    // Strip query params immediately
+    router.replace(pathname)
+
     if (activated) {
       toast.success('Trip activated. Preparing checklists…')
+      // Poll refresh: prep pipeline takes ~15s, refresh every 3s for up to 30s
+      let attempts = 0
+      const interval = setInterval(() => {
+        attempts++
+        router.refresh()
+        if (attempts >= 10) clearInterval(interval)
+      }, 3000)
+      return () => clearInterval(interval)
     } else if (cancelled) {
       toast('Payment cancelled')
     }
-
-    // Strip query params but keep path
-    router.replace(pathname)
   }, [searchParams, pathname, router])
 
   return null
