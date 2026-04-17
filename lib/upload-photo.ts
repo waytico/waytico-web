@@ -30,6 +30,7 @@ export async function uploadPhoto(
   file: File,
   dayId: string | null,
   token: string,
+  placement?: string,
 ): Promise<MediaRecord> {
   if (!ALLOWED_MIME.includes(file.type)) {
     throw new Error(`Unsupported format: ${file.type || 'unknown'}. Use JPEG, PNG, or WebP.`)
@@ -79,6 +80,7 @@ export async function uploadPhoto(
       fileName: file.name,
       fileSize: file.size,
       mimeType: file.type,
+      ...(placement ? { placement } : {}),
     }),
   })
   if (!regRes.ok) {

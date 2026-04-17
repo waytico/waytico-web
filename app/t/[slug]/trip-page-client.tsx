@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { ImagePlus } from 'lucide-react'
+import { ImagePlus, Trash2 } from 'lucide-react'
 import ActivateButton from '@/components/activate-button'
 import ActivationToast from '@/components/activation-toast'
 import PhotosBlock from '@/components/photos-block'
@@ -187,6 +187,47 @@ export default function TripPageClient({ slug, initialData }: Props) {
     },
     [media, getToken],
   )
+
+  // Hero upload: always placement='hero', single photo. If a hero already exists,
+  // it's replaced — old record deleted after the new one lands.
+  const handleHeroUpload = useCallback(
+    async (files: File[]) => {
+      const projectId = data?.project?.id
+      if (!projectId || files.length === 0) return
+      const file = files[0]
+      if (files.length > 1) {
+        toast.message('Hero uses the first photo — drop more in the gallery below')
+      }
+      const token = await getToken()
+      if (!token) {
+        toast.error('Please sign in again')
+        return
+      }
+      // Capture previous hero before upload so we can clean it up after success.
+      const prevHero = media.find((m) => m.placement === 'hero')
+      bumpUploading('hero', 1)
+      try {
+        const rec = await uploadPhoto(projectId, file, null, token, 'hero')
+        // Prepend so .find() picks the new hero even if the old one sticks around on failure.
+        setMedia((prev) => [rec, ...prev])
+        if (prevHero) {
+          // Best-effort: remove the old hero record + S3 object.
+          setMedia((prev) => prev.filter((m) => m.id !== prevHero.id))
+          try {
+            await deletePhoto(prevHero.id, token)
+          } catch {
+            // If delete failed, put it back so the user can retry.
+            setMedia((prev) => (prev.some((m) => m.id === prevHero.id) ? prev : [...prev, prevHero]))
+          }
+        }
+      } catch (e: any) {
+        toast.error(e?.message || 'Upload failed')
+      } finally {
+        bumpUploading('hero', -1)
+      }
+    },
+    [data?.project?.id, getToken, media],
+  )
   // ──────────────────────────────────────────────────────────
 
   // ─── Editor ────────────────────────────────────────────────
@@ -287,9 +328,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       {/* Hero */}
       {(() => {
-        const heroPhoto = media.filter((m) => !m.day_id)[0]
+        const heroPhoto = media.find((m) => m.placement === 'hero')
         const hasBg = !!heroPhoto
-        const uploadingHero = uploadingByDay['tour'] || 0
+        const uploadingHero = uploadingByDay['hero'] || 0
+        const showEmptyState = !hasBg && isOwner
         const heroDropHandlers = isOwner
           ? {
               onDragEnter: (e: React.DragEvent) => {
@@ -316,17 +358,22 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   if (list.length !== files.length) {
                     toast.error('Some files skipped — use JPEG/PNG/WebP, max 15MB')
                   }
-                  if (list.length) handleUpload(list, null)
+                  if (list.length) handleHeroUpload(list)
                 }
               },
             }
           : {}
+
+        const openHeroPicker = () => heroInputRef.current?.click()
+
         return (
           <section
             {...heroDropHandlers}
-            className={`relative overflow-hidden py-16 md:py-24 ${
+            className={`group relative overflow-hidden py-16 md:py-24 ${
               hasBg ? 'bg-foreground' : 'bg-secondary'
-            } ${heroDragOver ? 'ring-4 ring-accent ring-inset' : ''}`}
+            } ${showEmptyState ? 'border-2 border-dashed border-border' : ''} ${
+              heroDragOver ? 'ring-4 ring-accent ring-inset' : ''
+            }`}
           >
             {hasBg && (
               <>
@@ -343,12 +390,23 @@ export default function TripPageClient({ slug, initialData }: Props) {
               </>
             )}
 
-            {/* Top-right: Activate (owner/quoted only — handled inside component) */}
-            {p.id && (
-              <div className="absolute top-4 right-4 z-10">
-                <ActivateButton projectId={p.id} publicStatus={p.status} />
-              </div>
-            )}
+            {/* Top-right: Activate + (owner) Delete hero on hover */}
+            <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+              {isOwner && hasBg && heroPhoto && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDelete(heroPhoto.id)
+                  }}
+                  className="rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity hover:bg-black/80 group-hover:opacity-100 focus:opacity-100"
+                  aria-label="Delete hero photo"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+              {p.id && <ActivateButton projectId={p.id} publicStatus={p.status} />}
+            </div>
 
             {/* Drop indicator when dragging files */}
             {heroDragOver && (
@@ -357,6 +415,32 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   Drop photo to set as hero
                 </div>
               </div>
+            )}
+
+            {/* Hidden file input shared by empty-state click + drop pipeline */}
+            {isOwner && (
+              <input
+                ref={heroInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = e.target.files
+                  if (files && files.length > 0) {
+                    const list = Array.from(files).filter(
+                      (f) =>
+                        ['image/jpeg', 'image/png', 'image/webp'].includes(f.type) &&
+                        f.size <= 15 * 1024 * 1024,
+                    )
+                    if (list.length !== files.length) {
+                      toast.error('Some files skipped — use JPEG/PNG/WebP, max 15MB')
+                    }
+                    if (list.length) handleHeroUpload(list)
+                  }
+                  e.target.value = ''
+                }}
+              />
             )}
 
             <div
@@ -417,51 +501,29 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   </span>
                 </div>
               )}
+
+              {/* Empty-state CTA: matches PhotosBlock empty button, under the title */}
+              {showEmptyState && (
+                <div className="pt-4">
+                  <button
+                    type="button"
+                    onClick={openHeroPicker}
+                    disabled={uploadingHero > 0}
+                    className="inline-flex items-center gap-2 rounded-full border-2 border-dashed border-border bg-background/60 px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-60"
+                  >
+                    <ImagePlus className="h-4 w-4" />
+                    {uploadingHero > 0 ? 'Uploading…' : 'Add hero photo'}
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Bottom-right: Add photo (tap for mobile; also drop target zone) */}
-            {isOwner && (
-              <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2">
-                {uploadingHero > 0 && (
-                  <span className={`text-xs ${hasBg ? 'text-white/80' : 'text-foreground/60'}`}>
-                    Uploading {uploadingHero}…
-                  </span>
-                )}
-                <input
-                  ref={heroInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    const files = e.target.files
-                    if (files && files.length > 0) {
-                      const list = Array.from(files).filter(
-                        (f) =>
-                          ['image/jpeg', 'image/png', 'image/webp'].includes(f.type) &&
-                          f.size <= 15 * 1024 * 1024,
-                      )
-                      if (list.length !== files.length) {
-                        toast.error('Some files skipped — use JPEG/PNG/WebP, max 15MB')
-                      }
-                      if (list.length) handleUpload(list, null)
-                    }
-                    e.target.value = ''
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => heroInputRef.current?.click()}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium shadow-sm backdrop-blur-sm transition-colors ${
-                    hasBg
-                      ? 'bg-white/90 text-foreground hover:bg-white'
-                      : 'bg-foreground/5 text-foreground hover:bg-foreground/10'
-                  }`}
-                  aria-label={hasBg ? 'Change hero photo' : 'Add hero photo'}
-                >
-                  <ImagePlus className="h-4 w-4" />
-                  {hasBg ? 'Change photo' : 'Add photo'}
-                </button>
+            {/* Uploading indicator when replacing existing hero */}
+            {isOwner && hasBg && uploadingHero > 0 && (
+              <div className="absolute bottom-4 left-4 z-10">
+                <span className="rounded-full bg-black/60 px-3 py-1 text-xs text-white">
+                  Uploading…
+                </span>
               </div>
             )}
           </section>
@@ -477,7 +539,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         )}
 
         {(() => {
-          const tourMedia = media.filter((m) => !m.day_id)
+          const tourMedia = media.filter((m) => !m.day_id && m.placement !== 'hero')
           const showTourPhotos = isOwner || tourMedia.length > 0
           if (!showTourPhotos) return null
           return (
