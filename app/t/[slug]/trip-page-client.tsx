@@ -8,6 +8,7 @@ import ActivateButton from '@/components/activate-button'
 import ActivationToast from '@/components/activation-toast'
 import PhotosBlock from '@/components/photos-block'
 import PhotoLightbox from '@/components/photo-lightbox'
+import { TripEditorChat, StickyBottomBar } from '@/components/trip/trip-editor-chat'
 import { apiFetch } from '@/lib/api'
 import {
   uploadPhoto,
@@ -201,6 +202,54 @@ export default function TripPageClient({ slug, initialData }: Props) {
     },
     [media, getToken],
   )
+  // ──────────────────────────────────────────────────────────
+
+  // ─── Editor chat ──────────────────────────────────────────
+  const [chatOpen, setChatOpen] = useState(false)
+
+  const handleTripUpdated = useCallback(async () => {
+    // Re-fetch public data to reflect agent's tool-call changes.
+    // Also re-fetch owner media list (day-id links may have shifted if itinerary changed).
+    try {
+      const res = await fetch(`${API_URL}/api/public/projects/${slug}`, { cache: 'no-store' })
+      if (res.ok) {
+        const d = await res.json()
+        setData(d)
+      }
+      const projectId = data?.project?.id
+      if (projectId) {
+        const token = await getToken()
+        if (token) {
+          try {
+            const full = await fetchOwnerMedia(projectId, token)
+            setMedia(full)
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [slug, data?.project?.id, getToken])
+
+  const handleShare = useCallback(() => {
+    const url = `${APP_URL}/t/${slug}`
+    const copyFallback = () => {
+      try {
+        navigator.clipboard.writeText(url)
+        toast.success('Link copied!')
+      } catch {
+        toast.error('Could not copy link')
+      }
+    }
+    const nav = typeof navigator !== 'undefined' ? (navigator as any) : null
+    if (nav && typeof nav.share === 'function') {
+      nav.share({ title: 'Trip', url }).catch(copyFallback)
+    } else {
+      copyFallback()
+    }
+  }, [slug])
   // ──────────────────────────────────────────────────────────
 
   const isReady = data && data.project?.status !== 'generating'
@@ -497,6 +546,39 @@ export default function TripPageClient({ slug, initialData }: Props) {
       </div>
 
       <PhotoLightbox media={lightbox} onClose={() => setLightbox(null)} />
+
+      {/* ─── Owner-only editor controls ─── */}
+      {isOwner && (
+        <>
+          {/* Desktop floating "Edit" button */}
+          {!chatOpen && (
+            <button
+              onClick={() => setChatOpen(true)}
+              className="hidden md:flex fixed bottom-6 right-6 z-30 items-center gap-2 rounded-full bg-accent text-accent-foreground px-5 py-3 text-sm font-semibold shadow-lg hover:opacity-90 transition-opacity"
+              aria-label="Open trip editor"
+            >
+              <span>Edit Trip</span>
+            </button>
+          )}
+
+          {/* Mobile sticky bottom bar */}
+          {!chatOpen && (
+            <StickyBottomBar onShare={handleShare} onOpenChat={() => setChatOpen(true)} />
+          )}
+
+          {/* Chat panel (both mobile sheet + desktop docked panel) */}
+          <TripEditorChat
+            isOpen={chatOpen}
+            onClose={() => setChatOpen(false)}
+            projectId={p.id}
+            getToken={getToken}
+            onTripUpdated={handleTripUpdated}
+          />
+
+          {/* Spacer so the mobile StickyBottomBar doesn't cover the footer */}
+          <div className="h-16 md:hidden" aria-hidden="true" />
+        </>
+      )}
     </div>
   )
 }
