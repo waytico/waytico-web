@@ -1,11 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
 import ActivateButton from '@/components/activate-button'
 import ActivationToast from '@/components/activation-toast'
+import PhotosBlock from '@/components/photos-block'
+import PhotoLightbox from '@/components/photo-lightbox'
+import { apiFetch } from '@/lib/api'
+import {
+  uploadPhoto,
+  setPhotoDay,
+  deletePhoto,
+  fetchOwnerMedia,
+  type MediaRecord,
+} from '@/lib/upload-photo'
 
 type Location = {
   id: string; name: string; type: string
@@ -91,6 +101,107 @@ export default function TripPageClient({ slug, initialData }: Props) {
       router.replace(`/t/${slug}`)
     })()
   }, [searchParams, isSignedIn, isLoaded, getToken, slug, router])
+
+  // ─── Photos / owner state ──────────────────────────────────
+  const [isOwner, setIsOwner] = useState(false)
+  const [media, setMedia] = useState<MediaRecord[]>(
+    (initialData?.media as MediaRecord[]) || [],
+  )
+  const [uploadingByDay, setUploadingByDay] = useState<Record<string, number>>({})
+  const [lightbox, setLightbox] = useState<MediaRecord | null>(null)
+
+  // Owner check + fetch full media list (including unassigned)
+  useEffect(() => {
+    const projectId = data?.project?.id
+    if (!isLoaded || !isSignedIn || !projectId) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const token = await getToken()
+        if (!token) return
+        const ownRes = await apiFetch(`/api/projects/by-id/${projectId}`, { token })
+        if (!ownRes.ok || cancelled) return
+        setIsOwner(true)
+        const full = await fetchOwnerMedia(projectId, token)
+        if (!cancelled) setMedia(full)
+      } catch {
+        /* not owner */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isLoaded, isSignedIn, getToken, data?.project?.id])
+
+  const bumpUploading = (key: string, delta: number) =>
+    setUploadingByDay((prev) => {
+      const next = { ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }
+      if (next[key] === 0) delete next[key]
+      return next
+    })
+
+  const handleUpload = useCallback(
+    async (files: File[], dayId: string | null) => {
+      const projectId = data?.project?.id
+      if (!projectId) return
+      const key = dayId || 'unassigned'
+      const token = await getToken()
+      if (!token) {
+        toast.error('Please sign in again')
+        return
+      }
+      bumpUploading(key, files.length)
+      await Promise.all(
+        files.map(async (file) => {
+          try {
+            const rec = await uploadPhoto(projectId, file, dayId, token)
+            setMedia((prev) => [...prev, rec])
+          } catch (e: any) {
+            toast.error(e?.message || 'Upload failed')
+          } finally {
+            bumpUploading(key, -1)
+          }
+        }),
+      )
+    },
+    [data?.project?.id, getToken],
+  )
+
+  const handleMove = useCallback(
+    async (mediaId: string, dayId: string | null) => {
+      const prev = media.find((m) => m.id === mediaId)
+      if (!prev || prev.day_id === dayId) return
+      // Optimistic
+      setMedia((cur) => cur.map((m) => (m.id === mediaId ? { ...m, day_id: dayId } : m)))
+      try {
+        const token = await getToken()
+        if (!token) throw new Error('No token')
+        await setPhotoDay(mediaId, dayId, token)
+      } catch (e: any) {
+        // Rollback
+        setMedia((cur) => cur.map((m) => (m.id === mediaId ? { ...m, day_id: prev.day_id } : m)))
+        toast.error(e?.message || 'Could not move photo')
+      }
+    },
+    [media, getToken],
+  )
+
+  const handleDelete = useCallback(
+    async (mediaId: string) => {
+      const snapshot = media
+      setMedia((cur) => cur.filter((m) => m.id !== mediaId))
+      try {
+        const token = await getToken()
+        if (!token) throw new Error('No token')
+        await deletePhoto(mediaId, token)
+      } catch (e: any) {
+        setMedia(snapshot)
+        toast.error(e?.message || 'Could not delete photo')
+      }
+    },
+    [media, getToken],
+  )
+  // ──────────────────────────────────────────────────────────
 
   const isReady = data && data.project?.status !== 'generating'
 
@@ -216,37 +327,78 @@ export default function TripPageClient({ slug, initialData }: Props) {
           </section>
         )}
 
+        {/* Unassigned gallery — owner only, only when there are unassigned photos or the owner wants to upload */}
+        {isOwner && (
+          <section>
+            <div className="flex items-baseline justify-between mb-4">
+              <h2 className="text-2xl font-serif font-bold">Photos</h2>
+              <span className="text-xs text-muted-foreground">
+                Drag photos onto a day to attach them
+              </span>
+            </div>
+            <PhotosBlock
+              dayId={null}
+              media={media.filter((m) => !m.day_id)}
+              owner={isOwner}
+              uploading={uploadingByDay['unassigned'] || 0}
+              onUpload={handleUpload}
+              onDrop={handleMove}
+              onDelete={handleDelete}
+              onOpen={setLightbox}
+              emptyHint="Drop photos here to keep them unassigned"
+            />
+          </section>
+        )}
+
         {itinerary.length > 0 && (
           <section>
             <h2 className="text-2xl font-serif font-bold mb-6">Day-by-Day Itinerary</h2>
             <div className="space-y-6">
-              {itinerary.map((day: any) => (
-                <div key={day.dayNumber} className="border border-border rounded-xl p-5 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <span className="flex-shrink-0 w-10 h-10 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-bold text-sm">
-                      {day.dayNumber}
-                    </span>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{day.title}</h3>
-                      {day.description && (
-                        <p className="text-foreground/70 text-sm mt-1 leading-relaxed">{day.description}</p>
-                      )}
+              {itinerary.map((day: any, idx: number) => {
+                const dayMedia = media.filter((m) => m.day_id && m.day_id === day.id)
+                const dayKey = day.id || `day-${day.dayNumber || idx}`
+                return (
+                  <div key={dayKey} className="border border-border rounded-xl p-5 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-10 h-10 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-bold text-sm">
+                        {day.dayNumber}
+                      </span>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">{day.title}</h3>
+                        {day.description && (
+                          <p className="text-foreground/70 text-sm mt-1 leading-relaxed">{day.description}</p>
+                        )}
+                      </div>
                     </div>
+                    {day.highlights?.length > 0 && (
+                      <div className="pl-[52px] flex flex-wrap gap-2">
+                        {day.highlights.map((h: string, i: number) => (
+                          <span key={i} className="inline-block px-3 py-1 text-xs bg-secondary rounded-full text-foreground/70">{h}</span>
+                        ))}
+                      </div>
+                    )}
+                    {day.accommodation && (
+                      <p className="pl-[52px] text-xs text-muted-foreground">
+                        {typeof day.accommodation === 'string' ? day.accommodation : day.accommodation.name}
+                      </p>
+                    )}
+                    {day.id && (dayMedia.length > 0 || isOwner) && (
+                      <div className="pl-[52px] pt-2">
+                        <PhotosBlock
+                          dayId={day.id}
+                          media={dayMedia}
+                          owner={isOwner}
+                          uploading={uploadingByDay[day.id] || 0}
+                          onUpload={handleUpload}
+                          onDrop={handleMove}
+                          onDelete={handleDelete}
+                          onOpen={setLightbox}
+                        />
+                      </div>
+                    )}
                   </div>
-                  {day.highlights?.length > 0 && (
-                    <div className="pl-[52px] flex flex-wrap gap-2">
-                      {day.highlights.map((h: string, i: number) => (
-                        <span key={i} className="inline-block px-3 py-1 text-xs bg-secondary rounded-full text-foreground/70">{h}</span>
-                      ))}
-                    </div>
-                  )}
-                  {day.accommodation && (
-                    <p className="pl-[52px] text-xs text-muted-foreground">
-                      {typeof day.accommodation === 'string' ? day.accommodation : day.accommodation.name}
-                    </p>
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           </section>
         )}
@@ -343,6 +495,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
           </p>
         </footer>
       </div>
+
+      <PhotoLightbox media={lightbox} onClose={() => setLightbox(null)} />
     </div>
   )
 }
