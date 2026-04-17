@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
-import { Paperclip, X, FileText, Image as ImageIcon, FileSpreadsheet, File as FileIcon } from 'lucide-react'
+import { Plus, X, FileText, Image as ImageIcon, FileSpreadsheet, File as FileIcon } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 
@@ -287,7 +287,7 @@ export default function ChatFlow() {
               aria-label="Attach file"
               title="Attach a file (PDF, JPEG, PNG, DOCX, XLSX — max 10MB)"
             >
-              <Paperclip className="w-4 h-4" />
+              <Plus className="w-4 h-4" />
             </button>
             <span className="text-sm text-muted-foreground hidden sm:block">
               {messages.length === 0 ? 'Write naturally — AI will figure it out' : 'Shift+Enter for new line'}
