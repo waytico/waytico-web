@@ -1,46 +1,245 @@
 'use client'
 
-import { useEffect } from 'react'
-import { X } from 'lucide-react'
-import type { MediaRecord } from '@/lib/upload-photo'
+import { useEffect, useRef, useState } from 'react'
+import { X, Crop as CropIcon, Check, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { useAuth } from '@clerk/nextjs'
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
+import { replacePhoto, type MediaRecord } from '@/lib/upload-photo'
 
 type Props = {
   media: MediaRecord | null
+  owner: boolean
+  projectId: string | null
   onClose: () => void
+  onReplaced: (updated: MediaRecord) => void
 }
 
-export default function PhotoLightbox({ media, onClose }: Props) {
+type Mode = 'view' | 'edit'
+
+export default function PhotoLightbox({
+  media,
+  owner,
+  projectId,
+  onClose,
+  onReplaced,
+}: Props) {
+  const { getToken } = useAuth()
+  const imgRef = useRef<HTMLImageElement | null>(null)
+  const [mode, setMode] = useState<Mode>('view')
+  const [crop, setCrop] = useState<Crop>()
+  const [saving, setSaving] = useState(false)
+
+  // Reset mode when opening a different photo / closing
+  useEffect(() => {
+    setMode('view')
+    setCrop(undefined)
+    setSaving(false)
+  }, [media?.id])
+
+  // Esc to close (view) or cancel crop (edit)
   useEffect(() => {
     if (!media) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key !== 'Escape') return
+      if (mode === 'edit') setMode('view')
+      else onClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [media, onClose])
+  }, [media, mode, onClose])
 
   if (!media) return null
+
+  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { naturalWidth: w, naturalHeight: h } = e.currentTarget
+    // Default crop: 80% of the image, free aspect, centered
+    const initial = centerCrop(
+      makeAspectCrop({ unit: '%', width: 80 }, w / h, w, h),
+      w,
+      h,
+    )
+    setCrop(initial)
+  }
+
+  const applyCrop = async () => {
+    if (!media || !imgRef.current || !crop || !projectId) return
+    if (crop.width === 0 || crop.height === 0) {
+      toast.error('Select an area to crop')
+      return
+    }
+    setSaving(true)
+    try {
+      const img = imgRef.current
+      const scaleX = img.naturalWidth / img.width
+      const scaleY = img.naturalHeight / img.height
+      const unit = crop.unit || 'px'
+      const pxCrop =
+        unit === '%'
+          ? {
+              x: (crop.x / 100) * img.naturalWidth,
+              y: (crop.y / 100) * img.naturalHeight,
+              width: (crop.width / 100) * img.naturalWidth,
+              height: (crop.height / 100) * img.naturalHeight,
+            }
+          : {
+              x: crop.x * scaleX,
+              y: crop.y * scaleY,
+              width: crop.width * scaleX,
+              height: crop.height * scaleY,
+            }
+
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(pxCrop.width)
+      canvas.height = Math.round(pxCrop.height)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Canvas unavailable')
+      ctx.drawImage(
+        img,
+        pxCrop.x,
+        pxCrop.y,
+        pxCrop.width,
+        pxCrop.height,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      )
+
+      // Preserve original format when possible; default to JPEG for smaller size
+      const srcMime = media.mime_type || 'image/jpeg'
+      const outMime = srcMime === 'image/png' ? 'image/png' : 'image/jpeg'
+      const quality = outMime === 'image/jpeg' ? 0.9 : undefined
+      const blob: Blob = await new Promise((resolve, reject) =>
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
+          outMime,
+          quality,
+        ),
+      )
+
+      const token = await getToken()
+      if (!token) throw new Error('Sign in again')
+
+      const baseName = (media.file_name || 'photo').replace(/\.[^.]+$/, '')
+      const ext = outMime === 'image/png' ? 'png' : 'jpg'
+      const newName = `${baseName}-cropped.${ext}`
+
+      const updated = await replacePhoto(projectId, media.id, blob, newName, token, {
+        width: canvas.width,
+        height: canvas.height,
+      })
+      onReplaced(updated)
+      toast.success('Photo updated')
+      setMode('view')
+    } catch (e: any) {
+      toast.error(e?.message || 'Could not save crop')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const close = () => {
+    if (saving) return
+    onClose()
+  }
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-      onClick={onClose}
+      onClick={close}
     >
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
-        aria-label="Close"
-      >
-        <X className="h-5 w-5" />
-      </button>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={media.url}
-        alt={media.caption || media.file_name || 'Trip photo'}
-        className="max-h-[90vh] max-w-full rounded-lg object-contain shadow-2xl"
+      {/* Top bar */}
+      <div
+        className="absolute top-0 left-0 right-0 flex items-center justify-between gap-2 px-4 py-3"
         onClick={(e) => e.stopPropagation()}
-      />
+      >
+        <div className="flex items-center gap-2">
+          {owner && mode === 'view' && (
+            <button
+              type="button"
+              onClick={() => setMode('edit')}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20"
+            >
+              <CropIcon className="h-4 w-4" />
+              Crop
+            </button>
+          )}
+          {owner && mode === 'edit' && (
+            <>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={applyCrop}
+                className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground hover:bg-accent/90 disabled:opacity-60"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Save
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => setMode('view')}
+                className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={close}
+          disabled={saving}
+          className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 disabled:opacity-60"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Content */}
+      <div
+        className="max-h-[85vh] max-w-[95vw]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {mode === 'edit' ? (
+          <ReactCrop
+            crop={crop}
+            onChange={(_, pct) => setCrop(pct)}
+            keepSelection
+            className="max-h-[85vh]"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={imgRef}
+              src={media.url}
+              alt={media.caption || media.file_name || 'Trip photo'}
+              onLoad={onImageLoad}
+              crossOrigin="anonymous"
+              className="max-h-[85vh] max-w-full object-contain"
+              draggable={false}
+            />
+          </ReactCrop>
+        ) : (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={media.url}
+            alt={media.caption || media.file_name || 'Trip photo'}
+            className="max-h-[85vh] max-w-full rounded-lg object-contain shadow-2xl"
+          />
+        )}
+      </div>
     </div>
   )
 }

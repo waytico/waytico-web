@@ -119,6 +119,78 @@ export async function deletePhoto(mediaId: string, token: string): Promise<void>
   }
 }
 
+/**
+ * Replace the image file behind an existing media record (e.g., after crop).
+ * Uploads a new S3 object, PATCHes the DB record to point at it.
+ * Server-side deletes the old S3 object best-effort.
+ */
+export async function replacePhoto(
+  projectId: string,
+  mediaId: string,
+  blob: Blob,
+  fileName: string,
+  token: string,
+  dimensions?: { width: number; height: number },
+): Promise<MediaRecord> {
+  const contentType = blob.type || 'image/jpeg'
+  if (!ALLOWED_MIME.includes(contentType)) {
+    throw new Error(`Unsupported format: ${contentType}`)
+  }
+  if (blob.size > MAX_FILE_SIZE) {
+    throw new Error(`Result too large (${(blob.size / 1024 / 1024).toFixed(1)}MB). Max 15MB.`)
+  }
+
+  // 1. Presign
+  const presignRes = await apiFetch(`/api/projects/${projectId}/media/presign`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify({
+      fileName,
+      contentType,
+      fileSize: blob.size,
+    }),
+  })
+  if (!presignRes.ok) {
+    const err = await presignRes.json().catch(() => ({}))
+    throw new Error(err.error || `Presign failed (${presignRes.status})`)
+  }
+  const { uploadUrl, cdnUrl } = (await presignRes.json()) as {
+    uploadUrl: string
+    cdnUrl: string
+    key: string
+  }
+
+  // 2. PUT
+  const putRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': contentType },
+    body: blob,
+  })
+  if (!putRes.ok) {
+    throw new Error(`Upload to S3 failed (${putRes.status})`)
+  }
+
+  // 3. PATCH record — server deletes old S3 object
+  const patchRes = await apiFetch(`/api/media/${mediaId}`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({
+      url: cdnUrl,
+      fileName,
+      fileSize: blob.size,
+      mimeType: contentType,
+      ...(dimensions ? { width: dimensions.width, height: dimensions.height } : {}),
+      thumbnailUrl: null, // clear any stale thumbnail
+    }),
+  })
+  if (!patchRes.ok) {
+    const err = await patchRes.json().catch(() => ({}))
+    throw new Error(err.error || `Replace failed (${patchRes.status})`)
+  }
+  const { media } = (await patchRes.json()) as { media: MediaRecord }
+  return media
+}
+
 /** Fetch full media list for an owned project (includes unassigned photos). */
 export async function fetchOwnerMedia(
   projectId: string,

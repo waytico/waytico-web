@@ -513,7 +513,16 @@ export default function TripPageClient({ slug, initialData }: Props) {
         </footer>
       </div>
 
-      <PhotoLightbox media={lightbox} onClose={() => setLightbox(null)} />
+      <PhotoLightbox
+        media={lightbox}
+        owner={isOwner}
+        projectId={data.project?.id || null}
+        onClose={() => setLightbox(null)}
+        onReplaced={(updated) => {
+          setMedia((cur) => cur.map((m) => (m.id === updated.id ? updated : m)))
+          setLightbox(updated)
+        }}
+      />
 
       {/* ─── Owner-only editor controls ─── */}
       {isOwner && (
