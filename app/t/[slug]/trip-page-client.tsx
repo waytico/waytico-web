@@ -8,7 +8,7 @@ import ActivateButton from '@/components/activate-button'
 import ActivationToast from '@/components/activation-toast'
 import PhotosBlock from '@/components/photos-block'
 import PhotoLightbox from '@/components/photo-lightbox'
-import { TripEditorChat, StickyBottomBar } from '@/components/trip/trip-editor-chat'
+import { TripCommandBar } from '@/components/trip/trip-command-bar'
 import { apiFetch } from '@/lib/api'
 import {
   uploadPhoto,
@@ -186,9 +186,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
   )
   // ──────────────────────────────────────────────────────────
 
-  // ─── Editor chat ──────────────────────────────────────────
-  const [chatOpen, setChatOpen] = useState(false)
-
+  // ─── Editor ────────────────────────────────────────────────
   const handleTripUpdated = useCallback(async () => {
     // Re-fetch public data to reflect agent's tool-call changes.
     // Public endpoint returns all media (tour-level + per-day), so it's enough.
@@ -201,24 +199,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
       }
     } catch {
       /* ignore */
-    }
-  }, [slug])
-
-  const handleShare = useCallback(() => {
-    const url = `${APP_URL}/t/${slug}`
-    const copyFallback = () => {
-      try {
-        navigator.clipboard.writeText(url)
-        toast.success('Link copied!')
-      } catch {
-        toast.error('Could not copy link')
-      }
-    }
-    const nav = typeof navigator !== 'undefined' ? (navigator as any) : null
-    if (nav && typeof nav.share === 'function') {
-      nav.share({ title: 'Trip', url }).catch(copyFallback)
-    } else {
-      copyFallback()
     }
   }, [slug])
   // ──────────────────────────────────────────────────────────
@@ -527,33 +507,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
       {/* ─── Owner-only editor controls ─── */}
       {isOwner && (
         <>
-          {/* Desktop floating "Edit" button */}
-          {!chatOpen && (
-            <button
-              onClick={() => setChatOpen(true)}
-              className="hidden md:flex fixed bottom-6 right-6 z-30 items-center gap-2 rounded-full bg-accent text-accent-foreground px-5 py-3 text-sm font-semibold shadow-lg hover:opacity-90 transition-opacity"
-              aria-label="Open trip editor"
-            >
-              <span>Edit Trip</span>
-            </button>
-          )}
-
-          {/* Mobile sticky bottom bar */}
-          {!chatOpen && (
-            <StickyBottomBar onShare={handleShare} onOpenChat={() => setChatOpen(true)} />
-          )}
-
-          {/* Chat panel (both mobile sheet + desktop docked panel) */}
-          <TripEditorChat
-            isOpen={chatOpen}
-            onClose={() => setChatOpen(false)}
+          {/* Persistent bottom command bar for quick edits */}
+          <TripCommandBar
             projectId={p.id}
             getToken={getToken}
             onTripUpdated={handleTripUpdated}
           />
 
-          {/* Spacer so the mobile StickyBottomBar doesn't cover the footer */}
-          <div className="h-16 md:hidden" aria-hidden="true" />
+          {/* Spacer so the fixed command bar doesn't cover the footer */}
+          <div className="h-24 md:h-28" aria-hidden="true" />
         </>
       )}
     </div>
