@@ -8,17 +8,14 @@ import type { MediaRecord } from '@/lib/upload-photo'
 import { ALLOWED_MIME, MAX_FILE_SIZE } from '@/lib/upload-photo'
 
 type Props = {
-  /** null = unassigned gallery (drop here to detach). Otherwise = the day id. */
+  /** null = общий блок фото тура. Иначе = id дня. */
   dayId: string | null
   media: MediaRecord[]
   owner: boolean
   uploading: number
   onUpload: (files: File[], dayId: string | null) => void
-  onDrop: (mediaId: string, dayId: string | null) => void
   onDelete: (mediaId: string) => void
   onOpen: (media: MediaRecord) => void
-  /** Custom wrapper className (e.g., layout grid size). */
-  className?: string
   emptyHint?: string
 }
 
@@ -28,10 +25,8 @@ export default function PhotosBlock({
   owner,
   uploading,
   onUpload,
-  onDrop,
   onDelete,
   onOpen,
-  className,
   emptyHint,
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -48,48 +43,41 @@ export default function PhotosBlock({
     if (valid.length) onUpload(valid, dayId)
   }
 
-  // Drop targets accept media drags (reorder) + native file drops (upload from disk)
+  // Нативный file-drop с диска (только для owner; на мобиле нет — используется клик).
   const dropHandlers = owner
     ? {
         onDragEnter: (e: React.DragEvent) => {
+          if (!e.dataTransfer?.types.includes('Files')) return
           e.preventDefault()
           setIsDragOver(true)
         },
         onDragOver: (e: React.DragEvent) => {
+          if (!e.dataTransfer?.types.includes('Files')) return
           e.preventDefault()
-          e.dataTransfer.dropEffect = 'move'
+          e.dataTransfer.dropEffect = 'copy'
         },
         onDragLeave: (e: React.DragEvent) => {
-          // Only clear when leaving the container, not when crossing children
           if (e.currentTarget === e.target) setIsDragOver(false)
         },
         onDrop: (e: React.DragEvent) => {
+          if (!e.dataTransfer?.types.includes('Files')) return
           e.preventDefault()
           setIsDragOver(false)
-          // Photo reorder?
-          const mediaId = e.dataTransfer.getData('text/media-id')
-          if (mediaId) {
-            onDrop(mediaId, dayId)
-            return
-          }
-          // Native file drop?
-          if (e.dataTransfer.files.length > 0) {
-            handleFiles(e.dataTransfer.files)
-          }
+          if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files)
         },
       }
     : {}
 
   const hasPhotos = media.length > 0 || uploading > 0
-  const showSection = owner || hasPhotos
-  if (!showSection) return null
+  // Не-owner без фото — блок не рендерим совсем
+  if (!owner && !hasPhotos) return null
 
   return (
     <div
       {...dropHandlers}
-      className={`relative rounded-lg transition-colors ${
+      className={`relative rounded-lg transition-shadow ${
         isDragOver ? 'ring-2 ring-accent ring-offset-2' : ''
-      } ${className || ''}`}
+      }`}
     >
       {owner && (
         <input
@@ -116,7 +104,6 @@ export default function PhotosBlock({
               onDelete={() => onDelete(m.id)}
             />
           ))}
-          {/* Upload placeholders */}
           {Array.from({ length: uploading }).map((_, i) => (
             <div
               key={`up-${i}`}
@@ -125,7 +112,6 @@ export default function PhotosBlock({
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ))}
-          {/* Upload tile — always last (owner only) */}
           {owner && (
             <button
               type="button"
@@ -146,9 +132,7 @@ export default function PhotosBlock({
             className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border py-8 text-muted-foreground transition-colors hover:border-accent hover:text-accent"
           >
             <ImagePlus className="h-6 w-6" />
-            <span className="text-xs">
-              {emptyHint || 'Upload photos or drag here'}
-            </span>
+            <span className="text-xs">{emptyHint || 'Add photos'}</span>
           </button>
         )
       )}

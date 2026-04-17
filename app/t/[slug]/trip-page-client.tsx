@@ -12,9 +12,7 @@ import { TripEditorChat, StickyBottomBar } from '@/components/trip/trip-editor-c
 import { apiFetch } from '@/lib/api'
 import {
   uploadPhoto,
-  setPhotoDay,
   deletePhoto,
-  fetchOwnerMedia,
   type MediaRecord,
 } from '@/lib/upload-photo'
 
@@ -111,7 +109,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const [uploadingByDay, setUploadingByDay] = useState<Record<string, number>>({})
   const [lightbox, setLightbox] = useState<MediaRecord | null>(null)
 
-  // Owner check + fetch full media list (including unassigned)
+  // Owner-detect (показываем кнопки upload/delete только владельцу)
   useEffect(() => {
     const projectId = data?.project?.id
     if (!isLoaded || !isSignedIn || !projectId) return
@@ -123,8 +121,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
         const ownRes = await apiFetch(`/api/projects/by-id/${projectId}`, { token })
         if (!ownRes.ok || cancelled) return
         setIsOwner(true)
-        const full = await fetchOwnerMedia(projectId, token)
-        if (!cancelled) setMedia(full)
       } catch {
         /* not owner */
       }
@@ -133,6 +129,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
       cancelled = true
     }
   }, [isLoaded, isSignedIn, getToken, data?.project?.id])
+
+  // Sync media when initialData changes (e.g., after polling completes)
+  useEffect(() => {
+    if (initialData?.media) setMedia(initialData.media as MediaRecord[])
+  }, [initialData])
 
   const bumpUploading = (key: string, delta: number) =>
     setUploadingByDay((prev) => {
@@ -145,7 +146,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
     async (files: File[], dayId: string | null) => {
       const projectId = data?.project?.id
       if (!projectId) return
-      const key = dayId || 'unassigned'
+      const key = dayId || 'tour'
       const token = await getToken()
       if (!token) {
         toast.error('Please sign in again')
@@ -166,25 +167,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
       )
     },
     [data?.project?.id, getToken],
-  )
-
-  const handleMove = useCallback(
-    async (mediaId: string, dayId: string | null) => {
-      const prev = media.find((m) => m.id === mediaId)
-      if (!prev || prev.day_id === dayId) return
-      // Optimistic
-      setMedia((cur) => cur.map((m) => (m.id === mediaId ? { ...m, day_id: dayId } : m)))
-      try {
-        const token = await getToken()
-        if (!token) throw new Error('No token')
-        await setPhotoDay(mediaId, dayId, token)
-      } catch (e: any) {
-        // Rollback
-        setMedia((cur) => cur.map((m) => (m.id === mediaId ? { ...m, day_id: prev.day_id } : m)))
-        toast.error(e?.message || 'Could not move photo')
-      }
-    },
-    [media, getToken],
   )
 
   const handleDelete = useCallback(
@@ -376,28 +358,26 @@ export default function TripPageClient({ slug, initialData }: Props) {
           </section>
         )}
 
-        {/* Unassigned gallery — owner only, only when there are unassigned photos or the owner wants to upload */}
-        {isOwner && (
-          <section>
-            <div className="flex items-baseline justify-between mb-4">
-              <h2 className="text-2xl font-serif font-bold">Photos</h2>
-              <span className="text-xs text-muted-foreground">
-                Drag photos onto a day to attach them
-              </span>
-            </div>
-            <PhotosBlock
-              dayId={null}
-              media={media.filter((m) => !m.day_id)}
-              owner={isOwner}
-              uploading={uploadingByDay['unassigned'] || 0}
-              onUpload={handleUpload}
-              onDrop={handleMove}
-              onDelete={handleDelete}
-              onOpen={setLightbox}
-              emptyHint="Drop photos here to keep them unassigned"
-            />
-          </section>
-        )}
+        {(() => {
+          const tourMedia = media.filter((m) => !m.day_id)
+          const showTourPhotos = isOwner || tourMedia.length > 0
+          if (!showTourPhotos) return null
+          return (
+            <section>
+              <h2 className="text-2xl font-serif font-bold mb-4">Photos</h2>
+              <PhotosBlock
+                dayId={null}
+                media={tourMedia}
+                owner={isOwner}
+                uploading={uploadingByDay['tour'] || 0}
+                onUpload={handleUpload}
+                onDelete={handleDelete}
+                onOpen={setLightbox}
+                emptyHint="Add photos that represent the whole trip"
+              />
+            </section>
+          )
+        })()}
 
         {itinerary.length > 0 && (
           <section>
@@ -439,7 +419,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
                           owner={isOwner}
                           uploading={uploadingByDay[day.id] || 0}
                           onUpload={handleUpload}
-                          onDrop={handleMove}
                           onDelete={handleDelete}
                           onOpen={setLightbox}
                         />
