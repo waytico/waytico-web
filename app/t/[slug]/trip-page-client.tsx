@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import ActivateButton from '@/components/activate-button'
 import ActivationToast from '@/components/activation-toast'
+import ShareMenu from '@/components/share-menu'
 import PhotosBlock from '@/components/photos-block'
 import PhotoLightbox from '@/components/photo-lightbox'
 import { TripCommandBar } from '@/components/trip/trip-command-bar'
@@ -406,6 +407,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 </button>
               )}
               {p.id && <ActivateButton projectId={p.id} publicStatus={p.status} />}
+              {p.id && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
             </div>
 
             {/* Drop indicator when dragging files */}
@@ -696,6 +698,66 @@ export default function TripPageClient({ slug, initialData }: Props) {
             </div>
           </section>
         )}
+
+        {/* Active-trip sections: preparation tasks + downloadable documents */}
+        {p.status === 'active' && Array.isArray(data.tasks) && data.tasks.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-serif font-bold mb-6">Before you go</h2>
+            <div className="space-y-3">
+              {[...data.tasks]
+                .sort((a: any, b: any) => {
+                  const ad = a.deadline || '9999-12-31'
+                  const bd = b.deadline || '9999-12-31'
+                  if (ad !== bd) return ad.localeCompare(bd)
+                  return (a.sort_order ?? 0) - (b.sort_order ?? 0)
+                })
+                .map((t: any) => (
+                  <div key={t.id} className="border border-border rounded-lg p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="font-medium">{t.title}</h3>
+                      {t.deadline && (
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          by {new Date(t.deadline).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </span>
+                      )}
+                    </div>
+                    {t.description && (
+                      <p className="text-sm text-foreground/70 mt-1">{t.description}</p>
+                    )}
+                  </div>
+                ))}
+            </div>
+          </section>
+        )}
+
+        {p.status === 'active' &&
+          Array.isArray(data.media) &&
+          data.media.filter((m: any) => m.type === 'document').length > 0 && (
+            <section>
+              <h2 className="text-2xl font-serif font-bold mb-6">Documents</h2>
+              <div className="grid gap-2">
+                {data.media
+                  .filter((m: any) => m.type === 'document')
+                  .map((m: any) => (
+                    <a
+                      key={m.id}
+                      href={m.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-secondary transition-colors"
+                    >
+                      <span className="text-sm truncate text-foreground/80">
+                        {m.caption || 'Document'}
+                      </span>
+                      <span className="text-xs text-accent flex-shrink-0 ml-3">Download ↗</span>
+                    </a>
+                  ))}
+              </div>
+            </section>
+          )}
 
         <footer className="border-t border-border pt-8 pb-12 text-center">
           <p className="text-sm text-muted-foreground">
