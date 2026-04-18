@@ -593,6 +593,58 @@ export default function TripPageClient({ slug, initialData }: Props) {
                         {typeof day.accommodation === 'string' ? day.accommodation : day.accommodation.name}
                       </p>
                     )}
+                    {Array.isArray(day.segments) && day.segments.length > 0 && (
+                      <div className="pl-[52px] pt-2 space-y-3 border-l border-border/50 ml-[18px]">
+                        {[...day.segments]
+                          .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+                          .map((s: any) => (
+                            <div key={s.id} className="relative pl-4">
+                              <span className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full bg-accent" />
+                              <div className="flex items-baseline gap-3">
+                                {s.startTime && (
+                                  <span className="text-xs font-mono text-muted-foreground w-12 flex-shrink-0">
+                                    {s.startTime}
+                                  </span>
+                                )}
+                                <h4 className="font-medium text-sm">{s.title}</h4>
+                              </div>
+                              {s.notes && (
+                                <p className={`text-sm text-foreground/70 mt-1 ${s.startTime ? 'ml-[60px]' : ''}`}>
+                                  {s.notes}
+                                </p>
+                              )}
+                              {s.location?.name && (
+                                <div className={`text-xs text-muted-foreground mt-1 ${s.startTime ? 'ml-[60px]' : ''}`}>
+                                  {s.location.name}
+                                  {typeof s.location.latitude === 'number' && typeof s.location.longitude === 'number' && (
+                                    <a
+                                      href={`https://www.google.com/maps?q=${s.location.latitude},${s.location.longitude}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="ml-2 text-accent hover:underline"
+                                    >
+                                      Map ↗
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                              {s.contact?.phone && (
+                                <a
+                                  href={`tel:${s.contact.phone}`}
+                                  className={`text-xs text-accent hover:underline mt-1 block ${s.startTime ? 'ml-[60px]' : ''}`}
+                                >
+                                  📞 {s.contact.phone}
+                                </a>
+                              )}
+                              {s.reference && (
+                                <div className={`text-xs font-mono text-muted-foreground mt-1 ${s.startTime ? 'ml-[60px]' : ''}`}>
+                                  {s.reference}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                      </div>
+                    )}
                     {day.id && (dayMedia.length > 0 || isOwner) && (
                       <div className="pl-[52px] pt-2">
                         <PhotosBlock
