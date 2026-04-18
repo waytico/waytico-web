@@ -1,0 +1,108 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
+
+type Props = {
+  title: string
+  url: string
+  publicStatus: string
+}
+
+/**
+ * Share menu — dropdown with 4 channels for sending the trip quote to a client.
+ * Visible only while the trip is in 'quoted' status (pre-activation).
+ */
+export default function ShareMenu({ title, url, publicStatus }: Props) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    document.addEventListener('keydown', onEsc)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('keydown', onEsc)
+    }
+  }, [open])
+
+  if (publicStatus !== 'quoted') return null
+
+  const message = `${title} — ${url}`
+  const mailto = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(url)}`
+  const whatsapp = `https://wa.me/?text=${encodeURIComponent(message)}`
+  const telegram = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success('Link copied')
+    } catch {
+      toast.error('Could not copy')
+    }
+    setOpen(false)
+  }
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center justify-center gap-2 bg-secondary text-secondary-foreground font-medium px-5 py-3 rounded-full hover:bg-secondary/80 transition-colors"
+      >
+        Share with client
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute left-1/2 -translate-x-1/2 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-20"
+        >
+          <a
+            role="menuitem"
+            href={mailto}
+            onClick={() => setOpen(false)}
+            className="block px-4 py-2 text-sm hover:bg-secondary transition-colors"
+          >
+            Email
+          </a>
+          <a
+            role="menuitem"
+            href={whatsapp}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+            className="block px-4 py-2 text-sm hover:bg-secondary transition-colors"
+          >
+            WhatsApp
+          </a>
+          <a
+            role="menuitem"
+            href={telegram}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+            className="block px-4 py-2 text-sm hover:bg-secondary transition-colors"
+          >
+            Telegram
+          </a>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={copy}
+            className="block w-full text-left px-4 py-2 text-sm hover:bg-secondary transition-colors"
+          >
+            Copy link
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
