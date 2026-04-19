@@ -396,7 +396,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
               </>
             )}
 
-            {/* Top-right: Activate + (owner) Delete hero on hover */}
+            {/* Top-right desktop: Activate + Share. On mobile these move
+                under the title (see block below). Delete-hero stays here
+                at all sizes — it's a small icon that doesn't crowd. */}
             <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
               {isOwner && hasBg && heroPhoto && (
                 <button
@@ -411,8 +413,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   <Trash2 className="h-4 w-4" />
                 </button>
               )}
-              {p.id && <ActivateButton projectId={p.id} publicStatus={p.status} />}
-              {p.id && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
+              <div className="hidden md:flex items-center gap-2">
+                {p.id && <ActivateButton projectId={p.id} publicStatus={p.status} />}
+                {p.id && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
+              </div>
             </div>
 
             {/* Drop indicator when dragging files */}
@@ -521,6 +525,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
                     <ImagePlus className="h-4 w-4" />
                     {uploadingHero > 0 ? 'Uploading…' : 'Add hero photo'}
                   </button>
+                </div>
+              )}
+
+              {/* Mobile-only: Activate + Share (moved here from top-right so
+                  they don't overlap the title on narrow viewports). */}
+              {p.id && (
+                <div className="md:hidden pt-4 flex flex-wrap items-center justify-center gap-3">
+                  <ActivateButton projectId={p.id} publicStatus={p.status} />
+                  <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />
                 </div>
               )}
             </div>
