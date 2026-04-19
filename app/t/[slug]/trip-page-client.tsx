@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { ImagePlus, Trash2 } from 'lucide-react'
+import { ImagePlus, Trash2, Check, X } from 'lucide-react'
 import ActivateButton from '@/components/activate-button'
 import ActivationToast from '@/components/activation-toast'
 import ShareMenu from '@/components/share-menu'
@@ -672,7 +672,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
               {p.included && (
                 <div className="space-y-3">
                   <h3 className="font-semibold text-accent flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs">✓</span>
+                    <span className="w-6 h-6 rounded-full bg-success/15 text-success flex items-center justify-center">
+                      <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    </span>
                     Included
                   </h3>
                   <ul className="space-y-2">
@@ -685,7 +687,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
               {p.not_included && (
                 <div className="space-y-3">
                   <h3 className="font-semibold text-foreground/70 flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-red-50 text-red-400 flex items-center justify-center text-xs">✕</span>
+                    <span className="w-6 h-6 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+                      <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    </span>
                     Not Included
                   </h3>
                   <ul className="space-y-2">
