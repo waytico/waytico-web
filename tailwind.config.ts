@@ -17,7 +17,11 @@ export default {
         secondary: { DEFAULT: "#F5F1EB", foreground: "#2C2420" },
         muted: { DEFAULT: "#D9D0C8", foreground: "#8B7F78" },
         accent: { DEFAULT: "#C4622D", foreground: "#FFFFFE" },
-        destructive: { DEFAULT: "#DC2626", foreground: "#FFFFFE" },
+        // Warm neutral for hover/selected backgrounds on outline/ghost UI
+        highlight: { DEFAULT: "#F0E4DA", foreground: "#2C2420" },
+        // Brand-aligned semantic statuses
+        success: { DEFAULT: "#6B8E5A", foreground: "#FFFFFE" },
+        destructive: { DEFAULT: "#B54848", foreground: "#FFFFFE" },
         border: "#E8DFD5",
         input: "#FFFFFE",
         ring: "#C4622D",
