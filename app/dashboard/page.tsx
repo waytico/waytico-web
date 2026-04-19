@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import ChatFlow from '@/components/chat-flow'
+import Header from '@/components/header'
 import ProjectCard, { type Project, type ProjectStatus } from '@/components/project-card'
 import { apiFetch } from '@/lib/api'
 
@@ -138,61 +139,101 @@ export default function DashboardPage() {
   const archivedCount = groups ? groups.archived.length : 0
 
   return (
-    <div className="min-h-[calc(100vh-73px)] bg-background text-foreground">
-      <main className="max-w-4xl mx-auto px-4 py-10">
-        {(!isLoaded || projects === null) && <SkeletonList />}
+    <>
+      <Header />
+      <div className="min-h-[calc(100vh-73px)] bg-background text-foreground">
+        <main className="max-w-4xl mx-auto px-4 py-10">
+          {(!isLoaded || projects === null) && <SkeletonList />}
 
-        {isLoaded && projects !== null && projects.length === 0 && <EmptyState />}
+          {isLoaded && projects !== null && projects.length === 0 && <EmptyState />}
 
-        {isLoaded && projects !== null && projects.length > 0 && groups && (
-          <>
-            <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-              <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight">
-                Your trips
-              </h1>
-              <label className="flex items-center gap-2 text-sm text-foreground/70">
-                <span className="sr-only sm:not-sr-only">Sort:</span>
-                <select
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value as SortOption)}
-                  className="bg-card border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
-                  aria-label="Sort projects"
-                >
-                  <option value="updated_desc">Newest updated</option>
-                  <option value="updated_asc">Oldest updated</option>
-                  <option value="title_asc">Title A–Z</option>
-                  <option value="title_desc">Title Z–A</option>
-                  <option value="region_asc">Region A–Z</option>
-                </select>
-              </label>
-            </div>
+          {isLoaded && projects !== null && projects.length > 0 && groups && (
+            <>
+              <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+                <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight">
+                  Your trips
+                </h1>
+                <label className="flex items-center gap-2 text-sm text-foreground/70">
+                  <span className="sr-only sm:not-sr-only">Sort:</span>
+                  <select
+                    value={sort}
+                    onChange={(e) => setSort(e.target.value as SortOption)}
+                    className="bg-card border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                    aria-label="Sort projects"
+                  >
+                    <option value="updated_desc">Newest updated</option>
+                    <option value="updated_asc">Oldest updated</option>
+                    <option value="title_asc">Title A–Z</option>
+                    <option value="title_desc">Title Z–A</option>
+                    <option value="region_asc">Region A–Z</option>
+                  </select>
+                </label>
+              </div>
 
-            {!hasAnyActive && archivedCount === 0 && (
-              <p className="text-foreground/60 text-sm">
-                No trips yet.
-              </p>
-            )}
+              {!hasAnyActive && archivedCount === 0 && (
+                <p className="text-foreground/60 text-sm">
+                  No trips yet.
+                </p>
+              )}
 
-            {!hasAnyActive && archivedCount > 0 && (
-              <p className="text-foreground/60 text-sm mb-4">
-                No active trips. Only archived below.
-              </p>
-            )}
+              {!hasAnyActive && archivedCount > 0 && (
+                <p className="text-foreground/60 text-sm mb-4">
+                  No active trips. Only archived below.
+                </p>
+              )}
 
-            <div className="space-y-10">
-              {ACTIVE_GROUP_ORDER.map((status) => {
-                const items = groups[status]
-                if (items.length === 0) return null
-                return (
-                  <section key={status}>
-                    <h2 className="font-serif text-2xl tracking-tight mb-3">
-                      {GROUP_LABEL[status]}
-                      <span className="text-foreground/50 text-base font-sans ml-2">
-                        {items.length}
-                      </span>
-                    </h2>
-                    <div className="space-y-3">
-                      {items.map((p) => (
+              <div className="space-y-10">
+                {ACTIVE_GROUP_ORDER.map((status) => {
+                  const items = groups[status]
+                  if (items.length === 0) return null
+                  return (
+                    <section key={status}>
+                      <h2 className="font-serif text-2xl tracking-tight mb-3">
+                        {GROUP_LABEL[status]}
+                        <span className="text-foreground/50 text-base font-sans ml-2">
+                          {items.length}
+                        </span>
+                      </h2>
+                      <div className="space-y-3">
+                        {items.map((p) => (
+                          <ProjectCard
+                            key={p.id}
+                            project={p}
+                            onUpdate={handleUpdate}
+                            onDelete={handleDelete}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )
+                })}
+              </div>
+
+              {archivedCount > 0 && (
+                <section className="mt-10 pt-6 border-t border-border/50">
+                  <button
+                    type="button"
+                    onClick={() => setArchivedOpen((v) => !v)}
+                    className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors group"
+                    aria-expanded={archivedOpen}
+                    aria-controls="archived-list"
+                  >
+                    {archivedOpen ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                    <span className="font-serif text-xl tracking-tight">
+                      Archived
+                    </span>
+                    <span className="text-foreground/40 text-sm font-sans">
+                      {archivedCount}
+                    </span>
+                  </button>
+
+                  {archivedOpen && (
+                    <div id="archived-list" className="space-y-3 mt-4">
+                      {groups.archived.map((p) => (
                         <ProjectCard
                           key={p.id}
                           project={p}
@@ -201,50 +242,13 @@ export default function DashboardPage() {
                         />
                       ))}
                     </div>
-                  </section>
-                )
-              })}
-            </div>
-
-            {archivedCount > 0 && (
-              <section className="mt-10 pt-6 border-t border-border/50">
-                <button
-                  type="button"
-                  onClick={() => setArchivedOpen((v) => !v)}
-                  className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors group"
-                  aria-expanded={archivedOpen}
-                  aria-controls="archived-list"
-                >
-                  {archivedOpen ? (
-                    <ChevronDown className="w-4 h-4" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4" />
                   )}
-                  <span className="font-serif text-xl tracking-tight">
-                    Archived
-                  </span>
-                  <span className="text-foreground/40 text-sm font-sans">
-                    {archivedCount}
-                  </span>
-                </button>
-
-                {archivedOpen && (
-                  <div id="archived-list" className="space-y-3 mt-4">
-                    {groups.archived.map((p) => (
-                      <ProjectCard
-                        key={p.id}
-                        project={p}
-                        onUpdate={handleUpdate}
-                        onDelete={handleDelete}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
-            )}
-          </>
-        )}
-      </main>
-    </div>
+                </section>
+              )}
+            </>
+          )}
+        </main>
+      </div>
+    </>
   )
 }

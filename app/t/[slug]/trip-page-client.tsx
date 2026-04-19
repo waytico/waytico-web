@@ -10,6 +10,7 @@ import ActivationToast from '@/components/activation-toast'
 import ShareMenu from '@/components/share-menu'
 import PhotosBlock from '@/components/photos-block'
 import PhotoLightbox from '@/components/photo-lightbox'
+import Header from '@/components/header'
 import { TripCommandBar } from '@/components/trip/trip-command-bar'
 import { apiFetch } from '@/lib/api'
 import {
@@ -276,6 +277,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Global header only for the trip owner. Clients/guests see a clean,
+          agency-proposal-style page without the Waytico SaaS chrome. */}
+      {isOwner && <Header />}
+
       {/* Stripe return flow (?activated=1 / ?cancelled=1) */}
       <ActivationToast />
 
