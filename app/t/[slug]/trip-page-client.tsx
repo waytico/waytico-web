@@ -271,7 +271,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
   }
 
   const p = data.project
-  const locations = data.locations || []
   const itinerary: any[] = p.itinerary || []
   const shareUrl = `${APP_URL}/t/${slug}`
 
@@ -717,30 +716,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   </ul>
                 </div>
               )}
-            </div>
-          </section>
-        )}
-
-        {locations.length > 0 && (
-          <section>
-            <h2 className="text-2xl font-serif font-bold mb-6">Locations</h2>
-            <div className="grid gap-3">
-              {locations.map((loc) => (
-                <div key={loc.id} className="flex items-center gap-3 p-3 border border-border rounded-lg">
-                  <span className="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-bold">
-                    {loc.day_number || '·'}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{loc.name}</p>
-                    <p className="text-xs text-muted-foreground">{loc.type}{loc.notes ? ` · ${loc.notes}` : ''}</p>
-                  </div>
-                  <a href={`https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="text-xs text-accent hover:underline flex-shrink-0">
-                    Map ↗
-                  </a>
-                </div>
-              ))}
             </div>
           </section>
         )}
