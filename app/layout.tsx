@@ -26,7 +26,41 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        variables: {
+          colorPrimary: '#C4622D',
+          colorBackground: '#FAF8F5',
+          colorInputBackground: '#FFFFFE',
+          colorText: '#2C2420',
+          colorTextSecondary: '#8B7F78',
+          colorDanger: '#B54848',
+          colorSuccess: '#6B8E5A',
+          colorNeutral: '#2C2420',
+          colorShimmer: '#F0E4DA',
+          borderRadius: '0.625rem',
+          fontFamily: 'var(--font-sans), ui-sans-serif, system-ui, sans-serif',
+          fontFamilyButtons: 'var(--font-sans), ui-sans-serif, system-ui, sans-serif',
+          fontSize: '0.9375rem',
+        },
+        elements: {
+          rootBox: 'mx-auto',
+          card: 'bg-card border border-border shadow-sm',
+          headerTitle: 'font-serif text-2xl text-foreground',
+          headerSubtitle: 'text-muted-foreground',
+          formButtonPrimary:
+            'bg-accent hover:bg-accent/90 text-accent-foreground font-semibold shadow-none normal-case',
+          formFieldLabel: 'text-foreground/80 text-sm font-medium',
+          formFieldInput:
+            'bg-input border border-border text-foreground focus:border-accent focus:ring-2 focus:ring-accent/30',
+          socialButtonsBlockButton:
+            'border border-border hover:bg-highlight text-foreground',
+          socialButtonsBlockButtonText: 'font-medium',
+          footerActionLink: 'text-accent hover:text-accent/80',
+          identityPreviewEditButton: 'text-accent hover:text-accent/80',
+        },
+      }}
+    >
       <html lang="en" className={`${cormorant.variable} ${dmSans.variable}`}>
         <body className="font-sans antialiased">
           <Header />
