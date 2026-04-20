@@ -15,6 +15,7 @@ export type Project = {
   status: ProjectStatus
   region: string | null
   country: string | null
+  cover_url: string | null
   updated_at: string
   created_at: string
 }
@@ -187,57 +188,78 @@ export default function ProjectCard({ project, onUpdate, onDelete }: Props) {
   return (
     <div
       className={
-        'border border-border rounded-lg p-4 bg-card hover:border-accent transition-colors relative ' +
+        'border border-border rounded-lg bg-card hover:border-accent transition-colors relative overflow-hidden ' +
         (busy ? 'opacity-60 pointer-events-none' : '')
       }
     >
-      <div className="absolute top-2 right-2">
+      {/* Cover thumbnail (only if there's a hero / cover image) */}
+      {project.cover_url && (
+        <Link
+          href={`/t/${project.slug}`}
+          className="block aspect-[16/9] w-full overflow-hidden bg-secondary"
+          aria-label={`Open ${project.title}`}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={project.cover_url}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+        </Link>
+      )}
+
+      {/* Action menu — on top of cover if present, else top-right of text area */}
+      <div className={project.cover_url ? 'absolute top-2 right-2 z-10' : 'absolute top-2 right-2'}>
         <ActionMenu items={items} />
       </div>
 
-      <div className="pr-8">
-        {editing ? (
-          <input
-            ref={inputRef}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={save}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                ;(e.target as HTMLInputElement).blur()
-              }
-              if (e.key === 'Escape') {
-                e.preventDefault()
-                cancel()
-                ;(e.target as HTMLInputElement).blur()
-              }
-            }}
-            disabled={saving}
-            className="font-serif text-xl w-full border-b border-accent bg-transparent outline-none disabled:opacity-60"
-            aria-label="Edit project title"
-          />
-        ) : (
-          <h3
-            onClick={() => setEditing(true)}
-            className="font-serif text-xl cursor-text leading-tight"
-            title="Click to rename"
-          >
-            {project.title}
-          </h3>
-        )}
-      </div>
-
-      <Link
-        href={`/t/${project.slug}`}
-        className="block mt-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
-      >
-        <div>{[project.region, project.country].filter(Boolean).join(', ') || '—'}</div>
-        <div className="flex items-center gap-2 mt-2">
-          <StatusBadge status={project.status} />
-          <span>Updated {formatDate(project.updated_at)}</span>
+      <div className="p-4">
+        <div className="pr-8">
+          {editing ? (
+            <input
+              ref={inputRef}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={save}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  ;(e.target as HTMLInputElement).blur()
+                }
+                if (e.key === 'Escape') {
+                  e.preventDefault()
+                  cancel()
+                  ;(e.target as HTMLInputElement).blur()
+                }
+              }}
+              disabled={saving}
+              className="font-serif text-xl w-full border-b border-accent bg-transparent outline-none disabled:opacity-60"
+              aria-label="Edit project title"
+            />
+          ) : (
+            <h3
+              onClick={() => setEditing(true)}
+              className="font-serif text-xl cursor-text leading-tight"
+              title="Click to rename"
+            >
+              {project.title}
+            </h3>
+          )}
         </div>
-      </Link>
+
+        <Link
+          href={`/t/${project.slug}`}
+          className="block mt-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
+        >
+          <div>{[project.region, project.country].filter(Boolean).join(', ') || '—'}</div>
+          <div className="flex items-center gap-2 mt-2">
+            <StatusBadge status={project.status} />
+            <span>Updated {formatDate(project.updated_at)}</span>
+          </div>
+        </Link>
+      </div>
     </div>
   )
 }
