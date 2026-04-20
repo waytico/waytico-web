@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { ImagePlus, Trash2, Check, X } from 'lucide-react'
+import { ImagePlus, Trash2, Check, X, Eye, EyeOff, FileText, Upload } from 'lucide-react'
 import ActivateButton from '@/components/activate-button'
 import ActivationToast from '@/components/activation-toast'
 import ShareMenu from '@/components/share-menu'
@@ -109,36 +109,58 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const [media, setMedia] = useState<MediaRecord[]>(
     (initialData?.media as MediaRecord[]) || [],
   )
+  const [tasks, setTasks] = useState<any[]>(initialData?.tasks || [])
   const [uploadingByDay, setUploadingByDay] = useState<Record<string, number>>({})
   const [lightbox, setLightbox] = useState<MediaRecord | null>(null)
   const [heroDragOver, setHeroDragOver] = useState(false)
+  const [docDragOver, setDocDragOver] = useState(false)
+  const [uploadingDoc, setUploadingDoc] = useState(false)
   const heroInputRef = useRef<HTMLInputElement | null>(null)
+  const docInputRef = useRef<HTMLInputElement | null>(null)
 
-  // Owner-detect (показываем кнопки upload/delete только владельцу)
+  // Owner-detect + full payload fetch. /:id/full returns 200 only if the
+  // caller owns the project; in that case the response also contains all
+  // tasks/media (including hidden ones) with their visible_to_client flag.
+  const refreshOwnerData = useCallback(async () => {
+    const projectId = data?.project?.id
+    if (!projectId) return false
+    try {
+      const token = await getToken()
+      if (!token) return false
+      const ownRes = await apiFetch(`/api/projects/${projectId}/full`, { token })
+      if (!ownRes.ok) return false
+      const payload = await ownRes.json()
+      setIsOwner(true)
+      if (Array.isArray(payload.tasks)) setTasks(payload.tasks)
+      if (Array.isArray(payload.media)) setMedia(payload.media as MediaRecord[])
+      return true
+    } catch {
+      return false
+    }
+  }, [data?.project?.id, getToken])
+
   useEffect(() => {
     const projectId = data?.project?.id
     if (!isLoaded || !isSignedIn || !projectId) return
     let cancelled = false
     ;(async () => {
-      try {
-        const token = await getToken()
-        if (!token) return
-        const ownRes = await apiFetch(`/api/projects/by-id/${projectId}`, { token })
-        if (!ownRes.ok || cancelled) return
-        setIsOwner(true)
-      } catch {
-        /* not owner */
-      }
+      const ok = await refreshOwnerData()
+      if (cancelled) return
+      // If not owner, keep the public view as-is (initialData is already filtered)
+      void ok
     })()
     return () => {
       cancelled = true
     }
-  }, [isLoaded, isSignedIn, getToken, data?.project?.id])
+  }, [isLoaded, isSignedIn, refreshOwnerData, data?.project?.id])
 
-  // Sync media when initialData changes (e.g., after polling completes)
+  // Sync media/tasks when initialData changes (e.g., after polling completes).
+  // Only applies when we don't have the richer owner payload yet.
   useEffect(() => {
+    if (isOwner) return
     if (initialData?.media) setMedia(initialData.media as MediaRecord[])
-  }, [initialData])
+    if (initialData?.tasks) setTasks(initialData.tasks)
+  }, [initialData, isOwner])
 
   const bumpUploading = (key: string, delta: number) =>
     setUploadingByDay((prev) => {
@@ -241,12 +263,164 @@ export default function TripPageClient({ slug, initialData }: Props) {
       if (res.ok) {
         const d = await res.json()
         setData(d)
-        if (Array.isArray(d.media)) setMedia(d.media as MediaRecord[])
+        // If owner, refresh the richer payload (including hidden items + flags).
+        // Otherwise fall back to public data for tasks/media.
+        const refreshed = isOwner ? await refreshOwnerData() : false
+        if (!refreshed) {
+          if (Array.isArray(d.media)) setMedia(d.media as MediaRecord[])
+          if (Array.isArray(d.tasks)) setTasks(d.tasks)
+        }
       }
     } catch {
       /* ignore */
     }
-  }, [slug])
+  }, [slug, isOwner, refreshOwnerData])
+
+  // ─── Visibility toggles (owner only) ──────────────────────────
+  const toggleTaskVisibility = useCallback(
+    async (taskId: string, nextVisible: boolean) => {
+      const prev = tasks
+      // Optimistic
+      setTasks((cur) =>
+        cur.map((t) => (t.id === taskId ? { ...t, visible_to_client: nextVisible } : t)),
+      )
+      try {
+        const token = await getToken()
+        const res = await apiFetch(`/api/tasks/${taskId}`, {
+          method: 'PATCH',
+          token,
+          body: JSON.stringify({ visibleToClient: nextVisible }),
+        })
+        if (!res.ok) throw new Error(`PATCH task failed (${res.status})`)
+        toast.success(nextVisible ? 'Visible to client' : 'Hidden from client')
+      } catch (err: any) {
+        setTasks(prev)
+        toast.error(err?.message || 'Could not update task')
+      }
+    },
+    [tasks, getToken],
+  )
+
+  const toggleMediaVisibility = useCallback(
+    async (mediaId: string, nextVisible: boolean) => {
+      const prev = media
+      setMedia((cur) =>
+        cur.map((m) =>
+          m.id === mediaId ? ({ ...m, visible_to_client: nextVisible } as MediaRecord) : m,
+        ),
+      )
+      try {
+        const token = await getToken()
+        const res = await apiFetch(`/api/media/${mediaId}`, {
+          method: 'PATCH',
+          token,
+          body: JSON.stringify({ visibleToClient: nextVisible }),
+        })
+        if (!res.ok) throw new Error(`PATCH media failed (${res.status})`)
+        toast.success(nextVisible ? 'Visible to client' : 'Hidden from client')
+      } catch (err: any) {
+        setMedia(prev)
+        toast.error(err?.message || 'Could not update document')
+      }
+    },
+    [media, getToken],
+  )
+
+  const deleteDocument = useCallback(
+    async (mediaId: string) => {
+      const prev = media
+      setMedia((cur) => cur.filter((m) => m.id !== mediaId))
+      try {
+        const token = await getToken()
+        const res = await apiFetch(`/api/media/${mediaId}`, {
+          method: 'DELETE',
+          token,
+        })
+        if (!res.ok && res.status !== 204) {
+          throw new Error(`Delete failed (${res.status})`)
+        }
+        toast.success('Document removed')
+      } catch (err: any) {
+        setMedia(prev)
+        toast.error(err?.message || 'Could not delete document')
+      }
+    },
+    [media, getToken],
+  )
+
+  // ─── Document upload (owner only) ─────────────────────────────
+  const DOC_MIMES = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'image/jpeg',
+    'image/png',
+  ]
+  const DOC_MAX_SIZE = 10 * 1024 * 1024
+
+  const handleDocumentUpload = useCallback(
+    async (files: File[]) => {
+      const projectId = data?.project?.id
+      if (!projectId || files.length === 0) return
+      const token = await getToken()
+      if (!token) {
+        toast.error('Please sign in again')
+        return
+      }
+
+      for (const file of files) {
+        if (!DOC_MIMES.includes(file.type)) {
+          toast.error(`Unsupported: ${file.name}. Use PDF, DOCX, XLSX, JPEG or PNG.`)
+          continue
+        }
+        if (file.size > DOC_MAX_SIZE) {
+          toast.error(`Too large: ${file.name} (max 10MB).`)
+          continue
+        }
+
+        setUploadingDoc(true)
+        try {
+          const fd = new FormData()
+          fd.append('file', file)
+          const res = await fetch(`${API_URL}/api/projects/${projectId}/documents`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd,
+          })
+          if (!res.ok) {
+            const errBody = await res.json().catch(() => ({}))
+            throw new Error(errBody.error || `Upload failed (${res.status})`)
+          }
+          const body = await res.json()
+          const appliedCount = Array.isArray(body?.applied?.changes)
+            ? body.applied.changes.filter(
+                (c: any) => c.action === 'created' || c.action === 'task_created',
+              ).length
+            : 0
+          toast.success(
+            appliedCount > 0
+              ? `Uploaded — ${appliedCount} item${appliedCount === 1 ? '' : 's'} added to itinerary`
+              : 'Document uploaded',
+          )
+        } catch (err: any) {
+          toast.error(err?.message || `Upload failed: ${file.name}`)
+        } finally {
+          setUploadingDoc(false)
+        }
+      }
+
+      // Refresh — auto-apply may have added segments + tasks. Refetch both public trip data and owner payload.
+      try {
+        const pubRes = await fetch(`${API_URL}/api/public/projects/${slug}`, { cache: 'no-store' })
+        if (pubRes.ok) setData(await pubRes.json())
+      } catch {
+        /* ignore */
+      }
+      await refreshOwnerData()
+    },
+    [data?.project?.id, getToken, slug, refreshOwnerData],
+  )
+  // ──────────────────────────────────────────────────────────────
   // ──────────────────────────────────────────────────────────
 
   const isReady = data && data.project?.status !== 'generating'
@@ -749,64 +923,213 @@ export default function TripPageClient({ slug, initialData }: Props) {
         )}
 
         {/* Active-trip sections: preparation tasks + downloadable documents */}
-        {p.status === 'active' && Array.isArray(data.tasks) && data.tasks.length > 0 && (
-          <section>
-            <h2 className="text-2xl font-serif font-bold mb-6">Before you go</h2>
-            <div className="space-y-3">
-              {[...data.tasks]
-                .sort((a: any, b: any) => {
-                  const ad = a.deadline || '9999-12-31'
-                  const bd = b.deadline || '9999-12-31'
-                  if (ad !== bd) return ad.localeCompare(bd)
-                  return (a.sort_order ?? 0) - (b.sort_order ?? 0)
-                })
-                .map((t: any) => (
-                  <div key={t.id} className="border border-border rounded-lg p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-medium">{t.title}</h3>
-                      {t.deadline && (
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          by {new Date(t.deadline).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </span>
-                      )}
-                    </div>
-                    {t.description && (
-                      <p className="text-sm text-foreground/70 mt-1">{t.description}</p>
-                    )}
-                  </div>
-                ))}
-            </div>
-          </section>
-        )}
-
-        {p.status === 'active' &&
-          Array.isArray(data.media) &&
-          data.media.filter((m: any) => m.type === 'document').length > 0 && (
+        {p.status === 'active' && (() => {
+          const allTasks = Array.isArray(tasks) ? tasks : []
+          const visibleForClient = allTasks.filter((t: any) => t.visible_to_client !== false)
+          const renderList = isOwner ? allTasks : visibleForClient
+          if (renderList.length === 0) return null
+          return (
             <section>
-              <h2 className="text-2xl font-serif font-bold mb-6">Documents</h2>
-              <div className="grid gap-2">
-                {data.media
-                  .filter((m: any) => m.type === 'document')
-                  .map((m: any) => (
-                    <a
-                      key={m.id}
-                      href={m.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-secondary transition-colors"
-                    >
-                      <span className="text-sm truncate text-foreground/80">
-                        {m.caption || 'Document'}
-                      </span>
-                      <span className="text-xs text-accent flex-shrink-0 ml-3">Download ↗</span>
-                    </a>
-                  ))}
+              <h2 className="text-2xl font-serif font-bold mb-6">Before you go</h2>
+              <div className="space-y-3">
+                {[...renderList]
+                  .sort((a: any, b: any) => {
+                    const ad = a.deadline || '9999-12-31'
+                    const bd = b.deadline || '9999-12-31'
+                    if (ad !== bd) return ad.localeCompare(bd)
+                    return (a.sort_order ?? 0) - (b.sort_order ?? 0)
+                  })
+                  .map((t: any) => {
+                    const hidden = t.visible_to_client === false
+                    return (
+                      <div
+                        key={t.id}
+                        className={`border rounded-lg p-4 transition-opacity ${
+                          hidden ? 'border-dashed border-border/60 bg-secondary/30 opacity-60' : 'border-border'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="font-medium">{t.title}</h3>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {t.deadline && (
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                by {new Date(t.deadline).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                })}
+                              </span>
+                            )}
+                            {isOwner && (
+                              <button
+                                type="button"
+                                onClick={() => toggleTaskVisibility(t.id, hidden)}
+                                className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                                title={hidden ? 'Show to client' : 'Hide from client'}
+                                aria-label={hidden ? 'Show to client' : 'Hide from client'}
+                              >
+                                {hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {t.description && (
+                          <p className="text-sm text-foreground/70 mt-1">{t.description}</p>
+                        )}
+                        {isOwner && hidden && (
+                          <p className="text-xs text-muted-foreground mt-2 italic">Hidden from client</p>
+                        )}
+                      </div>
+                    )
+                  })}
               </div>
             </section>
-          )}
+          )
+        })()}
+
+        {p.status === 'active' && (() => {
+          const allDocs = (Array.isArray(media) ? media : []).filter(
+            (m: any) => m.type === 'document',
+          )
+          const visibleDocs = allDocs.filter((m: any) => m.visible_to_client !== false)
+          const renderDocs = isOwner ? allDocs : visibleDocs
+          // Client: hide whole section if nothing to show.
+          // Owner: always show (so they can drop new docs).
+          if (!isOwner && renderDocs.length === 0) return null
+          return (
+            <section>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-serif font-bold">Documents</h2>
+                {isOwner && (
+                  <button
+                    type="button"
+                    onClick={() => docInputRef.current?.click()}
+                    disabled={uploadingDoc}
+                    className="text-xs text-accent hover:underline disabled:opacity-50 flex items-center gap-1"
+                  >
+                    <Upload className="w-3.5 h-3.5" /> {uploadingDoc ? 'Uploading…' : 'Add document'}
+                  </button>
+                )}
+              </div>
+
+              {isOwner && (
+                <input
+                  ref={docInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.xlsx,image/jpeg,image/png"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || [])
+                    e.target.value = ''
+                    if (files.length > 0) void handleDocumentUpload(files)
+                  }}
+                />
+              )}
+
+              {isOwner && (
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    setDocDragOver(true)
+                  }}
+                  onDragLeave={() => setDocDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    setDocDragOver(false)
+                    const files = Array.from(e.dataTransfer.files || [])
+                    if (files.length > 0) void handleDocumentUpload(files)
+                  }}
+                  className={`mb-4 border-2 border-dashed rounded-lg p-6 text-center text-sm transition-colors cursor-pointer ${
+                    docDragOver
+                      ? 'border-accent bg-accent/5 text-accent'
+                      : 'border-border text-muted-foreground hover:border-foreground/30'
+                  }`}
+                  onClick={() => docInputRef.current?.click()}
+                >
+                  {uploadingDoc ? (
+                    <span>Uploading & parsing…</span>
+                  ) : (
+                    <>
+                      <FileText className="w-5 h-5 mx-auto mb-1 opacity-60" />
+                      <div>Drop a booking, voucher or ticket here</div>
+                      <div className="text-xs mt-0.5 opacity-75">
+                        PDF · DOCX · XLSX · JPEG · PNG — auto-applied to itinerary
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {renderDocs.length > 0 ? (
+                <div className="grid gap-2">
+                  {renderDocs.map((m: any) => {
+                    const hidden = m.visible_to_client === false
+                    return (
+                      <div
+                        key={m.id}
+                        className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+                          hidden
+                            ? 'border-dashed border-border/60 bg-secondary/30 opacity-60'
+                            : 'border-border hover:bg-secondary'
+                        }`}
+                      >
+                        <a
+                          href={m.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 flex-1 min-w-0"
+                        >
+                          <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          <span className="text-sm truncate text-foreground/80">
+                            {m.caption || m.file_name || 'Document'}
+                          </span>
+                        </a>
+                        <div className="flex items-center gap-1 flex-shrink-0 ml-3">
+                          <a
+                            href={m.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-accent hover:underline px-2"
+                          >
+                            Download ↗
+                          </a>
+                          {isOwner && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => toggleMediaVisibility(m.id, hidden)}
+                                className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                                title={hidden ? 'Show to client' : 'Hide from client'}
+                                aria-label={hidden ? 'Show to client' : 'Hide from client'}
+                              >
+                                {hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteDocument(m.id)}
+                                className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                title="Delete document"
+                                aria-label="Delete document"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                isOwner && (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    No documents yet.
+                  </p>
+                )
+              )}
+            </section>
+          )
+        })()}
 
         <footer className="border-t border-border pt-8 pb-12 text-center">
           <p className="text-sm text-muted-foreground">
