@@ -357,6 +357,39 @@ export default function TripPageClient({ slug, initialData }: Props) {
     [tasks, getToken],
   )
 
+  // Inline-edit helper for tasks. Updates local tasks[] optimistically on success.
+  const saveTaskPatch = useCallback(
+    async (taskId: string, patch: Record<string, any>): Promise<boolean> => {
+      try {
+        const token = await getToken()
+        if (!token) {
+          toast.error('Sign in to edit')
+          return false
+        }
+        const res = await apiFetch(`/api/tasks/${taskId}`, {
+          method: 'PATCH',
+          token,
+          body: JSON.stringify(patch),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          toast.error(err?.error || 'Save failed')
+          return false
+        }
+        const payload = await res.json()
+        const updated = payload?.task
+        if (updated) {
+          setTasks((cur) => cur.map((t) => (t.id === taskId ? updated : t)))
+        }
+        return true
+      } catch {
+        toast.error('Save failed')
+        return false
+      }
+    },
+    [getToken],
+  )
+
   const toggleMediaVisibility = useCallback(
     async (mediaId: string, nextVisible: boolean) => {
       const prev = media
@@ -1143,14 +1176,33 @@ export default function TripPageClient({ slug, initialData }: Props) {
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <h3 className="font-medium">{t.title}</h3>
+                          <h3 className="font-medium flex-1">
+                            <EditableField
+                              as="text"
+                              editable={showOwnerUI}
+                              value={t.title}
+                              required
+                              className="w-full"
+                              onSave={(v) => saveTaskPatch(t.id, { title: v })}
+                            />
+                          </h3>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            {t.deadline && (
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                by {new Date(t.deadline).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                })}
+                            {(t.deadline || showOwnerUI) && (
+                              <span className="text-xs text-muted-foreground whitespace-nowrap inline-flex items-center gap-1">
+                                <span>by</span>
+                                <EditableField
+                                  as="date"
+                                  editable={showOwnerUI}
+                                  value={t.deadline}
+                                  placeholder="Set date"
+                                  formatDisplay={(iso) =>
+                                    new Date(iso).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                    })
+                                  }
+                                  onSave={(v) => saveTaskPatch(t.id, { deadline: v })}
+                                />
                               </span>
                             )}
                             {showOwnerUI && (
@@ -1166,8 +1218,18 @@ export default function TripPageClient({ slug, initialData }: Props) {
                             )}
                           </div>
                         </div>
-                        {t.description && (
-                          <p className="text-sm text-foreground/70 mt-1">{t.description}</p>
+                        {(t.description || showOwnerUI) && (
+                          <div className="text-sm text-foreground/70 mt-1">
+                            <EditableField
+                              as="multiline"
+                              editable={showOwnerUI}
+                              value={t.description}
+                              placeholder="Click to add details"
+                              rows={2}
+                              className="w-full"
+                              onSave={(v) => saveTaskPatch(t.id, { description: v })}
+                            />
+                          </div>
                         )}
                         {showOwnerUI && hidden && (
                           <p className="text-xs text-muted-foreground mt-2 italic">Hidden from client</p>
