@@ -480,7 +480,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 }}
                 className="font-semibold text-accent hover:text-accent/80 underline underline-offset-2"
               >
-                Sign up
+                Sign up for free
               </button>
               <span className="hidden sm:inline"> to edit, add photos, and save to your account.</span>
               <span className="sm:hidden"> to save.</span>
