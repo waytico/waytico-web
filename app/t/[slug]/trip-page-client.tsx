@@ -42,6 +42,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const [showBanner, setShowBanner] = useState(false)
   const [isAnonCreator, setIsAnonCreator] = useState(false)
   const [projectIdForClaim, setProjectIdForClaim] = useState<string | null>(null)
+  const [ownerRefreshKey, setOwnerRefreshKey] = useState(0)
 
   const needsPolling = !initialData || initialData.project?.status === 'generating'
   const [polling, setPolling] = useState(needsPolling)
@@ -112,6 +113,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           } catch {}
           setShowBanner(false)
           setIsAnonCreator(false)
+          setOwnerRefreshKey((k) => k + 1)
         }
       } catch {}
       // Remove ?claim from URL
@@ -167,7 +169,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
     return () => {
       cancelled = true
     }
-  }, [isLoaded, isSignedIn, refreshOwnerData, data?.project?.id])
+  }, [isLoaded, isSignedIn, refreshOwnerData, data?.project?.id, ownerRefreshKey])
 
   // Sync media/tasks when initialData changes (e.g., after polling completes).
   // Only applies when we don't have the richer owner payload yet.
