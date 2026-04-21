@@ -40,6 +40,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
   const [data, setData] = useState(initialData)
   const [showBanner, setShowBanner] = useState(false)
+  const [isAnonCreator, setIsAnonCreator] = useState(false)
   const [projectIdForClaim, setProjectIdForClaim] = useState<string | null>(null)
 
   const needsPolling = !initialData || initialData.project?.status === 'generating'
@@ -78,9 +79,13 @@ export default function TripPageClient({ slug, initialData }: Props) {
       if (!pid) return
 
       const anonOwns = sessionStorage.getItem(`waytico:anon-owns-${pid}`)
+      if (anonOwns === '1') {
+        setIsAnonCreator(true)
+        setProjectIdForClaim(pid)
+      }
+
       const bannerDismissed = sessionStorage.getItem(`waytico:banner-dismissed-${pid}`)
       if (anonOwns === '1' && !bannerDismissed && data.project.status === 'quoted') {
-        setProjectIdForClaim(pid)
         setShowBanner(true)
       }
     } catch {}
@@ -106,6 +111,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             sessionStorage.removeItem(`waytico:banner-dismissed-${claimId}`)
           } catch {}
           setShowBanner(false)
+          setIsAnonCreator(false)
         }
       } catch {}
       // Remove ?claim from URL
@@ -584,7 +590,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
               )}
               <div className="hidden md:flex items-center gap-2">
                 {p.id && <ActivateButton projectId={p.id} publicStatus={p.status} />}
-                {p.id && isOwner && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
+                {p.id && (isOwner || isAnonCreator) && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
               </div>
             </div>
 
@@ -702,7 +708,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
               {p.id && (
                 <div className="md:hidden pt-4 flex flex-wrap items-center justify-center gap-3">
                   <ActivateButton projectId={p.id} publicStatus={p.status} />
-                  {isOwner && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
+                  {(isOwner || isAnonCreator) && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
                 </div>
               )}
             </div>
