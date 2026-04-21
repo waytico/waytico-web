@@ -21,6 +21,16 @@ const ALLOWED_MIMES = [
 ]
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
+const PLACEHOLDER_EXAMPLE = `Tuscany wine tour, Sep 14–20. Couple, relaxed pace.
+
+Sep 14 — Arrive FLR, transfer to Greve in Chianti, Villa Bordoni.
+Sep 15 — Castello di Ama tasting with Marco.
+…
+Sep 19 — Montalcino, Biondi-Santi cellar visit.
+Sep 20 — Transfer to FLR, flight out.
+
+Guide Marco Rossi. €3,200 pp, flights not included.`
+
 function fileIcon(mime: string) {
   if (mime.startsWith('image/')) return <ImageIcon className="w-4 h-4" />
   if (mime === 'application/pdf') return <FileText className="w-4 h-4" />
@@ -243,7 +253,7 @@ export default function ChatFlow() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={messages.length === 0
-            ? 'Elbrus trekking, 7 days, starting June 14th. Group of 8, intermediate level. Includes transfer from Mineralnye Vody, meals, gear…'
+            ? PLACEHOLDER_EXAMPLE
             : 'Add details or type "confirm" to generate…'
           }
           className="min-h-[140px] p-5 pb-20 text-base rounded-2xl border border-border bg-card text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
@@ -290,7 +300,7 @@ export default function ChatFlow() {
               <Plus className="w-4 h-4" />
             </button>
             <span className="text-sm text-muted-foreground hidden sm:block">
-              {messages.length === 0 ? 'Write naturally — AI will figure it out' : 'Shift+Enter for new line'}
+              {messages.length === 0 ? 'Itinerary on file? Attach it' : 'Shift+Enter for new line'}
             </span>
           </div>
           <Button
@@ -298,7 +308,7 @@ export default function ChatFlow() {
             disabled={(!input.trim() && !selectedFile) || phase === 'sending'}
             className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-full px-6 py-2 font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
           >
-            {messages.length === 0 ? 'Create page →' : 'Send →'}
+            {messages.length === 0 ? 'Create quote →' : 'Send →'}
           </Button>
         </div>
       </div>
