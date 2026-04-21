@@ -256,7 +256,7 @@ export default function ChatFlow() {
             ? PLACEHOLDER_EXAMPLE
             : 'Add details or type "confirm" to generate…'
           }
-          className="min-h-[140px] p-5 pb-20 text-base rounded-2xl border border-border bg-card text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
+          className="min-h-[260px] p-5 pb-20 text-base rounded-2xl border border-border bg-card text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
           rows={3}
           disabled={phase === 'sending'}
         />
@@ -299,8 +299,15 @@ export default function ChatFlow() {
             >
               <Plus className="w-4 h-4" />
             </button>
-            <span className="text-sm text-muted-foreground hidden sm:block">
-              {messages.length === 0 ? 'Itinerary on file? Attach it' : 'Shift+Enter for new line'}
+            <span className="text-sm text-muted-foreground">
+              {messages.length === 0 ? (
+                <>
+                  <span className="hidden sm:inline">Itinerary on file? Attach it</span>
+                  <span className="sm:hidden">Attach itinerary</span>
+                </>
+              ) : (
+                <span className="hidden sm:inline">Shift+Enter for new line</span>
+              )}
             </span>
           </div>
           <Button

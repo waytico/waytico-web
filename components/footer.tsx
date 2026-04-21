@@ -20,7 +20,7 @@ const legalLinks = [
 
 export default function Footer() {
   return (
-    <footer className="w-full border-t border-border/50 bg-background">
+    <footer className="w-full border-t border-border/50 bg-secondary">
       <div className="max-w-4xl mx-auto px-4 py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
           <FooterColumn title="Product" links={productLinks} />
