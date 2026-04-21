@@ -256,7 +256,7 @@ export default function ChatFlow() {
             ? PLACEHOLDER_EXAMPLE
             : 'Add details or type "confirm" to generate…'
           }
-          className="min-h-[260px] p-5 pb-20 text-base rounded-2xl border border-border bg-card text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
+          className="min-h-[300px] p-5 pb-24 text-base rounded-2xl border border-border bg-card text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
           rows={3}
           disabled={phase === 'sending'}
         />
