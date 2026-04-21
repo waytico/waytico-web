@@ -11,7 +11,7 @@ export default function Home() {
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold tracking-tight leading-tight text-balance">
             Your tour in.
             <br />
-            Client-ready page out.
+            Quote page out.
           </h1>
           <ChatFlow />
         </div>
