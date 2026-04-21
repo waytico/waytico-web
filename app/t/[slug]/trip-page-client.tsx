@@ -584,7 +584,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
               )}
               <div className="hidden md:flex items-center gap-2">
                 {p.id && <ActivateButton projectId={p.id} publicStatus={p.status} />}
-                {p.id && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
+                {p.id && isOwner && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
               </div>
             </div>
 
@@ -702,7 +702,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
               {p.id && (
                 <div className="md:hidden pt-4 flex flex-wrap items-center justify-center gap-3">
                   <ActivateButton projectId={p.id} publicStatus={p.status} />
-                  <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />
+                  {isOwner && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
                 </div>
               )}
             </div>
