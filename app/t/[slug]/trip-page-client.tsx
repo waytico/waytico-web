@@ -123,6 +123,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
   // ─── Photos / owner state ──────────────────────────────────
   const [isOwner, setIsOwner] = useState(false)
+  const [previewAsClient, setPreviewAsClient] = useState(false)
+  const showOwnerUI = isOwner && !previewAsClient
   const [media, setMedia] = useState<MediaRecord[]>(
     (initialData?.media as MediaRecord[]) || [],
   )
@@ -469,10 +471,28 @@ export default function TripPageClient({ slug, initialData }: Props) {
     <div className="min-h-screen bg-background">
       {/* Global header only for the trip owner. Clients/guests see a clean,
           agency-proposal-style page without the Waytico SaaS chrome. */}
-      {isOwner && <Header />}
+      {showOwnerUI && <Header />}
 
       {/* Stripe return flow (?activated=1 / ?cancelled=1) */}
       <ActivationToast />
+
+      {/* Preview-as-client banner — active when owner clicked "Preview as client" */}
+      {previewAsClient && (
+        <div className="sticky top-0 z-40 bg-foreground text-background">
+          <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
+            <p className="text-sm flex-1 min-w-0 flex items-center gap-2">
+              <Eye className="w-4 h-4 flex-shrink-0" />
+              <span>You're previewing as your client sees this page.</span>
+            </p>
+            <button
+              onClick={() => setPreviewAsClient(false)}
+              className="text-sm font-semibold underline underline-offset-2 hover:opacity-80 flex-shrink-0"
+            >
+              Exit preview
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Sticky save-reminder banner for anonymous owners (quoted status) */}
       {showBanner && projectIdForClaim && (
@@ -514,8 +534,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
         const heroPhoto = media.find((m) => m.placement === 'hero')
         const hasBg = !!heroPhoto
         const uploadingHero = uploadingByDay['hero'] || 0
-        const showEmptyState = !hasBg && isOwner
-        const heroDropHandlers = isOwner
+        const showEmptyState = !hasBg && showOwnerUI
+        const heroDropHandlers = showOwnerUI
           ? {
               onDragEnter: (e: React.DragEvent) => {
                 e.preventDefault()
@@ -577,7 +597,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 under the title (see block below). Delete-hero stays here
                 at all sizes — it's a small icon that doesn't crowd. */}
             <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-              {isOwner && hasBg && heroPhoto && (
+              {showOwnerUI && hasBg && heroPhoto && (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -592,7 +612,17 @@ export default function TripPageClient({ slug, initialData }: Props) {
               )}
               <div className="hidden md:flex items-center gap-2">
                 {p.id && <ActivateButton projectId={p.id} publicStatus={p.status} />}
-                {p.id && (isOwner || isAnonCreator) && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
+                {showOwnerUI && (
+                  <button
+                    onClick={() => setPreviewAsClient(true)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-secondary text-secondary-foreground hover:bg-highlight text-sm font-medium transition-colors"
+                    title="Preview as client"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>Preview as client</span>
+                  </button>
+                )}
+                {p.id && (showOwnerUI || isAnonCreator) && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
               </div>
             </div>
 
@@ -606,7 +636,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             )}
 
             {/* Hidden file input shared by empty-state click + drop pipeline */}
-            {isOwner && (
+            {showOwnerUI && (
               <input
                 ref={heroInputRef}
                 type="file"
@@ -710,13 +740,22 @@ export default function TripPageClient({ slug, initialData }: Props) {
               {p.id && (
                 <div className="md:hidden pt-4 flex flex-wrap items-center justify-center gap-3">
                   <ActivateButton projectId={p.id} publicStatus={p.status} />
-                  {(isOwner || isAnonCreator) && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
+                  {showOwnerUI && (
+                    <button
+                      onClick={() => setPreviewAsClient(true)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-secondary text-secondary-foreground hover:bg-highlight text-sm font-medium transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>Preview</span>
+                    </button>
+                  )}
+                  {(showOwnerUI || isAnonCreator) && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
                 </div>
               )}
             </div>
 
             {/* Uploading indicator when replacing existing hero */}
-            {isOwner && hasBg && uploadingHero > 0 && (
+            {showOwnerUI && hasBg && uploadingHero > 0 && (
               <div className="absolute bottom-4 left-4 z-10">
                 <span className="rounded-full bg-black/60 px-3 py-1 text-xs text-white">
                   Uploading…
@@ -737,7 +776,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
         {(() => {
           const tourMedia = media.filter((m) => !m.day_id && m.placement !== 'hero')
-          const showTourPhotos = isOwner || tourMedia.length > 0
+          const showTourPhotos = showOwnerUI || tourMedia.length > 0
           if (!showTourPhotos) return null
           return (
             <section>
@@ -745,7 +784,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
               <PhotosBlock
                 dayId={null}
                 media={tourMedia}
-                owner={isOwner}
+                owner={showOwnerUI}
                 uploading={uploadingByDay['tour'] || 0}
                 onUpload={handleUpload}
                 onDelete={handleDelete}
@@ -840,12 +879,12 @@ export default function TripPageClient({ slug, initialData }: Props) {
                           ))}
                       </div>
                     )}
-                    {day.id && (dayMedia.length > 0 || isOwner) && (
+                    {day.id && (dayMedia.length > 0 || showOwnerUI) && (
                       <div className="pl-[52px] pt-2">
                         <PhotosBlock
                           dayId={day.id}
                           media={dayMedia}
-                          owner={isOwner}
+                          owner={showOwnerUI}
                           uploading={uploadingByDay[day.id] || 0}
                           onUpload={handleUpload}
                           onDelete={handleDelete}
@@ -860,11 +899,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
           </section>
         )}
 
-        {(p.included || p.not_included) && (
+        {(p.included || p.not_included || showOwnerUI) && (
           <section>
             <h2 className="text-2xl font-serif font-bold mb-6">What's Included</h2>
             <div className="grid md:grid-cols-2 gap-6">
-              {p.included && (
+              {p.included ? (
                 <div className="space-y-3">
                   <h3 className="font-semibold text-accent flex items-center gap-2">
                     <span className="w-6 h-6 rounded-full bg-success/15 text-success flex items-center justify-center">
@@ -878,8 +917,13 @@ export default function TripPageClient({ slug, initialData }: Props) {
                     ))}
                   </ul>
                 </div>
-              )}
-              {p.not_included && (
+              ) : showOwnerUI ? (
+                <div className="rounded-xl border border-dashed border-border p-4 text-sm">
+                  <p className="font-medium text-foreground/80 mb-1">Included — not set yet</p>
+                  <p className="text-muted-foreground">Use the command bar below, e.g. “Add included: hotel, breakfast, guide”.</p>
+                </div>
+              ) : null}
+              {p.not_included ? (
                 <div className="space-y-3">
                   <h3 className="font-semibold text-foreground/70 flex items-center gap-2">
                     <span className="w-6 h-6 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
@@ -893,15 +937,27 @@ export default function TripPageClient({ slug, initialData }: Props) {
                     ))}
                   </ul>
                 </div>
-              )}
+              ) : showOwnerUI ? (
+                <div className="rounded-xl border border-dashed border-border p-4 text-sm">
+                  <p className="font-medium text-foreground/80 mb-1">Not Included — not set yet</p>
+                  <p className="text-muted-foreground">Use the command bar below, e.g. “Add not included: flights, personal expenses”.</p>
+                </div>
+              ) : null}
             </div>
           </section>
         )}
 
-        {p.terms && (
+        {(p.terms || showOwnerUI) && (
           <section>
             <h2 className="text-2xl font-serif font-bold mb-4">Terms</h2>
-            <p className="text-sm text-foreground/60 whitespace-pre-line">{p.terms}</p>
+            {p.terms ? (
+              <p className="text-sm text-foreground/60 whitespace-pre-line">{p.terms}</p>
+            ) : showOwnerUI ? (
+              <div className="rounded-xl border border-dashed border-border p-4 text-sm">
+                <p className="font-medium text-foreground/80 mb-1">Terms — not set yet</p>
+                <p className="text-muted-foreground">Use the command bar below, e.g. “Set terms: 50% deposit, free cancellation up to 7 days”.</p>
+              </div>
+            ) : null}
           </section>
         )}
 
@@ -930,7 +986,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         {p.status === 'active' && (() => {
           const allTasks = Array.isArray(tasks) ? tasks : []
           const visibleForClient = allTasks.filter((t: any) => t.visible_to_client !== false)
-          const renderList = isOwner ? allTasks : visibleForClient
+          const renderList = showOwnerUI ? allTasks : visibleForClient
           if (renderList.length === 0) return null
           return (
             <section>
@@ -963,7 +1019,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                                 })}
                               </span>
                             )}
-                            {isOwner && (
+                            {showOwnerUI && (
                               <button
                                 type="button"
                                 onClick={() => toggleTaskVisibility(t.id, hidden)}
@@ -979,7 +1035,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                         {t.description && (
                           <p className="text-sm text-foreground/70 mt-1">{t.description}</p>
                         )}
-                        {isOwner && hidden && (
+                        {showOwnerUI && hidden && (
                           <p className="text-xs text-muted-foreground mt-2 italic">Hidden from client</p>
                         )}
                       </div>
@@ -995,15 +1051,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
             (m: any) => m.type === 'document',
           )
           const visibleDocs = allDocs.filter((m: any) => m.visible_to_client !== false)
-          const renderDocs = isOwner ? allDocs : visibleDocs
+          const renderDocs = showOwnerUI ? allDocs : visibleDocs
           // Client: hide whole section if nothing to show.
           // Owner: always show (so they can drop new docs).
-          if (!isOwner && renderDocs.length === 0) return null
+          if (!showOwnerUI && renderDocs.length === 0) return null
           return (
             <section>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-serif font-bold">Documents</h2>
-                {isOwner && (
+                {showOwnerUI && (
                   <button
                     type="button"
                     onClick={() => docInputRef.current?.click()}
@@ -1015,7 +1071,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 )}
               </div>
 
-              {isOwner && (
+              {showOwnerUI && (
                 <input
                   ref={docInputRef}
                   type="file"
@@ -1030,7 +1086,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 />
               )}
 
-              {isOwner && (
+              {showOwnerUI && (
                 <div
                   onDragOver={(e) => {
                     e.preventDefault()
@@ -1097,7 +1153,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                           >
                             Download ↗
                           </a>
-                          {isOwner && (
+                          {showOwnerUI && (
                             <>
                               <button
                                 type="button"
@@ -1125,7 +1181,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   })}
                 </div>
               ) : (
-                isOwner && (
+                showOwnerUI && (
                   <p className="text-sm text-muted-foreground text-center py-2">
                     No documents yet.
                   </p>
@@ -1144,7 +1200,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       <PhotoLightbox
         media={lightbox}
-        owner={isOwner}
+        owner={showOwnerUI}
         projectId={data.project?.id || null}
         onClose={() => setLightbox(null)}
         onReplaced={(updated) => {
@@ -1154,7 +1210,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
       />
 
       {/* ─── Owner-only editor controls ─── */}
-      {isOwner && (
+      {showOwnerUI && (
         <>
           {/* Persistent bottom command bar for quick edits */}
           <TripCommandBar
