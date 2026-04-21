@@ -39,7 +39,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const { isSignedIn, getToken, isLoaded } = useAuth()
 
   const [data, setData] = useState(initialData)
-  const [showModal, setShowModal] = useState(false)
+  const [showReadyCard, setShowReadyCard] = useState(false)
+  const [showBanner, setShowBanner] = useState(false)
   const [projectIdForClaim, setProjectIdForClaim] = useState<string | null>(null)
 
   const needsPolling = !initialData || initialData.project?.status === 'generating'
@@ -70,17 +71,29 @@ export default function TripPageClient({ slug, initialData }: Props) {
     return () => { active = false; clearTimeout(timeout) }
   }, [polling, slug])
 
-  // Show modal if just created (sessionStorage flag)
+  // Show inline ready-card if just created (one-shot; flag removed immediately).
+  // Show sticky banner for anon-owned projects until dismissed or claimed.
   useEffect(() => {
     try {
+      if (!data?.project) return
+      const pid = data.project.id as string | undefined
+      if (!pid) return
+
       const justCreated = sessionStorage.getItem('waytico:just-created')
-      if (justCreated && data?.project) {
-        setProjectIdForClaim(justCreated)
-        setShowModal(true)
+      if (justCreated === pid) {
+        setProjectIdForClaim(pid)
+        setShowReadyCard(true)
         sessionStorage.removeItem('waytico:just-created')
       }
+
+      const anonOwns = sessionStorage.getItem(`waytico:anon-owns-${pid}`)
+      const bannerDismissed = sessionStorage.getItem(`waytico:banner-dismissed-${pid}`)
+      if (anonOwns === '1' && !bannerDismissed && data.project.status === 'quoted') {
+        if (!projectIdForClaim) setProjectIdForClaim(pid)
+        setShowBanner(true)
+      }
     } catch {}
-  }, [data])
+  }, [data, projectIdForClaim])
 
   // Claim flow: after sign-up, redirect back with ?claim=projectId
   useEffect(() => {
@@ -97,6 +110,12 @@ export default function TripPageClient({ slug, initialData }: Props) {
         })
         if (res.ok) {
           toast.success('Saved to your account')
+          try {
+            sessionStorage.removeItem(`waytico:anon-owns-${claimId}`)
+            sessionStorage.removeItem(`waytico:banner-dismissed-${claimId}`)
+          } catch {}
+          setShowBanner(false)
+          setShowReadyCard(false)
         }
       } catch {}
       // Remove ?claim from URL
@@ -457,50 +476,35 @@ export default function TripPageClient({ slug, initialData }: Props) {
       {/* Stripe return flow (?activated=1 / ?cancelled=1) */}
       <ActivationToast />
 
-      {/* Post-creation modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-background rounded-2xl max-w-md w-full p-6 space-y-5 shadow-xl">
-            <h2 className="text-2xl font-serif font-bold">Your quote is ready</h2>
-
-            {/* Share link */}
-            <div className="space-y-2">
-              <p className="text-sm text-foreground/60">Share this link with your client:</p>
-              <div className="flex items-center gap-2 bg-secondary rounded-lg p-3">
-                <span className="text-sm truncate flex-1 text-foreground/80">{shareUrl}</span>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(shareUrl)
-                    toast.success('Link copied!')
-                  }}
-                  className="text-xs font-medium text-accent hover:text-accent/80 flex-shrink-0"
-                >
-                  Copy
-                </button>
-              </div>
-            </div>
-
-            <p className="text-sm text-foreground/60">
-              This quote is available for 3 days. Sign up to edit, add photos, and save to your account.
-            </p>
-
-            <div className="flex gap-3">
+      {/* Sticky save-reminder banner for anonymous owners (quoted status) */}
+      {showBanner && projectIdForClaim && (
+        <div className="sticky top-0 z-40 bg-highlight border-b border-border">
+          <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
+            <p className="text-sm text-foreground/80 flex-1 min-w-0">
+              <span className="hidden sm:inline">This quote expires in 3 days. </span>
+              <span className="sm:hidden">Expires in 3 days. </span>
               <button
                 onClick={() => {
                   const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
                   router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
                 }}
-                className="flex-1 bg-accent text-accent-foreground font-semibold py-2.5 px-4 rounded-full hover:bg-accent/90 transition-colors"
+                className="font-semibold text-accent hover:text-accent/80 underline underline-offset-2"
               >
-                Sign up
+                Sign up to save
               </button>
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex-1 bg-secondary text-secondary-foreground font-medium py-2.5 px-4 rounded-full hover:bg-secondary/80 transition-colors"
-              >
-                Skip
-              </button>
-            </div>
+            </p>
+            <button
+              onClick={() => {
+                try {
+                  sessionStorage.setItem(`waytico:banner-dismissed-${projectIdForClaim}`, '1')
+                } catch {}
+                setShowBanner(false)
+              }}
+              className="p-1 text-foreground/50 hover:text-foreground transition-colors flex-shrink-0"
+              aria-label="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
@@ -724,6 +728,51 @@ export default function TripPageClient({ slug, initialData }: Props) {
       })()}
 
       <div className="max-w-3xl mx-auto px-4 py-12 space-y-16">
+        {/* Post-creation inline card — shown once per session (flag cleared on mount) */}
+        {showReadyCard && (
+          <section className="bg-card border border-border rounded-2xl p-6 space-y-5 shadow-sm">
+            <h2 className="text-2xl font-serif font-bold">Your quote is ready</h2>
+
+            <div className="space-y-2">
+              <p className="text-sm text-foreground/60">Share this link with your client:</p>
+              <div className="flex items-center gap-2 bg-secondary rounded-lg p-3">
+                <span className="text-sm truncate flex-1 text-foreground/80">{shareUrl}</span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareUrl)
+                    toast.success('Link copied!')
+                  }}
+                  className="text-xs font-medium text-accent hover:text-accent/80 flex-shrink-0"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+
+            <p className="text-sm text-foreground/60">
+              This quote is available for 3 days. Sign up to edit, add photos, and save to your account.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
+                  router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
+                }}
+                className="flex-1 bg-accent text-accent-foreground font-semibold py-2.5 px-4 rounded-full hover:bg-accent/90 transition-colors"
+              >
+                Sign up
+              </button>
+              <button
+                onClick={() => setShowReadyCard(false)}
+                className="flex-1 bg-secondary text-secondary-foreground font-medium py-2.5 px-4 rounded-full hover:bg-secondary/80 transition-colors"
+              >
+                Skip
+              </button>
+            </div>
+          </section>
+        )}
+
         {p.description && (
           <section>
             <h2 className="text-2xl font-serif font-bold mb-4">Overview</h2>

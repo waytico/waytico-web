@@ -48,7 +48,7 @@ function truncateName(name: string, max = 32) {
 
 export default function ChatFlow() {
   const router = useRouter()
-  const { getToken, isLoaded } = useAuth()
+  const { getToken, isLoaded, isSignedIn } = useAuth()
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -79,6 +79,9 @@ export default function ChatFlow() {
               const realSlug = data.project?.slug || slug
               try {
                 sessionStorage.setItem('waytico:just-created', projectId)
+                if (!isSignedIn) {
+                  sessionStorage.setItem(`waytico:anon-owns-${projectId}`, '1')
+                }
               } catch {}
               router.push(`/t/${realSlug}`)
               return
@@ -90,7 +93,7 @@ export default function ChatFlow() {
     }
     poll()
     return () => { active = false }
-  }, [phase, projectId, slug, router])
+  }, [phase, projectId, slug, router, isSignedIn])
 
   const validateAndSetFile = (file: File): boolean => {
     if (file.size > MAX_FILE_SIZE) {
