@@ -78,7 +78,6 @@ export default function ChatFlow() {
             if (status === 'quoted' || status === 'active' || status === 'completed') {
               const realSlug = data.project?.slug || slug
               try {
-                sessionStorage.setItem('waytico:just-created', projectId)
                 if (!isSignedIn) {
                   sessionStorage.setItem(`waytico:anon-owns-${projectId}`, '1')
                 }

@@ -39,7 +39,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const { isSignedIn, getToken, isLoaded } = useAuth()
 
   const [data, setData] = useState(initialData)
-  const [showReadyCard, setShowReadyCard] = useState(false)
   const [showBanner, setShowBanner] = useState(false)
   const [projectIdForClaim, setProjectIdForClaim] = useState<string | null>(null)
 
@@ -71,7 +70,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
     return () => { active = false; clearTimeout(timeout) }
   }, [polling, slug])
 
-  // Show inline ready-card if just created (one-shot; flag removed immediately).
   // Show sticky banner for anon-owned projects until dismissed or claimed.
   useEffect(() => {
     try {
@@ -79,21 +77,14 @@ export default function TripPageClient({ slug, initialData }: Props) {
       const pid = data.project.id as string | undefined
       if (!pid) return
 
-      const justCreated = sessionStorage.getItem('waytico:just-created')
-      if (justCreated === pid) {
-        setProjectIdForClaim(pid)
-        setShowReadyCard(true)
-        sessionStorage.removeItem('waytico:just-created')
-      }
-
       const anonOwns = sessionStorage.getItem(`waytico:anon-owns-${pid}`)
       const bannerDismissed = sessionStorage.getItem(`waytico:banner-dismissed-${pid}`)
       if (anonOwns === '1' && !bannerDismissed && data.project.status === 'quoted') {
-        if (!projectIdForClaim) setProjectIdForClaim(pid)
+        setProjectIdForClaim(pid)
         setShowBanner(true)
       }
     } catch {}
-  }, [data, projectIdForClaim])
+  }, [data])
 
   // Claim flow: after sign-up, redirect back with ?claim=projectId
   useEffect(() => {
@@ -115,7 +106,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
             sessionStorage.removeItem(`waytico:banner-dismissed-${claimId}`)
           } catch {}
           setShowBanner(false)
-          setShowReadyCard(false)
         }
       } catch {}
       // Remove ?claim from URL
@@ -481,8 +471,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
         <div className="sticky top-0 z-40 bg-highlight border-b border-border">
           <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
             <p className="text-sm text-foreground/80 flex-1 min-w-0">
-              <span className="hidden sm:inline">This quote expires in 3 days. </span>
-              <span className="sm:hidden">Expires in 3 days. </span>
+              <span className="hidden sm:inline">This quote is available for 3 days. </span>
+              <span className="sm:hidden">Available 3 days. </span>
               <button
                 onClick={() => {
                   const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
@@ -490,8 +480,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 }}
                 className="font-semibold text-accent hover:text-accent/80 underline underline-offset-2"
               >
-                Sign up to save
+                Sign up
               </button>
+              <span className="hidden sm:inline"> to edit, add photos, and save to your account.</span>
+              <span className="sm:hidden"> to save.</span>
             </p>
             <button
               onClick={() => {
@@ -728,51 +720,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
       })()}
 
       <div className="max-w-3xl mx-auto px-4 py-12 space-y-16">
-        {/* Post-creation inline card — shown once per session (flag cleared on mount) */}
-        {showReadyCard && (
-          <section className="bg-card border border-border rounded-2xl p-6 space-y-5 shadow-sm">
-            <h2 className="text-2xl font-serif font-bold">Your quote is ready</h2>
-
-            <div className="space-y-2">
-              <p className="text-sm text-foreground/60">Share this link with your client:</p>
-              <div className="flex items-center gap-2 bg-secondary rounded-lg p-3">
-                <span className="text-sm truncate flex-1 text-foreground/80">{shareUrl}</span>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(shareUrl)
-                    toast.success('Link copied!')
-                  }}
-                  className="text-xs font-medium text-accent hover:text-accent/80 flex-shrink-0"
-                >
-                  Copy
-                </button>
-              </div>
-            </div>
-
-            <p className="text-sm text-foreground/60">
-              This quote is available for 3 days. Sign up to edit, add photos, and save to your account.
-            </p>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
-                  router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
-                }}
-                className="flex-1 bg-accent text-accent-foreground font-semibold py-2.5 px-4 rounded-full hover:bg-accent/90 transition-colors"
-              >
-                Sign up
-              </button>
-              <button
-                onClick={() => setShowReadyCard(false)}
-                className="flex-1 bg-secondary text-secondary-foreground font-medium py-2.5 px-4 rounded-full hover:bg-secondary/80 transition-colors"
-              >
-                Skip
-              </button>
-            </div>
-          </section>
-        )}
-
         {p.description && (
           <section>
             <h2 className="text-2xl font-serif font-bold mb-4">Overview</h2>
