@@ -12,6 +12,7 @@ import PhotosBlock from '@/components/photos-block'
 import PhotoLightbox from '@/components/photo-lightbox'
 import Header from '@/components/header'
 import { TripCommandBar } from '@/components/trip/trip-command-bar'
+import { EditableField } from '@/components/editable/editable-field'
 import { apiFetch } from '@/lib/api'
 import {
   uploadPhoto,
@@ -157,6 +158,42 @@ export default function TripPageClient({ slug, initialData }: Props) {
       return false
     }
   }, [data?.project?.id, getToken])
+
+  // Inline-edit helper: PATCH /api/projects/:id with arbitrary subset of fields
+  // (camelCase per backend zod schema). On success replaces local project state
+  // with the server-returned row so downstream fields reflect normalizations.
+  const saveProjectPatch = useCallback(
+    async (patch: Record<string, any>): Promise<boolean> => {
+      const projectId = data?.project?.id
+      if (!projectId) return false
+      try {
+        const token = await getToken()
+        if (!token) {
+          toast.error('Sign in to edit')
+          return false
+        }
+        const res = await apiFetch(`/api/projects/${projectId}`, {
+          method: 'PATCH',
+          token,
+          body: JSON.stringify(patch),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          toast.error(err?.error || 'Save failed')
+          return false
+        }
+        const payload = await res.json()
+        if (payload?.project) {
+          setData((prev) => (prev ? { ...prev, project: payload.project } : prev))
+        }
+        return true
+      } catch {
+        toast.error('Save failed')
+        return false
+      }
+    },
+    [data?.project?.id, getToken],
+  )
 
   useEffect(() => {
     const projectId = data?.project?.id
@@ -664,7 +701,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             <div
               className={`relative max-w-3xl mx-auto px-4 text-center space-y-6 ${hasBg ? 'text-white' : ''}`}
             >
-              {p.activity_type && (
+              {(p.activity_type || showOwnerUI) && (
                 <span
                   className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${
                     hasBg
@@ -672,47 +709,127 @@ export default function TripPageClient({ slug, initialData }: Props) {
                       : 'bg-accent/10 text-accent'
                   }`}
                 >
-                  {p.activity_type}
+                  <EditableField
+                    as="text"
+                    editable={showOwnerUI}
+                    value={p.activity_type}
+                    placeholder="Add activity type"
+                    className="uppercase tracking-wider"
+                    maxLength={40}
+                    onSave={(v) => saveProjectPatch({ activityType: v })}
+                  />
                 </span>
               )}
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight leading-tight">
-                {p.title}
+                <EditableField
+                  as="text"
+                  editable={showOwnerUI}
+                  value={p.title}
+                  required
+                  className="w-full text-center"
+                  onSave={(v) => saveProjectPatch({ title: v })}
+                />
               </h1>
               <div
                 className={`flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm ${
                   hasBg ? 'text-white/85' : 'text-foreground/60'
                 }`}
               >
-                {p.region && (
-                  <span>
-                    {p.region}
-                    {p.country ? `, ${p.country}` : ''}
+                {(p.region || p.country || showOwnerUI) && (
+                  <span className="inline-flex items-center gap-1">
+                    <EditableField
+                      as="text"
+                      editable={showOwnerUI}
+                      value={p.region}
+                      placeholder="Region"
+                      onSave={(v) => saveProjectPatch({ region: v })}
+                    />
+                    {(p.country || showOwnerUI) && (
+                      <>
+                        <span>,</span>
+                        <EditableField
+                          as="text"
+                          editable={showOwnerUI}
+                          value={p.country}
+                          placeholder="Country"
+                          onSave={(v) => saveProjectPatch({ country: v })}
+                        />
+                      </>
+                    )}
                   </span>
                 )}
-                {p.duration_days && <span>{p.duration_days} days</span>}
-                {p.group_size && <span>{p.group_size} people</span>}
-                {p.dates_start && (
-                  <span>
-                    {new Date(p.dates_start).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                    {p.dates_end &&
-                      ` – ${new Date(p.dates_end).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}`}
+                {(p.duration_days || showOwnerUI) && (
+                  <EditableField
+                    as="number"
+                    editable={showOwnerUI}
+                    value={p.duration_days}
+                    placeholder="Days"
+                    suffix="days"
+                    min={1}
+                    onSave={(v) => saveProjectPatch({ durationDays: v })}
+                  />
+                )}
+                {(p.group_size || showOwnerUI) && (
+                  <EditableField
+                    as="number"
+                    editable={showOwnerUI}
+                    value={p.group_size}
+                    placeholder="Group size"
+                    suffix="people"
+                    min={1}
+                    onSave={(v) => saveProjectPatch({ groupSize: v })}
+                  />
+                )}
+                {(p.dates_start || p.dates_end || showOwnerUI) && (
+                  <span className="inline-flex items-center gap-1">
+                    <EditableField
+                      as="date"
+                      editable={showOwnerUI}
+                      value={p.dates_start}
+                      placeholder="Start date"
+                      onSave={(v) => saveProjectPatch({ datesStart: v })}
+                    />
+                    {(p.dates_end || showOwnerUI) && (
+                      <>
+                        <span>–</span>
+                        <EditableField
+                          as="date"
+                          editable={showOwnerUI}
+                          value={p.dates_end}
+                          placeholder="End date"
+                          onSave={(v) => saveProjectPatch({ datesEnd: v })}
+                        />
+                      </>
+                    )}
                   </span>
                 )}
               </div>
-              {p.price_per_person && (
-                <div className="pt-2">
+              {(p.price_per_person || showOwnerUI) && (
+                <div className="pt-2 flex items-baseline justify-center gap-1">
                   <span
                     className={`text-3xl font-serif font-bold ${hasBg ? 'text-white' : 'text-accent'}`}
                   >
-                    {p.currency === 'USD' ? '$' : p.currency === 'EUR' ? '€' : ''}
-                    {Number(p.price_per_person).toLocaleString()}
+                    <EditableField
+                      as="text"
+                      editable={showOwnerUI}
+                      value={p.currency || 'USD'}
+                      maxLength={3}
+                      className="uppercase"
+                      onSave={(v) => saveProjectPatch({ currency: v.toUpperCase() })}
+                    />
+                  </span>
+                  <span
+                    className={`text-3xl font-serif font-bold ${hasBg ? 'text-white' : 'text-accent'}`}
+                  >
+                    <EditableField
+                      as="number"
+                      editable={showOwnerUI}
+                      value={p.price_per_person}
+                      placeholder="Price"
+                      min={0}
+                      step={1}
+                      onSave={(v) => saveProjectPatch({ pricePerPerson: v })}
+                    />
                   </span>
                   <span className={`ml-1 ${hasBg ? 'text-white/75' : 'text-foreground/50'}`}>
                     per person
@@ -767,10 +884,18 @@ export default function TripPageClient({ slug, initialData }: Props) {
       })()}
 
       <div className="max-w-3xl mx-auto px-4 py-12 space-y-16">
-        {p.description && (
+        {(p.description || showOwnerUI) && (
           <section>
             <h2 className="text-2xl font-serif font-bold mb-4">Overview</h2>
-            <div className="text-foreground/80 leading-relaxed whitespace-pre-line">{p.description}</div>
+            <EditableField
+              as="multiline"
+              editable={showOwnerUI}
+              value={p.description}
+              placeholder="Click to add overview"
+              rows={5}
+              className="text-foreground/80 leading-relaxed w-full"
+              onSave={(v) => saveProjectPatch({ description: v })}
+            />
           </section>
         )}
 
@@ -903,46 +1028,54 @@ export default function TripPageClient({ slug, initialData }: Props) {
           <section>
             <h2 className="text-2xl font-serif font-bold mb-6">What's Included</h2>
             <div className="grid md:grid-cols-2 gap-6">
-              {p.included ? (
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-accent flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-success/15 text-success flex items-center justify-center">
-                      <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
-                    </span>
-                    Included
-                  </h3>
-                  <ul className="space-y-2">
-                    {p.included.split('\n').filter(Boolean).map((item: string, i: number) => (
-                      <li key={i} className="text-sm text-foreground/70 pl-8">{item.replace(/^[-•]\s*/, '')}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : showOwnerUI ? (
-                <div className="rounded-xl border border-dashed border-border p-4 text-sm">
-                  <p className="font-medium text-foreground/80 mb-1">Included — not set yet</p>
-                  <p className="text-muted-foreground">Use the command bar below, e.g. “Add included: hotel, breakfast, guide”.</p>
-                </div>
-              ) : null}
-              {p.not_included ? (
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-foreground/70 flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
-                      <X className="w-3.5 h-3.5" strokeWidth={2.5} />
-                    </span>
-                    Not Included
-                  </h3>
-                  <ul className="space-y-2">
-                    {p.not_included.split('\n').filter(Boolean).map((item: string, i: number) => (
-                      <li key={i} className="text-sm text-foreground/50 pl-8">{item.replace(/^[-•]\s*/, '')}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : showOwnerUI ? (
-                <div className="rounded-xl border border-dashed border-border p-4 text-sm">
-                  <p className="font-medium text-foreground/80 mb-1">Not Included — not set yet</p>
-                  <p className="text-muted-foreground">Use the command bar below, e.g. “Add not included: flights, personal expenses”.</p>
-                </div>
-              ) : null}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-accent flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-success/15 text-success flex items-center justify-center">
+                    <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
+                  </span>
+                  Included
+                </h3>
+                <EditableField
+                  as="multiline"
+                  editable={showOwnerUI}
+                  value={p.included}
+                  placeholder="Click to add — one item per line"
+                  rows={5}
+                  className="w-full text-sm text-foreground/70"
+                  onSave={(v) => saveProjectPatch({ included: v })}
+                  renderDisplay={(val) => (
+                    <ul className="space-y-2">
+                      {val.split('\n').filter(Boolean).map((item: string, i: number) => (
+                        <li key={i} className="text-sm text-foreground/70 pl-8">{item.replace(/^[-•]\s*/, '')}</li>
+                      ))}
+                    </ul>
+                  )}
+                />
+              </div>
+              <div className="space-y-3">
+                <h3 className="font-semibold text-foreground/70 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+                    <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                  </span>
+                  Not Included
+                </h3>
+                <EditableField
+                  as="multiline"
+                  editable={showOwnerUI}
+                  value={p.not_included}
+                  placeholder="Click to add — one item per line"
+                  rows={5}
+                  className="w-full text-sm text-foreground/50"
+                  onSave={(v) => saveProjectPatch({ notIncluded: v })}
+                  renderDisplay={(val) => (
+                    <ul className="space-y-2">
+                      {val.split('\n').filter(Boolean).map((item: string, i: number) => (
+                        <li key={i} className="text-sm text-foreground/50 pl-8">{item.replace(/^[-•]\s*/, '')}</li>
+                      ))}
+                    </ul>
+                  )}
+                />
+              </div>
             </div>
           </section>
         )}
@@ -950,14 +1083,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
         {(p.terms || showOwnerUI) && (
           <section>
             <h2 className="text-2xl font-serif font-bold mb-4">Terms</h2>
-            {p.terms ? (
-              <p className="text-sm text-foreground/60 whitespace-pre-line">{p.terms}</p>
-            ) : showOwnerUI ? (
-              <div className="rounded-xl border border-dashed border-border p-4 text-sm">
-                <p className="font-medium text-foreground/80 mb-1">Terms — not set yet</p>
-                <p className="text-muted-foreground">Use the command bar below, e.g. “Set terms: 50% deposit, free cancellation up to 7 days”.</p>
-              </div>
-            ) : null}
+            <EditableField
+              as="multiline"
+              editable={showOwnerUI}
+              value={p.terms}
+              placeholder="Click to add terms"
+              rows={4}
+              className="text-sm text-foreground/60 w-full"
+              onSave={(v) => saveProjectPatch({ terms: v })}
+            />
           </section>
         )}
 
