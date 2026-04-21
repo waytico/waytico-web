@@ -390,6 +390,85 @@ export default function TripPageClient({ slug, initialData }: Props) {
     [getToken],
   )
 
+  // Inline-edit helper for a single day's scalar fields.
+  // Server uses SELECT FOR UPDATE so concurrent edits are race-safe.
+  const saveDayPatch = useCallback(
+    async (dayId: string, patch: Record<string, any>): Promise<boolean> => {
+      const projectId = data?.project?.id
+      if (!projectId) return false
+      try {
+        const token = await getToken()
+        if (!token) {
+          toast.error('Sign in to edit')
+          return false
+        }
+        const res = await apiFetch(`/api/projects/${projectId}/days/${dayId}`, {
+          method: 'PATCH',
+          token,
+          body: JSON.stringify(patch),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          toast.error(err?.error || 'Save failed')
+          return false
+        }
+        const { day } = await res.json()
+        setData((prev) => {
+          if (!prev?.project) return prev
+          const it = Array.isArray(prev.project.itinerary) ? prev.project.itinerary : []
+          const newIt = it.map((d: any) => (d.id === dayId ? day : d))
+          return { ...prev, project: { ...prev.project, itinerary: newIt } }
+        })
+        return true
+      } catch {
+        toast.error('Save failed')
+        return false
+      }
+    },
+    [data?.project?.id, getToken],
+  )
+
+  // Inline-edit helper for a single segment.
+  const saveSegmentPatch = useCallback(
+    async (dayId: string, segmentId: string, patch: Record<string, any>): Promise<boolean> => {
+      const projectId = data?.project?.id
+      if (!projectId) return false
+      try {
+        const token = await getToken()
+        if (!token) {
+          toast.error('Sign in to edit')
+          return false
+        }
+        const res = await apiFetch(`/api/projects/${projectId}/days/${dayId}/segments/${segmentId}`, {
+          method: 'PATCH',
+          token,
+          body: JSON.stringify(patch),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          toast.error(err?.error || 'Save failed')
+          return false
+        }
+        const { segment } = await res.json()
+        setData((prev) => {
+          if (!prev?.project) return prev
+          const it = Array.isArray(prev.project.itinerary) ? prev.project.itinerary : []
+          const newIt = it.map((d: any) => {
+            if (d.id !== dayId) return d
+            const segs = Array.isArray(d.segments) ? d.segments : []
+            return { ...d, segments: segs.map((s: any) => (s.id === segmentId ? segment : s)) }
+          })
+          return { ...prev, project: { ...prev.project, itinerary: newIt } }
+        })
+        return true
+      } catch {
+        toast.error('Save failed')
+        return false
+      }
+    },
+    [data?.project?.id, getToken],
+  )
+
   const toggleMediaVisibility = useCallback(
     async (mediaId: string, nextVisible: boolean) => {
       const prev = media
@@ -967,9 +1046,28 @@ export default function TripPageClient({ slug, initialData }: Props) {
                         {day.dayNumber}
                       </span>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{day.title}</h3>
-                        {day.description && (
-                          <p className="text-foreground/70 text-sm mt-1 leading-relaxed">{day.description}</p>
+                        <h3 className="font-semibold text-lg">
+                          <EditableField
+                            as="text"
+                            editable={showOwnerUI}
+                            value={day.title}
+                            required
+                            className="w-full"
+                            onSave={(v) => (day.id ? saveDayPatch(day.id, { title: v }) : Promise.resolve(false))}
+                          />
+                        </h3>
+                        {(day.description || showOwnerUI) && (
+                          <div className="text-foreground/70 text-sm mt-1 leading-relaxed">
+                            <EditableField
+                              as="multiline"
+                              editable={showOwnerUI}
+                              value={day.description}
+                              placeholder="Click to add a short summary of this day"
+                              rows={2}
+                              className="w-full"
+                              onSave={(v) => (day.id ? saveDayPatch(day.id, { description: v }) : Promise.resolve(false))}
+                            />
+                          </div>
                         )}
                       </div>
                     </div>
@@ -993,17 +1091,50 @@ export default function TripPageClient({ slug, initialData }: Props) {
                             <div key={s.id} className="relative pl-4">
                               <span className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full bg-accent" />
                               <div className="flex items-baseline gap-3">
-                                {s.startTime && (
+                                {(s.startTime || showOwnerUI) && (
                                   <span className="text-xs font-mono text-muted-foreground w-12 flex-shrink-0">
-                                    {s.startTime}
+                                    <EditableField
+                                      as="text"
+                                      editable={showOwnerUI}
+                                      value={s.startTime}
+                                      placeholder="HH:MM"
+                                      maxLength={5}
+                                      className="w-full"
+                                      onSave={(v) =>
+                                        day.id && s.id
+                                          ? saveSegmentPatch(day.id, s.id, { startTime: v || null })
+                                          : Promise.resolve(false)
+                                      }
+                                    />
                                   </span>
                                 )}
-                                <h4 className="font-medium text-sm">{s.title}</h4>
+                                <h4 className="font-medium text-sm flex-1">
+                                  <EditableField
+                                    as="text"
+                                    editable={showOwnerUI}
+                                    value={s.title}
+                                    required
+                                    className="w-full"
+                                    onSave={(v) =>
+                                      day.id && s.id ? saveSegmentPatch(day.id, s.id, { title: v }) : Promise.resolve(false)
+                                    }
+                                  />
+                                </h4>
                               </div>
-                              {s.notes && (
-                                <p className={`text-sm text-foreground/70 mt-1 ${s.startTime ? 'ml-[60px]' : ''}`}>
-                                  {s.notes}
-                                </p>
+                              {(s.notes || showOwnerUI) && (
+                                <div className={`text-sm text-foreground/70 mt-1 ${s.startTime ? 'ml-[60px]' : ''}`}>
+                                  <EditableField
+                                    as="multiline"
+                                    editable={showOwnerUI}
+                                    value={s.notes}
+                                    placeholder="Click to add notes"
+                                    rows={2}
+                                    className="w-full"
+                                    onSave={(v) =>
+                                      day.id && s.id ? saveSegmentPatch(day.id, s.id, { notes: v || null }) : Promise.resolve(false)
+                                    }
+                                  />
+                                </div>
                               )}
                               {s.location?.name && (
                                 <div className={`text-xs text-muted-foreground mt-1 ${s.startTime ? 'ml-[60px]' : ''}`}>
@@ -1028,9 +1159,18 @@ export default function TripPageClient({ slug, initialData }: Props) {
                                   📞 {s.contact.phone}
                                 </a>
                               )}
-                              {s.reference && (
+                              {(s.reference || showOwnerUI) && (
                                 <div className={`text-xs font-mono text-muted-foreground mt-1 ${s.startTime ? 'ml-[60px]' : ''}`}>
-                                  {s.reference}
+                                  <EditableField
+                                    as="text"
+                                    editable={showOwnerUI}
+                                    value={s.reference}
+                                    placeholder="Ref / booking code"
+                                    className="w-full"
+                                    onSave={(v) =>
+                                      day.id && s.id ? saveSegmentPatch(day.id, s.id, { reference: v || null }) : Promise.resolve(false)
+                                    }
+                                  />
                                 </div>
                               )}
                             </div>
