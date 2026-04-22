@@ -8,6 +8,8 @@ import { apiFetch } from '@/lib/api'
 type Props = {
   projectId: string
   publicStatus: string
+  /** 'default' — large hero-style button. 'compact' — slim pill, fits inside action bar */
+  variant?: 'default' | 'compact'
 }
 
 /**
@@ -18,7 +20,7 @@ type Props = {
  *
  * Click → POST /api/stripe/create-checkout → redirect to Stripe-hosted page.
  */
-export default function ActivateButton({ projectId, publicStatus }: Props) {
+export default function ActivateButton({ projectId, publicStatus, variant = 'default' }: Props) {
   const { isSignedIn, isLoaded, getToken } = useAuth()
   const [isOwner, setIsOwner] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -73,11 +75,16 @@ export default function ActivateButton({ projectId, publicStatus }: Props) {
     }
   }
 
+  const sizeClass =
+    variant === 'compact'
+      ? 'px-3.5 py-1.5 text-sm'
+      : 'px-6 py-3'
+
   return (
     <button
       onClick={handleClick}
       disabled={loading}
-      className="inline-flex items-center justify-center gap-2 bg-accent text-accent-foreground font-semibold px-6 py-3 rounded-full shadow-sm hover:bg-accent/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+      className={`inline-flex items-center justify-center gap-2 bg-accent text-accent-foreground font-semibold rounded-full shadow-sm hover:bg-accent/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${sizeClass}`}
     >
       {loading ? (
         <>
