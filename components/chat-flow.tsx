@@ -281,9 +281,11 @@ export default function ChatFlow() {
           </div>
         )}
 
-        {/* Bottom controls */}
-        <div className="absolute bottom-4 left-5 right-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        {/* Bottom controls — gradient backdrop prevents textarea content from
+             visually overflowing onto the Attach button / CTA when user types
+             long inputs. */}
+        <div className="absolute bottom-0 left-0 right-0 pt-6 pb-4 px-5 flex items-center justify-between rounded-b-2xl bg-gradient-to-t from-card via-card to-transparent pointer-events-none">
+          <div className="flex items-center gap-3 pointer-events-auto">
             <input
               ref={fileInputRef}
               type="file"
@@ -315,7 +317,7 @@ export default function ChatFlow() {
           <Button
             onClick={send}
             disabled={(!input.trim() && !selectedFile) || phase === 'sending'}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-full px-6 py-2 font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-full px-6 py-2 font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 pointer-events-auto"
           >
             {messages.length === 0 ? 'Create quote →' : 'Send →'}
           </Button>
