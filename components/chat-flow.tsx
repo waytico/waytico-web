@@ -258,7 +258,7 @@ export default function ChatFlow() {
             ? PLACEHOLDER_EXAMPLE
             : 'Add details or type "confirm" to generate…'
           }
-          className="min-h-[420px] md:min-h-[300px] p-5 pb-24 text-base rounded-2xl border border-border bg-card text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
+          className="min-h-[420px] md:min-h-[300px] p-5 pb-28 text-base rounded-2xl border border-border bg-card text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
           rows={3}
           disabled={phase === 'sending'}
         />
@@ -284,7 +284,7 @@ export default function ChatFlow() {
         {/* Bottom controls — gradient backdrop prevents textarea content from
              visually overflowing onto the Attach button / CTA when user types
              long inputs. */}
-        <div className="absolute bottom-0 left-0 right-0 pt-6 pb-4 px-5 flex items-center justify-between rounded-b-2xl bg-gradient-to-t from-card via-card to-transparent pointer-events-none">
+        <div className="absolute bottom-0 left-0 right-0 pt-12 pb-4 px-5 flex items-center justify-between rounded-b-2xl bg-gradient-to-t from-card via-card to-transparent pointer-events-none">
           <div className="flex items-center gap-3 pointer-events-auto">
             <input
               ref={fileInputRef}
