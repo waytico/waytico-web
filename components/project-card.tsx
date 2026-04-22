@@ -6,6 +6,7 @@ import { useAuth } from '@clerk/nextjs'
 import { apiFetch } from '@/lib/api'
 import ActionMenu, { type ActionItem } from './action-menu'
 import { ArchiveDialog } from './trip/archive-dialog'
+import { getStatusMeta, buildTripMenu } from '@/lib/trip-status'
 
 export type ProjectStatus = 'draft' | 'quoted' | 'active' | 'completed' | 'archived'
 
@@ -31,19 +32,12 @@ type Props = {
 }
 
 function StatusBadge({ status }: { status: ProjectStatus }) {
-  const map: Record<string, { label: string; cls: string; dot?: boolean }> = {
-    quoted: { label: 'Quote', cls: 'bg-accent/10 text-accent' },
-    active: { label: 'Active', cls: 'bg-success/15 text-success', dot: true },
-    completed: { label: 'Completed', cls: 'bg-secondary text-foreground/60' },
-    archived: { label: 'Archived', cls: 'bg-secondary text-foreground/60' },
-    draft: { label: 'Draft', cls: 'bg-secondary text-foreground/60' },
-  }
-  const meta = map[status] || { label: status, cls: 'bg-secondary text-foreground/60' }
+  const meta = getStatusMeta(status)
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider rounded-full ${meta.cls}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider rounded-full ${meta.chipClass}`}
     >
-      {meta.dot && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+      {meta.hasDot && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
       {meta.label}
     </span>
   )
@@ -172,28 +166,13 @@ export default function ProjectCard({ project, onUpdate, onDelete }: Props) {
     }
   }
 
-  // Build menu items based on status.
-  // Labels and actions MUST stay in sync with components/trip/trip-action-bar.tsx.
-  const items: ActionItem[] = []
-  if (project.status === 'draft') {
-    items.push({ label: 'Publish', onClick: () => changeStatus('quoted') })
-    items.push({ label: 'Archive…', onClick: () => setArchiveOpen(true) })
-    items.push({ label: 'Delete', onClick: hardDelete, variant: 'danger' })
-  } else if (project.status === 'quoted') {
-    items.push({ label: 'Archive…', onClick: () => setArchiveOpen(true) })
-    items.push({ label: 'Delete', onClick: hardDelete, variant: 'danger' })
-  } else if (project.status === 'active') {
-    items.push({ label: 'Completed', onClick: () => changeStatus('completed') })
-    items.push({ label: 'Archive…', onClick: () => setArchiveOpen(true) })
-    items.push({ label: 'Delete', onClick: hardDelete, variant: 'danger' })
-  } else if (project.status === 'completed') {
-    items.push({ label: 'Reactivate', onClick: () => changeStatus('active') })
-    items.push({ label: 'Archive…', onClick: () => setArchiveOpen(true) })
-    items.push({ label: 'Delete', onClick: hardDelete, variant: 'danger' })
-  } else if (project.status === 'archived') {
-    items.push({ label: 'Restore', onClick: restore })
-    items.push({ label: 'Delete', onClick: hardDelete, variant: 'danger' })
-  }
+  // Build menu items via shared registry — stays in sync with trip page.
+  const items: ActionItem[] = buildTripMenu(project.status, {
+    changeStatus: (next) => changeStatus(next as ProjectStatus),
+    requestArchive: () => setArchiveOpen(true),
+    requestDelete: hardDelete,
+    restore,
+  })
 
   return (
     <div

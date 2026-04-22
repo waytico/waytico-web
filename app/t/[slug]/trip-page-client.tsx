@@ -16,6 +16,8 @@ import { TripActionBar } from '@/components/trip/trip-action-bar'
 import { ArchiveDialog } from '@/components/trip/archive-dialog'
 import { EditableField } from '@/components/editable/editable-field'
 import { apiFetch } from '@/lib/api'
+import { getStatusMeta } from '@/lib/trip-status'
+import { useTripMutations } from '@/hooks/use-trip-mutations'
 import {
   uploadPhoto,
   deletePhoto,
@@ -162,41 +164,26 @@ export default function TripPageClient({ slug, initialData }: Props) {
     }
   }, [data?.project?.id, getToken])
 
-  // Inline-edit helper: PATCH /api/projects/:id with arbitrary subset of fields
-  // (camelCase per backend zod schema). On success replaces local project state
-  // with the server-returned row so downstream fields reflect normalizations.
-  const saveProjectPatch = useCallback(
-    async (patch: Record<string, any>): Promise<boolean> => {
-      const projectId = data?.project?.id
-      if (!projectId) return false
-      try {
-        const token = await getToken()
-        if (!token) {
-          toast.error('Sign in to edit')
-          return false
-        }
-        const res = await apiFetch(`/api/projects/${projectId}`, {
-          method: 'PATCH',
-          token,
-          body: JSON.stringify(patch),
-        })
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}))
-          toast.error(err?.error || 'Save failed')
-          return false
-        }
-        const payload = await res.json()
-        if (payload?.project) {
-          setData((prev) => (prev ? { ...prev, project: payload.project } : prev))
-        }
-        return true
-      } catch {
-        toast.error('Save failed')
-        return false
-      }
-    },
-    [data?.project?.id, getToken],
-  )
+  // Mutation helpers (PATCH project / task / day / segment, PUT what-to-bring, DELETE project)
+  // live in a shared hook so they can be reused and tested independently.
+  const {
+    saveProjectPatch,
+    saveTaskPatch,
+    saveDayPatch,
+    saveSegmentPatch,
+    saveWhatToBring,
+    handleDeleteProject: _handleDeleteProject,
+  } = useTripMutations({
+    projectId: data?.project?.id,
+    setData: setData as any,
+    setTasks: setTasks as any,
+  })
+
+  // Thin wrapper so call sites don't need to pass title — it lives here.
+  const handleDeleteProject = useCallback(async () => {
+    const title = data?.project?.title || 'this trip'
+    await _handleDeleteProject(title)
+  }, [_handleDeleteProject, data?.project?.title])
 
   useEffect(() => {
     const projectId = data?.project?.id
@@ -385,184 +372,21 @@ export default function TripPageClient({ slug, initialData }: Props) {
   )
 
   // Inline-edit helper for tasks. Updates local tasks[] optimistically on success.
-  const saveTaskPatch = useCallback(
-    async (taskId: string, patch: Record<string, any>): Promise<boolean> => {
-      try {
-        const token = await getToken()
-        if (!token) {
-          toast.error('Sign in to edit')
-          return false
-        }
-        const res = await apiFetch(`/api/tasks/${taskId}`, {
-          method: 'PATCH',
-          token,
-          body: JSON.stringify(patch),
-        })
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}))
-          toast.error(err?.error || 'Save failed')
-          return false
-        }
-        const payload = await res.json()
-        const updated = payload?.task
-        if (updated) {
-          setTasks((cur) => cur.map((t) => (t.id === taskId ? updated : t)))
-        }
-        return true
-      } catch {
-        toast.error('Save failed')
-        return false
-      }
-    },
-    [getToken],
-  )
+  // (moved into useTripMutations hook)
 
   // Inline-edit helper for a single day's scalar fields.
   // Server uses SELECT FOR UPDATE so concurrent edits are race-safe.
-  const saveDayPatch = useCallback(
-    async (dayId: string, patch: Record<string, any>): Promise<boolean> => {
-      const projectId = data?.project?.id
-      if (!projectId) return false
-      try {
-        const token = await getToken()
-        if (!token) {
-          toast.error('Sign in to edit')
-          return false
-        }
-        const res = await apiFetch(`/api/projects/${projectId}/days/${dayId}`, {
-          method: 'PATCH',
-          token,
-          body: JSON.stringify(patch),
-        })
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}))
-          toast.error(err?.error || 'Save failed')
-          return false
-        }
-        const { day } = await res.json()
-        setData((prev) => {
-          if (!prev?.project) return prev
-          const it = Array.isArray(prev.project.itinerary) ? prev.project.itinerary : []
-          const newIt = it.map((d: any) => (d.id === dayId ? day : d))
-          return { ...prev, project: { ...prev.project, itinerary: newIt } }
-        })
-        return true
-      } catch {
-        toast.error('Save failed')
-        return false
-      }
-    },
-    [data?.project?.id, getToken],
-  )
+  // (moved into useTripMutations hook)
 
   // Inline-edit helper for a single segment.
-  const saveSegmentPatch = useCallback(
-    async (dayId: string, segmentId: string, patch: Record<string, any>): Promise<boolean> => {
-      const projectId = data?.project?.id
-      if (!projectId) return false
-      try {
-        const token = await getToken()
-        if (!token) {
-          toast.error('Sign in to edit')
-          return false
-        }
-        const res = await apiFetch(`/api/projects/${projectId}/days/${dayId}/segments/${segmentId}`, {
-          method: 'PATCH',
-          token,
-          body: JSON.stringify(patch),
-        })
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}))
-          toast.error(err?.error || 'Save failed')
-          return false
-        }
-        const { segment } = await res.json()
-        setData((prev) => {
-          if (!prev?.project) return prev
-          const it = Array.isArray(prev.project.itinerary) ? prev.project.itinerary : []
-          const newIt = it.map((d: any) => {
-            if (d.id !== dayId) return d
-            const segs = Array.isArray(d.segments) ? d.segments : []
-            return { ...d, segments: segs.map((s: any) => (s.id === segmentId ? segment : s)) }
-          })
-          return { ...prev, project: { ...prev.project, itinerary: newIt } }
-        })
-        return true
-      } catch {
-        toast.error('Save failed')
-        return false
-      }
-    },
-    [data?.project?.id, getToken],
-  )
+  // (moved into useTripMutations hook)
 
   // Full-array replace helper for what_to_bring. Race-safe via SELECT FOR UPDATE on the server.
-  const saveWhatToBring = useCallback(
-    async (next: Array<{ category: string; items: string[] }>): Promise<boolean> => {
-      const projectId = data?.project?.id
-      if (!projectId) return false
-      try {
-        const token = await getToken()
-        if (!token) {
-          toast.error('Sign in to edit')
-          return false
-        }
-        const res = await apiFetch(`/api/projects/${projectId}/what-to-bring`, {
-          method: 'PUT',
-          token,
-          body: JSON.stringify({ whatToBring: next }),
-        })
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}))
-          toast.error(err?.error || 'Save failed')
-          return false
-        }
-        const { whatToBring } = await res.json()
-        setData((prev) => {
-          if (!prev?.project) return prev
-          return { ...prev, project: { ...prev.project, what_to_bring: whatToBring } }
-        })
-        return true
-      } catch {
-        toast.error('Save failed')
-        return false
-      }
-    },
-    [data?.project?.id, getToken],
-  )
+  // (moved into useTripMutations hook)
 
   // Delete project. Uses a simple confirm prompt for now — if user agrees,
   // calls DELETE /api/projects/:id and navigates back to dashboard.
-  const handleDeleteProject = useCallback(async () => {
-    const projectId = data?.project?.id
-    if (!projectId) return
-    const title = data?.project?.title || 'this trip'
-    if (typeof window === 'undefined') return
-    const ok = window.confirm(
-      `Delete "${title}"? This cannot be undone. All photos, tasks, and documents will be removed.`,
-    )
-    if (!ok) return
-    try {
-      const token = await getToken()
-      if (!token) {
-        toast.error('Sign in again')
-        return
-      }
-      const res = await apiFetch(`/api/projects/${projectId}`, {
-        method: 'DELETE',
-        token,
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        toast.error(err?.error || 'Could not delete')
-        return
-      }
-      toast.success('Trip deleted')
-      router.push('/dashboard')
-    } catch {
-      toast.error('Network error')
-    }
-  }, [data?.project?.id, data?.project?.title, getToken, router])
+  // (moved into useTripMutations hook — a thin wrapper above forwards title.)
 
   const toggleMediaVisibility = useCallback(
     async (mediaId: string, nextVisible: boolean) => {
@@ -949,38 +773,18 @@ export default function TripPageClient({ slug, initialData }: Props) {
                     />
                   </span>
                 )}
-                {p.status === 'quoted' && !showOwnerUI && (
-                  <span
-                    className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${
-                      hasBg
-                        ? 'bg-white/15 text-white backdrop-blur-sm'
-                        : 'bg-accent/10 text-accent'
-                    }`}
-                  >
-                    Quote
-                  </span>
-                )}
-                {p.status === 'active' && !showOwnerUI && (
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${
-                      hasBg
-                        ? 'bg-white/15 text-white backdrop-blur-sm'
-                        : 'bg-success/15 text-success'
-                    }`}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                    Active
-                  </span>
-                )}
-                {p.status === 'completed' && !showOwnerUI && (
-                  <span
-                    className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${
-                      hasBg ? 'bg-white/15 text-white backdrop-blur-sm' : 'bg-secondary text-foreground/60'
-                    }`}
-                  >
-                    Completed
-                  </span>
-                )}
+                {!showOwnerUI && ['quoted', 'active', 'completed'].includes(p.status) && (() => {
+                  const meta = getStatusMeta(p.status)
+                  const cls = hasBg ? 'bg-white/15 text-white backdrop-blur-sm' : meta.chipClass
+                  return (
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${cls}`}
+                    >
+                      {meta.hasDot && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+                      {meta.label}
+                    </span>
+                  )
+                })()}
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight leading-tight">
                 <EditableField

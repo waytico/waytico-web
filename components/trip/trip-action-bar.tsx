@@ -9,6 +9,7 @@ import ActivateButton from '@/components/activate-button'
 import ShareMenu from '@/components/share-menu'
 import ActionMenu from '@/components/action-menu'
 import { apiFetch } from '@/lib/api'
+import { getStatusMeta, buildTripMenu, type TripStatus } from '@/lib/trip-status'
 
 type Props = {
   projectId: string
@@ -107,38 +108,14 @@ export function TripActionBar({
     }
   }
 
-  // Status → chip label + colour
-  const statusMeta: Record<string, { label: string; cls: string }> = {
-    quoted: { label: 'Quote', cls: 'bg-accent/10 text-accent' },
-    active: { label: 'Active', cls: 'bg-success/15 text-success' },
-    completed: { label: 'Completed', cls: 'bg-secondary text-foreground/60' },
-    archived: { label: 'Archived', cls: 'bg-secondary text-foreground/60' },
-    draft: { label: 'Draft', cls: 'bg-secondary text-foreground/60' },
-    generating: { label: 'Generating', cls: 'bg-secondary text-foreground/60' },
-  }
-  const meta = statusMeta[status] || { label: status, cls: 'bg-secondary text-foreground/60' }
+  const meta = getStatusMeta(status)
 
-  // Overflow items — unified verbs, no "Mark as"
-  const overflow: {
-    label: string
-    onClick: () => void
-    variant?: 'default' | 'danger'
-  }[] = []
-  if (status === 'active') {
-    overflow.push({ label: 'Completed', onClick: () => changeStatus('completed', 'complete') })
-    overflow.push({ label: 'Archive…', onClick: onRequestArchive })
-    overflow.push({ label: 'Delete', onClick: onRequestDelete, variant: 'danger' })
-  } else if (status === 'quoted') {
-    overflow.push({ label: 'Archive…', onClick: onRequestArchive })
-    overflow.push({ label: 'Delete', onClick: onRequestDelete, variant: 'danger' })
-  } else if (status === 'archived') {
-    overflow.push({ label: 'Restore', onClick: restoreFromArchive })
-    overflow.push({ label: 'Delete', onClick: onRequestDelete, variant: 'danger' })
-  } else if (status === 'completed') {
-    overflow.push({ label: 'Reactivate', onClick: () => changeStatus('active', 'reactivate') })
-    overflow.push({ label: 'Archive…', onClick: onRequestArchive })
-    overflow.push({ label: 'Delete', onClick: onRequestDelete, variant: 'danger' })
-  }
+  const overflow = buildTripMenu(status, {
+    changeStatus: (next) => changeStatus(next, next === 'completed' ? 'complete' : next === 'active' ? 'reactivate' : next),
+    requestArchive: onRequestArchive,
+    requestDelete: onRequestDelete,
+    restore: restoreFromArchive,
+  })
 
   return (
     <div className="relative z-30 w-full border-b border-border/60 bg-background/70 backdrop-blur-sm">
@@ -146,9 +123,9 @@ export function TripActionBar({
         {/* LEFT: status + primary action + overflow */}
         <div className="flex items-center gap-2 min-w-0">
           <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-sans font-semibold uppercase tracking-wider rounded-full ${meta.cls}`}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-sans font-semibold uppercase tracking-wider rounded-full ${meta.chipClass}`}
           >
-            {status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+            {meta.hasDot && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
             {meta.label}
           </span>
 
