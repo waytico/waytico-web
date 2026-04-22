@@ -494,6 +494,41 @@ export default function TripPageClient({ slug, initialData }: Props) {
     [data?.project?.id, getToken],
   )
 
+  // Full-array replace helper for what_to_bring. Race-safe via SELECT FOR UPDATE on the server.
+  const saveWhatToBring = useCallback(
+    async (next: Array<{ category: string; items: string[] }>): Promise<boolean> => {
+      const projectId = data?.project?.id
+      if (!projectId) return false
+      try {
+        const token = await getToken()
+        if (!token) {
+          toast.error('Sign in to edit')
+          return false
+        }
+        const res = await apiFetch(`/api/projects/${projectId}/what-to-bring`, {
+          method: 'PUT',
+          token,
+          body: JSON.stringify({ whatToBring: next }),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          toast.error(err?.error || 'Save failed')
+          return false
+        }
+        const { whatToBring } = await res.json()
+        setData((prev) => {
+          if (!prev?.project) return prev
+          return { ...prev, project: { ...prev.project, what_to_bring: whatToBring } }
+        })
+        return true
+      } catch {
+        toast.error('Save failed')
+        return false
+      }
+    },
+    [data?.project?.id, getToken],
+  )
+
   const toggleMediaVisibility = useCallback(
     async (mediaId: string, nextVisible: boolean) => {
       const prev = media
@@ -1299,23 +1334,61 @@ export default function TripPageClient({ slug, initialData }: Props) {
           </section>
         )}
 
-        {p.what_to_bring?.length > 0 && (
+        {((p.what_to_bring?.length > 0) || showOwnerUI) && (
           <section>
             <h2 className="text-2xl font-serif font-bold mb-6">What to Bring</h2>
             <div className="grid md:grid-cols-2 gap-6">
-              {p.what_to_bring.map((cat: any, i: number) => (
-                <div key={i} className="space-y-2">
-                  <h3 className="font-semibold text-sm">{cat.category}</h3>
-                  <ul className="space-y-1">
-                    {cat.items?.map((item: any, j: number) => (
-                      <li key={j} className="text-sm text-foreground/70 flex items-start gap-2">
-                        <span className="text-accent mt-0.5">·</span>
-                        <span>{typeof item === 'string' ? item : item.name || item.item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+              {(p.what_to_bring || []).map((cat: any, i: number) => {
+                // items can be strings or objects — normalize to strings for editing + display
+                const itemStrings: string[] = (cat.items || []).map((x: any) =>
+                  typeof x === 'string' ? x : (x?.name || x?.item || ''),
+                ).filter(Boolean)
+                const joined = itemStrings.join('\n')
+                return (
+                  <div key={i} className="space-y-2">
+                    <h3 className="font-semibold text-sm">
+                      <EditableField
+                        as="text"
+                        editable={showOwnerUI}
+                        value={cat.category}
+                        required
+                        className="w-full"
+                        onSave={(v) => {
+                          const next = (p.what_to_bring || []).map((c: any, idx: number) =>
+                            idx === i ? { category: v, items: itemStrings } : { category: c.category, items: (c.items || []).map((x: any) => typeof x === 'string' ? x : (x?.name || x?.item || '')).filter(Boolean) }
+                          )
+                          return saveWhatToBring(next)
+                        }}
+                      />
+                    </h3>
+                    <EditableField
+                      as="multiline"
+                      editable={showOwnerUI}
+                      value={joined}
+                      placeholder="Click to add items — one per line"
+                      rows={Math.max(3, itemStrings.length)}
+                      className="w-full"
+                      onSave={(v) => {
+                        const newItems = v.split('\n').map((s) => s.replace(/^[-•·]\s*/, '').trim()).filter(Boolean)
+                        const next = (p.what_to_bring || []).map((c: any, idx: number) =>
+                          idx === i ? { category: cat.category, items: newItems } : { category: c.category, items: (c.items || []).map((x: any) => typeof x === 'string' ? x : (x?.name || x?.item || '')).filter(Boolean) }
+                        )
+                        return saveWhatToBring(next)
+                      }}
+                      renderDisplay={() => (
+                        <ul className="space-y-1">
+                          {itemStrings.map((item, j) => (
+                            <li key={j} className="text-sm text-foreground/70 flex items-start gap-2">
+                              <span className="text-accent mt-0.5">·</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    />
+                  </div>
+                )
+              })}
             </div>
           </section>
         )}
