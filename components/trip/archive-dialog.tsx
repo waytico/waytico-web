@@ -141,14 +141,15 @@ export function ArchiveDialog({
         <div>
           <h2 className="text-xl font-serif font-bold">Archive trip</h2>
           <p className="text-sm text-foreground/60 mt-1">
-            Save the client's contact with this trip so you can find it later in your dashboard.
+            Optional — save the client's contact so you can find this trip later
+            by name or email from your dashboard.
           </p>
         </div>
 
         <div className="space-y-3">
           <div>
             <label className="block text-xs font-medium text-foreground/70 mb-1">
-              Client name
+              Client name <span className="text-muted-foreground font-normal">(optional)</span>
             </label>
             <input
               type="text"
@@ -160,7 +161,7 @@ export function ArchiveDialog({
           </div>
           <div>
             <label className="block text-xs font-medium text-foreground/70 mb-1">
-              Client email
+              Client email <span className="text-muted-foreground font-normal">(optional)</span>
             </label>
             <input
               type="email"
@@ -172,7 +173,7 @@ export function ArchiveDialog({
           </div>
           <div>
             <label className="block text-xs font-medium text-foreground/70 mb-1">
-              Client phone
+              Client phone <span className="text-muted-foreground font-normal">(optional)</span>
             </label>
             <input
               type="tel"
@@ -183,6 +184,10 @@ export function ArchiveDialog({
             />
           </div>
         </div>
+
+        <p className="text-xs text-muted-foreground">
+          You can always find archived trips in your dashboard — contact details aren't required to archive.
+        </p>
 
         <div className="flex gap-2 justify-end pt-2">
           <button
