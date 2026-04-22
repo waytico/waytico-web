@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { apiFetch } from '@/lib/api'
 import ActionMenu, { type ActionItem } from './action-menu'
+import { ArchiveDialog } from './trip/archive-dialog'
 
 export type ProjectStatus = 'draft' | 'quoted' | 'active' | 'completed' | 'archived'
 
@@ -18,6 +19,9 @@ export type Project = {
   cover_url: string | null
   updated_at: string
   created_at: string
+  client_name?: string | null
+  client_email?: string | null
+  client_phone?: string | null
 }
 
 type Props = {
@@ -27,19 +31,20 @@ type Props = {
 }
 
 function StatusBadge({ status }: { status: ProjectStatus }) {
-  const styles: Record<string, string> = {
-    quoted: 'bg-muted text-muted-foreground',
-    active: 'bg-accent text-accent-foreground',
-    completed: 'bg-green-600 text-white',
-    draft: 'bg-muted text-muted-foreground',
-    archived: 'bg-muted/60 text-muted-foreground',
+  const map: Record<string, { label: string; cls: string; dot?: boolean }> = {
+    quoted: { label: 'Quote', cls: 'bg-accent/10 text-accent' },
+    active: { label: 'Active', cls: 'bg-success/15 text-success', dot: true },
+    completed: { label: 'Completed', cls: 'bg-secondary text-foreground/60' },
+    archived: { label: 'Archived', cls: 'bg-secondary text-foreground/60' },
+    draft: { label: 'Draft', cls: 'bg-secondary text-foreground/60' },
   }
-  const label = status.charAt(0).toUpperCase() + status.slice(1)
+  const meta = map[status] || { label: status, cls: 'bg-secondary text-foreground/60' }
   return (
     <span
-      className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium ${styles[status] || styles.draft}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider rounded-full ${meta.cls}`}
     >
-      {label}
+      {meta.dot && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+      {meta.label}
     </span>
   )
 }
@@ -59,6 +64,7 @@ export default function ProjectCard({ project, onUpdate, onDelete }: Props) {
   const [title, setTitle] = useState(project.title)
   const [saving, setSaving] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [archiveOpen, setArchiveOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -166,23 +172,27 @@ export default function ProjectCard({ project, onUpdate, onDelete }: Props) {
     }
   }
 
-  // Build menu items based on status
+  // Build menu items based on status.
+  // Labels and actions MUST stay in sync with components/trip/trip-action-bar.tsx.
   const items: ActionItem[] = []
   if (project.status === 'draft') {
     items.push({ label: 'Publish', onClick: () => changeStatus('quoted') })
-    items.push({ label: 'Archive', onClick: () => changeStatus('archived') })
+    items.push({ label: 'Archive…', onClick: () => setArchiveOpen(true) })
     items.push({ label: 'Delete', onClick: hardDelete, variant: 'danger' })
   } else if (project.status === 'quoted') {
-    items.push({ label: 'Archive', onClick: () => changeStatus('archived') })
+    items.push({ label: 'Archive…', onClick: () => setArchiveOpen(true) })
     items.push({ label: 'Delete', onClick: hardDelete, variant: 'danger' })
   } else if (project.status === 'active') {
-    items.push({ label: 'Mark completed', onClick: () => changeStatus('completed') })
-    items.push({ label: 'Archive', onClick: () => changeStatus('archived') })
+    items.push({ label: 'Completed', onClick: () => changeStatus('completed') })
+    items.push({ label: 'Archive…', onClick: () => setArchiveOpen(true) })
+    items.push({ label: 'Delete', onClick: hardDelete, variant: 'danger' })
   } else if (project.status === 'completed') {
-    items.push({ label: 'Archive', onClick: () => changeStatus('archived') })
+    items.push({ label: 'Reactivate', onClick: () => changeStatus('active') })
+    items.push({ label: 'Archive…', onClick: () => setArchiveOpen(true) })
+    items.push({ label: 'Delete', onClick: hardDelete, variant: 'danger' })
   } else if (project.status === 'archived') {
     items.push({ label: 'Restore', onClick: restore })
-    items.push({ label: 'Delete forever', onClick: hardDelete, variant: 'danger' })
+    items.push({ label: 'Delete', onClick: hardDelete, variant: 'danger' })
   }
 
   return (
@@ -260,6 +270,21 @@ export default function ProjectCard({ project, onUpdate, onDelete }: Props) {
           </div>
         </Link>
       </div>
+
+      <ArchiveDialog
+        open={archiveOpen}
+        projectId={project.id}
+        projectTitle={project.title}
+        currentContact={{
+          name: project.client_name,
+          email: project.client_email,
+          phone: project.client_phone,
+        }}
+        onClose={() => setArchiveOpen(false)}
+        onArchived={() => {
+          onUpdate({ ...project, status: 'archived' })
+        }}
+      />
     </div>
   )
 }
