@@ -8,8 +8,11 @@ type Props = { params: { slug: string } }
 
 async function getProject(slug: string) {
   try {
+    // No ISR cache — Stripe activation + AI pipeline mutate the project, and
+    // router.refresh() must see the fresh state immediately. Trip pages are
+    // user-specific anyway, so CDN caching isn't useful here.
     const res = await fetch(`${API_URL}/api/public/projects/${slug}`, {
-      next: { revalidate: 30 },
+      cache: 'no-store',
     })
     if (!res.ok) return null
     return await res.json()

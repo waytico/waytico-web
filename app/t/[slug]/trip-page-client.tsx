@@ -218,6 +218,30 @@ export default function TripPageClient({ slug, initialData }: Props) {
     if (initialData?.tasks) setTasks(initialData.tasks)
   }, [initialData, isOwner])
 
+  // Keep `data.project` in sync with the SSR payload. When a parent `router.refresh()`
+  // re-fetches the trip (e.g. after Stripe activation redirect), the server returns
+  // updated status/fields; without this sync the client would keep showing the old
+  // status because `useState(initialData)` only reads the prop on first render.
+  useEffect(() => {
+    if (!initialData?.project) return
+    setData((prev) => {
+      if (!prev?.project) return initialData
+      // Only replace if the server version is actually newer / different in a
+      // user-visible way. We intentionally keep owner-side overlays (tasks/media
+      // from /full) since those are managed via their own setters.
+      return { ...prev, project: initialData.project }
+    })
+  }, [initialData])
+
+  // External trigger: ActivationToast (and anyone else) dispatches
+  // `waytico:trip-refresh` when they want the owner-side /full payload
+  // (tasks, media) re-fetched on top of the SSR refresh.
+  useEffect(() => {
+    const handler = () => setOwnerRefreshKey((k) => k + 1)
+    window.addEventListener('waytico:trip-refresh', handler)
+    return () => window.removeEventListener('waytico:trip-refresh', handler)
+  }, [])
+
   const bumpUploading = (key: string, delta: number) =>
     setUploadingByDay((prev) => {
       const next = { ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }
