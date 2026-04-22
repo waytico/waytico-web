@@ -18,6 +18,8 @@ type Props = {
   canShare: boolean
   onPreviewAsClient: () => void
   onStatusChanged?: () => void
+  onRequestArchive: () => void
+  onRequestDelete: () => void
 }
 
 /**
@@ -38,6 +40,8 @@ export function TripActionBar({
   canShare,
   onPreviewAsClient,
   onStatusChanged,
+  onRequestArchive,
+  onRequestDelete,
 }: Props) {
   const router = useRouter()
   const { getToken } = useAuth()
@@ -83,19 +87,25 @@ export function TripActionBar({
   }
   const meta = statusMeta[status] || { label: status, cls: 'bg-secondary text-foreground/60' }
 
-  // Overflow items
+  // Overflow items — unified verbs, no "Mark as"
   const overflow: {
     label: string
     onClick: () => void
     variant?: 'default' | 'danger'
   }[] = []
   if (status === 'active') {
-    overflow.push({ label: 'Mark as completed', onClick: () => changeStatus('completed', 'complete') })
-    overflow.push({ label: 'Archive', onClick: () => changeStatus('archived', 'archive') })
+    overflow.push({ label: 'Completed', onClick: () => changeStatus('completed', 'complete') })
+    overflow.push({ label: 'Archive…', onClick: onRequestArchive })
+    overflow.push({ label: 'Delete', onClick: onRequestDelete, variant: 'danger' })
   } else if (status === 'quoted') {
-    overflow.push({ label: 'Archive', onClick: () => changeStatus('archived', 'archive') })
+    overflow.push({ label: 'Archive…', onClick: onRequestArchive })
+    overflow.push({ label: 'Delete', onClick: onRequestDelete, variant: 'danger' })
   } else if (status === 'archived') {
     overflow.push({ label: 'Restore', onClick: () => changeStatus('quoted', 'restore') })
+    overflow.push({ label: 'Delete', onClick: onRequestDelete, variant: 'danger' })
+  } else if (status === 'completed') {
+    overflow.push({ label: 'Archive…', onClick: onRequestArchive })
+    overflow.push({ label: 'Delete', onClick: onRequestDelete, variant: 'danger' })
   }
 
   return (
@@ -126,7 +136,7 @@ export function TripActionBar({
             </button>
           )}
 
-          {overflow.length > 0 && <ActionMenu items={overflow} />}
+          {overflow.length > 0 && <ActionMenu items={overflow} align="left" />}
         </div>
 
         {/* RIGHT: agent tools */}

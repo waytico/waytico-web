@@ -89,10 +89,10 @@ export default function ActivateButton({ projectId, publicStatus, variant = 'def
       {loading ? (
         <>
           <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          Starting checkout…
+          {variant === 'compact' ? 'Processing…' : 'Starting checkout…'}
         </>
       ) : (
-        <>Activate this trip</>
+        <>{variant === 'compact' ? 'Activate' : 'Activate this trip'}</>
       )}
     </button>
   )

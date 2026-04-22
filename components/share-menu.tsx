@@ -55,7 +55,7 @@ export default function ShareMenu({ title, url, publicStatus }: Props) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center justify-center gap-2 bg-secondary text-secondary-foreground font-medium px-5 py-3 rounded-full hover:bg-secondary/80 transition-colors"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
       >
         Share with client
       </button>

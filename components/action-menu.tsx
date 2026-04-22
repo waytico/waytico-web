@@ -13,9 +13,11 @@ export type ActionItem = {
 type Props = {
   items: ActionItem[]
   ariaLabel?: string
+  /** Which edge of the trigger the menu aligns to. Default 'right' (legacy). */
+  align?: 'left' | 'right'
 }
 
-export default function ActionMenu({ items, ariaLabel = 'Project actions' }: Props) {
+export default function ActionMenu({ items, ariaLabel = 'Project actions', align = 'right' }: Props) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -58,7 +60,9 @@ export default function ActionMenu({ items, ariaLabel = 'Project actions' }: Pro
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full mt-1 z-10 min-w-[160px] rounded-md border border-border bg-card shadow-md py-1"
+          className={`absolute top-full mt-1 z-50 min-w-[180px] max-w-[calc(100vw-2rem)] rounded-md border border-border bg-card shadow-md py-1 ${
+            align === 'left' ? 'left-0' : 'right-0'
+          }`}
         >
           {items.map((it, i) => (
             <button
@@ -75,8 +79,8 @@ export default function ActionMenu({ items, ariaLabel = 'Project actions' }: Pro
               className={
                 'w-full text-left px-3 py-1.5 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ' +
                 (it.variant === 'danger'
-                  ? 'text-red-600 hover:bg-red-50'
-                  : 'text-foreground hover:bg-muted/50')
+                  ? 'text-destructive hover:bg-destructive/10'
+                  : 'text-foreground hover:bg-secondary')
               }
             >
               {it.label}

@@ -13,6 +13,7 @@ import PhotoLightbox from '@/components/photo-lightbox'
 import Header from '@/components/header'
 import { TripCommandBar } from '@/components/trip/trip-command-bar'
 import { TripActionBar } from '@/components/trip/trip-action-bar'
+import { ArchiveDialog } from '@/components/trip/archive-dialog'
 import { EditableField } from '@/components/editable/editable-field'
 import { apiFetch } from '@/lib/api'
 import {
@@ -127,6 +128,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const [isOwner, setIsOwner] = useState(false)
   const [previewAsClient, setPreviewAsClient] = useState(false)
   const showOwnerUI = isOwner && !previewAsClient
+  const [archiveOpen, setArchiveOpen] = useState(false)
   const [media, setMedia] = useState<MediaRecord[]>(
     (initialData?.media as MediaRecord[]) || [],
   )
@@ -529,6 +531,39 @@ export default function TripPageClient({ slug, initialData }: Props) {
     [data?.project?.id, getToken],
   )
 
+  // Delete project. Uses a simple confirm prompt for now — if user agrees,
+  // calls DELETE /api/projects/:id and navigates back to dashboard.
+  const handleDeleteProject = useCallback(async () => {
+    const projectId = data?.project?.id
+    if (!projectId) return
+    const title = data?.project?.title || 'this trip'
+    if (typeof window === 'undefined') return
+    const ok = window.confirm(
+      `Delete "${title}"? This cannot be undone. All photos, tasks, and documents will be removed.`,
+    )
+    if (!ok) return
+    try {
+      const token = await getToken()
+      if (!token) {
+        toast.error('Sign in again')
+        return
+      }
+      const res = await apiFetch(`/api/projects/${projectId}`, {
+        method: 'DELETE',
+        token,
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err?.error || 'Could not delete')
+        return
+      }
+      toast.success('Trip deleted')
+      router.push('/dashboard')
+    } catch {
+      toast.error('Network error')
+    }
+  }, [data?.project?.id, data?.project?.title, getToken, router])
+
   const toggleMediaVisibility = useCallback(
     async (mediaId: string, nextVisible: boolean) => {
       const prev = media
@@ -693,6 +728,27 @@ export default function TripPageClient({ slug, initialData }: Props) {
           canShare={showOwnerUI || isAnonCreator}
           onPreviewAsClient={() => setPreviewAsClient(true)}
           onStatusChanged={() => setOwnerRefreshKey((k) => k + 1)}
+          onRequestArchive={() => setArchiveOpen(true)}
+          onRequestDelete={handleDeleteProject}
+        />
+      )}
+
+      {/* Archive-with-client-contact modal */}
+      {showOwnerUI && p.id && (
+        <ArchiveDialog
+          open={archiveOpen}
+          projectId={p.id}
+          projectTitle={p.title}
+          currentContact={{
+            name: p.client_name,
+            email: p.client_email,
+            phone: p.client_phone,
+          }}
+          onClose={() => setArchiveOpen(false)}
+          onArchived={() => {
+            setOwnerRefreshKey((k) => k + 1)
+            router.refresh()
+          }}
         />
       )}
 
