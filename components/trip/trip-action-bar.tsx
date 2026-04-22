@@ -76,6 +76,37 @@ export function TripActionBar({
     }
   }
 
+  // Restore goes via the dedicated endpoint so the server can return the trip
+  // to its actual previous status (quoted / active / completed) instead of
+  // always defaulting to 'quoted'.
+  const restoreFromArchive = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const token = await getToken()
+      if (!token) {
+        toast.error('Sign in again')
+        return
+      }
+      const res = await apiFetch(`/api/projects/${projectId}/restore`, {
+        method: 'POST',
+        token,
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err?.error || 'Could not restore')
+        return
+      }
+      toast.success(`${title} — restored`)
+      onStatusChanged?.()
+      router.refresh()
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   // Status → chip label + colour
   const statusMeta: Record<string, { label: string; cls: string }> = {
     quoted: { label: 'Quote', cls: 'bg-accent/10 text-accent' },
@@ -101,9 +132,10 @@ export function TripActionBar({
     overflow.push({ label: 'Archive…', onClick: onRequestArchive })
     overflow.push({ label: 'Delete', onClick: onRequestDelete, variant: 'danger' })
   } else if (status === 'archived') {
-    overflow.push({ label: 'Restore', onClick: () => changeStatus('quoted', 'restore') })
+    overflow.push({ label: 'Restore', onClick: restoreFromArchive })
     overflow.push({ label: 'Delete', onClick: onRequestDelete, variant: 'danger' })
   } else if (status === 'completed') {
+    overflow.push({ label: 'Reactivate', onClick: () => changeStatus('active', 'reactivate') })
     overflow.push({ label: 'Archive…', onClick: onRequestArchive })
     overflow.push({ label: 'Delete', onClick: onRequestDelete, variant: 'danger' })
   }
@@ -127,7 +159,7 @@ export function TripActionBar({
           {status === 'archived' && (
             <button
               type="button"
-              onClick={() => changeStatus('quoted', 'restore')}
+              onClick={restoreFromArchive}
               disabled={busy}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold text-accent hover:bg-accent/10 transition-colors disabled:opacity-60"
             >
