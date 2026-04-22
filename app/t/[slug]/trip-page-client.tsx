@@ -893,6 +893,17 @@ export default function TripPageClient({ slug, initialData }: Props) {
                     />
                   </span>
                 )}
+                {p.status === 'quoted' && !showOwnerUI && (
+                  <span
+                    className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${
+                      hasBg
+                        ? 'bg-white/15 text-white backdrop-blur-sm'
+                        : 'bg-accent/10 text-accent'
+                    }`}
+                  >
+                    Quote
+                  </span>
+                )}
                 {p.status === 'active' && !showOwnerUI && (
                   <span
                     className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${
