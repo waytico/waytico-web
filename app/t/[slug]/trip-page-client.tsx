@@ -837,25 +837,48 @@ export default function TripPageClient({ slug, initialData }: Props) {
             <div
               className={`relative max-w-3xl mx-auto px-4 text-center space-y-6 ${hasBg ? 'text-white' : ''}`}
             >
-              {(p.activity_type || showOwnerUI) && (
-                <span
-                  className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${
-                    hasBg
-                      ? 'bg-white/15 text-white backdrop-blur-sm'
-                      : 'bg-accent/10 text-accent'
-                  }`}
-                >
-                  <EditableField
-                    as="text"
-                    editable={showOwnerUI}
-                    value={p.activity_type}
-                    placeholder="Add activity type"
-                    className="uppercase tracking-wider"
-                    maxLength={40}
-                    onSave={(v) => saveProjectPatch({ activityType: v })}
-                  />
-                </span>
-              )}
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {(p.activity_type || showOwnerUI) && (
+                  <span
+                    className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${
+                      hasBg
+                        ? 'bg-white/15 text-white backdrop-blur-sm'
+                        : 'bg-accent/10 text-accent'
+                    }`}
+                  >
+                    <EditableField
+                      as="text"
+                      editable={showOwnerUI}
+                      value={p.activity_type}
+                      placeholder="Add activity type"
+                      className="uppercase tracking-wider"
+                      maxLength={40}
+                      onSave={(v) => saveProjectPatch({ activityType: v })}
+                    />
+                  </span>
+                )}
+                {p.status === 'active' && (
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${
+                      hasBg
+                        ? 'bg-white/15 text-white backdrop-blur-sm'
+                        : 'bg-success/15 text-success'
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                    Active
+                  </span>
+                )}
+                {p.status === 'completed' && (
+                  <span
+                    className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${
+                      hasBg ? 'bg-white/15 text-white backdrop-blur-sm' : 'bg-secondary text-foreground/60'
+                    }`}
+                  >
+                    Completed
+                  </span>
+                )}
+              </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight leading-tight">
                 <EditableField
                   as="text"
