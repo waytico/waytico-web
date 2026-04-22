@@ -12,6 +12,7 @@ import PhotosBlock from '@/components/photos-block'
 import PhotoLightbox from '@/components/photo-lightbox'
 import Header from '@/components/header'
 import { TripCommandBar } from '@/components/trip/trip-command-bar'
+import { TripActionBar } from '@/components/trip/trip-action-bar'
 import { EditableField } from '@/components/editable/editable-field'
 import { apiFetch } from '@/lib/api'
 import {
@@ -646,6 +647,20 @@ export default function TripPageClient({ slug, initialData }: Props) {
           agency-proposal-style page without the Waytico SaaS chrome. */}
       {showOwnerUI && <Header />}
 
+      {/* Owner action bar: status + state action on the left, agent tools on the right.
+          Hidden in preview mode (client view) and for non-owners. */}
+      {showOwnerUI && p.id && (
+        <TripActionBar
+          projectId={p.id}
+          status={p.status}
+          title={p.title}
+          shareUrl={shareUrl}
+          canShare={showOwnerUI || isAnonCreator}
+          onPreviewAsClient={() => setPreviewAsClient(true)}
+          onStatusChanged={() => setOwnerRefreshKey((k) => k + 1)}
+        />
+      )}
+
       {/* Stripe return flow (?activated=1 / ?cancelled=1) */}
       <ActivationToast />
 
@@ -783,20 +798,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   <Trash2 className="h-4 w-4" />
                 </button>
               )}
-              <div className="hidden md:flex items-center gap-2">
-                {p.id && <ActivateButton projectId={p.id} publicStatus={p.status} />}
-                {showOwnerUI && (
-                  <button
-                    onClick={() => setPreviewAsClient(true)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-secondary text-secondary-foreground hover:bg-highlight text-sm font-medium transition-colors"
-                    title="Preview as client"
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span>Preview as client</span>
-                  </button>
-                )}
-                {p.id && (showOwnerUI || isAnonCreator) && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
-              </div>
             </div>
 
             {/* Drop indicator when dragging files */}
@@ -857,7 +858,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                     />
                   </span>
                 )}
-                {p.status === 'active' && (
+                {p.status === 'active' && !showOwnerUI && (
                   <span
                     className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${
                       hasBg
@@ -869,7 +870,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                     Active
                   </span>
                 )}
-                {p.status === 'completed' && (
+                {p.status === 'completed' && !showOwnerUI && (
                   <span
                     className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${
                       hasBg ? 'bg-white/15 text-white backdrop-blur-sm' : 'bg-secondary text-foreground/60'
@@ -1011,23 +1012,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 </div>
               )}
 
-              {/* Mobile-only: Activate + Share (moved here from top-right so
-                  they don't overlap the title on narrow viewports). */}
-              {p.id && (
-                <div className="md:hidden pt-4 flex flex-wrap items-center justify-center gap-3">
-                  <ActivateButton projectId={p.id} publicStatus={p.status} />
-                  {showOwnerUI && (
-                    <button
-                      onClick={() => setPreviewAsClient(true)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-secondary text-secondary-foreground hover:bg-highlight text-sm font-medium transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>Preview</span>
-                    </button>
-                  )}
-                  {(showOwnerUI || isAnonCreator) && <ShareMenu title={p.title} url={shareUrl} publicStatus={p.status} />}
-                </div>
-              )}
             </div>
 
             {/* Uploading indicator when replacing existing hero */}

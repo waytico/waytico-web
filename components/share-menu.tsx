@@ -33,7 +33,7 @@ export default function ShareMenu({ title, url, publicStatus }: Props) {
     }
   }, [open])
 
-  if (publicStatus !== 'quoted') return null
+  if (publicStatus !== 'quoted' && publicStatus !== 'active') return null
 
   const message = `${title} — ${url}`
   const mailto = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(url)}`
