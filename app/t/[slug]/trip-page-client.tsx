@@ -18,11 +18,8 @@ import { EditableField } from '@/components/editable/editable-field'
 import { apiFetch } from '@/lib/api'
 import { getStatusMeta } from '@/lib/trip-status'
 import { useTripMutations } from '@/hooks/use-trip-mutations'
-import {
-  uploadPhoto,
-  deletePhoto,
-  type MediaRecord,
-} from '@/lib/upload-photo'
+import { usePhotoUpload, type MediaRecord } from '@/hooks/use-photo-upload'
+import { useTripData } from '@/hooks/use-trip-data'
 
 type Location = {
   id: string; name: string; type: string
@@ -48,34 +45,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const [isAnonCreator, setIsAnonCreator] = useState(false)
   const [projectIdForClaim, setProjectIdForClaim] = useState<string | null>(null)
   const [ownerRefreshKey, setOwnerRefreshKey] = useState(0)
-
-  const needsPolling = !initialData || initialData.project?.status === 'generating'
-  const [polling, setPolling] = useState(needsPolling)
-
-  // Polling for generation
-  useEffect(() => {
-    if (!polling) return
-    let active = true
-    const poll = async () => {
-      while (active) {
-        try {
-          const res = await fetch(`${API_URL}/api/public/projects/${slug}`)
-          if (res.ok) {
-            const d = await res.json()
-            if (d.project?.status !== 'generating') {
-              setData(d)
-              setPolling(false)
-              return
-            }
-          }
-        } catch {}
-        await new Promise(r => setTimeout(r, 3000))
-      }
-    }
-    poll()
-    const timeout = setTimeout(() => { active = false; setPolling(false) }, 120_000)
-    return () => { active = false; clearTimeout(timeout) }
-  }, [polling, slug])
 
   // Show sticky banner for anon-owned projects until dismissed or claimed.
   useEffect(() => {
@@ -135,7 +104,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
     (initialData?.media as MediaRecord[]) || [],
   )
   const [tasks, setTasks] = useState<any[]>(initialData?.tasks || [])
-  const [uploadingByDay, setUploadingByDay] = useState<Record<string, number>>({})
   const [lightbox, setLightbox] = useState<MediaRecord | null>(null)
   const [heroDragOver, setHeroDragOver] = useState(false)
   const [docDragOver, setDocDragOver] = useState(false)
@@ -143,26 +111,17 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const heroInputRef = useRef<HTMLInputElement | null>(null)
   const docInputRef = useRef<HTMLInputElement | null>(null)
 
-  // Owner-detect + full payload fetch. /:id/full returns 200 only if the
-  // caller owns the project; in that case the response also contains all
-  // tasks/media (including hidden ones) with their visible_to_client flag.
-  const refreshOwnerData = useCallback(async () => {
-    const projectId = data?.project?.id
-    if (!projectId) return false
-    try {
-      const token = await getToken()
-      if (!token) return false
-      const ownRes = await apiFetch(`/api/projects/${projectId}/full`, { token })
-      if (!ownRes.ok) return false
-      const payload = await ownRes.json()
-      setIsOwner(true)
-      if (Array.isArray(payload.tasks)) setTasks(payload.tasks)
-      if (Array.isArray(payload.media)) setMedia(payload.media as MediaRecord[])
-      return true
-    } catch {
-      return false
-    }
-  }, [data?.project?.id, getToken])
+  // Trip-level data flows (polling, owner-detect, post-AI refresh) in a hook.
+  const { polling, refreshOwnerData, handleTripUpdated } = useTripData({
+    slug,
+    initialData,
+    setData,
+    setTasks,
+    setMedia,
+    isOwner,
+    setIsOwner,
+    ownerRefreshKey,
+  })
 
   // Mutation helpers (PATCH project / task / day / segment, PUT what-to-bring, DELETE project)
   // live in a shared hook so they can be reused and tested independently.
@@ -184,21 +143,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
     const title = data?.project?.title || 'this trip'
     await _handleDeleteProject(title)
   }, [_handleDeleteProject, data?.project?.title])
-
-  useEffect(() => {
-    const projectId = data?.project?.id
-    if (!isLoaded || !isSignedIn || !projectId) return
-    let cancelled = false
-    ;(async () => {
-      const ok = await refreshOwnerData()
-      if (cancelled) return
-      // If not owner, keep the public view as-is (initialData is already filtered)
-      void ok
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [isLoaded, isSignedIn, refreshOwnerData, data?.project?.id, ownerRefreshKey])
 
   // Sync media/tasks when initialData changes (e.g., after polling completes).
   // Only applies when we don't have the richer owner payload yet.
@@ -232,119 +176,19 @@ export default function TripPageClient({ slug, initialData }: Props) {
     return () => window.removeEventListener('waytico:trip-refresh', handler)
   }, [])
 
-  const bumpUploading = (key: string, delta: number) =>
-    setUploadingByDay((prev) => {
-      const next = { ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }
-      if (next[key] === 0) delete next[key]
-      return next
-    })
+  // Photo upload / delete / hero replace + per-key uploading counter.
+  // handleTripUpdated is provided by useTripData above.
+  const {
+    uploadingByDay,
+    handleUpload,
+    handleDelete,
+    handleHeroUpload,
+  } = usePhotoUpload({
+    projectId: data?.project?.id,
+    media,
+    setMedia,
+  })
 
-  const handleUpload = useCallback(
-    async (files: File[], dayId: string | null) => {
-      const projectId = data?.project?.id
-      if (!projectId) return
-      const key = dayId || 'tour'
-      const token = await getToken()
-      if (!token) {
-        toast.error('Please sign in again')
-        return
-      }
-      bumpUploading(key, files.length)
-      await Promise.all(
-        files.map(async (file) => {
-          try {
-            const rec = await uploadPhoto(projectId, file, dayId, token)
-            setMedia((prev) => [...prev, rec])
-          } catch (e: any) {
-            toast.error(e?.message || 'Upload failed')
-          } finally {
-            bumpUploading(key, -1)
-          }
-        }),
-      )
-    },
-    [data?.project?.id, getToken],
-  )
-
-  const handleDelete = useCallback(
-    async (mediaId: string) => {
-      const snapshot = media
-      setMedia((cur) => cur.filter((m) => m.id !== mediaId))
-      try {
-        const token = await getToken()
-        if (!token) throw new Error('No token')
-        await deletePhoto(mediaId, token)
-      } catch (e: any) {
-        setMedia(snapshot)
-        toast.error(e?.message || 'Could not delete photo')
-      }
-    },
-    [media, getToken],
-  )
-
-  // Hero upload: always placement='hero', single photo. If a hero already exists,
-  // it's replaced — old record deleted after the new one lands.
-  const handleHeroUpload = useCallback(
-    async (files: File[]) => {
-      const projectId = data?.project?.id
-      if (!projectId || files.length === 0) return
-      const file = files[0]
-      if (files.length > 1) {
-        toast.message('Hero uses the first photo — drop more in the gallery below')
-      }
-      const token = await getToken()
-      if (!token) {
-        toast.error('Please sign in again')
-        return
-      }
-      // Capture previous hero before upload so we can clean it up after success.
-      const prevHero = media.find((m) => m.placement === 'hero')
-      bumpUploading('hero', 1)
-      try {
-        const rec = await uploadPhoto(projectId, file, null, token, 'hero')
-        // Prepend so .find() picks the new hero even if the old one sticks around on failure.
-        setMedia((prev) => [rec, ...prev])
-        if (prevHero) {
-          // Best-effort: remove the old hero record + S3 object.
-          setMedia((prev) => prev.filter((m) => m.id !== prevHero.id))
-          try {
-            await deletePhoto(prevHero.id, token)
-          } catch {
-            // If delete failed, put it back so the user can retry.
-            setMedia((prev) => (prev.some((m) => m.id === prevHero.id) ? prev : [...prev, prevHero]))
-          }
-        }
-      } catch (e: any) {
-        toast.error(e?.message || 'Upload failed')
-      } finally {
-        bumpUploading('hero', -1)
-      }
-    },
-    [data?.project?.id, getToken, media],
-  )
-  // ──────────────────────────────────────────────────────────
-
-  // ─── Editor ────────────────────────────────────────────────
-  const handleTripUpdated = useCallback(async () => {
-    // Re-fetch public data to reflect agent's tool-call changes.
-    // Public endpoint returns all media (tour-level + per-day), so it's enough.
-    try {
-      const res = await fetch(`${API_URL}/api/public/projects/${slug}`, { cache: 'no-store' })
-      if (res.ok) {
-        const d = await res.json()
-        setData(d)
-        // If owner, refresh the richer payload (including hidden items + flags).
-        // Otherwise fall back to public data for tasks/media.
-        const refreshed = isOwner ? await refreshOwnerData() : false
-        if (!refreshed) {
-          if (Array.isArray(d.media)) setMedia(d.media as MediaRecord[])
-          if (Array.isArray(d.tasks)) setTasks(d.tasks)
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [slug, isOwner, refreshOwnerData])
 
   // ─── Visibility toggles (owner only) ──────────────────────────
   const toggleTaskVisibility = useCallback(
