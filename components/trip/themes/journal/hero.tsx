@@ -35,7 +35,8 @@ type Owner = {
 } | null | undefined
 
 type JournalHeroProps = {
-  project: Project
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  project: Project & Record<string, any>
   owner: boolean
   heroPhoto: MediaRecord | undefined
   uploadingHero: number

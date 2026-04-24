@@ -1,12 +1,11 @@
-import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
-import TripPageClient from './trip-page-client'
+import TripPageClient, { type TripInitialData } from './trip-page-client'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
 type Props = { params: { slug: string } }
 
-async function getProject(slug: string) {
+async function getProject(slug: string): Promise<TripInitialData | null> {
   try {
     // No ISR cache — Stripe activation + AI pipeline mutate the project, and
     // router.refresh() must see the fresh state immediately. Trip pages are
@@ -15,7 +14,7 @@ async function getProject(slug: string) {
       cache: 'no-store',
     })
     if (!res.ok) return null
-    return await res.json()
+    return (await res.json()) as TripInitialData
   } catch {
     return null
   }
