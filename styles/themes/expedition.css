@@ -1,0 +1,151 @@
+/* ======================================================
+   EXPEDITION THEME — cinematic dark, bold uppercase
+   Scoped to .theme-root[data-theme="expedition"]
+   ====================================================== */
+
+.theme-root[data-theme='expedition'] {
+  /* ---- Primitive tokens ---- */
+  --e-bg: #14110e;
+  --e-bg-deep: #0a0806;
+  --e-panel: #1d1815;
+  --e-panel-2: #25201c;
+  --e-cream: #e8dfcf;
+  --e-cream-mute: #c9bfad;
+  --e-ink-dim: #7a6f5e;
+  --e-rule: rgba(232, 223, 207, 0.1);
+  --e-rule-2: rgba(232, 223, 207, 0.18);
+  --e-ochre: #d48a3f;
+  --e-ochre-deep: #a6652a;
+  --e-rust: #b84a1f;
+
+  /* ---- Semantic layer ---- */
+  --theme-bg: var(--e-bg);
+  --theme-bg-deep: var(--e-bg-deep);
+  --theme-paper: var(--e-panel);
+  --theme-fg: var(--e-cream);
+  --theme-fg-soft: var(--e-cream-mute);
+  --theme-fg-mute: var(--e-ink-dim);
+  --theme-rule: var(--e-rule-2);
+  --theme-accent: var(--e-ochre);
+  --theme-accent-deep: var(--e-ochre-deep);
+  --theme-accent-soft: var(--e-rust);
+
+  /* ---- Base typography ---- */
+  background: var(--theme-bg);
+  color: var(--theme-fg);
+  font-family: var(--font-inter-tight), 'Inter', -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Typography utilities ---- */
+.theme-root[data-theme='expedition'] .e-display {
+  font-family: var(--font-archivo), 'Inter Tight', sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+  font-stretch: 125%;
+}
+.theme-root[data-theme='expedition'] .e-headline {
+  font-family: var(--font-archivo), 'Inter Tight', sans-serif;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+.theme-root[data-theme='expedition'] .e-mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.theme-root[data-theme='expedition'] .e-body {
+  font-family: var(--font-inter-tight), sans-serif;
+  font-weight: 400;
+}
+
+/* ---- Buttons ---- */
+.theme-root[data-theme='expedition'] .e-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 32px;
+  background: var(--e-ochre);
+  color: var(--e-bg);
+  border: 0;
+  cursor: pointer;
+  font-family: var(--font-archivo), sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition: background 0.2s, transform 0.2s;
+}
+.theme-root[data-theme='expedition'] .e-btn:hover {
+  background: var(--e-ochre-deep);
+}
+.theme-root[data-theme='expedition'] .e-btn .arrow {
+  transition: transform 0.2s;
+}
+.theme-root[data-theme='expedition'] .e-btn:hover .arrow {
+  transform: translateX(6px);
+}
+
+.theme-root[data-theme='expedition'] .e-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 30px;
+  background: transparent;
+  color: var(--e-cream);
+  border: 1px solid var(--e-rule-2);
+  cursor: pointer;
+  font-family: var(--font-archivo), sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+.theme-root[data-theme='expedition'] .e-btn-ghost:hover {
+  border-color: var(--e-ochre);
+  color: var(--e-ochre);
+}
+
+/* ---- Segment chip ---- */
+.theme-root[data-theme='expedition'] .e-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--e-rule-2);
+  font-family: var(--font-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--e-ochre);
+}
+
+/* ---- Full-bleed photo with caption overlay ---- */
+.theme-root[data-theme='expedition'] .e-hero-photo {
+  background-size: cover;
+  background-position: center;
+  filter: saturate(0.85) contrast(1.08) brightness(0.85);
+}
+
+/* ---- Heavy rule ---- */
+.theme-root[data-theme='expedition'] .e-rule-heavy {
+  height: 1px;
+  background: var(--e-cream);
+  opacity: 0.9;
+}
+
+/* ---- Big outline day label ---- */
+.theme-root[data-theme='expedition'] .e-day-outline {
+  font-family: var(--font-archivo), sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  -webkit-text-stroke: 1.5px var(--e-cream);
+  color: transparent;
+}
