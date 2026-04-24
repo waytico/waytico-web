@@ -57,11 +57,15 @@ export default function ChatFlow() {
   const [projectId, setProjectId] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // Scroll only the inner messages container so the page (header + textarea)
+    // stays put. scrollIntoView was affecting page scroll and pushing the
+    // latest message off-screen on small viewports.
+    const el = messagesContainerRef.current
+    if (el) el.scrollTop = el.scrollHeight
   }, [messages])
 
   // Poll by projectId after generation starts
@@ -208,7 +212,7 @@ export default function ChatFlow() {
   return (
     <div className="w-full space-y-4">
       {messages.length > 0 && (
-        <div className="w-full max-h-[40vh] overflow-y-auto space-y-3 text-left">
+        <div ref={messagesContainerRef} className="w-full max-h-[40vh] overflow-y-auto space-y-3 text-left">
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap leading-relaxed ${
@@ -234,7 +238,6 @@ export default function ChatFlow() {
               </div>
             </div>
           )}
-          <div ref={bottomRef} />
         </div>
       )}
 
