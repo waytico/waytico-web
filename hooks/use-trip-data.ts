@@ -28,6 +28,10 @@ type Options = {
   setMedia: React.Dispatch<React.SetStateAction<MediaRecord[]>>
   isOwner: boolean
   setIsOwner: (v: boolean) => void
+  // Current projectId — needed so owner-detect re-fires once polling
+  // populates the trip (initial SSR returns 404 for status='generating',
+  // so projectId is only known after the first successful poll tick).
+  projectId: string | undefined
   // bumping this from the outside forces a re-fetch of /full
   ownerRefreshKey: number
 }
@@ -40,6 +44,7 @@ export function useTripData({
   setMedia,
   isOwner,
   setIsOwner,
+  projectId,
   ownerRefreshKey,
 }: Options) {
   const { getToken, isLoaded, isSignedIn } = useAuth()
@@ -107,7 +112,8 @@ export function useTripData({
   }, [getToken, setData, setIsOwner, setTasks, setMedia])
 
   // Fire owner-detect once we have an authed user + a projectId, and
-  // re-fire whenever the caller bumps ownerRefreshKey.
+  // re-fire whenever the caller bumps ownerRefreshKey or the projectId
+  // becomes known (polling completes → SSR-null → populated).
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
     let cancelled = false
@@ -120,7 +126,7 @@ export function useTripData({
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, isSignedIn, refreshOwnerData, ownerRefreshKey])
+  }, [isLoaded, isSignedIn, refreshOwnerData, ownerRefreshKey, projectId])
 
   // 3. Refresh after agent tool-call edits. Re-fetch public data (fresh
   // itinerary / hero / sections) and, if owner, overlay the richer /full

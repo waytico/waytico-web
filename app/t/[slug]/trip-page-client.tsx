@@ -120,6 +120,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
     setMedia,
     isOwner,
     setIsOwner,
+    projectId: data?.project?.id,
     ownerRefreshKey,
   })
 
