@@ -191,7 +191,10 @@ export default function ChatFlow() {
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Submit only on Ctrl+Enter (Win/Linux) or Cmd+Enter (Mac).
+    // Plain Enter falls through to default textarea behaviour (new line)
+    // so users can't accidentally fire off an incomplete description.
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
       send()
     }
@@ -313,7 +316,7 @@ export default function ChatFlow() {
                   <span className="sm:hidden">Attach itinerary</span>
                 </>
               ) : (
-                <span className="hidden sm:inline">Shift+Enter for new line</span>
+                <span className="hidden sm:inline">Ctrl+Enter to send</span>
               )}
             </span>
           </div>
