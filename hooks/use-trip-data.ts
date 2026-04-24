@@ -85,21 +85,16 @@ export function useTripData({
   }, [polling, slug, setData])
 
   // 2. Owner-detect + full payload fetch. /:id/full returns 200 only if the
-  // caller owns the project.
+  // caller owns the project. Uses the projectId prop directly so a just-
+  // bumped ownerRefreshKey (e.g. after the claim flow attaches user_id)
+  // immediately re-queries ownership without relying on setData-callback
+  // timing, which is not synchronous in async contexts in React 18.
   const refreshOwnerData = useCallback(async () => {
-    // We need a fresh projectId from the latest setData — the caller also
-    // depends on it. Read through setData's closure trick: a cheap noop
-    // updater call captures current state.
-    let currentProjectId: string | undefined
-    setData((prev) => {
-      currentProjectId = prev?.project?.id
-      return prev
-    })
-    if (!currentProjectId) return false
+    if (!projectId) return false
     try {
       const token = await getToken()
       if (!token) return false
-      const ownRes = await apiFetch(`/api/projects/${currentProjectId}/full`, { token })
+      const ownRes = await apiFetch(`/api/projects/${projectId}/full`, { token })
       if (!ownRes.ok) return false
       const payload = await ownRes.json()
       setIsOwner(true)
@@ -109,7 +104,7 @@ export function useTripData({
     } catch {
       return false
     }
-  }, [getToken, setData, setIsOwner, setTasks, setMedia])
+  }, [projectId, getToken, setIsOwner, setTasks, setMedia])
 
   // Fire owner-detect once we have an authed user + a projectId, and
   // re-fire whenever the caller bumps ownerRefreshKey or the projectId
