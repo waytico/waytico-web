@@ -506,10 +506,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       {isAnonCreator && data?.project?.status === 'quoted' && (
         <>
-          {/* Banner — always visible, content row with explicit min-height for stable centering */}
+          {/* Banner — fixed-height row, flex items-center reliably centers both children */}
           <div className="sticky top-0 z-40 bg-highlight border-b border-border">
-            <div className="max-w-5xl mx-auto px-4 flex items-center gap-3 min-h-[52px]">
-              <p className="text-sm text-foreground/80 flex-1 min-w-0">
+            <div className="max-w-5xl mx-auto px-4 h-[52px] flex items-center gap-3">
+              <div className="text-sm text-foreground/80 flex-1 min-w-0">
                 <button
                   onClick={() => {
                     const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
@@ -520,7 +520,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   Sign up for free
                 </button>
                 <span> to edit, add photos, change design, and save.</span>
-              </p>
+              </div>
               <div className="relative flex-shrink-0">
                 <button
                   type="button"
@@ -542,10 +542,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
             </div>
           </div>
 
-          {/* Persistent toast-style card — appears after first share, never auto-dismisses.
-              Visually identical to a sonner toast: bottom-right, shadow, rounded, dismissable. */}
+          {/* Persistent toast — same position as sonner (top-center), but never auto-dismisses */}
           {sharedOnce && (
-            <div className="fixed bottom-4 right-4 z-50 max-w-sm w-[calc(100vw-2rem)] sm:w-auto">
+            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[calc(100vw-2rem)] sm:w-[400px]">
               <div className="bg-background border border-border rounded-xl shadow-2xl p-4 pr-9 relative">
                 <button
                   type="button"
