@@ -506,9 +506,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       {isAnonCreator && data?.project?.status === 'quoted' && (
         <>
-          {/* Banner 1 — always visible */}
+          {/* Banner — always visible, content row with explicit min-height for stable centering */}
           <div className="sticky top-0 z-40 bg-highlight border-b border-border">
-            <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-3">
+            <div className="max-w-5xl mx-auto px-4 flex items-center gap-3 min-h-[52px]">
               <p className="text-sm text-foreground/80 flex-1 min-w-0">
                 <button
                   onClick={() => {
@@ -521,7 +521,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 </button>
                 <span> to edit, add photos, change design, and save.</span>
               </p>
-              <div className="relative flex-shrink-0 self-center">
+              <div className="relative flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setAnonShareOpen((v) => !v)}
@@ -542,22 +542,31 @@ export default function TripPageClient({ slug, initialData }: Props) {
             </div>
           </div>
 
-          {/* Banner 2 — appears after first share, persists (survives tab switch) */}
+          {/* Persistent toast-style card — appears after first share, never auto-dismisses.
+              Visually identical to a sonner toast: bottom-right, shadow, rounded, dismissable. */}
           {sharedOnce && (
-            <div className="sticky top-0 z-39 bg-destructive/10 border-b border-destructive/20">
-              <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-3">
-                <p className="text-sm text-foreground/80 flex-1 min-w-0">
-                  Your client received an unregistered link — it will stop working in 3 days.{' '}
-                  <button
-                    onClick={() => {
-                      const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
-                      router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
-                    }}
-                    className="font-semibold text-accent hover:text-accent/80 underline underline-offset-2"
-                  >
-                    Sign up free to save it permanently.
-                  </button>
+            <div className="fixed bottom-4 right-4 z-50 max-w-sm w-[calc(100vw-2rem)] sm:w-auto">
+              <div className="bg-background border border-border rounded-xl shadow-2xl p-4 pr-9 relative">
+                <button
+                  type="button"
+                  onClick={() => setSharedOnce(false)}
+                  aria-label="Dismiss"
+                  className="absolute top-2 right-2 p-1 text-foreground/50 hover:text-foreground hover:bg-secondary rounded-full transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <p className="text-sm text-foreground/80 mb-2 leading-snug">
+                  Your client received an unregistered link — it will stop working in 3 days.
                 </p>
+                <button
+                  onClick={() => {
+                    const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
+                    router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
+                  }}
+                  className="text-sm font-semibold text-accent hover:text-accent/80 underline underline-offset-2"
+                >
+                  Sign up free to save it →
+                </button>
               </div>
             </div>
           )}
