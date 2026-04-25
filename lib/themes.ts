@@ -52,3 +52,13 @@ export function resolveTheme(value: string | null | undefined): ThemeId {
   }
   return DEFAULT_THEME
 }
+
+/** Type-guard for query-param overrides — returns true only for known IDs. */
+export function isThemeId(value: string | null | undefined): value is ThemeId {
+  return (
+    value === 'journal' ||
+    value === 'expedition' ||
+    value === 'atelier' ||
+    value === 'custom'
+  )
+}

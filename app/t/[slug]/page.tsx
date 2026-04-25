@@ -1,9 +1,13 @@
 import { Metadata } from 'next'
 import TripPageClient, { type TripInitialData } from './trip-page-client'
+import { isThemeId } from '@/lib/themes'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
-type Props = { params: { slug: string } }
+type Props = {
+  params: { slug: string }
+  searchParams?: { theme?: string }
+}
 
 async function getProject(slug: string): Promise<TripInitialData | null> {
   try {
@@ -30,7 +34,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function TripPage({ params }: Props) {
+export default async function TripPage({ params, searchParams }: Props) {
   const data = await getProject(params.slug)
+
+  // ?theme=atelier|expedition|journal — preview override before TZ-5 step 7
+  // ships a real switcher control. Read-only, never persisted; safe for any
+  // viewer because design_theme is not a paywall.
+  if (data?.project && searchParams?.theme && isThemeId(searchParams.theme)) {
+    data.project = { ...data.project, design_theme: searchParams.theme }
+  }
+
   return <TripPageClient slug={params.slug} initialData={data} />
 }
