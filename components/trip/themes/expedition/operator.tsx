@@ -24,7 +24,7 @@ export function ExpeditionOperator({
   brandTagline,
   hostAvatarUrl,
 }: ExpeditionOperatorProps) {
-  if (!hasAnyContact(contact) && !contact.name) return null
+  if (!hasAnyContact(contact)) return null
 
   type Row = {
     label: string
@@ -171,3 +171,4 @@ export function ExpeditionOperator({
     </section>
   )
 }
+
