@@ -122,7 +122,7 @@ export function AtelierHero({
   const priceText = formatPriceShort(p.price_per_person, p.currency)
 
   return (
-    <section className="relative max-w-5xl mx-auto px-4 pt-7 pb-12 md:pb-18">
+    <section className="relative max-w-7xl mx-auto px-4 pt-7 pb-12 md:pb-18">
       {/* Proposal validity strip — auto-filled at trip creation, editable
           by owner. Hidden for clients when both fields are empty. */}
       {(owner || p.proposal_date || p.valid_until) && (

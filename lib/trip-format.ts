@@ -66,21 +66,49 @@ export function formatDateRangeShort(
 }
 
 /**
- * Normalize a currency code to its 3-letter ISO 4217 form.
+ * Currency symbol for common codes; falls back to the ISO code itself.
  *
- * We deliberately do NOT translate codes to glyphs ($ £ €) — for a B2B
- * proposal, the literal code is unambiguous (USD vs CAD vs AUD all map
- * to "$" otherwise) and consistent across owner/client views.
- *
- * Empty / null input falls back to "USD" so calling code can always
- * render *something*.
+ * Short glyphs ($ € £ ¥) for the major currencies keep the price
+ * visually dominated by the *number*, not the currency. For codes
+ * without a single-character glyph we use the conventional short
+ * prefix (CA$ / A$) or fall back to the ISO code with a trailing
+ * space so longer codes still separate cleanly from the number.
+ */
+export function currencySymbol(code: string | null | undefined): string {
+  const c = (code || 'USD').toUpperCase().trim()
+  switch (c) {
+    case 'USD':
+      return '$'
+    case 'EUR':
+      return '€'
+    case 'GBP':
+      return '£'
+    case 'JPY':
+      return '¥'
+    case 'CAD':
+      return 'CA$'
+    case 'AUD':
+      return 'A$'
+    case 'NZD':
+      return 'NZ$'
+    case 'CHF':
+      return 'CHF '
+    default:
+      return /^[A-Z]{3}$/.test(c) ? `${c} ` : '$'
+  }
+}
+
+/**
+ * ISO currency code (always three uppercase letters). Used where the
+ * literal code is preferable to a glyph — e.g. machine-readable
+ * contexts or ambiguous-glyph regions.
  */
 export function currencyCode(code: string | null | undefined): string {
   const c = (code || 'USD').toUpperCase().trim()
   return /^[A-Z]{3}$/.test(c) ? c : 'USD'
 }
 
-/** "CAD 3,450" with thousands separators and a non-breaking space. */
+/** "$3,450" / "CA$3,450" / "€3,450" — compact, glyph-prefixed. */
 export function formatPriceShort(
   price: number | string | null | undefined,
   currency: string | null | undefined,
@@ -88,7 +116,7 @@ export function formatPriceShort(
   if (price === null || price === undefined || price === '') return ''
   const n = typeof price === 'number' ? price : Number(price)
   if (!Number.isFinite(n)) return ''
-  return `${currencyCode(currency)}\u00a0${n.toLocaleString('en-US')}`
+  return `${currencySymbol(currency)}${n.toLocaleString('en-US')}`
 }
 
 /** Zero-pads a number to two digits. `padTwo(3)` → "03". */

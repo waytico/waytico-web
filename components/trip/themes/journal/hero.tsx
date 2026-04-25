@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { EditableField } from '@/components/editable/editable-field'
-import { formatDateRange, formatPriceShort, currencyCode } from '@/lib/trip-format'
+import { formatDateRange, formatPriceShort, currencySymbol } from '@/lib/trip-format'
 import type { MediaRecord } from '@/lib/upload-photo'
 
 type Project = {
@@ -186,7 +186,7 @@ export function JournalHero({
           owner. Client only sees these when both are present. */}
       {(owner || p.proposal_date || p.valid_until) && (
         <div
-          className="relative max-w-5xl mx-auto flex flex-wrap gap-x-8 gap-y-2 justify-end px-4 py-5 md:py-7"
+          className="relative max-w-7xl mx-auto flex flex-wrap gap-x-8 gap-y-2 justify-end px-4 py-5 md:py-7"
           style={{ color: hasBg ? 'rgba(250,246,236,0.75)' : 'var(--j-ink-mute)' }}
         >
           {(owner || p.proposal_date) && (
@@ -220,7 +220,7 @@ export function JournalHero({
 
       {/* Title block */}
       <div
-        className="relative max-w-5xl mx-auto px-4 pb-10 md:pb-20 pt-6 md:pt-24"
+        className="relative max-w-7xl mx-auto px-4 pb-10 md:pb-20 pt-6 md:pt-24"
         style={{ color: hasBg ? 'var(--j-paper)' : 'var(--j-ink)' }}
       >
         {p.activity_type && (
@@ -348,14 +348,7 @@ export function JournalHero({
               accent
               value={
                 <span>
-                  <EditableField
-                    as="text"
-                    editable={owner}
-                    value={p.currency || 'USD'}
-                    maxLength={3}
-                    className="uppercase"
-                    onSave={(v) => onSaveProject({ currency: v.toUpperCase() })}
-                  />
+                  <span style={{ marginRight: 4 }}>{currencySymbol(p.currency)}</span>
                   <EditableField
                     as="number"
                     editable={owner}
@@ -366,7 +359,7 @@ export function JournalHero({
                   />
                 </span>
               }
-              display={priceText || (p.currency ? currencyCode(p.currency) : '')}
+              display={priceText || (p.currency ? currencySymbol(p.currency) : '')}
               preferDisplay={!owner && !!priceText}
             />
           )}

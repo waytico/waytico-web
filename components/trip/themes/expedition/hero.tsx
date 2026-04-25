@@ -210,7 +210,7 @@ export function ExpeditionHero({
           by owner. Hidden for clients when both fields are empty. */}
       {(owner || p.proposal_date || p.valid_until) && (
         <div
-          className="relative max-w-5xl mx-auto flex flex-wrap justify-end items-center gap-x-8 gap-y-2 px-4 py-5 md:py-7"
+          className="relative max-w-7xl mx-auto flex flex-wrap justify-end items-center gap-x-8 gap-y-2 px-4 py-5 md:py-7"
           style={{ color: 'var(--e-cream-mute)' }}
         >
           {(owner || p.proposal_date) && (
@@ -247,7 +247,7 @@ export function ExpeditionHero({
           a brand word. */}
       {p.activity_type && (
         <div
-          className="absolute top-6 md:top-8 left-1/2 -translate-x-1/2 w-full max-w-5xl px-4 flex items-center gap-3 md:gap-5"
+          className="absolute top-6 md:top-8 left-1/2 -translate-x-1/2 w-full max-w-7xl px-4 flex items-center gap-3 md:gap-5"
           aria-hidden="true"
         >
           <div className="flex-1 h-px" style={{ background: 'var(--e-rule-2)' }} />
@@ -260,7 +260,7 @@ export function ExpeditionHero({
 
       {/* Title + stats */}
       <div
-        className="absolute left-1/2 -translate-x-1/2 w-full max-w-5xl px-4"
+        className="absolute left-1/2 -translate-x-1/2 w-full max-w-7xl px-4"
         style={{
           bottom: 'clamp(40px, 14vw, 120px)',
           color: 'var(--e-cream)',

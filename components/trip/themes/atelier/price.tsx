@@ -2,7 +2,7 @@
 
 import { EditableField } from '@/components/editable/editable-field'
 import ActivateButton from '@/components/activate-button'
-import { currencyCode, formatPriceShort } from '@/lib/trip-format'
+import { currencySymbol, formatPriceShort } from '@/lib/trip-format'
 
 type AtelierPriceProps = {
   projectId: string
@@ -98,7 +98,7 @@ export function AtelierPrice({
             >
               {owner ? (
                 <>
-                  <span style={{ fontSize: '0.5em' }}>{currencyCode(currency)}</span>
+                  <span style={{ fontSize: '0.5em' }}>{currencySymbol(currency)}</span>
                   <EditableField
                     as="number"
                     editable={owner}
