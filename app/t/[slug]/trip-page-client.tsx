@@ -508,8 +508,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
         <>
           {/* Banner — fixed-height row, flex items-center reliably centers both children */}
           <div className="sticky top-0 z-40 bg-highlight border-b border-border">
-            <div className="max-w-5xl mx-auto px-4 h-[52px] flex items-center gap-3">
-              <div className="text-sm text-foreground/80 flex-1 min-w-0">
+            <div
+              className="max-w-5xl mx-auto px-4 flex items-center gap-3"
+              style={{ height: 52 }}
+            >
+              <div className="text-sm text-foreground/80 flex-1 min-w-0 leading-none">
                 <button
                   onClick={() => {
                     const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
