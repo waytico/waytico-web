@@ -1,6 +1,8 @@
 'use client'
 
-const ITEMS = [
+import type { SectionId } from '@/hooks/use-scroll-spy'
+
+const ITEMS: Array<{ id: SectionId; label: string }> = [
   { id: 'overview', label: 'OVERVIEW' },
   { id: 'itinerary', label: 'ITINERARY' },
   { id: 'included', label: 'INCLUDED' },
@@ -12,13 +14,17 @@ const ITEMS = [
   { id: 'contact', label: 'CONTACT' },
 ]
 
+type Props = {
+  activeSection?: SectionId | null
+}
+
 /**
  * Expedition — sticky section nav.
  *
- * Dark bar with mono "0N / SECTION" pairs, ochre accent on first item.
- * Desktop only (mobile relies on the sticky bottom bar for navigation).
+ * Dark bar with mono "0N / SECTION" pairs. Ochre on active item via
+ * scroll-spy. Desktop only.
  */
-export function ExpeditionNav() {
+export function ExpeditionNav({ activeSection }: Props) {
   return (
     <nav
       className="hidden md:flex sticky top-0 z-10 justify-center gap-9 px-14 py-5 border-b"
@@ -27,19 +33,22 @@ export function ExpeditionNav() {
         borderColor: 'var(--e-rule-2)',
       }}
     >
-      {ITEMS.map((item, i) => (
-        <a
-          key={item.id}
-          href={`#${item.id}`}
-          className="e-mono"
-          style={{
-            color: i === 0 ? 'var(--e-ochre)' : 'var(--e-cream-mute)',
-            textDecoration: 'none',
-          }}
-        >
-          {String(i + 1).padStart(2, '0')} / {item.label}
-        </a>
-      ))}
+      {ITEMS.map((item, i) => {
+        const active = activeSection === item.id
+        return (
+          <a
+            key={item.id}
+            href={`#${item.id}`}
+            className="e-mono transition-colors"
+            style={{
+              color: active ? 'var(--e-ochre)' : 'var(--e-cream-mute)',
+              textDecoration: 'none',
+            }}
+          >
+            {String(i + 1).padStart(2, '0')} / {item.label}
+          </a>
+        )
+      })}
     </nav>
   )
 }

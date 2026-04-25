@@ -18,6 +18,7 @@ import { resolveOperatorContact } from '@/lib/operator-contact'
 import { useTripMutations } from '@/hooks/use-trip-mutations'
 import { usePhotoUpload, type MediaRecord } from '@/hooks/use-photo-upload'
 import { useTripData } from '@/hooks/use-trip-data'
+import { useScrollSpy } from '@/hooks/use-scroll-spy'
 
 import { ThemeRoot } from '@/components/trip/theme-root'
 import { resolveTheme } from '@/lib/themes'
@@ -421,6 +422,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const shareUrl = `${APP_URL}/t/${slug}`
   const ownerInfo = data.owner ?? null
   const operatorContact = resolveOperatorContact(p.operator_contact, ownerInfo)
+  const activeSection = useScrollSpy()
   const heroPhoto = media.find((m) => m.placement === 'hero')
   const durationLabel = p.duration_days ? `${p.duration_days} days` : null
 
@@ -589,7 +591,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 onHeroDelete={handleDelete}
                 onSaveProject={saveProjectPatch}
               />
-              <ExpeditionNav />
+              <ExpeditionNav activeSection={activeSection} />
               <ExpeditionOverview
                 description={p.description}
                 owner={showOwnerUI}
@@ -665,7 +667,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         if (theme === 'atelier') {
           return (
             <ThemeRoot theme="atelier">
-              <AtelierNav />
+              <AtelierNav activeSection={activeSection} />
               <AtelierHero
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 project={p as any}
@@ -752,7 +754,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         // Default: Journal (also used for `custom` until that theme ships)
         return (
           <ThemeRoot theme={theme}>
-            <JournalNav />
+            <JournalNav activeSection={activeSection} />
             <JournalHero
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               project={p as any}
