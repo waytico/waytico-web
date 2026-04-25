@@ -12,9 +12,11 @@ type Props = {
   onOpenChange?: (open: boolean) => void
   /** Custom label for the trigger button. Defaults to "Share with client". */
   label?: string
+  /** When true, the trigger button is hidden — only the dropdown renders (controlled mode). */
+  hideTrigger?: boolean
 }
 
-export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenChange, label = 'Share with client' }: Props) {
+export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenChange, label = 'Share with client', hideTrigger }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -59,13 +61,15 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
 
   return (
     <div ref={ref} className="relative inline-block">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
-      >
-        {label}
-      </button>
+      {!hideTrigger && (
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
+        >
+          {label}
+        </button>
+      )}
 
       {isOpen && (
         <div

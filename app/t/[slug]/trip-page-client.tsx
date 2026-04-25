@@ -545,7 +545,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         </div>
       )}
 
-      {/* ─── Anon share button (top-right, always visible for anon creators) ─── */}
+      {/* ─── Anon: orange pill Share button (top-right) + controlled dropdown ─── */}
       {isAnonCreator && data?.project?.status === 'quoted' && (
         <>
           <AnonUpsellModal
@@ -554,14 +554,22 @@ export default function TripPageClient({ slug, initialData }: Props) {
             signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(`/t/${slug}?claim=${projectIdForClaim || data.project.id}`)}`}
             onShareClick={() => setAnonShareOpen(true)}
           />
-          <div className="fixed top-0 right-0 z-50 px-4 md:px-[72px] py-4 md:py-7">
+          {/* Orange pill button — the only visible share trigger for anon */}
+          <div className="fixed top-3 right-4 md:right-14 z-50">
+            <button
+              type="button"
+              onClick={() => setAnonShareOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-accent text-accent-foreground text-sm font-semibold shadow-lg hover:bg-accent/90 transition-colors"
+            >
+              Share as is →
+            </button>
             <ShareMenu
               title={data.project.title || 'Your trip'}
               url={shareUrl}
               publicStatus={data.project.status}
               forceOpen={anonShareOpen}
               onOpenChange={setAnonShareOpen}
-              label="Share as is →"
+              hideTrigger
             />
           </div>
         </>
