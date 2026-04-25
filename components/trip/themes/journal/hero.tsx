@@ -196,12 +196,14 @@ export function JournalHero({
               style={{ filter: hasBg ? 'brightness(1.6)' : undefined }}
             />
           ) : null}
-          <div
-            className="j-mono truncate"
-            style={{ color: hasBg ? 'rgba(250,246,236,0.85)' : 'var(--j-ink-soft)' }}
-          >
-            {brandLeft(ownerProfile)}
-          </div>
+          <a href="/" className="hover:opacity-80 transition-opacity">
+            <div
+              className="j-mono truncate"
+              style={{ color: hasBg ? 'rgba(250,246,236,0.85)' : 'var(--j-ink-soft)' }}
+            >
+              {brandLeft(ownerProfile)}
+            </div>
+          </a>
         </div>
         <div className="flex gap-6 flex-wrap">
           {p.proposal_date && (

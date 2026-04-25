@@ -9,6 +9,7 @@ import ActivationToast from '@/components/activation-toast'
 import PhotoLightbox from '@/components/photo-lightbox'
 import AnonUpsellModal from '@/components/anon-upsell-modal'
 import ShareMenu from '@/components/share-menu'
+import { ScrollToTop } from '@/components/scroll-to-top'
 import Header from '@/components/header'
 import { TripCommandBar } from '@/components/trip/trip-command-bar'
 import { TripActionBar } from '@/components/trip/trip-action-bar'
@@ -544,14 +545,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
             signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(`/t/${slug}?claim=${projectIdForClaim || data.project.id}`)}`}
             onShareClick={() => setAnonShareOpen(true)}
           />
-          {/* Hidden ShareMenu driven by anonShareOpen state */}
-          <div className="fixed bottom-20 right-6 z-50">
+          {/* Share as is — fixed top-right, same visual row as hero brand strip */}
+          <div className="fixed top-0 right-0 z-50 px-4 md:px-[72px] py-4 md:py-7">
             <ShareMenu
               title={data.project.title || 'Your trip'}
               url={shareUrl}
               publicStatus={data.project.status}
               forceOpen={anonShareOpen}
               onOpenChange={setAnonShareOpen}
+              label="Share as is →"
             />
           </div>
         </>
@@ -874,6 +876,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
           <div className="h-24 md:h-28" aria-hidden="true" />
         </>
       )}
+
+      {/* Scroll-to-top — visible for all users once scrolled 300px.
+          Owner has a fixed bottom command bar (~72px), so offset higher. */}
+      <ScrollToTop bottomOffset={showOwnerUI ? 88 : 24} />
     </div>
   )
 }

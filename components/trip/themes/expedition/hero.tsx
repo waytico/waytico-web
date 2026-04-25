@@ -208,18 +208,20 @@ export function ExpeditionHero({
         className="relative flex flex-wrap justify-between items-center gap-3 px-4 md:px-14 py-5 md:py-8"
         style={{ color: 'var(--e-cream)' }}
       >
-        <div className="e-display flex items-center gap-2" style={{ fontSize: 18, letterSpacing: '0.02em' }}>
-          {ownerProfile?.brand_logo_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={ownerProfile.brand_logo_url}
-              alt=""
-              className="h-6 w-auto object-contain"
-              style={{ filter: 'brightness(1.6)' }}
-            />
-          )}
-          <span>{headerLabel.split('/')[0]}<span style={{ color: 'var(--e-ochre)' }}>/</span>{headerLabel.split('/').slice(1).join('/')}</span>
-        </div>
+        <a href="/" className="hover:opacity-80 transition-opacity">
+          <div className="e-display flex items-center gap-2" style={{ fontSize: 18, letterSpacing: '0.02em' }}>
+            {ownerProfile?.brand_logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={ownerProfile.brand_logo_url}
+                alt=""
+                className="h-6 w-auto object-contain"
+                style={{ filter: 'brightness(1.6)' }}
+              />
+            )}
+            <span>{headerLabel.split('/')[0]}<span style={{ color: 'var(--e-ochre)' }}>/</span>{headerLabel.split('/').slice(1).join('/')}</span>
+          </div>
+        </a>
         <div className="flex flex-wrap gap-6 md:gap-10 items-center">
           {p.proposal_date && (
             <div className="e-mono" style={{ color: 'var(--e-cream-mute)' }}>

@@ -21,7 +21,7 @@ export default function AnonUpsellModal({
   tripTitle,
   tripUrl,
   signUpUrl,
-  delay = 3000,
+  delay = 8000,
   onShareClick,
 }: Props) {
   const [visible, setVisible] = useState(false)
@@ -89,7 +89,7 @@ export default function AnonUpsellModal({
               href={signUpUrl}
               className="block text-center font-semibold text-accent hover:text-accent/80 underline underline-offset-2 text-sm mb-4"
             >
-              Register free for:
+              Sign up free for:
             </a>
 
             {/* Feature list */}

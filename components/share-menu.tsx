@@ -10,15 +10,11 @@ type Props = {
   /** When provided, overrides internal open state (controlled mode). */
   forceOpen?: boolean
   onOpenChange?: (open: boolean) => void
+  /** Custom label for the trigger button. Defaults to "Share with client". */
+  label?: string
 }
 
-/**
- * Share menu — dropdown with 4 channels for sending the trip quote to a client.
- * Visible only while the trip is in 'quoted' or 'active' status.
- * Supports controlled `forceOpen` prop so external triggers (e.g. anon modal)
- * can open the dropdown programmatically.
- */
-export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenChange }: Props) {
+export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenChange, label = 'Share with client' }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -68,13 +64,13 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
         onClick={() => setIsOpen(!isOpen)}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
       >
-        Share with client
+        {label}
       </button>
 
       {isOpen && (
         <div
           role="menu"
-          className="absolute left-1/2 -translate-x-1/2 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-20"
+          className="absolute right-0 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-20"
         >
           <a
             role="menuitem"

@@ -131,24 +131,26 @@ export function AtelierHero({
     <section className="relative px-4 md:px-14 pt-7 pb-12 md:pb-18">
       {/* Top brand strip */}
       <div className="flex flex-wrap justify-between items-center gap-3 mb-9">
-        <div className="a-display flex items-center gap-2" style={{ fontSize: 22, letterSpacing: '-0.03em' }}>
-          {ownerProfile?.brand_logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={ownerProfile.brand_logo_url}
-              alt=""
-              className="h-6 w-auto object-contain"
-            />
-          ) : null}
-          <span>
-            Waytico{' '}
-            {brandName && (
-              <span className="a-italic" style={{ color: 'var(--a-coral)' }}>
-                · {brandName}
-              </span>
-            )}
-          </span>
-        </div>
+        <a href="/" className="hover:opacity-80 transition-opacity">
+          <div className="a-display flex items-center gap-2" style={{ fontSize: 22, letterSpacing: '-0.03em' }}>
+            {ownerProfile?.brand_logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={ownerProfile.brand_logo_url}
+                alt=""
+                className="h-6 w-auto object-contain"
+              />
+            ) : null}
+            <span>
+              Waytico{' '}
+              {brandName && (
+                <span className="a-italic" style={{ color: 'var(--a-coral)' }}>
+                  · {brandName}
+                </span>
+              )}
+            </span>
+          </div>
+        </a>
         <div className="flex flex-wrap gap-3 items-center">
           {p.proposal_date && (
             <span className="a-mono" style={{ color: 'var(--a-mute)' }}>
