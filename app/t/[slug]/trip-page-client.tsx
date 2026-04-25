@@ -129,7 +129,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const { isSignedIn, getToken, isLoaded } = useAuth()
 
   const [data, setData] = useState(initialData)
-  const [showBanner, setShowBanner] = useState(false)
   const [isAnonCreator, setIsAnonCreator] = useState(false)
   const [projectIdForClaim, setProjectIdForClaim] = useState<string | null>(null)
   const [anonShareOpen, setAnonShareOpen] = useState(false)
@@ -146,11 +145,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
       if (anonOwns === '1') {
         setIsAnonCreator(true)
         setProjectIdForClaim(pid)
-      }
-
-      const bannerDismissed = sessionStorage.getItem(`waytico:banner-dismissed-${pid}`)
-      if (anonOwns === '1' && !bannerDismissed && data.project.status === 'quoted') {
-        setShowBanner(true)
       }
     } catch {}
   }, [data])
@@ -171,9 +165,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           toast.success('Saved to your account')
           try {
             sessionStorage.removeItem(`waytico:anon-owns-${claimId}`)
-            sessionStorage.removeItem(`waytico:banner-dismissed-${claimId}`)
           } catch {}
-          setShowBanner(false)
           setIsAnonCreator(false)
           setOwnerRefreshKey((k) => k + 1)
         }
@@ -511,9 +503,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
         </div>
       )}
 
-      {showBanner && projectIdForClaim && (
-        <div className="sticky top-0 z-40 bg-highlight border-b border-border h-11">
-          <div className="max-w-5xl mx-auto px-4 h-full flex items-center gap-3">
+      {isAnonCreator && data?.project?.status === 'quoted' && (
+        <div className="sticky top-0 z-40 bg-highlight border-b border-border">
+          <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-3">
             <p className="text-sm text-foreground/80 flex-1 min-w-0">
               <span className="hidden sm:inline">This quote is available for 3 days. </span>
               <span className="sm:hidden">Available 3 days. </span>
@@ -526,53 +518,38 @@ export default function TripPageClient({ slug, initialData }: Props) {
               >
                 Sign up for free
               </button>
-              <span className="hidden sm:inline">
-                {' '}
-                to edit, add photos, and save to your account.
-              </span>
-              <span className="sm:hidden"> to save.</span>
+              <span className="hidden sm:inline"> to edit, add photos, and save.</span>
             </p>
-            <button
-              onClick={() => {
-                setShowBanner(false)
-                setAnonShareOpen(true)
-              }}
-              className="flex-shrink-0 text-sm font-semibold text-accent hover:text-accent/80 transition-colors whitespace-nowrap"
-            >
-              Share as is →
-            </button>
+            {/* Orange pill — opens share dropdown; dropdown anchors to this button */}
+            <div className="relative flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setAnonShareOpen((v) => !v)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 transition-colors whitespace-nowrap"
+              >
+                Share as is →
+              </button>
+              <ShareMenu
+                title={data.project.title || 'Your trip'}
+                url={shareUrl}
+                publicStatus={data.project.status}
+                forceOpen={anonShareOpen}
+                onOpenChange={setAnonShareOpen}
+                hideTrigger
+              />
+            </div>
           </div>
         </div>
       )}
 
-      {/* ─── Anon: orange pill Share button (top-right) + controlled dropdown ─── */}
+      {/* ─── Anon upsell modal (8s delay) ─── */}
       {isAnonCreator && data?.project?.status === 'quoted' && (
-        <>
-          <AnonUpsellModal
-            tripTitle={data.project.title || 'Your trip'}
-            tripUrl={shareUrl}
-            signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(`/t/${slug}?claim=${projectIdForClaim || data.project.id}`)}`}
-            onShareClick={() => setAnonShareOpen(true)}
-          />
-          {/* Orange pill button — the only visible share trigger for anon */}
-          <div className={`fixed right-4 md:right-14 z-50 transition-all duration-200 ${showBanner ? 'top-[48px]' : 'top-3'}`}>
-            <button
-              type="button"
-              onClick={() => setAnonShareOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-accent text-accent-foreground text-sm font-semibold shadow-lg hover:bg-accent/90 transition-colors"
-            >
-              Share as is →
-            </button>
-            <ShareMenu
-              title={data.project.title || 'Your trip'}
-              url={shareUrl}
-              publicStatus={data.project.status}
-              forceOpen={anonShareOpen}
-              onOpenChange={setAnonShareOpen}
-              hideTrigger
-            />
-          </div>
-        </>
+        <AnonUpsellModal
+          tripTitle={data.project.title || 'Your trip'}
+          tripUrl={shareUrl}
+          signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(`/t/${slug}?claim=${projectIdForClaim || data.project.id}`)}`}
+          onShareClick={() => setAnonShareOpen(true)}
+        />
       )}
 
       {/* ─── Themed content ─────────────────────────────────────────── */}
