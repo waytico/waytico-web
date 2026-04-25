@@ -19,6 +19,7 @@ import { usePhotoUpload, type MediaRecord } from '@/hooks/use-photo-upload'
 import { useTripData } from '@/hooks/use-trip-data'
 
 import { ThemeRoot } from '@/components/trip/theme-root'
+import { resolveTheme } from '@/lib/themes'
 import {
   JournalNav,
   JournalHero,
@@ -35,6 +36,22 @@ import {
   JournalTerms,
   JournalStickyCTA,
 } from '@/components/trip/themes/journal'
+import {
+  AtelierNav,
+  AtelierHero,
+  AtelierOverview,
+  AtelierItinerary,
+  AtelierIncluded,
+  AtelierMap,
+  AtelierGallery,
+  AtelierPrice,
+  AtelierRatings,
+  AtelierHost,
+  AtelierOperator,
+  AtelierCTA,
+  AtelierTerms,
+  AtelierStickyCTA,
+} from '@/components/trip/themes/atelier'
 import { TasksBlock, DocumentsBlock } from '@/components/trip/themes/shared'
 
 type Location = {
@@ -486,91 +503,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
       )}
 
       {/* ─── Themed content ─────────────────────────────────────────── */}
-      <ThemeRoot theme={p.design_theme}>
-        <JournalNav />
+      {(() => {
+        const theme = resolveTheme(p.design_theme)
 
-        <JournalHero
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          project={p as any}
-          owner={showOwnerUI}
-          heroPhoto={heroPhoto}
-          uploadingHero={uploadingByDay['hero'] || 0}
-          ownerProfile={ownerInfo}
-          onHeroUpload={handleHeroUpload}
-          onHeroDelete={handleDelete}
-          onSaveProject={saveProjectPatch}
-        />
-
-        <JournalOverview
-          description={p.description}
-          owner={showOwnerUI}
-          onSave={(v) => saveProjectPatch({ description: v })}
-          host={p.host}
-        />
-
-        <JournalItinerary
-          itinerary={itinerary}
-          media={media}
-          owner={showOwnerUI}
-          uploadingByDay={uploadingByDay}
-          onUpload={handleUpload}
-          onDelete={handleDelete}
-          onOpenPhoto={setLightbox}
-          onSaveDay={saveDayPatch}
-          onSaveSegment={saveSegmentPatch}
-          durationLabel={durationLabel}
-        />
-
-        <JournalIncluded
-          included={p.included}
-          notIncluded={p.not_included}
-          owner={showOwnerUI}
-          onSaveIncluded={(v) => saveProjectPatch({ included: v })}
-          onSaveNotIncluded={(v) => saveProjectPatch({ notIncluded: v })}
-        />
-
-        <JournalMap locations={locations} />
-
-        <JournalGallery
-          media={media}
-          owner={showOwnerUI}
-          uploading={uploadingByDay['tour'] || 0}
-          onUpload={handleUpload}
-          onOpenPhoto={setLightbox}
-        />
-
-        <JournalPrice
-          projectId={p.id}
-          status={p.status}
-          pricePerPerson={p.price_per_person}
-          currency={p.currency}
-          priceNote={null}
-          owner={showOwnerUI}
-          onSave={saveProjectPatch}
-        />
-
-        <JournalRatings ratings={p.ratings} />
-
-        <JournalHost
-          host={p.host}
-          businessName={ownerInfo?.business_name}
-        />
-
-        <JournalOperator
-          contact={operatorContact}
-          brandLogoUrl={ownerInfo?.brand_logo_url}
-          brandTagline={ownerInfo?.brand_tagline}
-        />
-
-        <JournalCTA
-          tripTitle={p.title}
-          shareUrl={shareUrl}
-          contact={operatorContact}
-          status={p.status}
-        />
-
-        {/* Active-status pre-trip sections (shared) */}
-        {p.status === 'active' && (
+        const activeStatusBlocks = p.status === 'active' && (
           <div className="max-w-3xl mx-auto px-6 md:px-[72px] py-16 space-y-16">
             <TasksBlock
               tasks={tasks}
@@ -686,23 +622,182 @@ export default function TripPageClient({ slug, initialData }: Props) {
               </section>
             )}
           </div>
-        )}
+        )
 
-        <JournalTerms
-          terms={p.terms}
-          owner={showOwnerUI}
-          onSave={(v) => saveProjectPatch({ terms: v })}
-          slug={slug}
-          businessName={ownerInfo?.business_name}
-        />
+        if (theme === 'atelier') {
+          return (
+            <ThemeRoot theme="atelier">
+              <AtelierNav />
+              <AtelierHero
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                project={p as any}
+                owner={showOwnerUI}
+                heroPhoto={heroPhoto}
+                uploadingHero={uploadingByDay['hero'] || 0}
+                ownerProfile={ownerInfo}
+                host={p.host}
+                onHeroUpload={handleHeroUpload}
+                onHeroDelete={handleDelete}
+                onSaveProject={saveProjectPatch}
+              />
+              <AtelierOverview
+                description={p.description}
+                owner={showOwnerUI}
+                onSave={(v) => saveProjectPatch({ description: v })}
+              />
+              <AtelierItinerary
+                itinerary={itinerary}
+                media={media}
+                owner={showOwnerUI}
+                uploadingByDay={uploadingByDay}
+                onUpload={handleUpload}
+                onDelete={handleDelete}
+                onOpenPhoto={setLightbox}
+                onSaveDay={saveDayPatch}
+                onSaveSegment={saveSegmentPatch}
+              />
+              <AtelierIncluded
+                included={p.included}
+                notIncluded={p.not_included}
+                owner={showOwnerUI}
+                onSaveIncluded={(v) => saveProjectPatch({ included: v })}
+                onSaveNotIncluded={(v) => saveProjectPatch({ notIncluded: v })}
+              />
+              <AtelierMap locations={locations} />
+              <AtelierGallery
+                media={media}
+                owner={showOwnerUI}
+                uploading={uploadingByDay['tour'] || 0}
+                onUpload={handleUpload}
+                onOpenPhoto={setLightbox}
+              />
+              <AtelierPrice
+                projectId={p.id}
+                status={p.status}
+                pricePerPerson={p.price_per_person}
+                currency={p.currency}
+                priceNote={null}
+                owner={showOwnerUI}
+                onSave={saveProjectPatch}
+              />
+              <AtelierRatings ratings={p.ratings} />
+              <AtelierHost host={p.host} />
+              <AtelierOperator
+                contact={operatorContact}
+                brandLogoUrl={ownerInfo?.brand_logo_url}
+                brandTagline={ownerInfo?.brand_tagline}
+                hostAvatarUrl={p.host?.avatarUrl}
+              />
+              <AtelierCTA
+                tripTitle={p.title}
+                shareUrl={shareUrl}
+                contact={operatorContact}
+              />
+              {activeStatusBlocks}
+              <AtelierTerms
+                terms={p.terms}
+                owner={showOwnerUI}
+                onSave={(v) => saveProjectPatch({ terms: v })}
+                slug={slug}
+                businessName={ownerInfo?.business_name}
+              />
+              <AtelierStickyCTA
+                projectId={p.id}
+                status={p.status}
+                pricePerPerson={p.price_per_person}
+                currency={p.currency}
+              />
+            </ThemeRoot>
+          )
+        }
 
-        <JournalStickyCTA
-          projectId={p.id}
-          status={p.status}
-          pricePerPerson={p.price_per_person}
-          currency={p.currency}
-        />
-      </ThemeRoot>
+        // Default: Journal (also used for `expedition` and `custom` until those themes ship)
+        return (
+          <ThemeRoot theme={theme}>
+            <JournalNav />
+            <JournalHero
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              project={p as any}
+              owner={showOwnerUI}
+              heroPhoto={heroPhoto}
+              uploadingHero={uploadingByDay['hero'] || 0}
+              ownerProfile={ownerInfo}
+              onHeroUpload={handleHeroUpload}
+              onHeroDelete={handleDelete}
+              onSaveProject={saveProjectPatch}
+            />
+            <JournalOverview
+              description={p.description}
+              owner={showOwnerUI}
+              onSave={(v) => saveProjectPatch({ description: v })}
+              host={p.host}
+            />
+            <JournalItinerary
+              itinerary={itinerary}
+              media={media}
+              owner={showOwnerUI}
+              uploadingByDay={uploadingByDay}
+              onUpload={handleUpload}
+              onDelete={handleDelete}
+              onOpenPhoto={setLightbox}
+              onSaveDay={saveDayPatch}
+              onSaveSegment={saveSegmentPatch}
+              durationLabel={durationLabel}
+            />
+            <JournalIncluded
+              included={p.included}
+              notIncluded={p.not_included}
+              owner={showOwnerUI}
+              onSaveIncluded={(v) => saveProjectPatch({ included: v })}
+              onSaveNotIncluded={(v) => saveProjectPatch({ notIncluded: v })}
+            />
+            <JournalMap locations={locations} />
+            <JournalGallery
+              media={media}
+              owner={showOwnerUI}
+              uploading={uploadingByDay['tour'] || 0}
+              onUpload={handleUpload}
+              onOpenPhoto={setLightbox}
+            />
+            <JournalPrice
+              projectId={p.id}
+              status={p.status}
+              pricePerPerson={p.price_per_person}
+              currency={p.currency}
+              priceNote={null}
+              owner={showOwnerUI}
+              onSave={saveProjectPatch}
+            />
+            <JournalRatings ratings={p.ratings} />
+            <JournalHost host={p.host} businessName={ownerInfo?.business_name} />
+            <JournalOperator
+              contact={operatorContact}
+              brandLogoUrl={ownerInfo?.brand_logo_url}
+              brandTagline={ownerInfo?.brand_tagline}
+            />
+            <JournalCTA
+              tripTitle={p.title}
+              shareUrl={shareUrl}
+              contact={operatorContact}
+              status={p.status}
+            />
+            {activeStatusBlocks}
+            <JournalTerms
+              terms={p.terms}
+              owner={showOwnerUI}
+              onSave={(v) => saveProjectPatch({ terms: v })}
+              slug={slug}
+              businessName={ownerInfo?.business_name}
+            />
+            <JournalStickyCTA
+              projectId={p.id}
+              status={p.status}
+              pricePerPerson={p.price_per_person}
+              currency={p.currency}
+            />
+          </ThemeRoot>
+        )
+      })()}
 
       <PhotoLightbox
         media={lightbox}
