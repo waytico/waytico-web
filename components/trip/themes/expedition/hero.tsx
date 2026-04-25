@@ -147,13 +147,15 @@ export function ExpeditionHero({
     return merged.toUpperCase()
   })()
 
+  const sectionMinHeight = 'clamp(640px, 85vh, 920px)'
+
   return (
     <section
       {...dropHandlers}
-      className={`relative group ${
+      className={`relative group overflow-hidden ${
         dragOver ? 'ring-4 ring-[color:var(--e-ochre)] ring-inset' : ''
       }`}
-      style={{ minHeight: 'clamp(640px, 85vh, 920px)' }}
+      style={{ minHeight: sectionMinHeight }}
     >
       {heroPhoto ? (
         <div
@@ -206,159 +208,169 @@ export function ExpeditionHero({
         </div>
       )}
 
-      {/* Proposal validity strip — auto-filled at trip creation, editable
-          by owner. Hidden for clients when both fields are empty. */}
-      {(owner || p.proposal_date || p.valid_until) && (
-        <div
-          className="relative max-w-7xl mx-auto flex flex-wrap justify-end items-center gap-x-8 gap-y-2 px-4 py-5 md:py-7"
-          style={{ color: 'var(--e-cream-mute)' }}
-        >
-          {(owner || p.proposal_date) && (
-            <div className="e-mono flex items-center gap-2">
-              <span style={{ opacity: 0.7 }}>PROPOSAL ·</span>
-              <EditableField
-                as="date"
-                editable={owner}
-                value={p.proposal_date}
-                placeholder="SET DATE"
-                formatDisplay={formatBrandDate}
-                onSave={(v) => onSaveProject({ proposalDate: v })}
-              />
-            </div>
-          )}
-          {(owner || p.valid_until) && (
-            <div className="e-mono flex items-center gap-2">
-              <span style={{ opacity: 0.7 }}>VALID →</span>
-              <EditableField
-                as="date"
-                editable={owner}
-                value={p.valid_until}
-                placeholder="SET DATE"
-                formatDisplay={formatBrandDate}
-                onSave={(v) => onSaveProject({ validUntil: v })}
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Ticker — only shown if activity_type is set; decorative dashes
-          flank the type to keep the field-guide language without hardcoding
-          a brand word. */}
-      {p.activity_type && (
-        <div
-          className="absolute top-6 md:top-8 left-1/2 -translate-x-1/2 w-full max-w-7xl px-4 flex items-center gap-3 md:gap-5"
-          aria-hidden="true"
-        >
-          <div className="flex-1 h-px" style={{ background: 'var(--e-rule-2)' }} />
-          <div className="e-mono" style={{ color: 'var(--e-ochre)' }}>
-            ◆ {p.activity_type.toUpperCase()} ◆
-          </div>
-          <div className="flex-1 h-px" style={{ background: 'var(--e-rule-2)' }} />
-        </div>
-      )}
-
-      {/* Title + stats */}
+      {/* Single flex column from top to bottom of the section. The spacer
+          between the ticker and the title pushes the title to the bottom
+          of the visible area when content is short, and lets the title
+          grow downwards (not over the header) when content is long.
+          Replaces the previous absolute-positioned title block which
+          overflowed the section vertically for long uppercase titles. */}
       <div
-        className="absolute left-1/2 -translate-x-1/2 w-full max-w-7xl px-4"
-        style={{
-          bottom: 'clamp(40px, 14vw, 120px)',
-          color: 'var(--e-cream)',
-        }}
+        className="relative max-w-7xl mx-auto px-4 flex flex-col"
+        style={{ minHeight: sectionMinHeight, color: 'var(--e-cream)' }}
       >
-        {(coords || region) && (
+        {/* Proposal validity strip — auto-filled at trip creation,
+            editable by owner. Hidden for clients when both fields are
+            empty. */}
+        {(owner || p.proposal_date || p.valid_until) && (
           <div
-            className="e-mono mb-7 md:mb-9"
-            style={{ color: 'var(--e-ochre)' }}
+            className="flex flex-wrap justify-end items-center gap-x-8 gap-y-2 py-5 md:py-7"
+            style={{ color: 'var(--e-cream-mute)' }}
           >
-            {coords && <span>{coords}</span>}
-            {coords && region && <span>&nbsp;·&nbsp;</span>}
-            {region && <span>{region}</span>}
+            {(owner || p.proposal_date) && (
+              <div className="e-mono flex items-center gap-2">
+                <span style={{ opacity: 0.7 }}>PROPOSAL ·</span>
+                <EditableField
+                  as="date"
+                  editable={owner}
+                  value={p.proposal_date}
+                  placeholder="SET DATE"
+                  formatDisplay={formatBrandDate}
+                  onSave={(v) => onSaveProject({ proposalDate: v })}
+                />
+              </div>
+            )}
+            {(owner || p.valid_until) && (
+              <div className="e-mono flex items-center gap-2">
+                <span style={{ opacity: 0.7 }}>VALID →</span>
+                <EditableField
+                  as="date"
+                  editable={owner}
+                  value={p.valid_until}
+                  placeholder="SET DATE"
+                  formatDisplay={formatBrandDate}
+                  onSave={(v) => onSaveProject({ validUntil: v })}
+                />
+              </div>
+            )}
           </div>
         )}
-        <h1
-          className="e-display"
-          style={{
-            fontSize: 'clamp(3.5rem, 12vw, 11.5rem)',
-            lineHeight: 0.82,
-            margin: 0,
-            letterSpacing: '-0.03em',
-          }}
-        >
-          <EditableField
-            as="text"
-            editable={owner}
-            value={p.title}
-            required
-            className="w-full"
-            onSave={(v) => onSaveProject({ title: v })}
-          />
-        </h1>
-        <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-8 mt-10 md:mt-16">
-          {p.description && (
-            <p
-              className="e-body"
-              style={{
-                fontSize: 'clamp(1rem, 1.3vw, 1.1875rem)',
-                color: 'var(--e-cream-mute)',
-                maxWidth: 520,
-                lineHeight: 1.5,
-              }}
-            >
-              {p.description.split(/\n\n+/)[0]}
-            </p>
-          )}
-          <div className="flex flex-wrap gap-6 md:gap-14">
-            {(owner || p.dates_start || p.dates_end) && (
-              <ExpeditionHeroStat
-                label="DEPARTURE"
-                showLabel={owner}
-                value={datesShort ? (datesShort.split('—')[0]?.trim().toUpperCase() || '—') : '—'}
-                sub={datesShort.includes('—') ? datesShort.split('—')[1]?.trim().toUpperCase() : ''}
-              />
-            )}
-            {(owner || p.duration_days) && (
-              <ExpeditionHeroStat
-                label="DURATION"
-                showLabel={owner}
-                value={p.duration_days ? String(p.duration_days).padStart(2, '0') : '—'}
-                sub={p.duration_days ? 'DAYS' : ''}
-              />
-            )}
-            {(owner || p.group_size) && (
-              <ExpeditionHeroStat
-                label="GROUP"
-                showLabel={owner}
-                value={p.group_size ? String(p.group_size).padStart(2, '0') : '—'}
-                sub={p.group_size ? 'TRAVELERS' : ''}
-              />
-            )}
-            {(owner || priceText) && (
-              <ExpeditionHeroStat
-                label="FROM"
-                showLabel={owner}
-                value={priceText || '—'}
-                sub={priceText ? 'PER TRAVELER' : ''}
-                accent
-              />
-            )}
-          </div>
-        </div>
 
-        {/* Empty state for owners without a hero photo */}
-        {!heroPhoto && owner && (
-          <div className="mt-8 md:mt-10">
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              disabled={uploadingHero > 0}
-              className="e-btn-ghost inline-flex items-center gap-2 disabled:opacity-60"
-            >
-              <ImagePlus className="w-4 h-4" />
-              {uploadingHero > 0 ? 'UPLOADING…' : 'ADD HERO PHOTO'}
-            </button>
+        {/* Ticker — only shown if activity_type is set. */}
+        {p.activity_type && (
+          <div
+            className="flex items-center gap-3 md:gap-5 mt-2 mb-4"
+            aria-hidden="true"
+          >
+            <div className="flex-1 h-px" style={{ background: 'var(--e-rule-2)' }} />
+            <div className="e-mono" style={{ color: 'var(--e-ochre)' }}>
+              ◆ {p.activity_type.toUpperCase()} ◆
+            </div>
+            <div className="flex-1 h-px" style={{ background: 'var(--e-rule-2)' }} />
           </div>
         )}
+
+        {/* Spacer — pushes the title block to the bottom for short
+            content, and absorbs nothing extra for tall content. */}
+        <div className="flex-1 min-h-[40px]" />
+
+        {/* Title + stats block */}
+        <div className="pb-10 md:pb-20">
+          {(coords || region) && (
+            <div
+              className="e-mono mb-7 md:mb-9"
+              style={{ color: 'var(--e-ochre)' }}
+            >
+              {coords && <span>{coords}</span>}
+              {coords && region && <span>&nbsp;·&nbsp;</span>}
+              {region && <span>{region}</span>}
+            </div>
+          )}
+          <h1
+            className="e-display"
+            style={{
+              fontSize: 'clamp(2.5rem, 9vw, 8.5rem)',
+              lineHeight: 0.85,
+              margin: 0,
+              letterSpacing: '-0.03em',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
+            }}
+          >
+            <EditableField
+              as="text"
+              editable={owner}
+              value={p.title}
+              required
+              className="w-full"
+              onSave={(v) => onSaveProject({ title: v })}
+            />
+          </h1>
+          <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-8 mt-10 md:mt-16">
+            {p.description && (
+              <p
+                className="e-body"
+                style={{
+                  fontSize: 'clamp(1rem, 1.3vw, 1.1875rem)',
+                  color: 'var(--e-cream-mute)',
+                  maxWidth: 520,
+                  lineHeight: 1.5,
+                }}
+              >
+                {p.description.split(/\n\n+/)[0]}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-6 md:gap-14">
+              {(owner || p.dates_start || p.dates_end) && (
+                <ExpeditionHeroStat
+                  label="DEPARTURE"
+                  showLabel={owner}
+                  value={datesShort ? (datesShort.split('—')[0]?.trim().toUpperCase() || '—') : '—'}
+                  sub={datesShort.includes('—') ? datesShort.split('—')[1]?.trim().toUpperCase() : ''}
+                />
+              )}
+              {(owner || p.duration_days) && (
+                <ExpeditionHeroStat
+                  label="DURATION"
+                  showLabel={owner}
+                  value={p.duration_days ? String(p.duration_days).padStart(2, '0') : '—'}
+                  sub={p.duration_days ? 'DAYS' : ''}
+                />
+              )}
+              {(owner || p.group_size) && (
+                <ExpeditionHeroStat
+                  label="GROUP"
+                  showLabel={owner}
+                  value={p.group_size ? String(p.group_size).padStart(2, '0') : '—'}
+                  sub={p.group_size ? 'TRAVELERS' : ''}
+                />
+              )}
+              {(owner || priceText) && (
+                <ExpeditionHeroStat
+                  label="FROM"
+                  showLabel={owner}
+                  value={priceText || '—'}
+                  sub={priceText ? 'PER TRAVELER' : ''}
+                  accent
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Empty state for owners without a hero photo */}
+          {!heroPhoto && owner && (
+            <div className="mt-8 md:mt-10">
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                disabled={uploadingHero > 0}
+                className="e-btn-ghost inline-flex items-center gap-2 disabled:opacity-60"
+              >
+                <ImagePlus className="w-4 h-4" />
+                {uploadingHero > 0 ? 'UPLOADING…' : 'ADD HERO PHOTO'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   )
