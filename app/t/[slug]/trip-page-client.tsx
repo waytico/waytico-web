@@ -532,11 +532,20 @@ export default function TripPageClient({ slug, initialData }: Props) {
               </span>
               <span className="sm:hidden"> to save.</span>
             </p>
+            <button
+              onClick={() => {
+                setShowBanner(false)
+                setAnonShareOpen(true)
+              }}
+              className="flex-shrink-0 text-sm font-semibold text-accent hover:text-accent/80 transition-colors whitespace-nowrap"
+            >
+              Share as is →
+            </button>
           </div>
         </div>
       )}
 
-      {/* ─── Anon upsell modal + floating share trigger ─── */}
+      {/* ─── Anon share button (top-right, always visible for anon creators) ─── */}
       {isAnonCreator && data?.project?.status === 'quoted' && (
         <>
           <AnonUpsellModal
@@ -545,7 +554,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
             signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(`/t/${slug}?claim=${projectIdForClaim || data.project.id}`)}`}
             onShareClick={() => setAnonShareOpen(true)}
           />
-          {/* Share as is — fixed top-right, same visual row as hero brand strip */}
           <div className="fixed top-0 right-0 z-50 px-4 md:px-[72px] py-4 md:py-7">
             <ShareMenu
               title={data.project.title || 'Your trip'}

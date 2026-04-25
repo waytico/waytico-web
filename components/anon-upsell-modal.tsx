@@ -25,7 +25,6 @@ export default function AnonUpsellModal({
   onShareClick,
 }: Props) {
   const [visible, setVisible] = useState(false)
-  const [dismissed, setDismissed] = useState(false)
   const overlayRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -33,23 +32,14 @@ export default function AnonUpsellModal({
     return () => clearTimeout(t)
   }, [delay])
 
-  // Close via X → hide modal AND show floating share button
-  const dismissWithFloat = () => {
-    setVisible(false)
-    setDismissed(true)
-  }
-
-  // Close via Share → hide modal only (no floating button; share dropdown opens instead)
-  const dismissSilent = () => {
-    setVisible(false)
-  }
+  const dismissWithFloat = () => setVisible(false)
 
   const handleShare = () => {
-    dismissSilent()
+    setVisible(false)
     onShareClick()
   }
 
-  if (!visible && !dismissed) return null
+  if (!visible) return null
 
   return (
     <>
@@ -127,16 +117,6 @@ export default function AnonUpsellModal({
         </div>
       )}
 
-      {/* ── Floating share button after dismiss ── */}
-      {dismissed && (
-        <button
-          type="button"
-          onClick={onShareClick}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-accent text-accent-foreground text-sm font-semibold shadow-lg hover:bg-accent/90 transition-colors"
-        >
-          Share as is →
-        </button>
-      )}
     </>
   )
 }
