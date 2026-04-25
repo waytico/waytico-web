@@ -41,14 +41,14 @@
 
 /* ---- Typography utilities ---- */
 .theme-root[data-theme='expedition'] .e-display {
-  font-family: var(--font-archivo), 'Inter Tight', sans-serif;
+  font-family: var(--font-archivo), var(--font-unbounded), "Inter Tight", sans-serif;
   font-weight: 900;
   letter-spacing: -0.015em;
   text-transform: uppercase;
   font-stretch: 125%;
 }
 .theme-root[data-theme='expedition'] .e-headline {
-  font-family: var(--font-archivo), 'Inter Tight', sans-serif;
+  font-family: var(--font-archivo), var(--font-unbounded), "Inter Tight", sans-serif;
   font-weight: 800;
   letter-spacing: 0;
   text-transform: uppercase;
@@ -74,7 +74,7 @@
   color: var(--e-bg);
   border: 0;
   cursor: pointer;
-  font-family: var(--font-archivo), sans-serif;
+  font-family: var(--font-archivo), var(--font-unbounded), sans-serif;
   font-weight: 800;
   font-size: 13px;
   letter-spacing: 0.18em;
@@ -100,7 +100,7 @@
   color: var(--e-cream);
   border: 1px solid var(--e-rule-2);
   cursor: pointer;
-  font-family: var(--font-archivo), sans-serif;
+  font-family: var(--font-archivo), var(--font-unbounded), sans-serif;
   font-weight: 700;
   font-size: 12px;
   letter-spacing: 0.18em;
@@ -142,7 +142,7 @@
 
 /* ---- Big outline day label ---- */
 .theme-root[data-theme='expedition'] .e-day-outline {
-  font-family: var(--font-archivo), sans-serif;
+  font-family: var(--font-archivo), var(--font-unbounded), sans-serif;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: -0.02em;

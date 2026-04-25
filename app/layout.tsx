@@ -7,6 +7,7 @@ import {
   Inter,
   Inter_Tight,
   Archivo,
+  Unbounded,
 } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 import { Toaster } from 'sonner'
@@ -57,6 +58,11 @@ const inter = Inter({
   preload: false,
 })
 
+// Inter Tight: next/font's Google declaration doesn't expose `cyrillic`
+// for this family even though the Google Fonts API supports it. Used
+// only for Expedition body text — falls back to system sans for
+// Cyrillic, which is acceptable. The hero *title* (Archivo) is the
+// element that matters most for the Expedition look-and-feel.
 const interTight = Inter_Tight({
   subsets: ['latin'],
   weight: ['400', '500', '700'],
@@ -65,10 +71,30 @@ const interTight = Inter_Tight({
   preload: false,
 })
 
+// Archivo doesn't have cyrillic glyphs at all on Google Fonts (only
+// latin / latin-ext / vietnamese). For cyrillic titles in Expedition
+// we use Unbounded as a font-fallback below — browsers pick
+// per-character: Archivo for latin, Unbounded for cyrillic. The
+// `wdth` axis is needed for `.e-display { font-stretch: 125% }`,
+// which only works when the font is loaded as a variable font
+// (`weight: 'variable'` instead of an explicit array).
 const archivo = Archivo({
   subsets: ['latin'],
-  weight: ['700', '800', '900'],
+  weight: 'variable',
+  axes: ['wdth'],
   variable: '--font-archivo',
+  display: 'swap',
+  preload: false,
+})
+
+// Unbounded: cyrillic-supporting expanded display sans, used as the
+// cyrillic counterpart to Archivo Black in the Expedition theme.
+// Geometric, heavy, cinematic — closest match available in next/font
+// for Archivo's expanded look.
+const unbounded = Unbounded({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['700', '800', '900'],
+  variable: '--font-unbounded',
   display: 'swap',
   preload: false,
 })
@@ -81,6 +107,7 @@ const fontVars = [
   inter.variable,
   interTight.variable,
   archivo.variable,
+  unbounded.variable,
 ].join(' ')
 
 export const metadata: Metadata = {
