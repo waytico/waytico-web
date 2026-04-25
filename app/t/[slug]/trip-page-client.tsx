@@ -7,6 +7,8 @@ import { toast } from 'sonner'
 import { Eye, X } from 'lucide-react'
 import ActivationToast from '@/components/activation-toast'
 import PhotoLightbox from '@/components/photo-lightbox'
+import AnonUpsellModal from '@/components/anon-upsell-modal'
+import ShareMenu from '@/components/share-menu'
 import Header from '@/components/header'
 import { TripCommandBar } from '@/components/trip/trip-command-bar'
 import { TripActionBar } from '@/components/trip/trip-action-bar'
@@ -129,6 +131,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const [showBanner, setShowBanner] = useState(false)
   const [isAnonCreator, setIsAnonCreator] = useState(false)
   const [projectIdForClaim, setProjectIdForClaim] = useState<string | null>(null)
+  const [anonShareOpen, setAnonShareOpen] = useState(false)
   const [ownerRefreshKey, setOwnerRefreshKey] = useState(0)
 
   // ─── Anon-owner banner wiring ────────────────────────────────────────
@@ -509,7 +512,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       {showBanner && projectIdForClaim && (
         <div className="sticky top-0 z-40 bg-highlight border-b border-border">
-          <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
+          <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center gap-3">
             <p className="text-sm text-foreground/80 flex-1 min-w-0">
               <span className="hidden sm:inline">This quote is available for 3 days. </span>
               <span className="sm:hidden">Available 3 days. </span>
@@ -528,23 +531,30 @@ export default function TripPageClient({ slug, initialData }: Props) {
               </span>
               <span className="sm:hidden"> to save.</span>
             </p>
-            <button
-              onClick={() => {
-                try {
-                  sessionStorage.setItem(
-                    `waytico:banner-dismissed-${projectIdForClaim}`,
-                    '1',
-                  )
-                } catch {}
-                setShowBanner(false)
-              }}
-              className="p-1 text-foreground/50 hover:text-foreground transition-colors flex-shrink-0"
-              aria-label="Dismiss"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
         </div>
+      )}
+
+      {/* ─── Anon upsell modal + floating share trigger ─── */}
+      {isAnonCreator && data?.project?.status === 'quoted' && (
+        <>
+          <AnonUpsellModal
+            tripTitle={data.project.title || 'Your trip'}
+            tripUrl={shareUrl}
+            signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(`/t/${slug}?claim=${projectIdForClaim || data.project.id}`)}`}
+            onShareClick={() => setAnonShareOpen(true)}
+          />
+          {/* Hidden ShareMenu driven by anonShareOpen state */}
+          <div className="fixed bottom-20 right-6 z-50">
+            <ShareMenu
+              title={data.project.title || 'Your trip'}
+              url={shareUrl}
+              publicStatus={data.project.status}
+              forceOpen={anonShareOpen}
+              onOpenChange={setAnonShareOpen}
+            />
+          </div>
+        </>
       )}
 
       {/* ─── Themed content ─────────────────────────────────────────── */}

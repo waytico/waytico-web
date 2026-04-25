@@ -7,23 +7,34 @@ type Props = {
   title: string
   url: string
   publicStatus: string
+  /** When provided, overrides internal open state (controlled mode). */
+  forceOpen?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 /**
  * Share menu — dropdown with 4 channels for sending the trip quote to a client.
- * Visible only while the trip is in 'quoted' status (pre-activation).
+ * Visible only while the trip is in 'quoted' or 'active' status.
+ * Supports controlled `forceOpen` prop so external triggers (e.g. anon modal)
+ * can open the dropdown programmatically.
  */
-export default function ShareMenu({ title, url, publicStatus }: Props) {
+export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenChange }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
+  const isOpen = forceOpen ?? open
+  const setIsOpen = (v: boolean) => {
+    setOpen(v)
+    onOpenChange?.(v)
+  }
+
   useEffect(() => {
-    if (!open) return
+    if (!isOpen) return
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false)
     }
     const onEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') setIsOpen(false)
     }
     document.addEventListener('mousedown', onClick)
     document.addEventListener('keydown', onEsc)
@@ -31,7 +42,7 @@ export default function ShareMenu({ title, url, publicStatus }: Props) {
       document.removeEventListener('mousedown', onClick)
       document.removeEventListener('keydown', onEsc)
     }
-  }, [open])
+  }, [isOpen])
 
   if (publicStatus !== 'quoted' && publicStatus !== 'active') return null
 
@@ -47,20 +58,20 @@ export default function ShareMenu({ title, url, publicStatus }: Props) {
     } catch {
       toast.error('Could not copy')
     }
-    setOpen(false)
+    setIsOpen(false)
   }
 
   return (
     <div ref={ref} className="relative inline-block">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setIsOpen(!isOpen)}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
       >
         Share with client
       </button>
 
-      {open && (
+      {isOpen && (
         <div
           role="menu"
           className="absolute left-1/2 -translate-x-1/2 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-20"
@@ -68,7 +79,7 @@ export default function ShareMenu({ title, url, publicStatus }: Props) {
           <a
             role="menuitem"
             href={mailto}
-            onClick={() => setOpen(false)}
+            onClick={() => setIsOpen(false)}
             className="block px-4 py-2 text-sm hover:bg-secondary transition-colors"
           >
             Email
@@ -78,7 +89,7 @@ export default function ShareMenu({ title, url, publicStatus }: Props) {
             href={whatsapp}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => setOpen(false)}
+            onClick={() => setIsOpen(false)}
             className="block px-4 py-2 text-sm hover:bg-secondary transition-colors"
           >
             WhatsApp
@@ -88,7 +99,7 @@ export default function ShareMenu({ title, url, publicStatus }: Props) {
             href={telegram}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => setOpen(false)}
+            onClick={() => setIsOpen(false)}
             className="block px-4 py-2 text-sm hover:bg-secondary transition-colors"
           >
             Telegram
