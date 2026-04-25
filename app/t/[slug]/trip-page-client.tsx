@@ -132,6 +132,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const [isAnonCreator, setIsAnonCreator] = useState(false)
   const [projectIdForClaim, setProjectIdForClaim] = useState<string | null>(null)
   const [anonShareOpen, setAnonShareOpen] = useState(false)
+  const [sharedOnce, setSharedOnce] = useState(false)
   const [ownerRefreshKey, setOwnerRefreshKey] = useState(0)
 
   // ─── Anon-owner banner wiring ────────────────────────────────────────
@@ -504,55 +505,63 @@ export default function TripPageClient({ slug, initialData }: Props) {
       )}
 
       {isAnonCreator && data?.project?.status === 'quoted' && (
-        <div className="sticky top-0 z-40 bg-highlight border-b border-border">
-          <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-3">
-            <p className="text-sm text-foreground/80 flex-1 min-w-0 leading-tight">
-              <button
-                onClick={() => {
-                  const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
-                  router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
-                }}
-                className="font-semibold text-accent hover:text-accent/80 underline underline-offset-2"
-              >
-                Sign up for free
-              </button>
-              <span> to edit, add photos, change design, and save.</span>
-            </p>
-            {/* Orange pill — opens share dropdown; dropdown anchors to this button */}
-            <div className="relative flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setAnonShareOpen((v) => !v)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 transition-colors whitespace-nowrap"
-              >
-                Share as is →
-              </button>
-              <ShareMenu
-                title={data.project.title || 'Your trip'}
-                url={shareUrl}
-                publicStatus={data.project.status}
-                forceOpen={anonShareOpen}
-                onOpenChange={setAnonShareOpen}
-                hideTrigger
-                onShareAction={() => {
-                  toast(
-                    'This quote will be deleted in 3 days for unregistered users — the link will stop working.',
-                    {
-                      duration: 12000,
-                      action: {
-                        label: 'Sign up free',
-                        onClick: () => {
-                          const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
-                          router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
-                        },
-                      },
-                    },
-                  )
-                }}
-              />
+        <>
+          {/* Banner 1 — always visible */}
+          <div className="sticky top-0 z-40 bg-highlight border-b border-border">
+            <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-3">
+              <p className="text-sm text-foreground/80 flex-1 min-w-0">
+                <button
+                  onClick={() => {
+                    const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
+                    router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
+                  }}
+                  className="font-semibold text-accent hover:text-accent/80 underline underline-offset-2"
+                >
+                  Sign up for free
+                </button>
+                <span> to edit, add photos, change design, and save.</span>
+              </p>
+              <div className="relative flex-shrink-0 self-center">
+                <button
+                  type="button"
+                  onClick={() => setAnonShareOpen((v) => !v)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 transition-colors whitespace-nowrap"
+                >
+                  Share as is →
+                </button>
+                <ShareMenu
+                  title={data.project.title || 'Your trip'}
+                  url={shareUrl}
+                  publicStatus={data.project.status}
+                  forceOpen={anonShareOpen}
+                  onOpenChange={setAnonShareOpen}
+                  hideTrigger
+                  onShareAction={() => setSharedOnce(true)}
+                />
+              </div>
             </div>
           </div>
-        </div>
+
+          {/* Banner 2 — appears after first share, persists (survives tab switch) */}
+          {sharedOnce && (
+            <div className="sticky top-0 z-39 bg-destructive/10 border-b border-destructive/20">
+              <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-3">
+                <p className="text-sm text-foreground/80 flex-1 min-w-0">
+                  Your client received an unregistered link — it will stop working in 3 days.{' '}
+                  <button
+                    onClick={() => {
+                      const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
+                      router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
+                    }}
+                    className="font-semibold text-accent hover:text-accent/80 underline underline-offset-2"
+                  >
+                    Sign up free to save it permanently.
+                  </button>
+                </p>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* ─── Anon upsell modal (8s delay) ─── */}
