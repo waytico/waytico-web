@@ -512,8 +512,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
       )}
 
       {showBanner && projectIdForClaim && (
-        <div className="sticky top-0 z-40 bg-highlight border-b border-border">
-          <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center gap-3">
+        <div className="sticky top-0 z-40 bg-highlight border-b border-border h-11">
+          <div className="max-w-5xl mx-auto px-4 h-full flex items-center gap-3">
             <p className="text-sm text-foreground/80 flex-1 min-w-0">
               <span className="hidden sm:inline">This quote is available for 3 days. </span>
               <span className="sm:hidden">Available 3 days. </span>
@@ -555,7 +555,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             onShareClick={() => setAnonShareOpen(true)}
           />
           {/* Orange pill button — the only visible share trigger for anon */}
-          <div className={`fixed right-4 md:right-14 z-50 transition-all duration-200 ${showBanner ? 'top-12' : 'top-3'}`}>
+          <div className={`fixed right-4 md:right-14 z-50 transition-all duration-200 ${showBanner ? 'top-[48px]' : 'top-3'}`}>
             <button
               type="button"
               onClick={() => setAnonShareOpen(true)}
