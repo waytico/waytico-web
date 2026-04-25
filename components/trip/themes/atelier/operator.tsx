@@ -26,7 +26,7 @@ export function AtelierOperator({
   brandTagline,
   hostAvatarUrl,
 }: AtelierOperatorProps) {
-  if (!hasAnyContact(contact) && !contact.name) return null
+  if (!hasAnyContact(contact)) return null
 
   type Row = {
     label: string
@@ -156,3 +156,4 @@ export function AtelierOperator({
     </section>
   )
 }
+
