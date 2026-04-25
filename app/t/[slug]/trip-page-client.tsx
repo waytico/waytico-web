@@ -524,7 +524,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 </button>
                 <span> to edit, add photos, change design, and save.</span>
               </div>
-              <div className="relative flex-shrink-0">
+              <div className="relative flex-shrink-0 flex items-center">
                 <button
                   type="button"
                   onClick={() => setAnonShareOpen((v) => !v)}
@@ -909,3 +909,4 @@ export default function TripPageClient({ slug, initialData }: Props) {
     </div>
   )
 }
+
