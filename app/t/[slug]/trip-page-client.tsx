@@ -668,7 +668,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
         if (theme === 'atelier') {
           return (
             <ThemeRoot theme="atelier">
-              <AtelierNav activeSection={activeSection} />
               <AtelierHero
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 project={p as any}
@@ -681,6 +680,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 onHeroDelete={handleDelete}
                 onSaveProject={saveProjectPatch}
               />
+              <AtelierNav activeSection={activeSection} />
               <AtelierOverview
                 description={p.description}
                 owner={showOwnerUI}
@@ -756,7 +756,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
         // Default: Journal (also used for `custom` until that theme ships)
         return (
           <ThemeRoot theme={theme}>
-            <JournalNav activeSection={activeSection} />
             <JournalHero
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               project={p as any}
@@ -768,6 +767,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
               onHeroDelete={handleDelete}
               onSaveProject={saveProjectPatch}
             />
+            <JournalNav activeSection={activeSection} />
             <JournalOverview
               description={p.description}
               owner={showOwnerUI}
