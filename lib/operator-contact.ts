@@ -46,12 +46,25 @@ const clean = (v: string | null | undefined): string | null => {
   return s.length > 0 ? s : null
 }
 
+/**
+ * Placeholder emails set by the backend for anonymous projects (owner has no
+ * real email yet). These should not be surfaced as a real contact channel —
+ * a `mailto:unknown@waytico.com` link sends mail to a black hole and a
+ * `Write to <name>` CTA built on it is worse than no CTA at all.
+ */
+const PLACEHOLDER_EMAILS = new Set(['unknown@waytico.com'])
+const cleanEmail = (v: string | null | undefined): string | null => {
+  const c = clean(v)
+  if (c === null) return null
+  return PLACEHOLDER_EMAILS.has(c.toLowerCase()) ? null : c
+}
+
 export function resolveOperatorContact(
   operatorContact: OperatorContactInput,
   owner: OwnerInput,
 ): ResolvedOperatorContact {
   return {
-    email: clean(operatorContact?.email) ?? clean(owner?.email),
+    email: cleanEmail(operatorContact?.email) ?? cleanEmail(owner?.email),
     name:
       clean(operatorContact?.name) ??
       clean(owner?.business_name) ??
@@ -98,3 +111,4 @@ export function channelHref(
       return null
   }
 }
+
