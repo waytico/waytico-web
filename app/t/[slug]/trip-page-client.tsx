@@ -659,6 +659,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 status={p.status}
                 pricePerPerson={p.price_per_person}
                 currency={p.currency}
+                contact={operatorContact}
               />
             </ThemeRoot>
           )
@@ -746,6 +747,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 status={p.status}
                 pricePerPerson={p.price_per_person}
                 currency={p.currency}
+                contact={operatorContact}
               />
             </ThemeRoot>
           )
@@ -834,6 +836,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
               status={p.status}
               pricePerPerson={p.price_per_person}
               currency={p.currency}
+              contact={operatorContact}
             />
           </ThemeRoot>
         )
