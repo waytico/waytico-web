@@ -1,21 +1,17 @@
-// Shared trip-page blocks — the non-theme-specific parts of a proposal.
+// Shared trip-page blocks — the parts that aren't theme-styled.
 //
-// Each of these is rendered identically across Journal / Expedition / Atelier;
-// the visual differentiation lives in `--theme-*` tokens scoped by ThemeRoot.
+// Per-theme blocks (hero, overview, itinerary, included-excluded, map,
+// gallery, price, ratings, host, operator, cta, terms, nav, sticky-cta)
+// live in `../{theme}/*.tsx`. Each theme renders those itself because
+// the visual language differs enough that CSS-vars-only theming wasn't
+// rich enough; an early experiment with shared overview/included/
+// locations/photos/terms blocks was cut in step 3c.1 and removed here
+// in step 7.5 cleanup.
 //
 // Owner-only surfaces (eye-toggles, delete buttons, drop-zones, upload
-// triggers) use `--owner-chrome-*` tokens so they stay legible on any theme,
-// including Expedition's dark background.
-//
-// Per-theme blocks (hero, days, price, ratings, host, operator, cta, nav)
-// live in `../{theme}/*.tsx` and compose these shared blocks in the same
-// order across every theme.
+// triggers) inside the shared blocks below use `--owner-chrome-*` tokens
+// so they stay legible on any theme, including Expedition's dark ground.
 
-export { OverviewBlock } from './overview'
-export { IncludedExcludedBlock } from './included-excluded'
-export { LocationsBlock } from './locations'
-export { PhotosGalleryBlock } from './photos'
 export { TasksBlock } from './tasks'
 export { DocumentsBlock } from './documents'
-export { TermsBlock } from './terms'
 export { WhatToBringBlock } from './what-to-bring'
