@@ -11,6 +11,7 @@ import Header from '@/components/header'
 import { TripCommandBar } from '@/components/trip/trip-command-bar'
 import { TripActionBar } from '@/components/trip/trip-action-bar'
 import { ArchiveDialog } from '@/components/trip/archive-dialog'
+import { StudioDrawer } from '@/components/trip/editors'
 import { EditableField } from '@/components/editable/editable-field'
 import { apiFetch } from '@/lib/api'
 import { resolveOperatorContact } from '@/lib/operator-contact'
@@ -181,6 +182,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const [previewAsClient, setPreviewAsClient] = useState(false)
   const showOwnerUI = isOwner && !previewAsClient
   const [archiveOpen, setArchiveOpen] = useState(false)
+  const [studioOpen, setStudioOpen] = useState(false)
   const [media, setMedia] = useState<MediaRecord[]>(
     (initialData?.media as MediaRecord[]) || [],
   )
@@ -438,6 +440,30 @@ export default function TripPageClient({ slug, initialData }: Props) {
           onStatusChanged={() => setOwnerRefreshKey((k) => k + 1)}
           onRequestArchive={() => setArchiveOpen(true)}
           onRequestDelete={handleDeleteProject}
+          onOpenStudio={() => setStudioOpen(true)}
+        />
+      )}
+
+      {showOwnerUI && p.id && (
+        <StudioDrawer
+          open={studioOpen}
+          onClose={() => setStudioOpen(false)}
+          projectId={p.id}
+          initialRatings={p.ratings}
+          initialHost={p.host}
+          initialOperatorContact={p.operator_contact}
+          initialBrand={
+            ownerInfo
+              ? {
+                  brand_logo_url: ownerInfo.brand_logo_url,
+                  brand_tagline: ownerInfo.brand_tagline,
+                }
+              : null
+          }
+          onSaved={() => {
+            setOwnerRefreshKey((k) => k + 1)
+            router.refresh()
+          }}
         />
       )}
 
