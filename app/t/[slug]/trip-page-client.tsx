@@ -555,7 +555,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             onShareClick={() => setAnonShareOpen(true)}
           />
           {/* Orange pill button — the only visible share trigger for anon */}
-          <div className="fixed top-3 right-4 md:right-14 z-50">
+          <div className={`fixed right-4 md:right-14 z-50 transition-all duration-200 ${showBanner ? 'top-12' : 'top-3'}`}>
             <button
               type="button"
               onClick={() => setAnonShareOpen(true)}
