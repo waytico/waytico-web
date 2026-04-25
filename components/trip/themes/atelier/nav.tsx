@@ -1,6 +1,8 @@
 'use client'
 
-const ITEMS = [
+import type { SectionId } from '@/hooks/use-scroll-spy'
+
+const ITEMS: Array<{ id: SectionId; label: string }> = [
   { id: 'overview', label: 'Overview' },
   { id: 'itinerary', label: 'Itinerary' },
   { id: 'included', label: 'Included' },
@@ -12,14 +14,17 @@ const ITEMS = [
   { id: 'contact', label: 'Contact' },
 ]
 
+type Props = {
+  activeSection?: SectionId | null
+}
+
 /**
  * Atelier — sticky pill nav.
  *
- * Floats inside the page (mx-14, top-3) rather than spanning full width like
- * Journal's straight strip. Desktop only — mobile loses too much vertical
- * real estate to a fixed pill.
+ * Floats inside the page (mx-14, top-3) rather than spanning full width.
+ * Active item highlighted in coral via scroll-spy.
  */
-export function AtelierNav() {
+export function AtelierNav({ activeSection }: Props) {
   return (
     <nav
       className="hidden md:flex sticky top-3 z-10 mx-14 mb-10 rounded-full px-5 py-2.5 justify-center gap-7"
@@ -29,16 +34,23 @@ export function AtelierNav() {
         border: '1px solid var(--a-rule)',
       }}
     >
-      {ITEMS.map((item) => (
-        <a
-          key={item.id}
-          href={`#${item.id}`}
-          className="a-sans text-[13px] font-medium px-1 py-2"
-          style={{ color: 'var(--a-ink-2)', textDecoration: 'none' }}
-        >
-          {item.label}
-        </a>
-      ))}
+      {ITEMS.map((item) => {
+        const active = activeSection === item.id
+        return (
+          <a
+            key={item.id}
+            href={`#${item.id}`}
+            className="a-sans text-[13px] font-medium px-1 py-2 transition-colors"
+            style={{
+              color: active ? 'var(--a-coral)' : 'var(--a-ink-2)',
+              textDecoration: 'none',
+              fontWeight: active ? 600 : 500,
+            }}
+          >
+            {item.label}
+          </a>
+        )
+      })}
     </nav>
   )
 }
