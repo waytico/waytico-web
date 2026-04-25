@@ -69,7 +69,7 @@ import {
   ExpeditionTerms,
   ExpeditionStickyCTA,
 } from '@/components/trip/themes/expedition'
-import { TasksBlock, DocumentsBlock } from '@/components/trip/themes/shared'
+import { TasksBlock, DocumentsBlock, WhatToBringBlock } from '@/components/trip/themes/shared'
 
 type Location = {
   id: string
@@ -566,104 +566,12 @@ export default function TripPageClient({ slug, initialData }: Props) {
               onDelete={deleteDocument}
             />
 
-            {/* What to Bring — kept inline until step 7 promotes it to 12th shared block */}
-            {((p.what_to_bring?.length > 0) || showOwnerUI) && (
-              <section>
-                <h2 className="text-2xl font-serif font-bold mb-6 text-theme-fg">
-                  What to Bring
-                </h2>
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {(p.what_to_bring || []).map((cat: any, i: number) => {
-                    const itemStrings: string[] = (cat.items || [])
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      .map((x: any) =>
-                        typeof x === 'string' ? x : x?.name || x?.item || '',
-                      )
-                      .filter(Boolean)
-                    const joined = itemStrings.join('\n')
-                    return (
-                      <div key={i} className="space-y-2">
-                        <h3 className="font-semibold text-sm text-theme-fg">
-                          <EditableField
-                            as="text"
-                            editable={showOwnerUI}
-                            value={cat.category}
-                            required
-                            className="w-full"
-                            onSave={(v) => {
-                              const next = (p.what_to_bring || []).map(
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                (c: any, idx: number) =>
-                                  idx === i
-                                    ? { category: v, items: itemStrings }
-                                    : {
-                                        category: c.category,
-                                        items: (c.items || [])
-                                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                          .map((x: any) =>
-                                            typeof x === 'string'
-                                              ? x
-                                              : x?.name || x?.item || '',
-                                          )
-                                          .filter(Boolean),
-                                      },
-                              )
-                              return saveWhatToBring(next)
-                            }}
-                          />
-                        </h3>
-                        <EditableField
-                          as="multiline"
-                          editable={showOwnerUI}
-                          value={joined}
-                          placeholder="Click to add items — one per line"
-                          rows={Math.max(3, itemStrings.length)}
-                          className="w-full"
-                          onSave={(v) => {
-                            const newItems = v
-                              .split('\n')
-                              .map((s) => s.replace(/^[-•·]\s*/, '').trim())
-                              .filter(Boolean)
-                            const next = (p.what_to_bring || []).map(
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                              (c: any, idx: number) =>
-                                idx === i
-                                  ? { category: cat.category, items: newItems }
-                                  : {
-                                      category: c.category,
-                                      items: (c.items || [])
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                        .map((x: any) =>
-                                          typeof x === 'string'
-                                            ? x
-                                            : x?.name || x?.item || '',
-                                        )
-                                        .filter(Boolean),
-                                    },
-                            )
-                            return saveWhatToBring(next)
-                          }}
-                          renderDisplay={() => (
-                            <ul className="space-y-1">
-                              {itemStrings.map((item, j) => (
-                                <li
-                                  key={j}
-                                  className="text-sm text-theme-fg-soft flex items-start gap-2"
-                                >
-                                  <span className="text-theme-accent mt-0.5">·</span>
-                                  <span>{item}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        />
-                      </div>
-                    )
-                  })}
-                </div>
-              </section>
-            )}
+            {/* What to Bring — shared block, theme-agnostic */}
+            <WhatToBringBlock
+              whatToBring={p.what_to_bring}
+              owner={showOwnerUI}
+              onSave={saveWhatToBring}
+            />
           </div>
         )
 
