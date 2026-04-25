@@ -449,6 +449,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           open={studioOpen}
           onClose={() => setStudioOpen(false)}
           projectId={p.id}
+          initialDesignTheme={p.design_theme}
           initialRatings={p.ratings}
           initialHost={p.host}
           initialOperatorContact={p.operator_contact}
