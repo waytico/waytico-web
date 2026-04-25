@@ -65,30 +65,22 @@ export function formatDateRangeShort(
   return start ? fmt(new Date(start), { month: 'short', day: 'numeric' }) : ''
 }
 
-/** Currency symbol for common codes; falls back to the code itself. */
-export function currencySymbol(code: string | null | undefined): string {
-  const c = (code || 'USD').toUpperCase()
-  switch (c) {
-    case 'USD':
-      return '$'
-    case 'EUR':
-      return '€'
-    case 'GBP':
-      return '£'
-    case 'JPY':
-      return '¥'
-    case 'CAD':
-      return 'CA$'
-    case 'AUD':
-      return 'A$'
-    case 'CHF':
-      return 'CHF '
-    default:
-      return c + ' '
-  }
+/**
+ * Normalize a currency code to its 3-letter ISO 4217 form.
+ *
+ * We deliberately do NOT translate codes to glyphs ($ £ €) — for a B2B
+ * proposal, the literal code is unambiguous (USD vs CAD vs AUD all map
+ * to "$" otherwise) and consistent across owner/client views.
+ *
+ * Empty / null input falls back to "USD" so calling code can always
+ * render *something*.
+ */
+export function currencyCode(code: string | null | undefined): string {
+  const c = (code || 'USD').toUpperCase().trim()
+  return /^[A-Z]{3}$/.test(c) ? c : 'USD'
 }
 
-/** "€3,450" with thousands separators. */
+/** "CAD 3,450" with thousands separators and a non-breaking space. */
 export function formatPriceShort(
   price: number | string | null | undefined,
   currency: string | null | undefined,
@@ -96,7 +88,7 @@ export function formatPriceShort(
   if (price === null || price === undefined || price === '') return ''
   const n = typeof price === 'number' ? price : Number(price)
   if (!Number.isFinite(n)) return ''
-  return `${currencySymbol(currency)}${n.toLocaleString('en-US')}`
+  return `${currencyCode(currency)}\u00a0${n.toLocaleString('en-US')}`
 }
 
 /** Zero-pads a number to two digits. `padTwo(3)` → "03". */

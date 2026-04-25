@@ -2,7 +2,7 @@
 
 import { EditableField } from '@/components/editable/editable-field'
 import ActivateButton from '@/components/activate-button'
-import { currencySymbol, formatPriceShort } from '@/lib/trip-format'
+import { currencyCode, formatPriceShort } from '@/lib/trip-format'
 
 type JournalPriceProps = {
   projectId: string
@@ -102,7 +102,7 @@ export function JournalPrice({
                     opacity: 0.7,
                   }}
                 >
-                  {currencySymbol(currency)}
+                  {currencyCode(currency)}
                 </span>
                 <EditableField
                   as="number"

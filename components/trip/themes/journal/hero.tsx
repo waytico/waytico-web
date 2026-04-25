@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { EditableField } from '@/components/editable/editable-field'
-import { formatDateRange, formatPriceShort, currencySymbol } from '@/lib/trip-format'
+import { formatDateRange, formatPriceShort, currencyCode } from '@/lib/trip-format'
 import type { MediaRecord } from '@/lib/upload-photo'
 
 type Project = {
@@ -366,7 +366,7 @@ export function JournalHero({
                   />
                 </span>
               }
-              display={priceText || (p.currency ? currencySymbol(p.currency) : '')}
+              display={priceText || (p.currency ? currencyCode(p.currency) : '')}
               preferDisplay={!owner && !!priceText}
             />
           )}

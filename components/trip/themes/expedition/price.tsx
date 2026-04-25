@@ -2,7 +2,7 @@
 
 import { EditableField } from '@/components/editable/editable-field'
 import ActivateButton from '@/components/activate-button'
-import { currencySymbol, formatPriceShort } from '@/lib/trip-format'
+import { currencyCode, formatPriceShort } from '@/lib/trip-format'
 
 type ExpeditionPriceProps = {
   projectId: string
@@ -92,7 +92,7 @@ export function ExpeditionPrice({
             >
               {owner ? (
                 <>
-                  <span style={{ fontSize: '0.45em' }}>{currencySymbol(currency)}</span>
+                  <span style={{ fontSize: '0.45em' }}>{currencyCode(currency)}</span>
                   <EditableField
                     as="number"
                     editable={owner}
