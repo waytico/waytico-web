@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { Eye, RotateCcw } from 'lucide-react'
+import { Eye, RotateCcw, Settings2 } from 'lucide-react'
 import ActivateButton from '@/components/activate-button'
 import ShareMenu from '@/components/share-menu'
 import ActionMenu from '@/components/action-menu'
@@ -21,6 +21,7 @@ type Props = {
   onStatusChanged?: () => void
   onRequestArchive: () => void
   onRequestDelete: () => void
+  onOpenStudio?: () => void
 }
 
 /**
@@ -43,6 +44,7 @@ export function TripActionBar({
   onStatusChanged,
   onRequestArchive,
   onRequestDelete,
+  onOpenStudio,
 }: Props) {
   const router = useRouter()
   const { getToken } = useAuth()
@@ -150,6 +152,16 @@ export function TripActionBar({
 
         {/* RIGHT: agent tools */}
         <div className="flex items-center gap-1">
+          {onOpenStudio && (
+            <button
+              type="button"
+              onClick={onOpenStudio}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
+            >
+              <Settings2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Studio</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onPreviewAsClient}
