@@ -13,12 +13,7 @@ const ITEMS: Array<{ id: SectionId; label: string }> = [
   { id: 'overview', label: 'Overview' },
   { id: 'itinerary', label: 'Itinerary' },
   { id: 'included', label: 'Included' },
-  { id: 'map', label: 'Map' },
-  { id: 'photos', label: 'Photos' },
   { id: 'price', label: 'Price' },
-  { id: 'ratings', label: 'Ratings' },
-  { id: 'host', label: 'Host' },
-  { id: 'contact', label: 'Contact' },
 ]
 
 type Props = {
@@ -54,3 +49,4 @@ export function JournalNav({ activeSection }: Props) {
     </nav>
   )
 }
+

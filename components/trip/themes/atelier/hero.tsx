@@ -208,7 +208,7 @@ export function AtelierHero({
           <div className="flex gap-2.5 mt-8 md:mt-10 flex-wrap">
             {(p.region || p.country) && (
               <span className="a-badge">
-                📍 {[p.region, p.country].filter(Boolean).join(', ')}
+                📍 {(() => { const r = (p.region || '').trim(); const co = (p.country || '').trim(); if (!r) return co; if (!co) return r; return r.toLowerCase().includes(co.toLowerCase()) ? r : `${r}, ${co}`; })()}
               </span>
             )}
             {datesShort && <span className="a-badge a-badge-coral">✦ {datesShort}</span>}
@@ -382,3 +382,4 @@ export function AtelierHero({
     </section>
   )
 }
+

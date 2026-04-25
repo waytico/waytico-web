@@ -119,7 +119,13 @@ export function JournalHero({
   const datesText =
     formatDateRange(p.dates_start, p.dates_end) ||
     (owner ? 'Set dates' : '')
-  const regionText = [p.region, p.country].filter(Boolean).join(', ')
+  const regionText = (() => {
+    const r = (p.region || '').trim()
+    const co = (p.country || '').trim()
+    if (!r) return co
+    if (!co) return r
+    return r.toLowerCase().includes(co.toLowerCase()) ? r : `${r}, ${co}`
+  })()
   const priceText = formatPriceShort(p.price_per_person, p.currency)
 
   return (
@@ -447,3 +453,4 @@ function HeroStat({ label, value, value2, display, preferDisplay, onBg, accent }
     </div>
   )
 }
+

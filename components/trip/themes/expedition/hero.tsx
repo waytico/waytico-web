@@ -139,7 +139,14 @@ export function ExpeditionHero({
   const datesShort = formatDateRangeShort(p.dates_start, p.dates_end)
   const priceText = formatPriceShort(p.price_per_person, p.currency)
   const coords = formatCoords(p.latitude, p.longitude)
-  const region = [p.region, p.country].filter(Boolean).join(' · ').toUpperCase()
+  const region = (() => {
+    const r = (p.region || '').trim()
+    const co = (p.country || '').trim()
+    if (!r) return co.toUpperCase()
+    if (!co) return r.toUpperCase()
+    const merged = r.toLowerCase().includes(co.toLowerCase()) ? r : `${r} · ${co}`
+    return merged.toUpperCase()
+  })()
   const headerLabel = ownerProfile?.business_name
     ? `WAYTICO/${ownerProfile.business_name.toUpperCase()}`
     : 'WAYTICO/EXPEDITIONS'
@@ -391,3 +398,4 @@ function ExpeditionHeroStat({
     </div>
   )
 }
+

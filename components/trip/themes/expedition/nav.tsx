@@ -6,12 +6,7 @@ const ITEMS: Array<{ id: SectionId; label: string }> = [
   { id: 'overview', label: 'OVERVIEW' },
   { id: 'itinerary', label: 'ITINERARY' },
   { id: 'included', label: 'INCLUDED' },
-  { id: 'map', label: 'MAP' },
-  { id: 'photos', label: 'PHOTOS' },
   { id: 'price', label: 'PRICE' },
-  { id: 'ratings', label: 'RATINGS' },
-  { id: 'host', label: 'HOST' },
-  { id: 'contact', label: 'CONTACT' },
 ]
 
 type Props = {
@@ -52,3 +47,4 @@ export function ExpeditionNav({ activeSection }: Props) {
     </nav>
   )
 }
+

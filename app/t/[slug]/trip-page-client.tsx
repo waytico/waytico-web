@@ -31,8 +31,6 @@ import {
   JournalOverview,
   JournalItinerary,
   JournalIncluded,
-  JournalMap,
-  JournalGallery,
   JournalPrice,
   JournalRatings,
   JournalHost,
@@ -47,8 +45,6 @@ import {
   AtelierOverview,
   AtelierItinerary,
   AtelierIncluded,
-  AtelierMap,
-  AtelierGallery,
   AtelierPrice,
   AtelierRatings,
   AtelierHost,
@@ -63,8 +59,6 @@ import {
   ExpeditionOverview,
   ExpeditionItinerary,
   ExpeditionIncluded,
-  ExpeditionMap,
-  ExpeditionGallery,
   ExpeditionPrice,
   ExpeditionRatings,
   ExpeditionHost,
@@ -418,6 +412,16 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const locations: Location[] = data.locations || []
   const shareUrl = `${APP_URL}/t/${slug}`
   const ownerInfo = data.owner ?? null
+  // Backend serializes NUMERIC as string ('3450.00'); themes guard typeof === 'number'.
+  // Normalize once here so all theme components receive a real number.
+  const pricePerPersonNum =
+    p.price_per_person == null
+      ? p.price_per_person
+      : typeof p.price_per_person === 'number'
+      ? p.price_per_person
+      : Number.isFinite(Number(p.price_per_person))
+      ? Number(p.price_per_person)
+      : null
   const operatorContact = resolveOperatorContact(p.operator_contact, ownerInfo)
   const activeSection = useScrollSpy()
   const heroPhoto = media.find((m) => m.placement === 'hero')
@@ -654,18 +658,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 onSaveIncluded={(v) => saveProjectPatch({ included: v })}
                 onSaveNotIncluded={(v) => saveProjectPatch({ notIncluded: v })}
               />
-              <ExpeditionMap locations={locations} />
-              <ExpeditionGallery
-                media={media}
-                owner={showOwnerUI}
-                uploading={uploadingByDay['tour'] || 0}
-                onUpload={handleUpload}
-                onOpenPhoto={setLightbox}
-              />
               <ExpeditionPrice
                 projectId={p.id}
                 status={p.status}
-                pricePerPerson={p.price_per_person}
+                pricePerPerson={pricePerPersonNum}
                 currency={p.currency}
                 priceNote={null}
                 owner={showOwnerUI}
@@ -695,7 +691,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
               <ExpeditionStickyCTA
                 projectId={p.id}
                 status={p.status}
-                pricePerPerson={p.price_per_person}
+                pricePerPerson={pricePerPersonNum}
                 currency={p.currency}
                 contact={operatorContact}
               />
@@ -742,18 +738,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 onSaveIncluded={(v) => saveProjectPatch({ included: v })}
                 onSaveNotIncluded={(v) => saveProjectPatch({ notIncluded: v })}
               />
-              <AtelierMap locations={locations} />
-              <AtelierGallery
-                media={media}
-                owner={showOwnerUI}
-                uploading={uploadingByDay['tour'] || 0}
-                onUpload={handleUpload}
-                onOpenPhoto={setLightbox}
-              />
               <AtelierPrice
                 projectId={p.id}
                 status={p.status}
-                pricePerPerson={p.price_per_person}
+                pricePerPerson={pricePerPersonNum}
                 currency={p.currency}
                 priceNote={null}
                 owner={showOwnerUI}
@@ -783,7 +771,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
               <AtelierStickyCTA
                 projectId={p.id}
                 status={p.status}
-                pricePerPerson={p.price_per_person}
+                pricePerPerson={pricePerPersonNum}
                 currency={p.currency}
                 contact={operatorContact}
               />
@@ -831,18 +819,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
               onSaveIncluded={(v) => saveProjectPatch({ included: v })}
               onSaveNotIncluded={(v) => saveProjectPatch({ notIncluded: v })}
             />
-            <JournalMap locations={locations} />
-            <JournalGallery
-              media={media}
-              owner={showOwnerUI}
-              uploading={uploadingByDay['tour'] || 0}
-              onUpload={handleUpload}
-              onOpenPhoto={setLightbox}
-            />
             <JournalPrice
               projectId={p.id}
               status={p.status}
-              pricePerPerson={p.price_per_person}
+              pricePerPerson={pricePerPersonNum}
               currency={p.currency}
               priceNote={null}
               owner={showOwnerUI}
@@ -872,7 +852,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             <JournalStickyCTA
               projectId={p.id}
               status={p.status}
-              pricePerPerson={p.price_per_person}
+              pricePerPerson={pricePerPersonNum}
               currency={p.currency}
               contact={operatorContact}
             />
@@ -909,4 +889,5 @@ export default function TripPageClient({ slug, initialData }: Props) {
     </div>
   )
 }
+
 
