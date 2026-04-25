@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { EditableField } from '@/components/editable/editable-field'
 import ActivateButton from '@/components/activate-button'
-import { formatDateRange, formatPriceShort, currencySymbol } from '@/lib/trip-format'
+import { formatDateRange, formatPriceShort, currencySymbol, splitTitleAccent } from '@/lib/trip-format'
 import type { MediaRecord } from '@/lib/upload-photo'
 
 type Project = {
@@ -119,8 +119,15 @@ export function JournalHero({
   const datesText =
     formatDateRange(p.dates_start, p.dates_end) ||
     (owner ? 'Set dates' : '')
-  const regionText = [p.region, p.country].filter(Boolean).join(', ')
+  // E3: dedupe country if region already contains it
+  const regionRaw = (p.region || '').trim()
+  const countryRaw = (p.country || '').trim()
+  const regionText =
+    countryRaw && regionRaw && regionRaw.toLowerCase().includes(countryRaw.toLowerCase())
+      ? regionRaw
+      : [regionRaw, countryRaw].filter(Boolean).join(', ')
   const priceText = formatPriceShort(p.price_per_person, p.currency)
+  const { base: titleBase, accent: titleAccent } = splitTitleAccent(p.title)
 
   return (
     <section
@@ -240,21 +247,38 @@ export function JournalHero({
         <h1
           className="j-serif"
           style={{
-            fontSize: 'clamp(3.4rem, 8vw, 8rem)',
+            fontSize: 'clamp(3.875rem, 9vw, 8rem)',
             lineHeight: 0.95,
             margin: 0,
             letterSpacing: '-0.02em',
             maxWidth: 1100,
           }}
         >
-          <EditableField
-            as="text"
-            editable={owner}
-            value={p.title}
-            required
-            className="w-full"
-            onSave={(v) => onSaveProject({ title: v })}
-          />
+          {owner ? (
+            <EditableField
+              as="text"
+              editable={owner}
+              value={p.title}
+              required
+              className="w-full"
+              onSave={(v) => onSaveProject({ title: v })}
+            />
+          ) : titleAccent ? (
+            <>
+              <span style={{ display: 'block' }}>{titleBase}</span>
+              <em
+                style={{
+                  display: 'block',
+                  color: hasBg ? '#E8B893' : 'var(--j-terra)',
+                  fontWeight: 400,
+                }}
+              >
+                {titleAccent}
+              </em>
+            </>
+          ) : (
+            titleBase
+          )}
         </h1>
 
         {/* Stat rule */}
