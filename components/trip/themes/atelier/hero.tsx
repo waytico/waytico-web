@@ -4,7 +4,6 @@ import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { EditableField } from '@/components/editable/editable-field'
-import ActivateButton from '@/components/activate-button'
 import { formatDateRangeShort, formatPriceShort } from '@/lib/trip-format'
 import type { MediaRecord } from '@/lib/upload-photo'
 
@@ -60,10 +59,6 @@ function formatBrandDate(iso: string | null | undefined): string {
   if (!iso) return ''
   const d = new Date(iso)
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(d)
-}
-
-function brandLeft(ownerProfile: Owner): string {
-  return ownerProfile?.business_name || ownerProfile?.name || ''
 }
 
 /**
@@ -125,45 +120,41 @@ export function AtelierHero({
 
   const datesShort = formatDateRangeShort(p.dates_start, p.dates_end)
   const priceText = formatPriceShort(p.price_per_person, p.currency)
-  const brandName = brandLeft(ownerProfile)
 
   return (
-    <section className="relative px-4 md:px-14 pt-7 pb-12 md:pb-18">
-      {/* Top brand strip */}
-      <div className="flex flex-wrap justify-between items-center gap-3 mb-9">
-        <a href="/" className="hover:opacity-80 transition-opacity">
-          <div className="a-display flex items-center gap-2" style={{ fontSize: 22, letterSpacing: '-0.03em' }}>
-            {ownerProfile?.brand_logo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={ownerProfile.brand_logo_url}
-                alt=""
-                className="h-6 w-auto object-contain"
+    <section className="relative max-w-7xl mx-auto px-4 md:px-14 pt-7 pb-12 md:pb-18">
+      {/* Proposal validity strip — auto-filled at trip creation, editable
+          by owner. Hidden for clients when both fields are empty. */}
+      {(owner || p.proposal_date || p.valid_until) && (
+        <div className="flex flex-wrap justify-end items-center gap-3 mb-9">
+          {(owner || p.proposal_date) && (
+            <span className="a-mono flex items-center gap-2" style={{ color: 'var(--a-mute)' }}>
+              <span style={{ opacity: 0.7 }}>Proposal ·</span>
+              <EditableField
+                as="date"
+                editable={owner}
+                value={p.proposal_date}
+                placeholder="Set date"
+                formatDisplay={formatBrandDate}
+                onSave={(v) => onSaveProject({ proposalDate: v })}
               />
-            ) : null}
-            <span>
-              Waytico{' '}
-              {brandName && (
-                <span className="a-italic" style={{ color: 'var(--a-coral)' }}>
-                  · {brandName}
-                </span>
-              )}
-            </span>
-          </div>
-        </a>
-        <div className="flex flex-wrap gap-3 items-center">
-          {p.proposal_date && (
-            <span className="a-mono" style={{ color: 'var(--a-mute)' }}>
-              Proposal · {formatBrandDate(p.proposal_date)}
             </span>
           )}
-          {p.valid_until && (
+          {(owner || p.valid_until) && (
             <span className="a-badge a-badge-sage">
-              Valid through {formatBrandDate(p.valid_until)}
+              <span style={{ opacity: 0.7, marginRight: 4 }}>Valid through</span>
+              <EditableField
+                as="date"
+                editable={owner}
+                value={p.valid_until}
+                placeholder="Set date"
+                formatDisplay={formatBrandDate}
+                onSave={(v) => onSaveProject({ validUntil: v })}
+              />
             </span>
           )}
         </div>
-      </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
         {/* LEFT: copy column */}
@@ -247,11 +238,6 @@ export function AtelierHero({
                 <div className="a-mono mt-1.5" style={{ color: 'var(--a-mute)' }}>
                   per traveler
                 </div>
-              </div>
-            )}
-            {p.status === 'quoted' && p.id && (
-              <div className="mb-3">
-                <ActivateButton projectId={p.id} publicStatus={p.status} />
               </div>
             )}
           </div>

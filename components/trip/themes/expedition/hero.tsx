@@ -4,7 +4,6 @@ import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { EditableField } from '@/components/editable/editable-field'
-import ActivateButton from '@/components/activate-button'
 import { formatDateRangeShort, formatPriceShort } from '@/lib/trip-format'
 import type { MediaRecord } from '@/lib/upload-photo'
 
@@ -147,9 +146,6 @@ export function ExpeditionHero({
     const merged = r.toLowerCase().includes(co.toLowerCase()) ? r : `${r} · ${co}`
     return merged.toUpperCase()
   })()
-  const headerLabel = ownerProfile?.business_name
-    ? `WAYTICO/${ownerProfile.business_name.toUpperCase()}`
-    : 'WAYTICO/EXPEDITIONS'
 
   return (
     <section
@@ -210,42 +206,46 @@ export function ExpeditionHero({
         </div>
       )}
 
-      {/* Top brand strip */}
-      <div
-        className="relative flex flex-wrap justify-between items-center gap-3 px-4 md:px-14 py-5 md:py-8"
-        style={{ color: 'var(--e-cream)' }}
-      >
-        <a href="/" className="hover:opacity-80 transition-opacity">
-          <div className="e-display flex items-center gap-2" style={{ fontSize: 18, letterSpacing: '0.02em' }}>
-            {ownerProfile?.brand_logo_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={ownerProfile.brand_logo_url}
-                alt=""
-                className="h-6 w-auto object-contain"
-                style={{ filter: 'brightness(1.6)' }}
+      {/* Proposal validity strip — auto-filled at trip creation, editable
+          by owner. Hidden for clients when both fields are empty. */}
+      {(owner || p.proposal_date || p.valid_until) && (
+        <div
+          className="relative max-w-7xl mx-auto flex flex-wrap justify-end items-center gap-x-8 gap-y-2 px-4 md:px-14 py-5 md:py-7"
+          style={{ color: 'var(--e-cream-mute)' }}
+        >
+          {(owner || p.proposal_date) && (
+            <div className="e-mono flex items-center gap-2">
+              <span style={{ opacity: 0.7 }}>PROPOSAL ·</span>
+              <EditableField
+                as="date"
+                editable={owner}
+                value={p.proposal_date}
+                placeholder="SET DATE"
+                formatDisplay={formatBrandDate}
+                onSave={(v) => onSaveProject({ proposalDate: v })}
               />
-            )}
-            <span>{headerLabel.split('/')[0]}<span style={{ color: 'var(--e-ochre)' }}>/</span>{headerLabel.split('/').slice(1).join('/')}</span>
-          </div>
-        </a>
-        <div className="flex flex-wrap gap-6 md:gap-10 items-center">
-          {p.proposal_date && (
-            <div className="e-mono" style={{ color: 'var(--e-cream-mute)' }}>
-              PROPOSAL № {p.id ? p.id.slice(0, 8).toUpperCase() : ''}
             </div>
           )}
-          {p.valid_until && (
-            <div className="e-mono" style={{ color: 'var(--e-cream-mute)' }}>
-              VALID → {formatBrandDate(p.valid_until)}
+          {(owner || p.valid_until) && (
+            <div className="e-mono flex items-center gap-2">
+              <span style={{ opacity: 0.7 }}>VALID →</span>
+              <EditableField
+                as="date"
+                editable={owner}
+                value={p.valid_until}
+                placeholder="SET DATE"
+                formatDisplay={formatBrandDate}
+                onSave={(v) => onSaveProject({ validUntil: v })}
+              />
             </div>
           )}
         </div>
-      </div>
+      )}
 
-      {/* Ticker */}
+      {/* Ticker — shifts to the very top of the hero now that the brand
+          strip is gone. */}
       <div
-        className="absolute top-24 md:top-28 left-4 right-4 md:left-14 md:right-14 flex items-center gap-3 md:gap-5"
+        className="absolute top-6 md:top-8 left-4 right-4 md:left-14 md:right-14 flex items-center gap-3 md:gap-5"
         aria-hidden="true"
       >
         <div className="flex-1 h-px" style={{ background: 'var(--e-rule-2)' }} />
@@ -257,7 +257,7 @@ export function ExpeditionHero({
 
       {/* Title + stats */}
       <div
-        className="absolute left-4 right-4 md:left-14 md:right-14"
+        className="absolute left-1/2 -translate-x-1/2 w-full max-w-7xl px-4 md:px-14"
         style={{
           bottom: 'clamp(40px, 14vw, 120px)',
           color: 'var(--e-cream)',
@@ -306,36 +306,37 @@ export function ExpeditionHero({
             </p>
           )}
           <div className="flex flex-wrap gap-6 md:gap-14">
-            <ExpeditionHeroStat
-              label="DEPARTURE"
-              value={datesShort.split('—')[0]?.trim().toUpperCase() || '—'}
-              sub={datesShort.includes('—') ? datesShort.split('—')[1]?.trim().toUpperCase() : ''}
-            />
-            <ExpeditionHeroStat
-              label="DURATION"
-              value={p.duration_days ? String(p.duration_days).padStart(2, '0') : '—'}
-              sub={p.duration_days ? 'DAYS' : ''}
-            />
-            <ExpeditionHeroStat
-              label="GROUP"
-              value={p.group_size ? String(p.group_size).padStart(2, '0') : '—'}
-              sub={p.group_size ? 'TRAVELERS' : ''}
-            />
-            <ExpeditionHeroStat
-              label="FROM"
-              value={priceText || '—'}
-              sub={priceText ? 'PER TRAVELER' : ''}
-              accent
-            />
+            {(owner || p.dates_start || p.dates_end) && (
+              <ExpeditionHeroStat
+                label="DEPARTURE"
+                value={datesShort ? (datesShort.split('—')[0]?.trim().toUpperCase() || '—') : '—'}
+                sub={datesShort.includes('—') ? datesShort.split('—')[1]?.trim().toUpperCase() : ''}
+              />
+            )}
+            {(owner || p.duration_days) && (
+              <ExpeditionHeroStat
+                label="DURATION"
+                value={p.duration_days ? String(p.duration_days).padStart(2, '0') : '—'}
+                sub={p.duration_days ? 'DAYS' : ''}
+              />
+            )}
+            {(owner || p.group_size) && (
+              <ExpeditionHeroStat
+                label="GROUP"
+                value={p.group_size ? String(p.group_size).padStart(2, '0') : '—'}
+                sub={p.group_size ? 'TRAVELERS' : ''}
+              />
+            )}
+            {(owner || priceText) && (
+              <ExpeditionHeroStat
+                label="FROM"
+                value={priceText || '—'}
+                sub={priceText ? 'PER TRAVELER' : ''}
+                accent
+              />
+            )}
           </div>
         </div>
-
-        {/* Activate (quoted only) */}
-        {p.status === 'quoted' && p.id && (
-          <div className="mt-8 md:mt-12">
-            <ActivateButton projectId={p.id} publicStatus={p.status} />
-          </div>
-        )}
 
         {/* Empty state for owners without a hero photo */}
         {!heroPhoto && owner && (

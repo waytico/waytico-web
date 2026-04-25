@@ -4,7 +4,6 @@ import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { EditableField } from '@/components/editable/editable-field'
-import ActivateButton from '@/components/activate-button'
 import { formatDateRange, formatPriceShort, currencySymbol } from '@/lib/trip-format'
 import type { MediaRecord } from '@/lib/upload-photo'
 
@@ -53,11 +52,6 @@ function formatBrandDate(iso: string | null | undefined): string {
   if (!iso) return ''
   const d = new Date(iso)
   return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(d)
-}
-
-function brandLeft(ownerProfile: Owner): string {
-  const name = ownerProfile?.business_name || ownerProfile?.name
-  return name ? `Waytico · ${name}` : 'Waytico'
 }
 
 /**
@@ -187,53 +181,46 @@ export function JournalHero({
         </div>
       )}
 
-      {/* Brand strip */}
-      <div
-        className="relative flex flex-wrap gap-3 items-center justify-between px-6 md:px-[72px] py-5 md:py-8"
-        style={{ color: hasBg ? 'var(--j-paper)' : 'var(--j-ink-soft)' }}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          {ownerProfile?.brand_logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={ownerProfile.brand_logo_url}
-              alt=""
-              className="h-6 w-auto object-contain"
-              style={{ filter: hasBg ? 'brightness(1.6)' : undefined }}
-            />
-          ) : null}
-          <a href="/" className="hover:opacity-80 transition-opacity">
-            <div
-              className="j-mono truncate"
-              style={{ color: hasBg ? 'rgba(250,246,236,0.85)' : 'var(--j-ink-soft)' }}
-            >
-              {brandLeft(ownerProfile)}
+      {/* Proposal validity strip — proposal date + valid-through.
+          Auto-filled at trip creation (today / +14d) and editable by the
+          owner. Client only sees these when both are present. */}
+      {(owner || p.proposal_date || p.valid_until) && (
+        <div
+          className="relative max-w-7xl mx-auto flex flex-wrap gap-x-8 gap-y-2 justify-end px-6 md:px-[72px] py-5 md:py-7"
+          style={{ color: hasBg ? 'rgba(250,246,236,0.75)' : 'var(--j-ink-mute)' }}
+        >
+          {(owner || p.proposal_date) && (
+            <div className="j-mono flex items-center gap-2">
+              <span style={{ opacity: 0.7 }}>Proposal ·</span>
+              <EditableField
+                as="date"
+                editable={owner}
+                value={p.proposal_date}
+                placeholder="Set date"
+                formatDisplay={formatBrandDate}
+                onSave={(v) => onSaveProject({ proposalDate: v })}
+              />
             </div>
-          </a>
-        </div>
-        <div className="flex gap-6 flex-wrap">
-          {p.proposal_date && (
-            <span
-              className="j-mono"
-              style={{ color: hasBg ? 'rgba(250,246,236,0.7)' : 'var(--j-ink-mute)' }}
-            >
-              Proposal · {formatBrandDate(p.proposal_date)}
-            </span>
           )}
-          {p.valid_until && (
-            <span
-              className="j-mono"
-              style={{ color: hasBg ? 'rgba(250,246,236,0.7)' : 'var(--j-ink-mute)' }}
-            >
-              Valid through {formatBrandDate(p.valid_until)}
-            </span>
+          {(owner || p.valid_until) && (
+            <div className="j-mono flex items-center gap-2">
+              <span style={{ opacity: 0.7 }}>Valid through</span>
+              <EditableField
+                as="date"
+                editable={owner}
+                value={p.valid_until}
+                placeholder="Set date"
+                formatDisplay={formatBrandDate}
+                onSave={(v) => onSaveProject({ validUntil: v })}
+              />
+            </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* Title block */}
       <div
-        className="relative px-6 md:px-[72px] pb-10 md:pb-20 pt-6 md:pt-24"
+        className="relative max-w-7xl mx-auto px-6 md:px-[72px] pb-10 md:pb-20 pt-6 md:pt-24"
         style={{ color: hasBg ? 'var(--j-paper)' : 'var(--j-ink)' }}
       >
         <div
@@ -270,102 +257,112 @@ export function JournalHero({
             borderColor: hasBg ? 'rgba(250,246,236,0.3)' : 'var(--j-rule)',
           }}
         >
-          <HeroStat
-            label="Dates"
-            onBg={hasBg}
-            value={
-              <EditableField
-                as="date"
-                editable={owner}
-                value={p.dates_start}
-                placeholder="Start"
-                onSave={(v) => onSaveProject({ datesStart: v })}
-              />
-            }
-            value2={
-              p.dates_end || owner ? (
+          {(owner || p.dates_start || p.dates_end) && (
+            <HeroStat
+              label="Dates"
+              onBg={hasBg}
+              value={
                 <EditableField
                   as="date"
                   editable={owner}
-                  value={p.dates_end}
-                  placeholder="End"
-                  onSave={(v) => onSaveProject({ datesEnd: v })}
+                  value={p.dates_start}
+                  placeholder="Start"
+                  onSave={(v) => onSaveProject({ datesStart: v })}
                 />
-              ) : undefined
-            }
-            display={datesText}
-            preferDisplay={!owner}
-          />
-          <HeroStat
-            label="Duration"
-            onBg={hasBg}
-            value={
-              <EditableField
-                as="number"
-                editable={owner}
-                value={p.duration_days}
-                placeholder="—"
-                suffix="days"
-                min={1}
-                onSave={(v) => onSaveProject({ durationDays: v })}
-              />
-            }
-          />
-          <HeroStat
-            label="Region"
-            onBg={hasBg}
-            value={
-              <EditableField
-                as="text"
-                editable={owner}
-                value={regionText || null}
-                placeholder="Region"
-                onSave={(v) => onSaveProject({ region: v })}
-              />
-            }
-          />
-          <HeroStat
-            label="Group"
-            onBg={hasBg}
-            value={
-              <EditableField
-                as="number"
-                editable={owner}
-                value={p.group_size}
-                placeholder="—"
-                suffix="people"
-                min={1}
-                onSave={(v) => onSaveProject({ groupSize: v })}
-              />
-            }
-          />
-          <HeroStat
-            label="From"
-            onBg={hasBg}
-            accent
-            value={
-              <span>
-                <EditableField
-                  as="text"
-                  editable={owner}
-                  value={p.currency || 'USD'}
-                  maxLength={3}
-                  className="uppercase"
-                  onSave={(v) => onSaveProject({ currency: v.toUpperCase() })}
-                />
+              }
+              value2={
+                p.dates_end || owner ? (
+                  <EditableField
+                    as="date"
+                    editable={owner}
+                    value={p.dates_end}
+                    placeholder="End"
+                    onSave={(v) => onSaveProject({ datesEnd: v })}
+                  />
+                ) : undefined
+              }
+              display={datesText}
+              preferDisplay={!owner}
+            />
+          )}
+          {(owner || p.duration_days) && (
+            <HeroStat
+              label="Duration"
+              onBg={hasBg}
+              value={
                 <EditableField
                   as="number"
                   editable={owner}
-                  value={p.price_per_person}
-                  placeholder="Price"
-                  min={0}
-                  onSave={(v) => onSaveProject({ pricePerPerson: v })}
+                  value={p.duration_days}
+                  placeholder="—"
+                  suffix="days"
+                  min={1}
+                  onSave={(v) => onSaveProject({ durationDays: v })}
                 />
-              </span>
-            }
-            display={priceText || (p.currency ? currencySymbol(p.currency) : '')}
-            preferDisplay={!owner && !!priceText}
-          />
+              }
+            />
+          )}
+          {(owner || regionText) && (
+            <HeroStat
+              label="Region"
+              onBg={hasBg}
+              value={
+                <EditableField
+                  as="text"
+                  editable={owner}
+                  value={regionText || null}
+                  placeholder="Region"
+                  onSave={(v) => onSaveProject({ region: v })}
+                />
+              }
+            />
+          )}
+          {(owner || p.group_size) && (
+            <HeroStat
+              label="Group"
+              onBg={hasBg}
+              value={
+                <EditableField
+                  as="number"
+                  editable={owner}
+                  value={p.group_size}
+                  placeholder="—"
+                  suffix="people"
+                  min={1}
+                  onSave={(v) => onSaveProject({ groupSize: v })}
+                />
+              }
+            />
+          )}
+          {(owner || priceText) && (
+            <HeroStat
+              label="From"
+              onBg={hasBg}
+              accent
+              value={
+                <span>
+                  <EditableField
+                    as="text"
+                    editable={owner}
+                    value={p.currency || 'USD'}
+                    maxLength={3}
+                    className="uppercase"
+                    onSave={(v) => onSaveProject({ currency: v.toUpperCase() })}
+                  />
+                  <EditableField
+                    as="number"
+                    editable={owner}
+                    value={p.price_per_person}
+                    placeholder="Price"
+                    min={0}
+                    onSave={(v) => onSaveProject({ pricePerPerson: v })}
+                  />
+                </span>
+              }
+              display={priceText || (p.currency ? currencySymbol(p.currency) : '')}
+              preferDisplay={!owner && !!priceText}
+            />
+          )}
         </div>
 
         {/* Empty-state hero photo CTA */}
@@ -384,13 +381,6 @@ export function JournalHero({
               <ImagePlus className="h-4 w-4" />
               {uploadingHero > 0 ? 'Uploading…' : 'Add hero photo'}
             </button>
-          </div>
-        )}
-
-        {/* Primary CTA: Activate (only when quoted) */}
-        {p.status === 'quoted' && p.id && (
-          <div className="mt-10 md:mt-14">
-            <ActivateButton projectId={p.id} publicStatus={p.status} />
           </div>
         )}
       </div>
