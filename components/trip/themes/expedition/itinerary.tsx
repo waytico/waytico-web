@@ -235,7 +235,7 @@ function ExpeditionDay({
               <div
                 className="e-display"
                 style={{
-                  fontSize: 'clamp(4rem, 14vw, 13.75rem)',
+                  fontSize: 'clamp(4rem, 16vw, 13.75rem)',
                   lineHeight: 0.82,
                   letterSpacing: '-0.04em',
                   color: 'var(--e-cream)',
@@ -246,7 +246,7 @@ function ExpeditionDay({
               <div
                 className="e-day-outline"
                 style={{
-                  fontSize: 'clamp(5rem, 18vw, 17.5rem)',
+                  fontSize: 'clamp(5rem, 20vw, 17.5rem)',
                   lineHeight: 0.82,
                   letterSpacing: '-0.04em',
                   marginTop: '-0.08em',
