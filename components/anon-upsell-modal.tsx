@@ -33,13 +33,19 @@ export default function AnonUpsellModal({
     return () => clearTimeout(t)
   }, [delay])
 
-  const dismiss = () => {
+  // Close via X → hide modal AND show floating share button
+  const dismissWithFloat = () => {
     setVisible(false)
     setDismissed(true)
   }
 
+  // Close via Share → hide modal only (no floating button; share dropdown opens instead)
+  const dismissSilent = () => {
+    setVisible(false)
+  }
+
   const handleShare = () => {
-    dismiss()
+    dismissSilent()
     onShareClick()
   }
 
@@ -54,14 +60,14 @@ export default function AnonUpsellModal({
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.45)' }}
           onMouseDown={(e) => {
-            if (e.target === overlayRef.current) dismiss()
+            if (e.target === overlayRef.current) dismissWithFloat()
           }}
         >
           <div className="relative w-full max-w-sm rounded-2xl bg-background border border-border shadow-2xl p-6">
             {/* Close */}
             <button
               type="button"
-              onClick={dismiss}
+              onClick={dismissWithFloat}
               aria-label="Close"
               className="absolute top-3.5 right-3.5 p-1 text-foreground/40 hover:text-foreground transition-colors"
             >
