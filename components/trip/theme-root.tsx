@@ -19,11 +19,7 @@ type ThemeRootProps = {
 export function ThemeRoot({ theme, children, className }: ThemeRootProps) {
   const resolved = resolveTheme(theme)
   return (
-    <div
-      data-theme={resolved}
-      className={cn('theme-root mx-auto', className)}
-      style={{ maxWidth: 1440 }}
-    >
+    <div data-theme={resolved} className={cn('theme-root', className)}>
       {children}
     </div>
   )

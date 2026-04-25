@@ -115,65 +115,6 @@ export function roman(n: number): string {
   return map[n] ?? String(n)
 }
 
-/**
- * Split a trip title into a base + accent for two-line hero rendering.
- *
- * Strategy:
- *   1. If the title contains an explicit `\n` newline → split on the first one.
- *   2. Else, if the title is multi-word, accent the LAST word/phrase after the
- *      last common preposition or connector ("in / of / through / across /
- *      between / at / on / to") — so "Cultural Tour in Île-de-France" becomes
- *      base="Cultural Tour in", accent="Île-de-France".
- *   3. Else, if no preposition matches, accent the last token.
- *   4. Single-word titles → base only, accent empty.
- *
- * Used by all three theme heroes (Journal/Atelier/Expedition) to render the
- * h1 as <base><br/><accent> with the accent in theme color, matching the
- * Claude Design specs.
- */
-export function splitTitleAccent(
-  title: string | null | undefined,
-): { base: string; accent: string } {
-  const t = (title || '').trim()
-  if (!t) return { base: '', accent: '' }
-
-  // 1. explicit newline override
-  if (t.includes('\n')) {
-    const [b, ...rest] = t.split('\n')
-    return { base: b.trim(), accent: rest.join(' ').trim() }
-  }
-
-  const tokens = t.split(/\s+/)
-  if (tokens.length === 1) return { base: t, accent: '' }
-  if (tokens.length === 2) return { base: tokens[0], accent: tokens[1] }
-
-  // 2. find LAST connector/preposition; accent everything after it
-  const connectors = new Set([
-    'in', 'of', 'through', 'across', 'between', 'at', 'on', 'to',
-    'for', 'into', 'from', 'over', 'around', 'along', 'via', 'by',
-    'and', '&', '+',
-  ])
-  let lastConnIdx = -1
-  for (let i = tokens.length - 2; i >= 1; i--) {
-    if (connectors.has(tokens[i].toLowerCase())) {
-      lastConnIdx = i
-      break
-    }
-  }
-  if (lastConnIdx > 0 && lastConnIdx < tokens.length - 1) {
-    return {
-      base: tokens.slice(0, lastConnIdx + 1).join(' '),
-      accent: tokens.slice(lastConnIdx + 1).join(' '),
-    }
-  }
-
-  // 3. fallback — accent only the last token
-  return {
-    base: tokens.slice(0, -1).join(' '),
-    accent: tokens[tokens.length - 1],
-  }
-}
-
 /** "Thu, Jun 12" — per-day itinerary date label. */
 export function formatDayDate(iso: string | null | undefined): string {
   if (!iso) return ''

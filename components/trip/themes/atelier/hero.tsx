@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { EditableField } from '@/components/editable/editable-field'
 import ActivateButton from '@/components/activate-button'
-import { formatDateRangeShort, formatPriceShort, splitTitleAccent } from '@/lib/trip-format'
+import { formatDateRangeShort, formatPriceShort } from '@/lib/trip-format'
 import type { MediaRecord } from '@/lib/upload-photo'
 
 type Project = {
@@ -126,7 +126,6 @@ export function AtelierHero({
   const datesShort = formatDateRangeShort(p.dates_start, p.dates_end)
   const priceText = formatPriceShort(p.price_per_person, p.currency)
   const brandName = brandLeft(ownerProfile)
-  const { base: titleBase, accent: titleAccent } = splitTitleAccent(p.title)
 
   return (
     <section className="relative px-4 md:px-14 pt-7 pb-12 md:pb-18">
@@ -175,34 +174,20 @@ export function AtelierHero({
           <h1
             className="a-display"
             style={{
-              fontSize: 'clamp(3.5rem, 9vw, 8rem)',
+              fontSize: 'clamp(3rem, 9vw, 8rem)',
               lineHeight: 0.95,
               margin: 0,
               letterSpacing: '-0.035em',
             }}
           >
-            {owner ? (
-              <EditableField
-                as="text"
-                editable={owner}
-                value={p.title}
-                required
-                className="w-full"
-                onSave={(v) => onSaveProject({ title: v })}
-              />
-            ) : titleAccent ? (
-              <>
-                <span style={{ display: 'block' }}>{titleBase}</span>
-                <span
-                  className="a-italic"
-                  style={{ display: 'block', color: 'var(--a-coral)' }}
-                >
-                  {titleAccent}
-                </span>
-              </>
-            ) : (
-              titleBase
-            )}
+            <EditableField
+              as="text"
+              editable={owner}
+              value={p.title}
+              required
+              className="w-full"
+              onSave={(v) => onSaveProject({ title: v })}
+            />
           </h1>
 
           {p.description && (

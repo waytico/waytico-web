@@ -46,24 +46,12 @@ const clean = (v: string | null | undefined): string | null => {
   return s.length > 0 ? s : null
 }
 
-/**
- * Filter known placeholder values that should be treated as absent.
- * Currently: anonymous trip owners get an `unknown@waytico.com` stub
- * email — surfacing that to clients looks broken, so treat it as null.
- */
-const cleanEmail = (v: string | null | undefined): string | null => {
-  const s = clean(v)
-  if (!s) return null
-  if (s.toLowerCase() === 'unknown@waytico.com') return null
-  return s
-}
-
 export function resolveOperatorContact(
   operatorContact: OperatorContactInput,
   owner: OwnerInput,
 ): ResolvedOperatorContact {
   return {
-    email: cleanEmail(operatorContact?.email) ?? cleanEmail(owner?.email),
+    email: clean(operatorContact?.email) ?? clean(owner?.email),
     name:
       clean(operatorContact?.name) ??
       clean(owner?.business_name) ??

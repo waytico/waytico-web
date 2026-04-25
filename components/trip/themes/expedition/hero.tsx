@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { EditableField } from '@/components/editable/editable-field'
 import ActivateButton from '@/components/activate-button'
-import { formatDateRangeShort, formatPriceShort, splitTitleAccent } from '@/lib/trip-format'
+import { formatDateRangeShort, formatPriceShort } from '@/lib/trip-format'
 import type { MediaRecord } from '@/lib/upload-photo'
 
 type Project = {
@@ -139,18 +139,7 @@ export function ExpeditionHero({
   const datesShort = formatDateRangeShort(p.dates_start, p.dates_end)
   const priceText = formatPriceShort(p.price_per_person, p.currency)
   const coords = formatCoords(p.latitude, p.longitude)
-  // E3 fix: dedupe country if it's already inside region ("Île-de-France, France" + "France" → just "Île-de-France · France")
-  const regionRaw = (p.region || '').trim()
-  const countryRaw = (p.country || '').trim()
-  const regionAlreadyContainsCountry =
-    !!countryRaw &&
-    !!regionRaw &&
-    regionRaw.toLowerCase().includes(countryRaw.toLowerCase())
-  const regionParts = regionAlreadyContainsCountry
-    ? [regionRaw]
-    : [regionRaw, countryRaw].filter(Boolean)
-  const region = regionParts.join(' · ').toUpperCase()
-  const { base: titleBase, accent: titleAccent } = splitTitleAccent(p.title)
+  const region = [p.region, p.country].filter(Boolean).join(' · ').toUpperCase()
   const headerLabel = ownerProfile?.business_name
     ? `WAYTICO/${ownerProfile.business_name.toUpperCase()}`
     : 'WAYTICO/EXPEDITIONS'
@@ -236,7 +225,7 @@ export function ExpeditionHero({
         <div className="flex flex-wrap gap-6 md:gap-10 items-center">
           {p.proposal_date && (
             <div className="e-mono" style={{ color: 'var(--e-cream-mute)' }}>
-              PROPOSAL № {(p.slug ? p.slug.split('-').pop() || p.id.slice(0, 6) : p.id.slice(0, 6)).toUpperCase()}
+              PROPOSAL № {p.id ? p.id.slice(0, 8).toUpperCase() : ''}
             </div>
           )}
           {p.valid_until && (
@@ -280,32 +269,20 @@ export function ExpeditionHero({
         <h1
           className="e-display"
           style={{
-            fontSize: 'clamp(5rem, 14vw, 11.5rem)',
+            fontSize: 'clamp(3.5rem, 12vw, 11.5rem)',
             lineHeight: 0.82,
             margin: 0,
             letterSpacing: '-0.03em',
           }}
         >
-          {owner ? (
-            // Owner: editable inline (single-line edit, splits on render only)
-            <EditableField
-              as="text"
-              editable={owner}
-              value={p.title}
-              required
-              className="w-full"
-              onSave={(v) => onSaveProject({ title: v })}
-            />
-          ) : titleAccent ? (
-            <>
-              <span style={{ display: 'block' }}>{titleBase}</span>
-              <span style={{ display: 'block', color: 'var(--e-ochre)' }}>
-                {titleAccent}
-              </span>
-            </>
-          ) : (
-            titleBase
-          )}
+          <EditableField
+            as="text"
+            editable={owner}
+            value={p.title}
+            required
+            className="w-full"
+            onSave={(v) => onSaveProject({ title: v })}
+          />
         </h1>
         <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-8 mt-10 md:mt-16">
           {p.description && (
