@@ -5,6 +5,8 @@ import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
 import { X, Loader2, ChevronDown } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
+import { resolveTheme, type ThemeId } from '@/lib/themes'
+import { ThemeSwitcher } from './theme-switcher'
 import { RatingsEditor, type Ratings, type RatingsPatch } from './ratings-editor'
 import { HostEditor, type Host, type HostPatch } from './host-editor'
 import {
@@ -19,6 +21,8 @@ type Props = {
   onClose: () => void
   /** Project id — needed for /api/projects/:id PATCH */
   projectId: string
+  /** Current design theme on the project */
+  initialDesignTheme: string | null | undefined
   /** Current project trip-level fields */
   initialRatings: Ratings
   initialHost: Host
@@ -32,9 +36,10 @@ type Props = {
   onSaved: () => void
 }
 
-type Section = 'ratings' | 'host' | 'operator' | 'brand'
+type Section = 'theme' | 'ratings' | 'host' | 'operator' | 'brand'
 
 const SECTIONS: Array<{ key: Section; label: string; hint: string }> = [
+  { key: 'theme', label: 'Theme', hint: 'Visual style of the trip page' },
   { key: 'ratings', label: 'Ratings', hint: 'Difficulty · comfort · pace · immersion' },
   { key: 'host', label: 'Host', hint: 'Name · title · bio · avatar' },
   { key: 'operator', label: 'Operator contact', hint: 'Per-trip override' },
@@ -62,6 +67,7 @@ export function StudioDrawer({
   open,
   onClose,
   projectId,
+  initialDesignTheme,
   initialRatings,
   initialHost,
   initialOperatorContact,
@@ -69,15 +75,17 @@ export function StudioDrawer({
   onSaved,
 }: Props) {
   const { getToken } = useAuth()
-  const [openSection, setOpenSection] = useState<Section | null>('ratings')
+  const [openSection, setOpenSection] = useState<Section | null>('theme')
 
   // Local working copies, reset whenever the drawer reopens
+  const [theme, setTheme] = useState<ThemeId>(resolveTheme(initialDesignTheme))
   const [ratings, setRatings] = useState<RatingsPatch | null>(null)
   const [host, setHost] = useState<HostPatch | null>(null)
   const [opContact, setOpContact] = useState<OperatorContactPatch | null>(null)
   const [brand, setBrand] = useState<BrandPatch | null>(null)
 
   const [dirty, setDirty] = useState({
+    theme: false,
     ratings: false,
     host: false,
     operator: false,
@@ -88,6 +96,7 @@ export function StudioDrawer({
   // Reset state on open
   useEffect(() => {
     if (!open) return
+    setTheme(resolveTheme(initialDesignTheme))
     setRatings(
       initialRatings
         ? {
@@ -124,8 +133,14 @@ export function StudioDrawer({
       brandLogoUrl: initialBrand?.brand_logo_url ?? null,
       brandTagline: initialBrand?.brand_tagline ?? null,
     })
-    setDirty({ ratings: false, host: false, operator: false, brand: false })
-  }, [open, initialRatings, initialHost, initialOperatorContact, initialBrand])
+    setDirty({
+      theme: false,
+      ratings: false,
+      host: false,
+      operator: false,
+      brand: false,
+    })
+  }, [open, initialDesignTheme, initialRatings, initialHost, initialOperatorContact, initialBrand])
 
   // Close on Escape (when not saving)
   useEffect(() => {
@@ -139,7 +154,8 @@ export function StudioDrawer({
 
   if (!open) return null
 
-  const isDirty = dirty.ratings || dirty.host || dirty.operator || dirty.brand
+  const isDirty =
+    dirty.theme || dirty.ratings || dirty.host || dirty.operator || dirty.brand
 
   const save = async () => {
     if (saving || !isDirty) return
@@ -153,6 +169,7 @@ export function StudioDrawer({
       }
 
       const projectPatch: Record<string, unknown> = {}
+      if (dirty.theme) projectPatch.designTheme = theme
       if (dirty.ratings) projectPatch.ratings = ratings
       if (dirty.host) projectPatch.host = host
       if (dirty.operator) projectPatch.operatorContact = opContact
@@ -192,7 +209,13 @@ export function StudioDrawer({
       }
 
       toast.success('Saved')
-      setDirty({ ratings: false, host: false, operator: false, brand: false })
+      setDirty({
+        theme: false,
+        ratings: false,
+        host: false,
+        operator: false,
+        brand: false,
+      })
       onSaved()
       onClose()
     } catch {
@@ -273,6 +296,15 @@ export function StudioDrawer({
                 </button>
                 {isOpen && (
                   <div className="px-5 pb-5">
+                    {s.key === 'theme' && (
+                      <ThemeSwitcher
+                        value={theme}
+                        onChange={(next) => {
+                          setTheme(next)
+                          setDirty((d) => ({ ...d, theme: true }))
+                        }}
+                      />
+                    )}
                     {s.key === 'ratings' && (
                       <RatingsEditor
                         value={ratings}

@@ -1,4 +1,5 @@
 export { StudioDrawer } from './studio-drawer'
+export { ThemeSwitcher } from './theme-switcher'
 export { RatingsEditor } from './ratings-editor'
 export { HostEditor } from './host-editor'
 export { OperatorContactEditor } from './operator-contact-editor'
