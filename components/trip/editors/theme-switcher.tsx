@@ -7,7 +7,7 @@ type Props = {
   onChange: (next: ThemeId) => void
 }
 
-const ORDER: ThemeId[] = ['journal', 'atelier', 'expedition', 'custom']
+const ORDER: ThemeId[] = ['journal', 'expedition', 'atelier', 'custom']
 
 /**
  * 4-position segmented control for switching the trip's design theme.
