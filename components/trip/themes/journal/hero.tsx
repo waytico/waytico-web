@@ -186,7 +186,7 @@ export function JournalHero({
           owner. Client only sees these when both are present. */}
       {(owner || p.proposal_date || p.valid_until) && (
         <div
-          className="relative max-w-7xl mx-auto flex flex-wrap gap-x-8 gap-y-2 justify-end px-6 md:px-[72px] py-5 md:py-7"
+          className="relative max-w-5xl mx-auto flex flex-wrap gap-x-8 gap-y-2 justify-end px-4 py-5 md:py-7"
           style={{ color: hasBg ? 'rgba(250,246,236,0.75)' : 'var(--j-ink-mute)' }}
         >
           {(owner || p.proposal_date) && (
@@ -220,16 +220,18 @@ export function JournalHero({
 
       {/* Title block */}
       <div
-        className="relative max-w-7xl mx-auto px-6 md:px-[72px] pb-10 md:pb-20 pt-6 md:pt-24"
+        className="relative max-w-5xl mx-auto px-4 pb-10 md:pb-20 pt-6 md:pt-24"
         style={{ color: hasBg ? 'var(--j-paper)' : 'var(--j-ink)' }}
       >
-        <div
-          className="j-mono mb-5 md:mb-6"
-          style={{ color: hasBg ? 'rgba(250,246,236,0.85)' : 'var(--j-terra)' }}
-        >
-          <span style={{ color: 'var(--j-terra)' }}>◆</span>
-          &nbsp;&nbsp;A private circuit{p.activity_type ? ` · ${p.activity_type}` : ''}
-        </div>
+        {p.activity_type && (
+          <div
+            className="j-mono mb-5 md:mb-6"
+            style={{ color: hasBg ? 'rgba(250,246,236,0.85)' : 'var(--j-terra)' }}
+          >
+            <span style={{ color: 'var(--j-terra)' }}>◆</span>
+            &nbsp;&nbsp;{p.activity_type}
+          </div>
+        )}
         <h1
           className="j-serif"
           style={{
@@ -261,6 +263,7 @@ export function JournalHero({
             <HeroStat
               label="Dates"
               onBg={hasBg}
+              showLabel={owner}
               value={
                 <EditableField
                   as="date"
@@ -289,6 +292,7 @@ export function JournalHero({
             <HeroStat
               label="Duration"
               onBg={hasBg}
+              showLabel={owner}
               value={
                 <EditableField
                   as="number"
@@ -306,6 +310,7 @@ export function JournalHero({
             <HeroStat
               label="Region"
               onBg={hasBg}
+              showLabel={owner}
               value={
                 <EditableField
                   as="text"
@@ -321,6 +326,7 @@ export function JournalHero({
             <HeroStat
               label="Group"
               onBg={hasBg}
+              showLabel={owner}
               value={
                 <EditableField
                   as="number"
@@ -338,6 +344,7 @@ export function JournalHero({
             <HeroStat
               label="From"
               onBg={hasBg}
+              showLabel={owner}
               accent
               value={
                 <span>
@@ -405,9 +412,10 @@ type HeroStatProps = {
   preferDisplay?: boolean
   onBg: boolean
   accent?: boolean
+  showLabel?: boolean
 }
 
-function HeroStat({ label, value, value2, display, preferDisplay, onBg, accent }: HeroStatProps) {
+function HeroStat({ label, value, value2, display, preferDisplay, onBg, accent, showLabel = true }: HeroStatProps) {
   const labelColor = onBg ? 'rgba(250,246,236,0.65)' : 'var(--j-ink-mute)'
   const valueColor = accent
     ? onBg
@@ -419,9 +427,11 @@ function HeroStat({ label, value, value2, display, preferDisplay, onBg, accent }
 
   return (
     <div className="flex-shrink-0">
-      <div className="j-mono mb-2" style={{ color: labelColor }}>
-        {label}
-      </div>
+      {showLabel && (
+        <div className="j-mono mb-2" style={{ color: labelColor }}>
+          {label}
+        </div>
+      )}
       <div
         className="j-serif"
         style={{ fontSize: 22, fontWeight: 400, color: valueColor }}

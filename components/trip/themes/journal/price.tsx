@@ -2,7 +2,7 @@
 
 import { EditableField } from '@/components/editable/editable-field'
 import ActivateButton from '@/components/activate-button'
-import { currencySymbol } from '@/lib/trip-format'
+import { currencySymbol, formatPriceShort } from '@/lib/trip-format'
 
 type JournalPriceProps = {
   projectId: string
@@ -38,10 +38,7 @@ export function JournalPrice({
     if (!owner) return null
   }
 
-  const formattedPrice =
-    typeof pricePerPerson === 'number' && Number.isFinite(pricePerPerson)
-      ? pricePerPerson.toLocaleString('en-US')
-      : null
+  const formattedPrice = formatPriceShort(pricePerPerson, currency)
 
   return (
     <section
@@ -95,25 +92,27 @@ export function JournalPrice({
               letterSpacing: '-0.04em',
             }}
           >
-            <span
-              style={{
-                fontSize: 'clamp(2rem, 4vw, 4rem)',
-                verticalAlign: 'top',
-                marginRight: 6,
-                opacity: 0.7,
-              }}
-            >
-              {currencySymbol(currency)}
-            </span>
             {owner ? (
-              <EditableField
-                as="number"
-                editable={owner}
-                value={pricePerPerson}
-                placeholder="Price"
-                min={0}
-                onSave={(v) => onSave({ pricePerPerson: v })}
-              />
+              <>
+                <span
+                  style={{
+                    fontSize: '0.4em',
+                    verticalAlign: 'top',
+                    marginRight: 6,
+                    opacity: 0.7,
+                  }}
+                >
+                  {currencySymbol(currency)}
+                </span>
+                <EditableField
+                  as="number"
+                  editable={owner}
+                  value={pricePerPerson}
+                  placeholder="Price"
+                  min={0}
+                  onSave={(v) => onSave({ pricePerPerson: v })}
+                />
+              </>
             ) : (
               formattedPrice || ''
             )}

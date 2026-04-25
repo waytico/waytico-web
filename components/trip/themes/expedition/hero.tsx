@@ -210,7 +210,7 @@ export function ExpeditionHero({
           by owner. Hidden for clients when both fields are empty. */}
       {(owner || p.proposal_date || p.valid_until) && (
         <div
-          className="relative max-w-7xl mx-auto flex flex-wrap justify-end items-center gap-x-8 gap-y-2 px-4 md:px-14 py-5 md:py-7"
+          className="relative max-w-5xl mx-auto flex flex-wrap justify-end items-center gap-x-8 gap-y-2 px-4 py-5 md:py-7"
           style={{ color: 'var(--e-cream-mute)' }}
         >
           {(owner || p.proposal_date) && (
@@ -242,22 +242,25 @@ export function ExpeditionHero({
         </div>
       )}
 
-      {/* Ticker — shifts to the very top of the hero now that the brand
-          strip is gone. */}
-      <div
-        className="absolute top-6 md:top-8 left-4 right-4 md:left-14 md:right-14 flex items-center gap-3 md:gap-5"
-        aria-hidden="true"
-      >
-        <div className="flex-1 h-px" style={{ background: 'var(--e-rule-2)' }} />
-        <div className="e-mono" style={{ color: 'var(--e-ochre)' }}>
-          ◆ EXPEDITION{p.activity_type ? ` · ${p.activity_type.toUpperCase()}` : ''} ◆
+      {/* Ticker — only shown if activity_type is set; decorative dashes
+          flank the type to keep the field-guide language without hardcoding
+          a brand word. */}
+      {p.activity_type && (
+        <div
+          className="absolute top-6 md:top-8 left-1/2 -translate-x-1/2 w-full max-w-5xl px-4 flex items-center gap-3 md:gap-5"
+          aria-hidden="true"
+        >
+          <div className="flex-1 h-px" style={{ background: 'var(--e-rule-2)' }} />
+          <div className="e-mono" style={{ color: 'var(--e-ochre)' }}>
+            ◆ {p.activity_type.toUpperCase()} ◆
+          </div>
+          <div className="flex-1 h-px" style={{ background: 'var(--e-rule-2)' }} />
         </div>
-        <div className="flex-1 h-px" style={{ background: 'var(--e-rule-2)' }} />
-      </div>
+      )}
 
       {/* Title + stats */}
       <div
-        className="absolute left-1/2 -translate-x-1/2 w-full max-w-7xl px-4 md:px-14"
+        className="absolute left-1/2 -translate-x-1/2 w-full max-w-5xl px-4"
         style={{
           bottom: 'clamp(40px, 14vw, 120px)',
           color: 'var(--e-cream)',
@@ -309,6 +312,7 @@ export function ExpeditionHero({
             {(owner || p.dates_start || p.dates_end) && (
               <ExpeditionHeroStat
                 label="DEPARTURE"
+                showLabel={owner}
                 value={datesShort ? (datesShort.split('—')[0]?.trim().toUpperCase() || '—') : '—'}
                 sub={datesShort.includes('—') ? datesShort.split('—')[1]?.trim().toUpperCase() : ''}
               />
@@ -316,6 +320,7 @@ export function ExpeditionHero({
             {(owner || p.duration_days) && (
               <ExpeditionHeroStat
                 label="DURATION"
+                showLabel={owner}
                 value={p.duration_days ? String(p.duration_days).padStart(2, '0') : '—'}
                 sub={p.duration_days ? 'DAYS' : ''}
               />
@@ -323,6 +328,7 @@ export function ExpeditionHero({
             {(owner || p.group_size) && (
               <ExpeditionHeroStat
                 label="GROUP"
+                showLabel={owner}
                 value={p.group_size ? String(p.group_size).padStart(2, '0') : '—'}
                 sub={p.group_size ? 'TRAVELERS' : ''}
               />
@@ -330,6 +336,7 @@ export function ExpeditionHero({
             {(owner || priceText) && (
               <ExpeditionHeroStat
                 label="FROM"
+                showLabel={owner}
                 value={priceText || '—'}
                 sub={priceText ? 'PER TRAVELER' : ''}
                 accent
@@ -362,23 +369,27 @@ function ExpeditionHeroStat({
   value,
   sub,
   accent,
+  showLabel = true,
 }: {
   label: string
   value: string
   sub?: string
   accent?: boolean
+  showLabel?: boolean
 }) {
   return (
     <div
       className="pt-3.5 min-w-[120px]"
       style={{ borderTop: '1px solid rgba(232,223,207,0.35)' }}
     >
-      <div
-        className="e-mono mb-2.5"
-        style={{ color: 'var(--e-cream-mute)' }}
-      >
-        {label}
-      </div>
+      {showLabel && (
+        <div
+          className="e-mono mb-2.5"
+          style={{ color: 'var(--e-cream-mute)' }}
+        >
+          {label}
+        </div>
+      )}
       <div
         className="e-display"
         style={{

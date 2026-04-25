@@ -2,7 +2,7 @@
 
 import { EditableField } from '@/components/editable/editable-field'
 import ActivateButton from '@/components/activate-button'
-import { currencySymbol } from '@/lib/trip-format'
+import { currencySymbol, formatPriceShort } from '@/lib/trip-format'
 
 type ExpeditionPriceProps = {
   projectId: string
@@ -33,10 +33,7 @@ export function ExpeditionPrice({
 }: ExpeditionPriceProps) {
   if ((pricePerPerson === null || pricePerPerson === undefined) && !owner) return null
 
-  const formatted =
-    typeof pricePerPerson === 'number' && Number.isFinite(pricePerPerson)
-      ? pricePerPerson.toLocaleString('en-US')
-      : null
+  const formatted = formatPriceShort(pricePerPerson, currency)
 
   return (
     <section
@@ -93,16 +90,18 @@ export function ExpeditionPrice({
                 color: 'var(--e-ochre)',
               }}
             >
-              <span style={{ fontSize: '0.45em' }}>{currencySymbol(currency)}</span>
               {owner ? (
-                <EditableField
-                  as="number"
-                  editable={owner}
-                  value={pricePerPerson}
-                  placeholder="Price"
-                  min={0}
-                  onSave={(v) => onSave({ pricePerPerson: v })}
-                />
+                <>
+                  <span style={{ fontSize: '0.45em' }}>{currencySymbol(currency)}</span>
+                  <EditableField
+                    as="number"
+                    editable={owner}
+                    value={pricePerPerson}
+                    placeholder="Price"
+                    min={0}
+                    onSave={(v) => onSave({ pricePerPerson: v })}
+                  />
+                </>
               ) : (
                 formatted || ''
               )}

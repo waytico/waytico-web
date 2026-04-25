@@ -2,7 +2,7 @@
 
 import { EditableField } from '@/components/editable/editable-field'
 import ActivateButton from '@/components/activate-button'
-import { currencySymbol } from '@/lib/trip-format'
+import { currencySymbol, formatPriceShort } from '@/lib/trip-format'
 
 type AtelierPriceProps = {
   projectId: string
@@ -32,10 +32,7 @@ export function AtelierPrice({
 }: AtelierPriceProps) {
   if ((pricePerPerson === null || pricePerPerson === undefined) && !owner) return null
 
-  const formatted =
-    typeof pricePerPerson === 'number' && Number.isFinite(pricePerPerson)
-      ? pricePerPerson.toLocaleString('en-US')
-      : null
+  const formatted = formatPriceShort(pricePerPerson, currency)
 
   return (
     <section id="price" className="px-4 md:px-14 py-16 md:py-24">
@@ -99,16 +96,18 @@ export function AtelierPrice({
                 color: 'var(--a-teal)',
               }}
             >
-              <span style={{ fontSize: '0.5em' }}>{currencySymbol(currency)}</span>
               {owner ? (
-                <EditableField
-                  as="number"
-                  editable={owner}
-                  value={pricePerPerson}
-                  placeholder="Price"
-                  min={0}
-                  onSave={(v) => onSave({ pricePerPerson: v })}
-                />
+                <>
+                  <span style={{ fontSize: '0.5em' }}>{currencySymbol(currency)}</span>
+                  <EditableField
+                    as="number"
+                    editable={owner}
+                    value={pricePerPerson}
+                    placeholder="Price"
+                    min={0}
+                    onSave={(v) => onSave({ pricePerPerson: v })}
+                  />
+                </>
               ) : (
                 formatted || ''
               )}

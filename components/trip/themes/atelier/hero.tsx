@@ -122,7 +122,7 @@ export function AtelierHero({
   const priceText = formatPriceShort(p.price_per_person, p.currency)
 
   return (
-    <section className="relative max-w-7xl mx-auto px-4 md:px-14 pt-7 pb-12 md:pb-18">
+    <section className="relative max-w-5xl mx-auto px-4 pt-7 pb-12 md:pb-18">
       {/* Proposal validity strip — auto-filled at trip creation, editable
           by owner. Hidden for clients when both fields are empty. */}
       {(owner || p.proposal_date || p.valid_until) && (
@@ -159,9 +159,9 @@ export function AtelierHero({
       <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
         {/* LEFT: copy column */}
         <div className="md:pt-5">
-          <div className="a-eyebrow mb-7">
-            Édition · {p.activity_type || 'private circuit'}
-          </div>
+          {p.activity_type && (
+            <div className="a-eyebrow mb-7">{p.activity_type}</div>
+          )}
           <h1
             className="a-display"
             style={{
@@ -213,9 +213,11 @@ export function AtelierHero({
           <div className="mt-10 md:mt-12 flex flex-wrap items-end gap-7">
             {(priceText || owner) && (
               <div>
-                <div className="a-mono mb-1.5" style={{ color: 'var(--a-mute)' }}>
-                  From
-                </div>
+                {owner && (
+                  <div className="a-mono mb-1.5" style={{ color: 'var(--a-mute)' }}>
+                    From
+                  </div>
+                )}
                 <div
                   className="a-display"
                   style={{
@@ -235,9 +237,11 @@ export function AtelierHero({
                     />
                   )}
                 </div>
-                <div className="a-mono mt-1.5" style={{ color: 'var(--a-mute)' }}>
-                  per traveler
-                </div>
+                {owner && (
+                  <div className="a-mono mt-1.5" style={{ color: 'var(--a-mute)' }}>
+                    per traveler
+                  </div>
+                )}
               </div>
             )}
           </div>
