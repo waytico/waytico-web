@@ -506,9 +506,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
       {isAnonCreator && data?.project?.status === 'quoted' && (
         <div className="sticky top-0 z-40 bg-highlight border-b border-border">
           <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-3">
-            <p className="text-sm text-foreground/80 flex-1 min-w-0">
-              <span className="hidden sm:inline">This quote is available for 3 days. </span>
-              <span className="sm:hidden">Available 3 days. </span>
+            <p className="text-sm text-foreground/80 flex-1 min-w-0 leading-tight">
               <button
                 onClick={() => {
                   const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
@@ -518,7 +516,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
               >
                 Sign up for free
               </button>
-              <span className="hidden sm:inline"> to edit, add photos, and save.</span>
+              <span> to edit, add photos, change design, and save.</span>
             </p>
             {/* Orange pill — opens share dropdown; dropdown anchors to this button */}
             <div className="relative flex-shrink-0">
@@ -536,6 +534,21 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 forceOpen={anonShareOpen}
                 onOpenChange={setAnonShareOpen}
                 hideTrigger
+                onShareAction={() => {
+                  toast(
+                    'This quote will be deleted in 3 days for unregistered users — the link will stop working.',
+                    {
+                      duration: 12000,
+                      action: {
+                        label: 'Sign up free',
+                        onClick: () => {
+                          const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
+                          router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
+                        },
+                      },
+                    },
+                  )
+                }}
               />
             </div>
           </div>

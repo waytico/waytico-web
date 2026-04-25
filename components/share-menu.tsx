@@ -14,9 +14,11 @@ type Props = {
   label?: string
   /** When true, the trigger button is hidden — only the dropdown renders (controlled mode). */
   hideTrigger?: boolean
+  /** Fired when user picks any share channel (Email/WA/TG/Copy). */
+  onShareAction?: () => void
 }
 
-export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenChange, label = 'Share with client', hideTrigger }: Props) {
+export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenChange, label = 'Share with client', hideTrigger, onShareAction }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -57,6 +59,7 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
       toast.error('Could not copy')
     }
     setIsOpen(false)
+    onShareAction?.()
   }
 
   return (
@@ -79,7 +82,7 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
           <a
             role="menuitem"
             href={mailto}
-            onClick={() => setIsOpen(false)}
+            onClick={() => { setIsOpen(false); onShareAction?.() }}
             className="block px-4 py-2 text-sm hover:bg-secondary transition-colors"
           >
             Email
@@ -89,7 +92,7 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
             href={whatsapp}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => setIsOpen(false)}
+            onClick={() => { setIsOpen(false); onShareAction?.() }}
             className="block px-4 py-2 text-sm hover:bg-secondary transition-colors"
           >
             WhatsApp
@@ -99,7 +102,7 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
             href={telegram}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => setIsOpen(false)}
+            onClick={() => { setIsOpen(false); onShareAction?.() }}
             className="block px-4 py-2 text-sm hover:bg-secondary transition-colors"
           >
             Telegram

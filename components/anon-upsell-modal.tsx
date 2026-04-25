@@ -53,15 +53,15 @@ export default function AnonUpsellModal({
             if (e.target === overlayRef.current) dismissWithFloat()
           }}
         >
-          <div className="relative w-full max-w-sm rounded-2xl bg-background border border-border shadow-2xl p-6">
+          <div className="relative w-full max-w-sm rounded-2xl bg-background border border-border shadow-2xl p-6 pt-12">
             {/* Close */}
             <button
               type="button"
               onClick={dismissWithFloat}
               aria-label="Close"
-              className="absolute top-3.5 right-3.5 p-1 text-foreground/40 hover:text-foreground transition-colors"
+              className="absolute top-3 right-3 p-1.5 text-foreground/70 hover:text-foreground hover:bg-secondary rounded-full transition-colors"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
 
             {/* Primary action */}
