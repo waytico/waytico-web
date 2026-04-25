@@ -289,7 +289,7 @@ export function ExpeditionHero({
             className="e-display"
             style={{
               fontSize: 'clamp(2.5rem, 9vw, 8.5rem)',
-              lineHeight: 0.85,
+              lineHeight: 0.8,
               margin: 0,
               letterSpacing: '-0.03em',
               wordBreak: 'break-word',
