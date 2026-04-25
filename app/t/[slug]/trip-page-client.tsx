@@ -52,6 +52,22 @@ import {
   AtelierTerms,
   AtelierStickyCTA,
 } from '@/components/trip/themes/atelier'
+import {
+  ExpeditionNav,
+  ExpeditionHero,
+  ExpeditionOverview,
+  ExpeditionItinerary,
+  ExpeditionIncluded,
+  ExpeditionMap,
+  ExpeditionGallery,
+  ExpeditionPrice,
+  ExpeditionRatings,
+  ExpeditionHost,
+  ExpeditionOperator,
+  ExpeditionCTA,
+  ExpeditionTerms,
+  ExpeditionStickyCTA,
+} from '@/components/trip/themes/expedition'
 import { TasksBlock, DocumentsBlock } from '@/components/trip/themes/shared'
 
 type Location = {
@@ -624,6 +640,93 @@ export default function TripPageClient({ slug, initialData }: Props) {
           </div>
         )
 
+        if (theme === 'expedition') {
+          return (
+            <ThemeRoot theme="expedition">
+              <ExpeditionHero
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                project={p as any}
+                owner={showOwnerUI}
+                heroPhoto={heroPhoto}
+                uploadingHero={uploadingByDay['hero'] || 0}
+                ownerProfile={ownerInfo}
+                onHeroUpload={handleHeroUpload}
+                onHeroDelete={handleDelete}
+                onSaveProject={saveProjectPatch}
+              />
+              <ExpeditionNav />
+              <ExpeditionOverview
+                description={p.description}
+                owner={showOwnerUI}
+                onSave={(v) => saveProjectPatch({ description: v })}
+                host={p.host}
+              />
+              <ExpeditionItinerary
+                itinerary={itinerary}
+                media={media}
+                owner={showOwnerUI}
+                uploadingByDay={uploadingByDay}
+                onUpload={handleUpload}
+                onDelete={handleDelete}
+                onOpenPhoto={setLightbox}
+                onSaveDay={saveDayPatch}
+                onSaveSegment={saveSegmentPatch}
+              />
+              <ExpeditionIncluded
+                included={p.included}
+                notIncluded={p.not_included}
+                owner={showOwnerUI}
+                onSaveIncluded={(v) => saveProjectPatch({ included: v })}
+                onSaveNotIncluded={(v) => saveProjectPatch({ notIncluded: v })}
+              />
+              <ExpeditionMap locations={locations} />
+              <ExpeditionGallery
+                media={media}
+                owner={showOwnerUI}
+                uploading={uploadingByDay['tour'] || 0}
+                onUpload={handleUpload}
+                onOpenPhoto={setLightbox}
+              />
+              <ExpeditionPrice
+                projectId={p.id}
+                status={p.status}
+                pricePerPerson={p.price_per_person}
+                currency={p.currency}
+                priceNote={null}
+                owner={showOwnerUI}
+                onSave={saveProjectPatch}
+              />
+              <ExpeditionRatings ratings={p.ratings} />
+              <ExpeditionHost host={p.host} />
+              <ExpeditionOperator
+                contact={operatorContact}
+                brandLogoUrl={ownerInfo?.brand_logo_url}
+                brandTagline={ownerInfo?.brand_tagline}
+                hostAvatarUrl={p.host?.avatarUrl}
+              />
+              <ExpeditionCTA
+                tripTitle={p.title}
+                shareUrl={shareUrl}
+                contact={operatorContact}
+              />
+              {activeStatusBlocks}
+              <ExpeditionTerms
+                terms={p.terms}
+                owner={showOwnerUI}
+                onSave={(v) => saveProjectPatch({ terms: v })}
+                slug={slug}
+                businessName={ownerInfo?.business_name}
+              />
+              <ExpeditionStickyCTA
+                projectId={p.id}
+                status={p.status}
+                pricePerPerson={p.price_per_person}
+                currency={p.currency}
+              />
+            </ThemeRoot>
+          )
+        }
+
         if (theme === 'atelier') {
           return (
             <ThemeRoot theme="atelier">
@@ -711,7 +814,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           )
         }
 
-        // Default: Journal (also used for `expedition` and `custom` until those themes ship)
+        // Default: Journal (also used for `custom` until that theme ships)
         return (
           <ThemeRoot theme={theme}>
             <JournalNav />
