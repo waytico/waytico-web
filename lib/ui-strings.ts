@@ -26,7 +26,6 @@ export const UI = {
   validUntil: 'Valid until',
   totalPrice: 'Total',
   bookCta: 'Reserve dates',
-  bookHelp: 'Seven-day hold on your dates. No commitment, no card.',
   emptyList: 'Nothing listed.',
   segType: {
     transport: 'Transport',

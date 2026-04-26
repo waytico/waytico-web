@@ -62,14 +62,16 @@ export type MenuCallbacks = {
   requestDelete: () => void
   /** Uses POST /:id/restore (returns to previous_status) */
   restore: () => void
+  /** Optional — when provided, "Activate" appears as the first item for
+   *  quoted trips. Currently used by the trip-action-bar to surface the
+   *  ActivateStubModal placeholder. Dashboard project-card omits this so
+   *  the menu there stays the way it always was. */
+  onActivate?: () => void
 }
 
 /**
  * Returns the list of menu items for a given status.
  * MUST stay in sync across trip page and dashboard.
- *
- * Primary state actions (Activate, Restore) are NOT in this list because
- * they render as dedicated inline buttons on the trip page, not menu items.
  */
 export function buildTripMenu(status: string, cb: MenuCallbacks): MenuItem[] {
   const items: MenuItem[] = []
@@ -79,6 +81,9 @@ export function buildTripMenu(status: string, cb: MenuCallbacks): MenuItem[] {
     items.push({ label: 'Archive…', onClick: cb.requestArchive })
     items.push({ label: 'Delete', onClick: cb.requestDelete, variant: 'danger' })
   } else if (status === 'quoted') {
+    if (cb.onActivate) {
+      items.push({ label: 'Activate', onClick: cb.onActivate })
+    }
     items.push({ label: 'Archive…', onClick: cb.requestArchive })
     items.push({ label: 'Delete', onClick: cb.requestDelete, variant: 'danger' })
   } else if (status === 'active') {

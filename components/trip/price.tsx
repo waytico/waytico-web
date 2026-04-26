@@ -8,17 +8,18 @@ type PriceProps = {
   /** Pre-formatted total (price_total × group_size) — null if absent. */
   totalFormatted: string | null
   groupSize: number | null
-  /** CTA button — Activate / View activation / null. Owned by trip-page-client. */
-  ctaSlot?: ReactNode
   /** True when the section should render at all (price > 0 OR owner mode). */
   visible: boolean
 }
 
 /**
  * Price — shared structure across all themes (TZ-6 §6.6). Per-theme styling
- * (display weight, button shape) flows from CSS variables.
+ * (display weight) flows from CSS variables.
+ *
+ * The Activate CTA was removed from this section; activation is now driven
+ * from the trip-action-bar status menu only.
  */
-export function TripPrice({ amountSlot, totalFormatted, groupSize, ctaSlot, visible }: PriceProps) {
+export function TripPrice({ amountSlot, totalFormatted, groupSize, visible }: PriceProps) {
   if (!visible) return null
   return (
     <section className="tp-section" id="price">
@@ -38,10 +39,6 @@ export function TripPrice({ amountSlot, totalFormatted, groupSize, ctaSlot, visi
                 {groupSize != null && ` · ${groupSize} ${UI.travelers}`}
               </p>
             )}
-          </div>
-          <div className="tp-price-cta">
-            <p>{UI.bookHelp}</p>
-            {ctaSlot}
           </div>
         </div>
       </div>

@@ -7,7 +7,6 @@ import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
 import { Trash2, Eye, EyeOff, FileText, Upload, X } from 'lucide-react'
 
-import ActivateButton from '@/components/activate-button'
 import ActivationToast from '@/components/activation-toast'
 import PhotosBlock from '@/components/photos-block'
 import PhotoLightbox from '@/components/photo-lightbox'
@@ -450,13 +449,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
     return priceFormatted
   })()
 
-  const priceCtaSlot: ReactNode | null = (() => {
-    if (showOwnerUI && p.status === 'quoted' && p.id) {
-      return <ActivateButton projectId={p.id} publicStatus={p.status} />
-    }
-    return null
-  })()
-
   const priceVisible = ed || pricePerPersonNum != null
 
   const termsBodySlot: ReactNode = ed ? (
@@ -774,7 +766,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
           amountSlot={priceAmountSlot}
           totalFormatted={totalFormatted}
           groupSize={p.group_size}
-          ctaSlot={priceCtaSlot}
           visible={priceVisible}
         />
 

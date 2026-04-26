@@ -405,15 +405,9 @@
 .tp-incl-empty { color: var(--ink-mute); font-size: 14px; font-style: italic; }
 
 /* ===================== PRICE ===================== */
-.tp-price-block {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 64px;
-  align-items: center;
-}
-.trip-page[data-mobile="true"] .tp-price-block { grid-template-columns: 1fr; gap: 32px; }
+.tp-price-block { display: block; }
 .tp-price-amount { font-family: var(--font-display); font-weight: var(--display-weight); font-size: clamp(64px, 8vw, 128px); line-height: 1; letter-spacing: var(--display-tracking); }
 .tp-price-meta { color: var(--ink-mute); font-size: 12px; letter-spacing: var(--eyebrow-tracking); text-transform: uppercase; margin-top: 12px; }
-.tp-price-cta { display: flex; flex-direction: column; gap: 16px; max-width: 380px; }
-.tp-price-cta p { color: var(--ink-soft); font-size: 15px; }
 
 /* ===================== TERMS / FOOTER ===================== */
 .tp-terms { background: var(--paper); padding: 64px 0 24px; }
