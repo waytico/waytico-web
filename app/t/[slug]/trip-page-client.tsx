@@ -752,7 +752,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 >
                   Sign up for free
                 </button>
-                <span> to edit, add photos, and save to your account.</span>
+                <span> to edit, add photos, change design, and save to your account.</span>
               </div>
               <div className="relative flex-shrink-0 flex items-center">
                 <button
