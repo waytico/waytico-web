@@ -10,6 +10,7 @@ import ShareMenu from '@/components/share-menu'
 import ActionMenu from '@/components/action-menu'
 import { apiFetch } from '@/lib/api'
 import { getStatusMeta, buildTripMenu, type TripStatus } from '@/lib/trip-status'
+import { ThemeSwitcher } from '@/components/trip/theme-switcher'
 
 type Props = {
   projectId: string
@@ -17,6 +18,8 @@ type Props = {
   title: string
   shareUrl: string
   canShare: boolean
+  /** Persisted design_theme from the project (null = default 'editorial'). */
+  designTheme?: string | null
   onPreviewAsClient: () => void
   onStatusChanged?: () => void
   onRequestArchive: () => void
@@ -39,6 +42,7 @@ export function TripActionBar({
   title,
   shareUrl,
   canShare,
+  designTheme,
   onPreviewAsClient,
   onStatusChanged,
   onRequestArchive,
@@ -149,7 +153,9 @@ export function TripActionBar({
         </div>
 
         {/* RIGHT: agent tools */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <ThemeSwitcher projectId={projectId} value={designTheme} />
+          <div className="w-px h-5 bg-border/60 hidden sm:block" aria-hidden="true" />
           <button
             type="button"
             onClick={onPreviewAsClient}

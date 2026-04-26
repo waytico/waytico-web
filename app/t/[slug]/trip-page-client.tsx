@@ -620,6 +620,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           title={p.title}
           shareUrl={shareUrl}
           canShare={showOwnerUI || isAnonCreator}
+          designTheme={p.design_theme}
           onPreviewAsClient={() => setPreviewAsClient(true)}
           onStatusChanged={() => setOwnerRefreshKey((k) => k + 1)}
           onRequestArchive={() => setArchiveOpen(true)}
