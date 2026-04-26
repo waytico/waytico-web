@@ -585,7 +585,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
   })()
 
   const priceCtaSlot: ReactNode | null = (() => {
-    if (p.status === 'quoted' && p.id) {
+    if (showOwnerUI && p.status === 'quoted' && p.id) {
       return <ActivateButton projectId={p.id} publicStatus={p.status} />
     }
     return null
