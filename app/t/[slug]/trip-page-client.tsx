@@ -12,6 +12,9 @@ import ActivationToast from '@/components/activation-toast'
 import PhotosBlock from '@/components/photos-block'
 import PhotoLightbox from '@/components/photo-lightbox'
 import Header from '@/components/header'
+import ShareMenu from '@/components/share-menu'
+import AnonUpsellModal from '@/components/anon-upsell-modal'
+import { ScrollToTop } from '@/components/scroll-to-top'
 import { TripCommandBar } from '@/components/trip/trip-command-bar'
 import { TripActionBar } from '@/components/trip/trip-action-bar'
 import { ArchiveDialog } from '@/components/trip/archive-dialog'
@@ -61,12 +64,13 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const { isSignedIn, getToken, isLoaded } = useAuth()
 
   const [data, setData] = useState(initialData)
-  const [showBanner, setShowBanner] = useState(false)
   const [isAnonCreator, setIsAnonCreator] = useState(false)
   const [projectIdForClaim, setProjectIdForClaim] = useState<string | null>(null)
+  const [anonShareOpen, setAnonShareOpen] = useState(false)
+  const [sharedOnce, setSharedOnce] = useState(false)
   const [ownerRefreshKey, setOwnerRefreshKey] = useState(0)
 
-  // Show sticky banner for anon-owned projects until dismissed or claimed.
+  // Mark anon-creator for non-dismissible banner + 8s upsell modal.
   useEffect(() => {
     try {
       if (!data?.project) return
@@ -76,10 +80,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
       if (anonOwns === '1') {
         setIsAnonCreator(true)
         setProjectIdForClaim(pid)
-      }
-      const bannerDismissed = sessionStorage.getItem(`waytico:banner-dismissed-${pid}`)
-      if (anonOwns === '1' && !bannerDismissed && data.project.status === 'quoted') {
-        setShowBanner(true)
       }
     } catch {}
   }, [data])
@@ -100,10 +100,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
           toast.success('Saved to your account')
           try {
             sessionStorage.removeItem(`waytico:anon-owns-${claimId}`)
-            sessionStorage.removeItem(`waytico:banner-dismissed-${claimId}`)
           } catch {}
-          setShowBanner(false)
           setIsAnonCreator(false)
+          setSharedOnce(false)
           setOwnerRefreshKey((k) => k + 1)
         }
       } catch {}
@@ -719,7 +718,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       {previewAsClient && (
         <div className="sticky top-0 z-40 bg-foreground text-background">
-          <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
+          <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
             <p className="text-sm flex-1 min-w-0 flex items-center gap-2">
               <Eye className="w-4 h-4 flex-shrink-0" />
               <span>You're previewing as your client sees this page.</span>
@@ -734,38 +733,87 @@ export default function TripPageClient({ slug, initialData }: Props) {
         </div>
       )}
 
-      {showBanner && projectIdForClaim && (
-        <div className="sticky top-0 z-40 bg-highlight border-b border-border">
-          <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
-            <p className="text-sm text-foreground/80 flex-1 min-w-0">
-              <span className="hidden sm:inline">This quote is available for 3 days. </span>
-              <span className="sm:hidden">Available 3 days. </span>
-              <button
-                onClick={() => {
-                  const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
-                  router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
-                }}
-                className="font-semibold text-accent hover:text-accent/80 underline underline-offset-2"
-              >
-                Sign up for free
-              </button>
-              <span className="hidden sm:inline"> to edit, add photos, and save to your account.</span>
-              <span className="sm:hidden"> to save.</span>
-            </p>
-            <button
-              onClick={() => {
-                try {
-                  sessionStorage.setItem(`waytico:banner-dismissed-${projectIdForClaim}`, '1')
-                } catch {}
-                setShowBanner(false)
-              }}
-              className="p-1 text-foreground/50 hover:text-foreground transition-colors flex-shrink-0"
-              aria-label="Dismiss"
+      {isAnonCreator && data?.project?.status === 'quoted' && projectIdForClaim && (
+        <>
+          {/* Non-dismissible sticky banner — fixed-height row, leading-none + flex items-center
+              guarantees vertical centering of both text and pill button. */}
+          <div className="sticky top-0 z-40 bg-highlight border-b border-border">
+            <div
+              className="max-w-7xl mx-auto px-4 flex items-center gap-3"
+              style={{ height: 52 }}
             >
-              <X className="w-4 h-4" />
-            </button>
+              <div className="text-sm text-foreground/80 flex-1 min-w-0 leading-none">
+                <button
+                  onClick={() => {
+                    const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
+                    router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
+                  }}
+                  className="font-semibold text-accent hover:text-accent/80 underline underline-offset-2"
+                >
+                  Sign up for free
+                </button>
+                <span> to edit, add photos, and save to your account.</span>
+              </div>
+              <div className="relative flex-shrink-0 flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setAnonShareOpen((v) => !v)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 transition-colors whitespace-nowrap"
+                >
+                  Share as is →
+                </button>
+                <ShareMenu
+                  title={data.project.title || 'Your trip'}
+                  url={shareUrl}
+                  publicStatus={data.project.status}
+                  forceOpen={anonShareOpen}
+                  onOpenChange={setAnonShareOpen}
+                  hideTrigger
+                  onShareAction={() => setSharedOnce(true)}
+                />
+              </div>
+            </div>
           </div>
-        </div>
+
+          {/* Persistent post-share toast — top-center, never auto-dismisses. */}
+          {sharedOnce && (
+            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[calc(100vw-2rem)] sm:w-[400px]">
+              <div className="bg-background border border-border rounded-xl shadow-2xl p-4 pr-9 relative">
+                <button
+                  type="button"
+                  onClick={() => setSharedOnce(false)}
+                  aria-label="Dismiss"
+                  className="absolute top-2 right-2 p-1 text-foreground/50 hover:text-foreground hover:bg-secondary rounded-full transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <p className="text-sm text-foreground/80 mb-2 leading-snug">
+                  Your client received an unregistered link — it will stop working in 3 days.
+                </p>
+                <button
+                  onClick={() => {
+                    const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
+                    router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
+                  }}
+                  className="text-sm font-semibold text-accent hover:text-accent/80 underline underline-offset-2"
+                >
+                  Sign up free to save it →
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Anon upsell modal — appears 8s after page load for unauthenticated agents.
+          Two paths: share immediately (opens banner ShareMenu), or sign up free. */}
+      {isAnonCreator && data?.project?.status === 'quoted' && projectIdForClaim && (
+        <AnonUpsellModal
+          tripTitle={data.project.title || 'Your trip'}
+          tripUrl={shareUrl}
+          signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(`/t/${slug}?claim=${projectIdForClaim}`)}`}
+          onShareClick={() => setAnonShareOpen(true)}
+        />
       )}
 
       {/* Themed surface — switching data-theme reflows tokens in styles/themes.css.
@@ -928,6 +976,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
           <div className="h-24 md:h-28" aria-hidden="true" />
         </>
       )}
+
+      <ScrollToTop bottomOffset={showOwnerUI ? 88 : 24} />
     </div>
   )
 }
