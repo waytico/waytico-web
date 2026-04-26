@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import type { ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { ImagePlus, Trash2, Check, X, Eye, EyeOff, FileText, Upload } from 'lucide-react'
+import { Trash2, Eye, EyeOff, FileText, Upload, X } from 'lucide-react'
+
 import ActivateButton from '@/components/activate-button'
 import ActivationToast from '@/components/activation-toast'
-import ShareMenu from '@/components/share-menu'
 import PhotosBlock from '@/components/photos-block'
 import PhotoLightbox from '@/components/photo-lightbox'
 import Header from '@/components/header'
@@ -15,8 +16,27 @@ import { TripCommandBar } from '@/components/trip/trip-command-bar'
 import { TripActionBar } from '@/components/trip/trip-action-bar'
 import { ArchiveDialog } from '@/components/trip/archive-dialog'
 import { EditableField } from '@/components/editable/editable-field'
+
+import { ThemeRoot } from '@/components/trip/theme-root'
+import { TripNav } from '@/components/trip/nav'
+import { TripHero } from '@/components/trip/hero'
+import { TripOverview } from '@/components/trip/overview'
+import { TripItinerary } from '@/components/trip/itinerary'
+import { TripIncluded, IncludedList } from '@/components/trip/included'
+import { TripPrice } from '@/components/trip/price'
+import { TripTerms } from '@/components/trip/terms'
+import { HeroOwnerOverlay, HeroDropZone } from '@/components/trip/owner-extras'
+
 import { apiFetch } from '@/lib/api'
-import { getStatusMeta } from '@/lib/trip-status'
+import { resolveTheme } from '@/lib/themes'
+import { UI } from '@/lib/ui-strings'
+import {
+  fmtDateRange,
+  fmtPrice,
+  coercePrice,
+  todayISO,
+  addDaysISO,
+} from '@/lib/trip-format'
 import { useTripMutations } from '@/hooks/use-trip-mutations'
 import { usePhotoUpload, type MediaRecord } from '@/hooks/use-photo-upload'
 import { useTripData } from '@/hooks/use-trip-data'
@@ -52,13 +72,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
       if (!data?.project) return
       const pid = data.project.id as string | undefined
       if (!pid) return
-
       const anonOwns = sessionStorage.getItem(`waytico:anon-owns-${pid}`)
       if (anonOwns === '1') {
         setIsAnonCreator(true)
         setProjectIdForClaim(pid)
       }
-
       const bannerDismissed = sessionStorage.getItem(`waytico:banner-dismissed-${pid}`)
       if (anonOwns === '1' && !bannerDismissed && data.project.status === 'quoted') {
         setShowBanner(true)
@@ -70,7 +88,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
   useEffect(() => {
     const claimId = searchParams.get('claim')
     if (!claimId || !isLoaded || !isSignedIn) return
-
     ;(async () => {
       try {
         const token = await getToken()
@@ -90,7 +107,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
           setOwnerRefreshKey((k) => k + 1)
         }
       } catch {}
-      // Remove ?claim from URL
       router.replace(`/t/${slug}`)
     })()
   }, [searchParams, isSignedIn, isLoaded, getToken, slug, router])
@@ -111,7 +127,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const heroInputRef = useRef<HTMLInputElement | null>(null)
   const docInputRef = useRef<HTMLInputElement | null>(null)
 
-  // Trip-level data flows (polling, owner-detect, post-AI refresh) in a hook.
   const { polling, refreshOwnerData, handleTripUpdated } = useTripData({
     slug,
     initialData,
@@ -124,8 +139,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
     ownerRefreshKey,
   })
 
-  // Mutation helpers (PATCH project / task / day / segment, PUT what-to-bring, DELETE project)
-  // live in a shared hook so they can be reused and tested independently.
   const {
     saveProjectPatch,
     saveTaskPatch,
@@ -139,66 +152,42 @@ export default function TripPageClient({ slug, initialData }: Props) {
     setTasks: setTasks as any,
   })
 
-  // Thin wrapper so call sites don't need to pass title — it lives here.
   const handleDeleteProject = useCallback(async () => {
     const title = data?.project?.title || 'this trip'
     await _handleDeleteProject(title)
   }, [_handleDeleteProject, data?.project?.title])
 
-  // Sync media/tasks when initialData changes (e.g., after polling completes).
-  // Only applies when we don't have the richer owner payload yet.
   useEffect(() => {
     if (isOwner) return
     if (initialData?.media) setMedia(initialData.media as MediaRecord[])
     if (initialData?.tasks) setTasks(initialData.tasks)
   }, [initialData, isOwner])
 
-  // Keep `data.project` in sync with the SSR payload. When a parent `router.refresh()`
-  // re-fetches the trip (e.g. after Stripe activation redirect), the server returns
-  // updated status/fields; without this sync the client would keep showing the old
-  // status because `useState(initialData)` only reads the prop on first render.
   useEffect(() => {
     if (!initialData?.project) return
     setData((prev) => {
       if (!prev?.project) return initialData
-      // Only replace if the server version is actually newer / different in a
-      // user-visible way. We intentionally keep owner-side overlays (tasks/media
-      // from /full) since those are managed via their own setters.
       return { ...prev, project: initialData.project }
     })
   }, [initialData])
 
-  // External trigger: ActivationToast (and anyone else) dispatches
-  // `waytico:trip-refresh` when they want the owner-side /full payload
-  // (tasks, media) re-fetched on top of the SSR refresh.
   useEffect(() => {
     const handler = () => setOwnerRefreshKey((k) => k + 1)
     window.addEventListener('waytico:trip-refresh', handler)
     return () => window.removeEventListener('waytico:trip-refresh', handler)
   }, [])
 
-  // Photo upload / delete / hero replace + per-key uploading counter.
-  // handleTripUpdated is provided by useTripData above.
-  const {
-    uploadingByDay,
-    handleUpload,
-    handleDelete,
-    handleHeroUpload,
-  } = usePhotoUpload({
+  const { uploadingByDay, handleUpload, handleDelete, handleHeroUpload } = usePhotoUpload({
     projectId: data?.project?.id,
     media,
     setMedia,
   })
 
-
   // ─── Visibility toggles (owner only) ──────────────────────────
   const toggleTaskVisibility = useCallback(
     async (taskId: string, nextVisible: boolean) => {
       const prev = tasks
-      // Optimistic
-      setTasks((cur) =>
-        cur.map((t) => (t.id === taskId ? { ...t, visible_to_client: nextVisible } : t)),
-      )
+      setTasks((cur) => cur.map((t) => (t.id === taskId ? { ...t, visible_to_client: nextVisible } : t)))
       try {
         const token = await getToken()
         const res = await apiFetch(`/api/tasks/${taskId}`, {
@@ -216,31 +205,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
     [tasks, getToken],
   )
 
-  // Inline-edit helper for tasks. Updates local tasks[] optimistically on success.
-  // (moved into useTripMutations hook)
-
-  // Inline-edit helper for a single day's scalar fields.
-  // Server uses SELECT FOR UPDATE so concurrent edits are race-safe.
-  // (moved into useTripMutations hook)
-
-  // Inline-edit helper for a single segment.
-  // (moved into useTripMutations hook)
-
-  // Full-array replace helper for what_to_bring. Race-safe via SELECT FOR UPDATE on the server.
-  // (moved into useTripMutations hook)
-
-  // Delete project. Uses a simple confirm prompt for now — if user agrees,
-  // calls DELETE /api/projects/:id and navigates back to dashboard.
-  // (moved into useTripMutations hook — a thin wrapper above forwards title.)
-
   const toggleMediaVisibility = useCallback(
     async (mediaId: string, nextVisible: boolean) => {
       const prev = media
-      setMedia((cur) =>
-        cur.map((m) =>
-          m.id === mediaId ? ({ ...m, visible_to_client: nextVisible } as MediaRecord) : m,
-        ),
-      )
+      setMedia((cur) => cur.map((m) => (m.id === mediaId ? ({ ...m, visible_to_client: nextVisible } as MediaRecord) : m)))
       try {
         const token = await getToken()
         const res = await apiFetch(`/api/media/${mediaId}`, {
@@ -264,13 +232,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
       setMedia((cur) => cur.filter((m) => m.id !== mediaId))
       try {
         const token = await getToken()
-        const res = await apiFetch(`/api/media/${mediaId}`, {
-          method: 'DELETE',
-          token,
-        })
-        if (!res.ok && res.status !== 204) {
-          throw new Error(`Delete failed (${res.status})`)
-        }
+        const res = await apiFetch(`/api/media/${mediaId}`, { method: 'DELETE', token })
+        if (!res.ok && res.status !== 204) throw new Error(`Delete failed (${res.status})`)
         toast.success('Document removed')
       } catch (err: any) {
         setMedia(prev)
@@ -299,7 +262,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
         toast.error('Please sign in again')
         return
       }
-
       for (const file of files) {
         if (!DOC_MIMES.includes(file.type)) {
           toast.error(`Unsupported: ${file.name}. Use PDF, DOCX, XLSX, JPEG or PNG.`)
@@ -309,7 +271,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
           toast.error(`Too large: ${file.name} (max 10MB).`)
           continue
         }
-
         setUploadingDoc(true)
         try {
           const fd = new FormData()
@@ -340,20 +301,14 @@ export default function TripPageClient({ slug, initialData }: Props) {
           setUploadingDoc(false)
         }
       }
-
-      // Refresh — auto-apply may have added segments + tasks. Refetch both public trip data and owner payload.
       try {
         const pubRes = await fetch(`${API_URL}/api/public/projects/${slug}`, { cache: 'no-store' })
         if (pubRes.ok) setData(await pubRes.json())
-      } catch {
-        /* ignore */
-      }
+      } catch {}
       await refreshOwnerData()
     },
     [data?.project?.id, getToken, slug, refreshOwnerData],
   )
-  // ──────────────────────────────────────────────────────────────
-  // ──────────────────────────────────────────────────────────
 
   const isReady = data && data.project?.status !== 'generating'
 
@@ -377,17 +332,287 @@ export default function TripPageClient({ slug, initialData }: Props) {
   }
 
   const p = data.project
-  const itinerary: any[] = p.itinerary || []
+  const itinerary: any[] = Array.isArray(p.itinerary) ? p.itinerary : []
   const shareUrl = `${APP_URL}/t/${slug}`
+  const ed = showOwnerUI
+
+  // TZ-6 §3: NUMERIC arrives from PostgreSQL as string ("3450.00") — coerce
+  // exactly once at the top of trip-page-client before forwarding to children.
+  const pricePerPersonNum = coercePrice(p.price_per_person)
+  const priceTotalNum = coercePrice(p.price_total)
+  const priceFormatted = fmtPrice(pricePerPersonNum, p.currency)
+  const totalFormatted = fmtPrice(priceTotalNum, p.currency)
+  const dateRange = fmtDateRange(p.dates_start, p.dates_end)
+
+  const resolvedTheme = resolveTheme(p.design_theme)
+  const heroPhoto = media.find((m) => m.placement === 'hero') || null
+  const hasHeroBg = !!heroPhoto
+
+  const today = todayISO()
+  const validUntil = addDaysISO(today, 7)
+
+  // ── Slot builders (owner mode wraps with EditableField, public uses static values) ──
+
+  const titleSlot: ReactNode = ed ? (
+    <EditableField
+      as="text"
+      editable
+      value={p.title}
+      required
+      className="w-full"
+      onSave={(v) => saveProjectPatch({ title: v })}
+    />
+  ) : (
+    p.title || ''
+  )
+
+  const firstParagraph = (text: string | null | undefined): string | null => {
+    if (!text) return null
+    const para = text.split('\n\n')[0]
+    return para || null
+  }
+
+  const overviewBodySlot: ReactNode = ed ? (
+    <EditableField
+      as="multiline"
+      editable
+      value={p.description}
+      placeholder="Click to add overview"
+      rows={5}
+      className="w-full"
+      onSave={(v) => saveProjectPatch({ description: v })}
+    />
+  ) : (
+    <DescriptionParagraphs text={p.description} />
+  )
+
+  const heroDescriptionSlot: ReactNode = (() => {
+    const para = firstParagraph(p.description)
+    if (ed) {
+      // Show first paragraph plain — full editing happens in Overview body.
+      return para ? <span>{para}</span> : null
+    }
+    return para
+  })()
+
+  const activityChipSlot: ReactNode | null =
+    p.activity_type || ed ? (
+      <span className="tp-chip">
+        {ed ? (
+          <EditableField
+            as="text"
+            editable
+            value={p.activity_type}
+            placeholder="Add type"
+            maxLength={40}
+            className="uppercase"
+            onSave={(v) => saveProjectPatch({ activityType: v })}
+          />
+        ) : (
+          p.activity_type
+        )}
+      </span>
+    ) : null
+
+  const regionEyebrowSlot: ReactNode | null =
+    p.region || p.country || ed ? (
+      <span className="tp-eyebrow">
+        {ed ? (
+          <>
+            <EditableField
+              as="text"
+              editable
+              value={p.region}
+              placeholder="Region"
+              onSave={(v) => saveProjectPatch({ region: v })}
+            />
+            {(p.country || ed) && (
+              <>
+                {p.region ? ', ' : ''}
+                <EditableField
+                  as="text"
+                  editable
+                  value={p.country}
+                  placeholder="Country"
+                  onSave={(v) => saveProjectPatch({ country: v })}
+                />
+              </>
+            )}
+          </>
+        ) : (
+          [p.region, p.country].filter(Boolean).join(', ').toUpperCase()
+        )}
+      </span>
+    ) : null
+
+  // Render an Included list block — owner mode: EditableField; public mode: parsed list.
+  const includedBodySlot: ReactNode = (() => {
+    if (ed) {
+      return (
+        <EditableField
+          as="multiline"
+          editable
+          value={p.included}
+          placeholder="Click to add — one item per line"
+          rows={5}
+          className="w-full"
+          onSave={(v) => saveProjectPatch({ included: v })}
+          renderDisplay={(val: string) => <IncludedList source={val} kind="in" />}
+        />
+      )
+    }
+    return <IncludedList source={p.included} kind="in" />
+  })()
+
+  const notIncludedBodySlot: ReactNode = (() => {
+    if (ed) {
+      return (
+        <EditableField
+          as="multiline"
+          editable
+          value={p.not_included}
+          placeholder="Click to add — one item per line"
+          rows={5}
+          className="w-full"
+          onSave={(v) => saveProjectPatch({ notIncluded: v })}
+          renderDisplay={(val: string) => <IncludedList source={val} kind="out" />}
+        />
+      )
+    }
+    return <IncludedList source={p.not_included} kind="out" />
+  })()
+
+  const includedVisible = ed || !!(p.included && p.included.trim()) || !!(p.not_included && p.not_included.trim())
+
+  // Price slot — owner: editable currency + amount. Public: pre-formatted string.
+  const priceAmountSlot: ReactNode = (() => {
+    if (ed) {
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
+          <EditableField
+            as="text"
+            editable
+            value={p.currency || 'USD'}
+            maxLength={3}
+            className="uppercase"
+            onSave={(v) => saveProjectPatch({ currency: v.toUpperCase() })}
+          />
+          <EditableField
+            as="number"
+            editable
+            value={pricePerPersonNum}
+            placeholder="Price"
+            min={0}
+            step={1}
+            onSave={(v) => saveProjectPatch({ pricePerPerson: v })}
+          />
+        </span>
+      )
+    }
+    return priceFormatted
+  })()
+
+  const priceCtaSlot: ReactNode | null = (() => {
+    if (p.status === 'quoted' && p.id) {
+      return <ActivateButton projectId={p.id} publicStatus={p.status} />
+    }
+    return null
+  })()
+
+  const priceVisible = ed || pricePerPersonNum != null
+
+  const termsBodySlot: ReactNode = ed ? (
+    <EditableField
+      as="multiline"
+      editable
+      value={p.terms}
+      placeholder="Click to add terms"
+      rows={4}
+      className="w-full"
+      onSave={(v) => saveProjectPatch({ terms: v })}
+    />
+  ) : (
+    <DescriptionParagraphs text={p.terms} />
+  )
+
+  const termsVisible = ed || !!(p.terms && p.terms.trim())
+
+  const overviewVisible = ed || !!(p.description && p.description.trim())
+
+  // ── Itinerary slot renderers ──
+  const renderDayTitle = (day: any): ReactNode =>
+    ed ? (
+      <EditableField
+        as="text"
+        editable
+        value={day.title}
+        required
+        className="w-full"
+        onSave={(v) => (day.id ? saveDayPatch(day.id, { title: v }) : Promise.resolve(false))}
+      />
+    ) : (
+      day.title || ''
+    )
+
+  const renderDayDescription = (day: any): ReactNode => {
+    if (ed) {
+      return (
+        <EditableField
+          as="multiline"
+          editable
+          value={day.description}
+          placeholder="Click to add a short summary of this day"
+          rows={2}
+          className="w-full"
+          onSave={(v) => (day.id ? saveDayPatch(day.id, { description: v }) : Promise.resolve(false))}
+        />
+      )
+    }
+    return day.description || null
+  }
+
+  const renderSegmentTitle = (day: any, s: any): ReactNode =>
+    ed ? (
+      <EditableField
+        as="text"
+        editable
+        value={s.title}
+        required
+        className="w-full"
+        onSave={(v) =>
+          day.id && s.id ? saveSegmentPatch(day.id, s.id, { title: v }) : Promise.resolve(false)
+        }
+      />
+    ) : (
+      s.title || ''
+    )
+
+  const renderDayExtras = (day: any): ReactNode => {
+    if (!ed && !day.id) return null
+    const dayMedia = media.filter((m) => m.day_id && m.day_id === day.id)
+    if (!day.id || (!ed && dayMedia.length === 0)) return null
+    return (
+      <div style={{ marginTop: 16 }}>
+        <PhotosBlock
+          dayId={day.id}
+          media={dayMedia}
+          owner={ed}
+          uploading={uploadingByDay[day.id] || 0}
+          onUpload={handleUpload}
+          onDelete={handleDelete}
+          onOpen={setLightbox}
+        />
+      </div>
+    )
+  }
+
+  // ─────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Global header only for the trip owner. Clients/guests see a clean,
-          agency-proposal-style page without the Waytico SaaS chrome. */}
+      {/* Owner chrome — outside ThemeRoot so it uses shadcn semantic tokens
+          (per TZ-6 §11 — owner UI must work even on a dark Expedition theme). */}
       {showOwnerUI && <Header />}
-
-      {/* Owner action bar: status + state action on the left, agent tools on the right.
-          Hidden in preview mode (client view) and for non-owners. */}
       {showOwnerUI && p.id && (
         <TripActionBar
           projectId={p.id}
@@ -402,17 +627,12 @@ export default function TripPageClient({ slug, initialData }: Props) {
         />
       )}
 
-      {/* Archive-with-client-contact modal */}
       {showOwnerUI && p.id && (
         <ArchiveDialog
           open={archiveOpen}
           projectId={p.id}
           projectTitle={p.title}
-          currentContact={{
-            name: p.client_name,
-            email: p.client_email,
-            phone: p.client_phone,
-          }}
+          currentContact={{ name: p.client_name, email: p.client_email, phone: p.client_phone }}
           onClose={() => setArchiveOpen(false)}
           onArchived={() => {
             setOwnerRefreshKey((k) => k + 1)
@@ -421,10 +641,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
         />
       )}
 
-      {/* Stripe return flow (?activated=1 / ?cancelled=1) */}
       <ActivationToast />
 
-      {/* Preview-as-client banner — active when owner clicked "Preview as client" */}
       {previewAsClient && (
         <div className="sticky top-0 z-40 bg-foreground text-background">
           <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
@@ -442,7 +660,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
         </div>
       )}
 
-      {/* Sticky save-reminder banner for anonymous owners (quoted status) */}
       {showBanner && projectIdForClaim && (
         <div className="sticky top-0 z-40 bg-highlight border-b border-border">
           <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
@@ -477,882 +694,142 @@ export default function TripPageClient({ slug, initialData }: Props) {
         </div>
       )}
 
-      {/* Hero */}
-      {(() => {
-        const heroPhoto = media.find((m) => m.placement === 'hero')
-        const hasBg = !!heroPhoto
-        const uploadingHero = uploadingByDay['hero'] || 0
-        const showEmptyState = !hasBg && showOwnerUI
-        const heroDropHandlers = showOwnerUI
-          ? {
-              onDragEnter: (e: React.DragEvent) => {
-                e.preventDefault()
-                if (e.dataTransfer?.types?.includes('Files')) setHeroDragOver(true)
-              },
-              onDragOver: (e: React.DragEvent) => {
-                e.preventDefault()
-                if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
-              },
-              onDragLeave: (e: React.DragEvent) => {
-                if (e.currentTarget === e.target) setHeroDragOver(false)
-              },
-              onDrop: (e: React.DragEvent) => {
-                e.preventDefault()
-                setHeroDragOver(false)
-                const files = e.dataTransfer?.files
-                if (files && files.length > 0) {
-                  const list = Array.from(files).filter(
-                    (f) =>
-                      ['image/jpeg', 'image/png', 'image/webp'].includes(f.type) &&
-                      f.size <= 15 * 1024 * 1024,
-                  )
-                  if (list.length !== files.length) {
-                    toast.error('Some files skipped — use JPEG/PNG/WebP, max 15MB')
-                  }
-                  if (list.length) handleHeroUpload(list)
-                }
-              },
+      {/* Themed surface — switching data-theme reflows tokens in styles/themes.css.
+          Owner edit UX rides through via slot props; structural variants
+          (split/overlay/card hero, timeline/photo-cards/grid itinerary) live
+          inside Hero.tsx / Itinerary.tsx as `if (heroStyle === ...)` branches. */}
+      <ThemeRoot theme={p.design_theme}>
+        <TripNav />
+
+        <HeroDropZone
+          enabled={showOwnerUI}
+          onDrop={(files) => handleHeroUpload(files)}
+          onDragOver={() => setHeroDragOver(true)}
+          onDragLeave={() => setHeroDragOver(false)}
+        >
+          <TripHero
+            theme={resolvedTheme}
+            heroPhoto={heroPhoto?.url || null}
+            status={!showOwnerUI ? p.status : null}
+            dateRange={dateRange}
+            durationDays={p.duration_days}
+            groupSize={p.group_size}
+            pricePerPersonFormatted={priceFormatted}
+            activityChipSlot={activityChipSlot}
+            regionEyebrowSlot={regionEyebrowSlot}
+            titleSlot={titleSlot}
+            descriptionSlot={heroDescriptionSlot}
+            ownerOverlay={
+              showOwnerUI ? (
+                <HeroOwnerOverlay
+                  hasBg={hasHeroBg}
+                  uploadingHero={uploadingByDay['hero'] || 0}
+                  heroPhotoId={heroPhoto?.id || null}
+                  onDelete={() => heroPhoto && handleDelete(heroPhoto.id)}
+                  onPickFile={() => heroInputRef.current?.click()}
+                  dragOver={heroDragOver}
+                  emptyState={!hasHeroBg}
+                />
+              ) : undefined
             }
-          : {}
+          />
+        </HeroDropZone>
 
-        const openHeroPicker = () => heroInputRef.current?.click()
-
-        return (
-          <section
-            {...heroDropHandlers}
-            className={`group relative overflow-hidden py-16 md:py-24 ${
-              hasBg ? 'bg-foreground' : 'bg-secondary'
-            } ${showEmptyState ? 'border-2 border-dashed border-border' : ''} ${
-              heroDragOver ? 'ring-4 ring-accent ring-inset' : ''
-            }`}
-          >
-            {hasBg && (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={heroPhoto.url}
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                  className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-                />
-                {/* Dark gradient overlay for text legibility */}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/70" />
-              </>
-            )}
-
-            {/* Top-right desktop: Activate + Share. On mobile these move
-                under the title (see block below). Delete-hero stays here
-                at all sizes — it's a small icon that doesn't crowd. */}
-            <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-              {showOwnerUI && hasBg && heroPhoto && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDelete(heroPhoto.id)
-                  }}
-                  className="rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity hover:bg-black/80 group-hover:opacity-100 focus:opacity-100"
-                  aria-label="Delete hero photo"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Drop indicator when dragging files */}
-            {heroDragOver && (
-              <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/40">
-                <div className="rounded-full bg-white/95 px-5 py-2 text-sm font-medium text-foreground shadow-lg">
-                  Drop photo to set as hero
-                </div>
-              </div>
-            )}
-
-            {/* Hidden file input shared by empty-state click + drop pipeline */}
-            {showOwnerUI && (
-              <input
-                ref={heroInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  const files = e.target.files
-                  if (files && files.length > 0) {
-                    const list = Array.from(files).filter(
-                      (f) =>
-                        ['image/jpeg', 'image/png', 'image/webp'].includes(f.type) &&
-                        f.size <= 15 * 1024 * 1024,
-                    )
-                    if (list.length !== files.length) {
-                      toast.error('Some files skipped — use JPEG/PNG/WebP, max 15MB')
-                    }
-                    if (list.length) handleHeroUpload(list)
-                  }
-                  e.target.value = ''
-                }}
-              />
-            )}
-
-            <div
-              className={`relative max-w-3xl mx-auto px-4 text-center space-y-6 ${hasBg ? 'text-white' : ''}`}
-            >
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {(p.activity_type || showOwnerUI) && (
-                  <span
-                    className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${
-                      hasBg
-                        ? 'bg-white/15 text-white backdrop-blur-sm'
-                        : 'bg-accent/10 text-accent'
-                    }`}
-                  >
-                    <EditableField
-                      as="text"
-                      editable={showOwnerUI}
-                      value={p.activity_type}
-                      placeholder="Add activity type"
-                      className="uppercase tracking-wider"
-                      maxLength={40}
-                      onSave={(v) => saveProjectPatch({ activityType: v })}
-                    />
-                  </span>
-                )}
-                {!showOwnerUI && ['quoted', 'active', 'completed'].includes(p.status) && (() => {
-                  const meta = getStatusMeta(p.status)
-                  const cls = hasBg ? 'bg-white/15 text-white backdrop-blur-sm' : meta.chipClass
-                  return (
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full ${cls}`}
-                    >
-                      {meta.hasDot && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
-                      {meta.label}
-                    </span>
-                  )
-                })()}
-              </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight leading-tight">
-                <EditableField
-                  as="text"
-                  editable={showOwnerUI}
-                  value={p.title}
-                  required
-                  className="w-full text-center"
-                  onSave={(v) => saveProjectPatch({ title: v })}
-                />
-              </h1>
-              <div
-                className={`flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm ${
-                  hasBg ? 'text-white/85' : 'text-foreground/60'
-                }`}
-              >
-                {(p.region || p.country || showOwnerUI) && (
-                  <span className="inline-flex items-center gap-1">
-                    <EditableField
-                      as="text"
-                      editable={showOwnerUI}
-                      value={p.region}
-                      placeholder="Region"
-                      onSave={(v) => saveProjectPatch({ region: v })}
-                    />
-                    {(p.country || showOwnerUI) && (
-                      <>
-                        <span>,</span>
-                        <EditableField
-                          as="text"
-                          editable={showOwnerUI}
-                          value={p.country}
-                          placeholder="Country"
-                          onSave={(v) => saveProjectPatch({ country: v })}
-                        />
-                      </>
-                    )}
-                  </span>
-                )}
-                {(p.duration_days || showOwnerUI) && (
-                  <EditableField
-                    as="number"
-                    editable={showOwnerUI}
-                    value={p.duration_days}
-                    placeholder="Days"
-                    suffix="days"
-                    min={1}
-                    onSave={(v) => saveProjectPatch({ durationDays: v })}
-                  />
-                )}
-                {(p.group_size || showOwnerUI) && (
-                  <EditableField
-                    as="number"
-                    editable={showOwnerUI}
-                    value={p.group_size}
-                    placeholder="Group size"
-                    suffix="people"
-                    min={1}
-                    onSave={(v) => saveProjectPatch({ groupSize: v })}
-                  />
-                )}
-                {(p.dates_start || p.dates_end || showOwnerUI) && (
-                  <span className="inline-flex items-center gap-1">
-                    <EditableField
-                      as="date"
-                      editable={showOwnerUI}
-                      value={p.dates_start}
-                      placeholder="Start date"
-                      onSave={(v) => saveProjectPatch({ datesStart: v })}
-                    />
-                    {(p.dates_end || showOwnerUI) && (
-                      <>
-                        <span>–</span>
-                        <EditableField
-                          as="date"
-                          editable={showOwnerUI}
-                          value={p.dates_end}
-                          placeholder="End date"
-                          onSave={(v) => saveProjectPatch({ datesEnd: v })}
-                        />
-                      </>
-                    )}
-                  </span>
-                )}
-              </div>
-              {(p.price_per_person || showOwnerUI) && (
-                <div className="pt-2 flex items-baseline justify-center gap-1">
-                  <span
-                    className={`text-3xl font-serif font-bold ${hasBg ? 'text-white' : 'text-accent'}`}
-                  >
-                    <EditableField
-                      as="text"
-                      editable={showOwnerUI}
-                      value={p.currency || 'USD'}
-                      maxLength={3}
-                      className="uppercase"
-                      onSave={(v) => saveProjectPatch({ currency: v.toUpperCase() })}
-                    />
-                  </span>
-                  <span
-                    className={`text-3xl font-serif font-bold ${hasBg ? 'text-white' : 'text-accent'}`}
-                  >
-                    <EditableField
-                      as="number"
-                      editable={showOwnerUI}
-                      value={p.price_per_person}
-                      placeholder="Price"
-                      min={0}
-                      step={1}
-                      onSave={(v) => saveProjectPatch({ pricePerPerson: v })}
-                    />
-                  </span>
-                  <span className={`ml-1 ${hasBg ? 'text-white/75' : 'text-foreground/50'}`}>
-                    per person
-                  </span>
-                </div>
-              )}
-
-              {/* Empty-state CTA: matches PhotosBlock empty button, under the title */}
-              {showEmptyState && (
-                <div className="pt-4">
-                  <button
-                    type="button"
-                    onClick={openHeroPicker}
-                    disabled={uploadingHero > 0}
-                    className="inline-flex items-center gap-2 rounded-full border-2 border-dashed border-border bg-background/60 px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-60"
-                  >
-                    <ImagePlus className="h-4 w-4" />
-                    {uploadingHero > 0 ? 'Uploading…' : 'Add hero photo'}
-                  </button>
-                </div>
-              )}
-
-            </div>
-
-            {/* Uploading indicator when replacing existing hero */}
-            {showOwnerUI && hasBg && uploadingHero > 0 && (
-              <div className="absolute bottom-4 left-4 z-10">
-                <span className="rounded-full bg-black/60 px-3 py-1 text-xs text-white">
-                  Uploading…
-                </span>
-              </div>
-            )}
-          </section>
-        )
-      })()}
-
-      <div className="max-w-3xl mx-auto px-4 py-12 space-y-16">
-        {(p.description || showOwnerUI) && (
-          <section>
-            <h2 className="text-2xl font-serif font-bold mb-4">Overview</h2>
-            <EditableField
-              as="multiline"
-              editable={showOwnerUI}
-              value={p.description}
-              placeholder="Click to add overview"
-              rows={5}
-              className="text-foreground/80 leading-relaxed w-full"
-              onSave={(v) => saveProjectPatch({ description: v })}
-            />
-          </section>
-        )}
-
-        {(() => {
-          const tourMedia = media.filter((m) => !m.day_id && m.placement !== 'hero')
-          const showTourPhotos = showOwnerUI || tourMedia.length > 0
-          if (!showTourPhotos) return null
-          return (
-            <section>
-              <h2 className="text-2xl font-serif font-bold mb-4">Photos</h2>
-              <PhotosBlock
-                dayId={null}
-                media={tourMedia}
-                owner={showOwnerUI}
-                uploading={uploadingByDay['tour'] || 0}
-                onUpload={handleUpload}
-                onDelete={handleDelete}
-                onOpen={setLightbox}
-                emptyHint="Add photos that represent the whole trip"
-              />
-            </section>
-          )
-        })()}
-
-        {itinerary.length > 0 && (
-          <section>
-            <h2 className="text-2xl font-serif font-bold mb-6">Day-by-Day Itinerary</h2>
-            <div className="space-y-6">
-              {itinerary.map((day: any, idx: number) => {
-                const dayMedia = media.filter((m) => m.day_id && m.day_id === day.id)
-                const dayKey = day.id || `day-${day.dayNumber || idx}`
-                return (
-                  <div key={dayKey} className="border border-border rounded-xl p-5 space-y-3">
-                    <div className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-10 h-10 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-bold text-sm">
-                        {day.dayNumber}
-                      </span>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">
-                          <EditableField
-                            as="text"
-                            editable={showOwnerUI}
-                            value={day.title}
-                            required
-                            className="w-full"
-                            onSave={(v) => (day.id ? saveDayPatch(day.id, { title: v }) : Promise.resolve(false))}
-                          />
-                        </h3>
-                        {(day.description || showOwnerUI) && (
-                          <div className="text-foreground/70 text-sm mt-1 leading-relaxed">
-                            <EditableField
-                              as="multiline"
-                              editable={showOwnerUI}
-                              value={day.description}
-                              placeholder="Click to add a short summary of this day"
-                              rows={2}
-                              className="w-full"
-                              onSave={(v) => (day.id ? saveDayPatch(day.id, { description: v }) : Promise.resolve(false))}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {day.highlights?.length > 0 && (
-                      <div className="pl-[52px] flex flex-wrap gap-2">
-                        {day.highlights.map((h: string, i: number) => (
-                          <span key={i} className="inline-block px-3 py-1 text-xs bg-secondary rounded-full text-foreground/70">{h}</span>
-                        ))}
-                      </div>
-                    )}
-                    {day.accommodation && (
-                      <p className="pl-[52px] text-xs text-muted-foreground">
-                        {typeof day.accommodation === 'string' ? day.accommodation : day.accommodation.name}
-                      </p>
-                    )}
-                    {Array.isArray(day.segments) && day.segments.length > 0 && (
-                      <div className="pl-[52px] pt-2 space-y-3 border-l border-border/50 ml-[18px]">
-                        {[...day.segments]
-                          .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-                          .map((s: any) => (
-                            <div key={s.id} className="relative pl-4">
-                              <span className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full bg-accent" />
-                              <div className="flex items-baseline gap-3">
-                                {(s.startTime || showOwnerUI) && (
-                                  <span className="text-xs font-mono text-muted-foreground w-12 flex-shrink-0">
-                                    <EditableField
-                                      as="text"
-                                      editable={showOwnerUI}
-                                      value={s.startTime}
-                                      placeholder="HH:MM"
-                                      maxLength={5}
-                                      className="w-full"
-                                      onSave={(v) =>
-                                        day.id && s.id
-                                          ? saveSegmentPatch(day.id, s.id, { startTime: v || null })
-                                          : Promise.resolve(false)
-                                      }
-                                    />
-                                  </span>
-                                )}
-                                <h4 className="font-medium text-sm flex-1">
-                                  <EditableField
-                                    as="text"
-                                    editable={showOwnerUI}
-                                    value={s.title}
-                                    required
-                                    className="w-full"
-                                    onSave={(v) =>
-                                      day.id && s.id ? saveSegmentPatch(day.id, s.id, { title: v }) : Promise.resolve(false)
-                                    }
-                                  />
-                                </h4>
-                              </div>
-                              {(s.notes || showOwnerUI) && (
-                                <div className={`text-sm text-foreground/70 mt-1 ${s.startTime ? 'ml-[60px]' : ''}`}>
-                                  <EditableField
-                                    as="multiline"
-                                    editable={showOwnerUI}
-                                    value={s.notes}
-                                    placeholder="Click to add notes"
-                                    rows={2}
-                                    className="w-full"
-                                    onSave={(v) =>
-                                      day.id && s.id ? saveSegmentPatch(day.id, s.id, { notes: v || null }) : Promise.resolve(false)
-                                    }
-                                  />
-                                </div>
-                              )}
-                              {s.location?.name && (
-                                <div className={`text-xs text-muted-foreground mt-1 ${s.startTime ? 'ml-[60px]' : ''}`}>
-                                  {s.location.name}
-                                  {typeof s.location.latitude === 'number' && typeof s.location.longitude === 'number' && (
-                                    <a
-                                      href={`https://www.google.com/maps?q=${s.location.latitude},${s.location.longitude}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="ml-2 text-accent hover:underline"
-                                    >
-                                      Map ↗
-                                    </a>
-                                  )}
-                                </div>
-                              )}
-                              {s.contact?.phone && (
-                                <a
-                                  href={`tel:${s.contact.phone}`}
-                                  className={`text-xs text-accent hover:underline mt-1 block ${s.startTime ? 'ml-[60px]' : ''}`}
-                                >
-                                  📞 {s.contact.phone}
-                                </a>
-                              )}
-                              {(s.reference || showOwnerUI) && (
-                                <div className={`text-xs font-mono text-muted-foreground mt-1 ${s.startTime ? 'ml-[60px]' : ''}`}>
-                                  <EditableField
-                                    as="text"
-                                    editable={showOwnerUI}
-                                    value={s.reference}
-                                    placeholder="Ref / booking code"
-                                    className="w-full"
-                                    onSave={(v) =>
-                                      day.id && s.id ? saveSegmentPatch(day.id, s.id, { reference: v || null }) : Promise.resolve(false)
-                                    }
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                      </div>
-                    )}
-                    {day.id && (dayMedia.length > 0 || showOwnerUI) && (
-                      <div className="pl-[52px] pt-2">
-                        <PhotosBlock
-                          dayId={day.id}
-                          media={dayMedia}
-                          owner={showOwnerUI}
-                          uploading={uploadingByDay[day.id] || 0}
-                          onUpload={handleUpload}
-                          onDelete={handleDelete}
-                          onOpen={setLightbox}
-                        />
-                      </div>
-                    )}
-                  </div>
+        {showOwnerUI && (
+          <input
+            ref={heroInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              const files = e.target.files
+              if (files && files.length > 0) {
+                const list = Array.from(files).filter(
+                  (f) =>
+                    ['image/jpeg', 'image/png', 'image/webp'].includes(f.type) &&
+                    f.size <= 15 * 1024 * 1024,
                 )
-              })}
-            </div>
-          </section>
+                if (list.length !== files.length) {
+                  toast.error('Some files skipped — use JPEG/PNG/WebP, max 15MB')
+                }
+                if (list.length) handleHeroUpload(list)
+              }
+              e.target.value = ''
+            }}
+          />
         )}
 
-        {(p.included || p.not_included || showOwnerUI) && (
-          <section>
-            <h2 className="text-2xl font-serif font-bold mb-6">What's Included</h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <h3 className="font-semibold text-accent flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-success/15 text-success flex items-center justify-center">
-                    <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
-                  </span>
-                  Included
-                </h3>
-                <EditableField
-                  as="multiline"
-                  editable={showOwnerUI}
-                  value={p.included}
-                  placeholder="Click to add — one item per line"
-                  rows={5}
-                  className="w-full text-sm text-foreground/70"
-                  onSave={(v) => saveProjectPatch({ included: v })}
-                  renderDisplay={(val) => (
-                    <ul className="space-y-2">
-                      {val.split('\n').filter(Boolean).map((item: string, i: number) => (
-                        <li key={i} className="text-sm text-foreground/70 pl-8">{item.replace(/^[-•]\s*/, '')}</li>
-                      ))}
-                    </ul>
-                  )}
-                />
-              </div>
-              <div className="space-y-3">
-                <h3 className="font-semibold text-foreground/70 flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
-                    <X className="w-3.5 h-3.5" strokeWidth={2.5} />
-                  </span>
-                  Not Included
-                </h3>
-                <EditableField
-                  as="multiline"
-                  editable={showOwnerUI}
-                  value={p.not_included}
-                  placeholder="Click to add — one item per line"
-                  rows={5}
-                  className="w-full text-sm text-foreground/50"
-                  onSave={(v) => saveProjectPatch({ notIncluded: v })}
-                  renderDisplay={(val) => (
-                    <ul className="space-y-2">
-                      {val.split('\n').filter(Boolean).map((item: string, i: number) => (
-                        <li key={i} className="text-sm text-foreground/50 pl-8">{item.replace(/^[-•]\s*/, '')}</li>
-                      ))}
-                    </ul>
-                  )}
-                />
-              </div>
-            </div>
-          </section>
+        <TripOverview
+          dateRange={dateRange}
+          durationDays={p.duration_days}
+          groupSize={p.group_size}
+          activityType={p.activity_type}
+          region={p.region}
+          country={p.country}
+          bodySlot={overviewBodySlot}
+          visible={overviewVisible}
+        />
+
+        <TripItinerary
+          theme={resolvedTheme}
+          itinerary={itinerary as any}
+          media={media as any}
+          renderDayTitle={renderDayTitle}
+          renderDayDescription={renderDayDescription}
+          renderSegmentTitle={renderSegmentTitle}
+          renderDayExtras={renderDayExtras}
+        />
+
+        <TripIncluded
+          includedBodySlot={includedBodySlot}
+          notIncludedBodySlot={notIncludedBodySlot}
+          visible={includedVisible}
+        />
+
+        <TripPrice
+          amountSlot={priceAmountSlot}
+          totalFormatted={totalFormatted}
+          groupSize={p.group_size}
+          ctaSlot={priceCtaSlot}
+          visible={priceVisible}
+        />
+
+        <TripTerms
+          bodySlot={termsBodySlot}
+          proposalISO={today}
+          validUntilISO={validUntil}
+          visible={termsVisible}
+        />
+
+        {/* Active-trip sections — render as themed sections that reuse the
+            tokenised palette but keep their existing edit affordances. */}
+        {p.status === 'active' && (
+          <ActiveSections
+            tasks={tasks}
+            media={media}
+            showOwnerUI={showOwnerUI}
+            uploadingDoc={uploadingDoc}
+            docDragOver={docDragOver}
+            setDocDragOver={setDocDragOver}
+            docInputRef={docInputRef}
+            saveTaskPatch={saveTaskPatch}
+            toggleTaskVisibility={toggleTaskVisibility}
+            toggleMediaVisibility={toggleMediaVisibility}
+            deleteDocument={deleteDocument}
+            handleDocumentUpload={handleDocumentUpload}
+          />
         )}
 
-        {(p.terms || showOwnerUI) && (
-          <section>
-            <h2 className="text-2xl font-serif font-bold mb-4">Terms</h2>
-            <EditableField
-              as="multiline"
-              editable={showOwnerUI}
-              value={p.terms}
-              placeholder="Click to add terms"
-              rows={4}
-              className="text-sm text-foreground/60 w-full"
-              onSave={(v) => saveProjectPatch({ terms: v })}
-            />
-          </section>
-        )}
-
+        {/* What-to-bring — kept inside themed surface so colours track theme. */}
         {((p.what_to_bring?.length > 0) || showOwnerUI) && (
-          <section>
-            <h2 className="text-2xl font-serif font-bold mb-6">What to Bring</h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              {(p.what_to_bring || []).map((cat: any, i: number) => {
-                // items can be strings or objects — normalize to strings for editing + display
-                const itemStrings: string[] = (cat.items || []).map((x: any) =>
-                  typeof x === 'string' ? x : (x?.name || x?.item || ''),
-                ).filter(Boolean)
-                const joined = itemStrings.join('\n')
-                return (
-                  <div key={i} className="space-y-2">
-                    <h3 className="font-semibold text-sm">
-                      <EditableField
-                        as="text"
-                        editable={showOwnerUI}
-                        value={cat.category}
-                        required
-                        className="w-full"
-                        onSave={(v) => {
-                          const next = (p.what_to_bring || []).map((c: any, idx: number) =>
-                            idx === i ? { category: v, items: itemStrings } : { category: c.category, items: (c.items || []).map((x: any) => typeof x === 'string' ? x : (x?.name || x?.item || '')).filter(Boolean) }
-                          )
-                          return saveWhatToBring(next)
-                        }}
-                      />
-                    </h3>
-                    <EditableField
-                      as="multiline"
-                      editable={showOwnerUI}
-                      value={joined}
-                      placeholder="Click to add items — one per line"
-                      rows={Math.max(3, itemStrings.length)}
-                      className="w-full"
-                      onSave={(v) => {
-                        const newItems = v.split('\n').map((s) => s.replace(/^[-•·]\s*/, '').trim()).filter(Boolean)
-                        const next = (p.what_to_bring || []).map((c: any, idx: number) =>
-                          idx === i ? { category: cat.category, items: newItems } : { category: c.category, items: (c.items || []).map((x: any) => typeof x === 'string' ? x : (x?.name || x?.item || '')).filter(Boolean) }
-                        )
-                        return saveWhatToBring(next)
-                      }}
-                      renderDisplay={() => (
-                        <ul className="space-y-1">
-                          {itemStrings.map((item, j) => (
-                            <li key={j} className="text-sm text-foreground/70 flex items-start gap-2">
-                              <span className="text-accent mt-0.5">·</span>
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    />
-                  </div>
-                )
-              })}
-            </div>
-          </section>
+          <WhatToBringSection
+            categories={p.what_to_bring || []}
+            showOwnerUI={showOwnerUI}
+            saveWhatToBring={saveWhatToBring}
+          />
         )}
-
-        {/* Active-trip sections: preparation tasks + downloadable documents */}
-        {p.status === 'active' && (() => {
-          const allTasks = Array.isArray(tasks) ? tasks : []
-          const visibleForClient = allTasks.filter((t: any) => t.visible_to_client !== false)
-          const renderList = showOwnerUI ? allTasks : visibleForClient
-          if (renderList.length === 0) return null
-          return (
-            <section>
-              <h2 className="text-2xl font-serif font-bold mb-6">Before you go</h2>
-              <div className="space-y-3">
-                {[...renderList]
-                  .sort((a: any, b: any) => {
-                    const ad = a.deadline || '9999-12-31'
-                    const bd = b.deadline || '9999-12-31'
-                    if (ad !== bd) return ad.localeCompare(bd)
-                    return (a.sort_order ?? 0) - (b.sort_order ?? 0)
-                  })
-                  .map((t: any) => {
-                    const hidden = t.visible_to_client === false
-                    return (
-                      <div
-                        key={t.id}
-                        className={`border rounded-lg p-4 transition-opacity ${
-                          hidden ? 'border-dashed border-border/60 bg-secondary/30 opacity-60' : 'border-border'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <h3 className="font-medium flex-1">
-                            <EditableField
-                              as="text"
-                              editable={showOwnerUI}
-                              value={t.title}
-                              required
-                              className="w-full"
-                              onSave={(v) => saveTaskPatch(t.id, { title: v })}
-                            />
-                          </h3>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {(t.deadline || showOwnerUI) && (
-                              <span className="text-xs text-muted-foreground whitespace-nowrap inline-flex items-center gap-1">
-                                <span>by</span>
-                                <EditableField
-                                  as="date"
-                                  editable={showOwnerUI}
-                                  value={t.deadline}
-                                  placeholder="Set date"
-                                  formatDisplay={(iso) =>
-                                    new Date(iso).toLocaleDateString('en-US', {
-                                      month: 'short',
-                                      day: 'numeric',
-                                    })
-                                  }
-                                  onSave={(v) => saveTaskPatch(t.id, { deadline: v })}
-                                />
-                              </span>
-                            )}
-                            {showOwnerUI && (
-                              <button
-                                type="button"
-                                onClick={() => toggleTaskVisibility(t.id, hidden)}
-                                className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                                title={hidden ? 'Show to client' : 'Hide from client'}
-                                aria-label={hidden ? 'Show to client' : 'Hide from client'}
-                              >
-                                {hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        {(t.description || showOwnerUI) && (
-                          <div className="text-sm text-foreground/70 mt-1">
-                            <EditableField
-                              as="multiline"
-                              editable={showOwnerUI}
-                              value={t.description}
-                              placeholder="Click to add details"
-                              rows={2}
-                              className="w-full"
-                              onSave={(v) => saveTaskPatch(t.id, { description: v })}
-                            />
-                          </div>
-                        )}
-                        {showOwnerUI && hidden && (
-                          <p className="text-xs text-muted-foreground mt-2 italic">Hidden from client</p>
-                        )}
-                      </div>
-                    )
-                  })}
-              </div>
-            </section>
-          )
-        })()}
-
-        {p.status === 'active' && (() => {
-          const allDocs = (Array.isArray(media) ? media : []).filter(
-            (m: any) => m.type === 'document',
-          )
-          const visibleDocs = allDocs.filter((m: any) => m.visible_to_client !== false)
-          const renderDocs = showOwnerUI ? allDocs : visibleDocs
-          // Client: hide whole section if nothing to show.
-          // Owner: always show (so they can drop new docs).
-          if (!showOwnerUI && renderDocs.length === 0) return null
-          return (
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-serif font-bold">Documents</h2>
-                {showOwnerUI && (
-                  <button
-                    type="button"
-                    onClick={() => docInputRef.current?.click()}
-                    disabled={uploadingDoc}
-                    className="text-xs text-accent hover:underline disabled:opacity-50 flex items-center gap-1"
-                  >
-                    <Upload className="w-3.5 h-3.5" /> {uploadingDoc ? 'Uploading…' : 'Add document'}
-                  </button>
-                )}
-              </div>
-
-              {showOwnerUI && (
-                <input
-                  ref={docInputRef}
-                  type="file"
-                  accept=".pdf,.docx,.xlsx,image/jpeg,image/png"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || [])
-                    e.target.value = ''
-                    if (files.length > 0) void handleDocumentUpload(files)
-                  }}
-                />
-              )}
-
-              {showOwnerUI && (
-                <div
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    setDocDragOver(true)
-                  }}
-                  onDragLeave={() => setDocDragOver(false)}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    setDocDragOver(false)
-                    const files = Array.from(e.dataTransfer.files || [])
-                    if (files.length > 0) void handleDocumentUpload(files)
-                  }}
-                  className={`mb-4 border-2 border-dashed rounded-lg p-6 text-center text-sm transition-colors cursor-pointer ${
-                    docDragOver
-                      ? 'border-accent bg-accent/5 text-accent'
-                      : 'border-border text-muted-foreground hover:border-foreground/30'
-                  }`}
-                  onClick={() => docInputRef.current?.click()}
-                >
-                  {uploadingDoc ? (
-                    <span>Uploading & parsing…</span>
-                  ) : (
-                    <>
-                      <FileText className="w-5 h-5 mx-auto mb-1 opacity-60" />
-                      <div>Drop a booking, voucher or ticket here</div>
-                      <div className="text-xs mt-0.5 opacity-75">
-                        PDF · DOCX · XLSX · JPEG · PNG — auto-applied to itinerary
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {renderDocs.length > 0 ? (
-                <div className="grid gap-2">
-                  {renderDocs.map((m: any) => {
-                    const hidden = m.visible_to_client === false
-                    return (
-                      <div
-                        key={m.id}
-                        className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
-                          hidden
-                            ? 'border-dashed border-border/60 bg-secondary/30 opacity-60'
-                            : 'border-border hover:bg-secondary'
-                        }`}
-                      >
-                        <a
-                          href={m.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 flex-1 min-w-0"
-                        >
-                          <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                          <span className="text-sm truncate text-foreground/80">
-                            {m.caption || m.file_name || 'Document'}
-                          </span>
-                        </a>
-                        <div className="flex items-center gap-1 flex-shrink-0 ml-3">
-                          <a
-                            href={m.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-accent hover:underline px-2"
-                          >
-                            Download ↗
-                          </a>
-                          {showOwnerUI && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => toggleMediaVisibility(m.id, hidden)}
-                                className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                                title={hidden ? 'Show to client' : 'Hide from client'}
-                                aria-label={hidden ? 'Show to client' : 'Hide from client'}
-                              >
-                                {hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => deleteDocument(m.id)}
-                                className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                                title="Delete document"
-                                aria-label="Delete document"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                showOwnerUI && (
-                  <p className="text-sm text-muted-foreground text-center py-2">
-                    No documents yet.
-                  </p>
-                )
-              )}
-            </section>
-          )
-        })()}
-
-        <footer className="border-t border-border pt-8 pb-12 text-center">
-          <p className="text-sm text-muted-foreground">
-            Powered by <a href="/" className="text-accent hover:underline">Waytico</a>
-          </p>
-        </footer>
-      </div>
+      </ThemeRoot>
 
       <PhotoLightbox
         media={lightbox}
@@ -1365,20 +842,382 @@ export default function TripPageClient({ slug, initialData }: Props) {
         }}
       />
 
-      {/* ─── Owner-only editor controls ─── */}
       {showOwnerUI && (
         <>
-          {/* Persistent bottom command bar for quick edits */}
-          <TripCommandBar
-            projectId={p.id}
-            getToken={getToken}
-            onTripUpdated={handleTripUpdated}
-          />
-
-          {/* Spacer so the fixed command bar doesn't cover the footer */}
+          <TripCommandBar projectId={p.id} getToken={getToken} onTripUpdated={handleTripUpdated} />
           <div className="h-24 md:h-28" aria-hidden="true" />
         </>
       )}
     </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Helpers — kept in the same file to avoid further fragmentation.
+// ─────────────────────────────────────────────────────────────────
+
+function DescriptionParagraphs({ text }: { text: string | null | undefined }) {
+  if (!text) return null
+  const paras = text.split('\n\n').filter(Boolean)
+  return (
+    <>
+      {paras.map((p, i) => (
+        <p key={i} style={{ marginTop: i === 0 ? 0 : '1em' }}>
+          {p}
+        </p>
+      ))}
+    </>
+  )
+}
+
+function ActiveSections({
+  tasks,
+  media,
+  showOwnerUI,
+  uploadingDoc,
+  docDragOver,
+  setDocDragOver,
+  docInputRef,
+  saveTaskPatch,
+  toggleTaskVisibility,
+  toggleMediaVisibility,
+  deleteDocument,
+  handleDocumentUpload,
+}: {
+  tasks: any[]
+  media: any[]
+  showOwnerUI: boolean
+  uploadingDoc: boolean
+  docDragOver: boolean
+  setDocDragOver: (v: boolean) => void
+  docInputRef: React.RefObject<HTMLInputElement>
+  saveTaskPatch: (id: string, patch: Record<string, any>) => Promise<boolean>
+  toggleTaskVisibility: (id: string, next: boolean) => void
+  toggleMediaVisibility: (id: string, next: boolean) => void
+  deleteDocument: (id: string) => void
+  handleDocumentUpload: (files: File[]) => void
+}) {
+  const allTasks = Array.isArray(tasks) ? tasks : []
+  const visibleForClient = allTasks.filter((t: any) => t.visible_to_client !== false)
+  const renderTaskList = showOwnerUI ? allTasks : visibleForClient
+
+  const allDocs = (Array.isArray(media) ? media : []).filter((m: any) => m.type === 'document')
+  const visibleDocs = allDocs.filter((m: any) => m.visible_to_client !== false)
+  const renderDocs = showOwnerUI ? allDocs : visibleDocs
+
+  return (
+    <>
+      {renderTaskList.length > 0 && (
+        <section className="tp-section">
+          <div className="tp-container">
+            <header className="tp-section-head">
+              <h2 className="tp-display tp-section-title">Before you go</h2>
+            </header>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[...renderTaskList]
+                .sort((a: any, b: any) => {
+                  const ad = a.deadline || '9999-12-31'
+                  const bd = b.deadline || '9999-12-31'
+                  if (ad !== bd) return ad.localeCompare(bd)
+                  return (a.sort_order ?? 0) - (b.sort_order ?? 0)
+                })
+                .map((t: any) => {
+                  const hidden = t.visible_to_client === false
+                  return (
+                    <div
+                      key={t.id}
+                      className="tp-incl-card"
+                      style={{ opacity: hidden ? 0.6 : 1 }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+                        <h3 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 18 }}>
+                          <EditableField
+                            as="text"
+                            editable={showOwnerUI}
+                            value={t.title}
+                            required
+                            className="w-full"
+                            onSave={(v) => saveTaskPatch(t.id, { title: v })}
+                          />
+                        </h3>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          {t.deadline && (
+                            <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>
+                              by {new Date(t.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          )}
+                          {showOwnerUI && (
+                            <button
+                              type="button"
+                              onClick={() => toggleTaskVisibility(t.id, hidden)}
+                              style={{ background: 'transparent', border: 0, color: 'var(--ink-mute)', cursor: 'pointer' }}
+                              aria-label={hidden ? 'Show to client' : 'Hide from client'}
+                            >
+                              {hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {(t.description || showOwnerUI) && (
+                        <div style={{ marginTop: 8, fontSize: 14, color: 'var(--ink-soft)' }}>
+                          <EditableField
+                            as="multiline"
+                            editable={showOwnerUI}
+                            value={t.description}
+                            placeholder="Click to add details"
+                            rows={2}
+                            className="w-full"
+                            onSave={(v) => saveTaskPatch(t.id, { description: v })}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {(renderDocs.length > 0 || showOwnerUI) && (
+        <section className="tp-section">
+          <div className="tp-container">
+            <header className="tp-section-head">
+              <h2 className="tp-display tp-section-title">Documents</h2>
+              {showOwnerUI && (
+                <button
+                  type="button"
+                  onClick={() => docInputRef.current?.click()}
+                  disabled={uploadingDoc}
+                  style={{ background: 'transparent', color: 'var(--accent)', border: 0, cursor: 'pointer', fontSize: 13 }}
+                >
+                  <Upload className="inline w-3.5 h-3.5 mr-1" /> {uploadingDoc ? 'Uploading…' : 'Add document'}
+                </button>
+              )}
+            </header>
+
+            {showOwnerUI && (
+              <input
+                ref={docInputRef}
+                type="file"
+                accept=".pdf,.docx,.xlsx,image/jpeg,image/png"
+                multiple
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || [])
+                  e.target.value = ''
+                  if (files.length > 0) void handleDocumentUpload(files)
+                }}
+              />
+            )}
+
+            {showOwnerUI && (
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setDocDragOver(true)
+                }}
+                onDragLeave={() => setDocDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  setDocDragOver(false)
+                  const files = Array.from(e.dataTransfer.files || [])
+                  if (files.length > 0) void handleDocumentUpload(files)
+                }}
+                style={{
+                  marginBottom: 16,
+                  padding: 24,
+                  textAlign: 'center',
+                  border: docDragOver
+                    ? '2px dashed var(--accent)'
+                    : '2px dashed var(--rule)',
+                  background: docDragOver ? 'var(--chip-bg)' : 'transparent',
+                  color: docDragOver ? 'var(--accent)' : 'var(--ink-mute)',
+                  borderRadius: 'var(--r-card)',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                }}
+                onClick={() => docInputRef.current?.click()}
+              >
+                {uploadingDoc ? (
+                  <span>Uploading & parsing…</span>
+                ) : (
+                  <>
+                    <FileText className="w-5 h-5" style={{ display: 'inline', marginBottom: 4 }} />
+                    <div>Drop a booking, voucher or ticket here</div>
+                    <div style={{ fontSize: 11, marginTop: 2, opacity: 0.75 }}>
+                      PDF · DOCX · XLSX · JPEG · PNG — auto-applied to itinerary
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {renderDocs.length > 0 ? (
+              <div style={{ display: 'grid', gap: 8 }}>
+                {renderDocs.map((m: any) => {
+                  const hidden = m.visible_to_client === false
+                  return (
+                    <div
+                      key={m.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: 12,
+                        border: '1px solid var(--rule)',
+                        borderRadius: 'var(--r-card)',
+                        opacity: hidden ? 0.6 : 1,
+                      }}
+                    >
+                      <a
+                        href={m.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0, color: 'var(--ink)' }}
+                      >
+                        <FileText className="w-4 h-4" style={{ color: 'var(--ink-mute)', flexShrink: 0 }} />
+                        <span style={{ fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {m.caption || m.file_name || 'Document'}
+                        </span>
+                      </a>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                        <a
+                          href={m.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: 'var(--accent)', fontSize: 12, padding: '0 8px' }}
+                        >
+                          Download ↗
+                        </a>
+                        {showOwnerUI && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => toggleMediaVisibility(m.id, hidden)}
+                              style={{ background: 'transparent', border: 0, color: 'var(--ink-mute)', cursor: 'pointer', padding: 4 }}
+                              aria-label={hidden ? 'Show to client' : 'Hide from client'}
+                            >
+                              {hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteDocument(m.id)}
+                              style={{ background: 'transparent', border: 0, color: 'var(--ink-mute)', cursor: 'pointer', padding: 4 }}
+                              aria-label="Delete document"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              showOwnerUI && (
+                <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--ink-mute)', padding: '8px 0' }}>
+                  No documents yet.
+                </p>
+              )
+            )}
+          </div>
+        </section>
+      )}
+    </>
+  )
+}
+
+function WhatToBringSection({
+  categories,
+  showOwnerUI,
+  saveWhatToBring,
+}: {
+  categories: any[]
+  showOwnerUI: boolean
+  saveWhatToBring: (next: any[]) => Promise<boolean>
+}) {
+  return (
+    <section className="tp-section">
+      <div className="tp-container">
+        <header className="tp-section-head">
+          <h2 className="tp-display tp-section-title">What to bring</h2>
+        </header>
+        <div className="tp-incl-grid">
+          {categories.map((cat: any, i: number) => {
+            const itemStrings: string[] = (cat.items || [])
+              .map((x: any) => (typeof x === 'string' ? x : x?.name || x?.item || ''))
+              .filter(Boolean)
+            const joined = itemStrings.join('\n')
+            return (
+              <div key={i} className="tp-incl-card">
+                <h4>
+                  <EditableField
+                    as="text"
+                    editable={showOwnerUI}
+                    value={cat.category}
+                    required
+                    className="w-full"
+                    onSave={(v) => {
+                      const next = categories.map((c: any, idx: number) =>
+                        idx === i
+                          ? { category: v, items: itemStrings }
+                          : {
+                              category: c.category,
+                              items: (c.items || [])
+                                .map((x: any) =>
+                                  typeof x === 'string' ? x : x?.name || x?.item || '',
+                                )
+                                .filter(Boolean),
+                            },
+                      )
+                      return saveWhatToBring(next)
+                    }}
+                  />
+                </h4>
+                <EditableField
+                  as="multiline"
+                  editable={showOwnerUI}
+                  value={joined}
+                  placeholder="Click to add items — one per line"
+                  rows={Math.max(3, itemStrings.length)}
+                  className="w-full"
+                  onSave={(v: string) => {
+                    const newItems = v
+                      .split('\n')
+                      .map((s) => s.replace(/^[-•·]\s*/, '').trim())
+                      .filter(Boolean)
+                    const next = categories.map((c: any, idx: number) =>
+                      idx === i
+                        ? { category: cat.category, items: newItems }
+                        : {
+                            category: c.category,
+                            items: (c.items || [])
+                              .map((x: any) =>
+                                typeof x === 'string' ? x : x?.name || x?.item || '',
+                              )
+                              .filter(Boolean),
+                          },
+                    )
+                    return saveWhatToBring(next)
+                  }}
+                  renderDisplay={() => (
+                    <ul>
+                      {itemStrings.map((item, j) => (
+                        <li key={j}>
+                          <span className="mk">·</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                />
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
   )
 }
