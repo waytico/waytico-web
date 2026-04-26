@@ -364,6 +364,123 @@ export default function TripPageClient({ slug, initialData }: Props) {
     p.title || ''
   )
 
+  // ── Hero meta-table slots (Dates / Duration / Group / Per traveler /
+  // Type / Region / Country). Owner mode wraps each value in EditableField
+  // so every field is inline-editable from the hero. Public mode passes
+  // formatted strings; null/empty hides the row. ──
+
+  const dateRangeSlot: ReactNode = ed ? (
+    <span style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
+      <EditableField
+        as="date"
+        editable
+        value={p.dates_start}
+        placeholder="Start"
+        onSave={(v) => saveProjectPatch({ datesStart: v })}
+      />
+      <span style={{ color: 'var(--ink-mute)' }}>–</span>
+      <EditableField
+        as="date"
+        editable
+        value={p.dates_end}
+        placeholder="End"
+        onSave={(v) => saveProjectPatch({ datesEnd: v })}
+      />
+    </span>
+  ) : (
+    dateRange
+  )
+
+  const durationSlot: ReactNode = ed ? (
+    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'baseline' }}>
+      <EditableField
+        as="number"
+        editable
+        value={p.duration_days}
+        placeholder="0"
+        onSave={(v) => saveProjectPatch({ durationDays: v })}
+      />
+      <span style={{ color: 'var(--ink-mute)' }}>{UI.days}</span>
+    </span>
+  ) : p.duration_days != null ? (
+    `${p.duration_days} ${UI.days}`
+  ) : null
+
+  const groupSizeSlot: ReactNode = ed ? (
+    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'baseline' }}>
+      <EditableField
+        as="number"
+        editable
+        value={p.group_size}
+        placeholder="0"
+        onSave={(v) => saveProjectPatch({ groupSize: v })}
+      />
+      <span style={{ color: 'var(--ink-mute)' }}>{UI.travelers}</span>
+    </span>
+  ) : p.group_size != null ? (
+    `${p.group_size} ${UI.travelers}`
+  ) : null
+
+  const pricePerTravelerSlot: ReactNode = ed ? (
+    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'baseline' }}>
+      <EditableField
+        as="text"
+        editable
+        value={p.currency || 'USD'}
+        placeholder="USD"
+        maxLength={3}
+        className="uppercase"
+        onSave={(v) => saveProjectPatch({ currency: v.toUpperCase() })}
+      />
+      <EditableField
+        as="number"
+        editable
+        value={pricePerPersonNum}
+        placeholder="0"
+        onSave={(v) => saveProjectPatch({ pricePerPerson: v })}
+      />
+    </span>
+  ) : (
+    priceFormatted
+  )
+
+  const activityTypeSlot: ReactNode = ed ? (
+    <EditableField
+      as="text"
+      editable
+      value={p.activity_type}
+      placeholder="Add type"
+      maxLength={40}
+      onSave={(v) => saveProjectPatch({ activityType: v })}
+    />
+  ) : (
+    p.activity_type || null
+  )
+
+  const regionSlot: ReactNode = ed ? (
+    <EditableField
+      as="text"
+      editable
+      value={p.region}
+      placeholder="Region"
+      onSave={(v) => saveProjectPatch({ region: v })}
+    />
+  ) : (
+    p.region || null
+  )
+
+  const countrySlot: ReactNode = ed ? (
+    <EditableField
+      as="text"
+      editable
+      value={p.country}
+      placeholder="Country"
+      onSave={(v) => saveProjectPatch({ country: v })}
+    />
+  ) : (
+    p.country || null
+  )
+
   const overviewBodySlot: ReactNode = ed ? (
     <EditableField
       as="multiline"
@@ -689,6 +806,13 @@ export default function TripPageClient({ slug, initialData }: Props) {
             theme={resolvedTheme}
             heroPhoto={heroPhoto?.url || null}
             titleSlot={titleSlot}
+            dateRangeSlot={dateRangeSlot}
+            durationSlot={durationSlot}
+            groupSizeSlot={groupSizeSlot}
+            pricePerTravelerSlot={pricePerTravelerSlot}
+            activityTypeSlot={activityTypeSlot}
+            regionSlot={regionSlot}
+            countrySlot={countrySlot}
             ownerOverlay={
               showOwnerUI ? (
                 <HeroOwnerOverlay
@@ -732,17 +856,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           />
         )}
 
-        <TripOverview
-          dateRange={dateRange}
-          durationDays={p.duration_days}
-          groupSize={p.group_size}
-          pricePerTraveler={priceFormatted}
-          activityType={p.activity_type}
-          region={p.region}
-          country={p.country}
-          bodySlot={overviewBodySlot}
-          visible={overviewVisible}
-        />
+        <TripOverview bodySlot={overviewBodySlot} visible={overviewVisible} />
 
         <TripItinerary
           theme={resolvedTheme}
