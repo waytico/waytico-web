@@ -228,10 +228,9 @@
 }
 .tp-nav-inner {
   max-width: 1120px; margin: 0 auto; padding: 14px 32px;
-  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  display: flex; align-items: center; justify-content: center;
 }
 .trip-page[data-mobile="true"] .tp-nav-inner { padding: 12px 20px; }
-.tp-nav-brand { font-family: var(--font-display); font-weight: var(--display-weight); font-size: 22px; letter-spacing: var(--display-tracking); }
 .tp-nav-links { display: flex; gap: 24px; font-size: 13px; }
 .tp-nav-links a { color: var(--ink-soft); text-decoration: none; }
 .tp-nav-links a:hover { color: var(--ink); }

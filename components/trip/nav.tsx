@@ -18,7 +18,6 @@ export function TripNav() {
   return (
     <nav className="tp-nav">
       <div className="tp-nav-inner">
-        <span className="tp-nav-brand">Waytico</span>
         <div className="tp-nav-links">
           {items.map((item) => (
             <a key={item.href} href={item.href}>

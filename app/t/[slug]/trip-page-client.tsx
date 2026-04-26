@@ -821,8 +821,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
           (split/overlay/card hero, timeline/photo-cards/grid itinerary) live
           inside Hero.tsx / Itinerary.tsx as `if (heroStyle === ...)` branches. */}
       <ThemeRoot theme={p.design_theme}>
-        <TripNav />
-
         <HeroDropZone
           enabled={showOwnerUI}
           onDrop={(files) => handleHeroUpload(files)}
@@ -860,6 +858,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
             }
           />
         </HeroDropZone>
+
+        <TripNav />
 
         {showOwnerUI && (
           <input
