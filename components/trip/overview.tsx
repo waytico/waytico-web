@@ -6,6 +6,8 @@ type OverviewProps = {
   dateRange: string | null
   durationDays: number | null
   groupSize: number | null
+  /** Pre-formatted price including currency glyph (or null). */
+  pricePerTraveler: string | null
   activityType: string | null
   region: string | null
   country: string | null
@@ -18,11 +20,16 @@ type OverviewProps = {
 /**
  * Overview — shared structure across all themes (TZ-6 §6.3).
  * Two-column: left rail with key/value meta, right column body.
+ *
+ * As of the title+photo Hero refactor (Apr 2026), Overview is the single
+ * source of truth for all non-image trip metadata: dates, duration, group,
+ * price-per-traveler, type, region, country, description.
  */
 export function TripOverview({
   dateRange,
   durationDays,
   groupSize,
+  pricePerTraveler,
   activityType,
   region,
   country,
@@ -39,15 +46,14 @@ export function TripOverview({
         </header>
         <div className="tp-overview-grid">
           <aside className="tp-overview-meta">
-            {dateRange && (
-              <Row k="Dates" v={dateRange} />
-            )}
+            {dateRange && <Row k="Dates" v={dateRange} />}
             {durationDays != null && (
               <Row k="Duration" v={`${durationDays} ${UI.days}`} />
             )}
             {groupSize != null && (
               <Row k="Group" v={`${groupSize} ${UI.travelers}`} />
             )}
+            {pricePerTraveler && <Row k="Per traveler" v={pricePerTraveler} />}
             {activityType && <Row k="Type" v={activityType} />}
             {region && <Row k="Region" v={region} />}
             {country && <Row k="Country" v={country} />}

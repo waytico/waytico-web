@@ -365,12 +365,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
     p.title || ''
   )
 
-  const firstParagraph = (text: string | null | undefined): string | null => {
-    if (!text) return null
-    const para = text.split('\n\n')[0]
-    return para || null
-  }
-
   const overviewBodySlot: ReactNode = ed ? (
     <EditableField
       as="multiline"
@@ -385,137 +379,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
     <DescriptionParagraphs text={p.description} />
   )
 
-  const heroDescriptionSlot: ReactNode = (() => {
-    const para = firstParagraph(p.description)
-    if (ed) {
-      // Show first paragraph plain — full editing happens in Overview body.
-      return para ? <span>{para}</span> : null
-    }
-    return para
-  })()
-
-  const activityChipSlot: ReactNode | null =
-    p.activity_type || ed ? (
-      <span className="tp-chip">
-        {ed ? (
-          <EditableField
-            as="text"
-            editable
-            value={p.activity_type}
-            placeholder="Add type"
-            maxLength={40}
-            className="uppercase"
-            onSave={(v) => saveProjectPatch({ activityType: v })}
-          />
-        ) : (
-          p.activity_type
-        )}
-      </span>
-    ) : null
-
-  const regionEyebrowSlot: ReactNode | null =
-    p.region || p.country || ed ? (
-      <span className="tp-eyebrow">
-        {ed ? (
-          <>
-            <EditableField
-              as="text"
-              editable
-              value={p.region}
-              placeholder="Region"
-              onSave={(v) => saveProjectPatch({ region: v })}
-            />
-            {(p.country || ed) && (
-              <>
-                {p.region ? ', ' : ''}
-                <EditableField
-                  as="text"
-                  editable
-                  value={p.country}
-                  placeholder="Country"
-                  onSave={(v) => saveProjectPatch({ country: v })}
-                />
-              </>
-            )}
-          </>
-        ) : (
-          [p.region, p.country].filter(Boolean).join(', ').toUpperCase()
-        )}
-      </span>
-    ) : null
-
   // ── Hero stat tiles — owner mode wraps each scalar with EditableField. ──
-  // Hero.tsx accepts these as ReactNode slots (dateStatSlot / durationStatSlot /
-  // groupStatSlot / priceStatSlot). When undefined, Hero falls back to the
-  // pre-formatted scalar values it also receives. Public mode passes
-  // undefined so the formatted strings render as before.
-
-  const dateStatSlot: ReactNode | undefined = ed ? (
-    <span style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
-      <EditableField
-        as="date"
-        editable
-        value={p.dates_start}
-        placeholder="Start"
-        onSave={(v) => saveProjectPatch({ datesStart: v })}
-      />
-      <span style={{ color: 'var(--ink-mute)' }}>–</span>
-      <EditableField
-        as="date"
-        editable
-        value={p.dates_end}
-        placeholder="End"
-        onSave={(v) => saveProjectPatch({ datesEnd: v })}
-      />
-    </span>
-  ) : undefined
-
-  const durationStatSlot: ReactNode | undefined = ed ? (
-    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'baseline' }}>
-      <EditableField
-        as="number"
-        editable
-        value={p.duration_days}
-        placeholder="0"
-        onSave={(v) => saveProjectPatch({ durationDays: v })}
-      />
-      <span style={{ color: 'var(--ink-mute)' }}>{UI.days}</span>
-    </span>
-  ) : undefined
-
-  const groupStatSlot: ReactNode | undefined = ed ? (
-    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'baseline' }}>
-      <EditableField
-        as="number"
-        editable
-        value={p.group_size}
-        placeholder="0"
-        onSave={(v) => saveProjectPatch({ groupSize: v })}
-      />
-      <span style={{ color: 'var(--ink-mute)' }}>{UI.travelers}</span>
-    </span>
-  ) : undefined
-
-  const priceStatSlot: ReactNode | undefined = ed ? (
-    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'baseline' }}>
-      <EditableField
-        as="text"
-        editable
-        value={p.currency || 'USD'}
-        placeholder="USD"
-        maxLength={3}
-        className="uppercase"
-        onSave={(v) => saveProjectPatch({ currency: v.toUpperCase() })}
-      />
-      <EditableField
-        as="number"
-        editable
-        value={pricePerPersonNum}
-        placeholder="0"
-        onSave={(v) => saveProjectPatch({ pricePerPerson: v })}
-      />
-    </span>
-  ) : undefined
+  // Removed after Hero was simplified to title+photo. Stats now live only
+  // in the Overview block. Owner edits these scalars via the AI command bar.
 
   // Render an Included list block — owner mode: EditableField; public mode: parsed list.
   const includedBodySlot: ReactNode = (() => {
@@ -830,19 +696,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           <TripHero
             theme={resolvedTheme}
             heroPhoto={heroPhoto?.url || null}
-            status={!showOwnerUI ? p.status : null}
-            dateRange={dateRange}
-            durationDays={p.duration_days}
-            groupSize={p.group_size}
-            pricePerPersonFormatted={priceFormatted}
-            activityChipSlot={activityChipSlot}
-            regionEyebrowSlot={regionEyebrowSlot}
             titleSlot={titleSlot}
-            descriptionSlot={heroDescriptionSlot}
-            dateStatSlot={dateStatSlot}
-            durationStatSlot={durationStatSlot}
-            groupStatSlot={groupStatSlot}
-            priceStatSlot={priceStatSlot}
             ownerOverlay={
               showOwnerUI ? (
                 <HeroOwnerOverlay
@@ -890,6 +744,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           dateRange={dateRange}
           durationDays={p.duration_days}
           groupSize={p.group_size}
+          pricePerTraveler={priceFormatted}
           activityType={p.activity_type}
           region={p.region}
           country={p.country}
