@@ -38,16 +38,32 @@ function getDayPhoto(media: MediaLite[], dayId: string): string | null {
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 /**
+ * Normalise any ISO-shaped string to YYYY-MM-DD.
+ * Backend serialises Postgres TIMESTAMPTZ as full ISO ("2026-06-08T00:00:00.000Z"),
+ * not as a bare date — so the strict regex alone rejects every dates_start
+ * coming from the public API. Take the first 10 chars and re-validate.
+ * Returns null for anything that still doesn't match (legacy "May 11", empty,
+ * non-string).
+ */
+function toISODate(s: string | null | undefined): string | null {
+  if (typeof s !== 'string' || s.length < 10) return null
+  const head = s.slice(0, 10)
+  return ISO_DATE_RE.test(head) ? head : null
+}
+
+/**
  * Resolve the ISO date for a given day. Order:
- *   1. day.date if it's a strict ISO YYYY-MM-DD (set by pipeline_days v8+).
+ *   1. day.date if it normalises to a valid YYYY-MM-DD (set by pipeline_days v8+).
  *   2. computed from datesStart + (dayNumber - 1) — handles older trips
  *      where the pipeline didn't yet write per-day dates.
  *   3. null — both unavailable; the day will simply not show a date.
  */
 function resolveDayDate(day: Day, datesStart?: string | null): string | null {
-  if (day.date && ISO_DATE_RE.test(day.date)) return day.date
-  if (datesStart && ISO_DATE_RE.test(datesStart) && typeof day.dayNumber === 'number') {
-    return addDaysISO(datesStart, day.dayNumber - 1)
+  const fromDay = toISODate(day.date)
+  if (fromDay) return fromDay
+  const fromStart = toISODate(datesStart)
+  if (fromStart && typeof day.dayNumber === 'number') {
+    return addDaysISO(fromStart, day.dayNumber - 1)
   }
   return null
 }
@@ -296,4 +312,5 @@ function accommodationName(value: Day['accommodation']): string | null {
 function sortedSegments(segs: Segment[]): Segment[] {
   return [...segs].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 }
+
 
