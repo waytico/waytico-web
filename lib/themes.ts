@@ -45,9 +45,18 @@ export const ITINERARY_STYLE: Record<ThemeId, 'timeline' | 'photo-cards' | 'grid
   compact: 'grid',
 }
 
-/** Display-friendly labels for the theme switcher (TZ-6 §5.3). */
+/**
+ * Display-friendly labels for the theme switcher (TZ-6 §5.3).
+ *
+ * NOTE: these are UI-only — internal ThemeId values, the DB `design_theme`
+ * column, the CSS `data-theme` selectors, and `HERO_STYLE` / `ITINERARY_STYLE`
+ * maps all keep using the enum names below. Mapping:
+ *   editorial  → "Classic"
+ *   expedition → "Cinematic"
+ *   compact    → "Clean"
+ */
 export const THEME_LABELS: Record<ThemeId, string> = {
-  editorial: 'Editorial',
-  expedition: 'Expedition',
-  compact: 'Compact',
+  editorial: 'Classic',
+  expedition: 'Cinematic',
+  compact: 'Clean',
 }
