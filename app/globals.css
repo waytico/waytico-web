@@ -1,3 +1,9 @@
+/* Trip-page theme tokens — :root[data-theme="..."] cascade
+   activates only inside <ThemeRoot> on the trip page.
+   Keep this @import ABOVE the @tailwind directives so PostCSS
+   inlines the variable definitions before utilities run. */
+@import '../styles/themes.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
