@@ -35,17 +35,20 @@
 
 /* =============== THEME 1 — EDITORIAL (current Waytico, fixed) =============== */
 :root[data-theme="editorial"], [data-theme="editorial"] {
-  --bg:         #FBF8F3;
-  --bg-alt:     #F4EFE6;
-  --paper:     #EFE8DA;
-  --ink:        #1F1A14;
-  --ink-soft:   rgba(31, 26, 20, 0.72);
-  --ink-mute:   rgba(31, 26, 20, 0.52);
-  --rule:       rgba(31, 26, 20, 0.14);
-  --accent:     #B5563A;
-  --accent-ink: #FBF8F3;
-  --chip-bg:    rgba(181, 86, 58, 0.10);
-  --chip-ink:   #8E3F26;
+  /* Editorial palette aligned with the production Tailwind tokens
+     (background / foreground / accent / border) so existing trips
+     on the default theme remain visually indistinguishable. */
+  --bg:         #FAF8F5;
+  --bg-alt:     #F5F1EB;
+  --paper:     #F0E4DA;
+  --ink:        #2C2420;
+  --ink-soft:   rgba(44, 36, 32, 0.72);
+  --ink-mute:   rgba(44, 36, 32, 0.52);
+  --rule:       #E8DFD5;
+  --accent:     #C4622D;
+  --accent-ink: #FFFFFE;
+  --chip-bg:    rgba(196, 98, 45, 0.10);
+  --chip-ink:   #C4622D;
 
   --font-display: var(--font-serif), "Cormorant Garamond", "EB Garamond", Georgia, serif;
   --font-body:    var(--font-sans), "DM Sans", system-ui, sans-serif;
