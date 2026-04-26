@@ -7,34 +7,23 @@ type Props = {
   title: string
   url: string
   publicStatus: string
-  /** When provided, overrides internal open state (controlled mode). */
-  forceOpen?: boolean
-  onOpenChange?: (open: boolean) => void
-  /** Custom label for the trigger button. Defaults to "Share with client". */
-  label?: string
-  /** When true, the trigger button is hidden — only the dropdown renders (controlled mode). */
-  hideTrigger?: boolean
-  /** Fired when user picks any share channel (Email/WA/TG/Copy). */
-  onShareAction?: () => void
 }
 
-export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenChange, label = 'Share with client', hideTrigger, onShareAction }: Props) {
+/**
+ * Share menu — dropdown with 4 channels for sending the trip quote to a client.
+ * Visible only while the trip is in 'quoted' status (pre-activation).
+ */
+export default function ShareMenu({ title, url, publicStatus }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  const isOpen = forceOpen ?? open
-  const setIsOpen = (v: boolean) => {
-    setOpen(v)
-    onOpenChange?.(v)
-  }
-
   useEffect(() => {
-    if (!isOpen) return
+    if (!open) return
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false)
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
     const onEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOpen(false)
+      if (e.key === 'Escape') setOpen(false)
     }
     document.addEventListener('mousedown', onClick)
     document.addEventListener('keydown', onEsc)
@@ -42,7 +31,7 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
       document.removeEventListener('mousedown', onClick)
       document.removeEventListener('keydown', onEsc)
     }
-  }, [isOpen])
+  }, [open])
 
   if (publicStatus !== 'quoted' && publicStatus !== 'active') return null
 
@@ -58,31 +47,28 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
     } catch {
       toast.error('Could not copy')
     }
-    setIsOpen(false)
-    onShareAction?.()
+    setOpen(false)
   }
 
   return (
     <div ref={ref} className="relative inline-block">
-      {!hideTrigger && (
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
-        >
-          {label}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
+      >
+        Share with client
+      </button>
 
-      {isOpen && (
+      {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-20"
+          className="absolute left-1/2 -translate-x-1/2 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-20"
         >
           <a
             role="menuitem"
             href={mailto}
-            onClick={() => { setIsOpen(false); onShareAction?.() }}
+            onClick={() => setOpen(false)}
             className="block px-4 py-2 text-sm hover:bg-secondary transition-colors"
           >
             Email
@@ -92,7 +78,7 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
             href={whatsapp}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => { setIsOpen(false); onShareAction?.() }}
+            onClick={() => setOpen(false)}
             className="block px-4 py-2 text-sm hover:bg-secondary transition-colors"
           >
             WhatsApp
@@ -102,7 +88,7 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
             href={telegram}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => { setIsOpen(false); onShareAction?.() }}
+            onClick={() => setOpen(false)}
             className="block px-4 py-2 text-sm hover:bg-secondary transition-colors"
           >
             Telegram

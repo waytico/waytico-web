@@ -2,31 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ------------------------------------------------------------------
-   Trip-page themes
-   Scoped to .theme-root[data-theme="..."]. Imported at the top so theme
-   tokens are available before utilities cascade.
-   ------------------------------------------------------------------ */
-@import '../styles/themes/journal.css';
-@import '../styles/themes/expedition.css';
-@import '../styles/themes/atelier.css';
-
-/* ------------------------------------------------------------------
-   Owner chrome tokens — neutral, theme-independent.
-   Used by the theme switcher, command bar, eye-toggles, and other
-   owner-only surfaces that must stay legible on any theme (especially
-   the dark Expedition background).
-   ------------------------------------------------------------------ */
-:root {
-  --owner-chrome-bg: #ffffff;
-  --owner-chrome-fg: #2c2420;
-  --owner-chrome-fg-soft: #5a4f41;
-  --owner-chrome-border: #e8dfd5;
-  --owner-chrome-accent: #c4622d;
-  --owner-chrome-accent-fg: #ffffff;
-  --owner-chrome-shadow: 0 4px 24px rgba(28, 24, 19, 0.08);
-}
-
 @layer base {
   * {
     @apply border-border;
