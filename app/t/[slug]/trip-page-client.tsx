@@ -776,6 +776,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
           theme={resolvedTheme}
           itinerary={itinerary as any}
           media={media as any}
+          datesStart={p.dates_start}
+          language={p.language ?? 'en'}
           renderDayTitle={renderDayTitle}
           renderDayDescription={renderDayDescription}
           renderSegmentTitle={renderSegmentTitle}
@@ -1222,3 +1224,4 @@ function WhatToBringSection({
     </section>
   )
 }
+

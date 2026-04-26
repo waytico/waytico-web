@@ -3,12 +3,18 @@ import { UI } from '@/lib/ui-strings'
 import type { ThemeId } from '@/lib/themes'
 import { ITINERARY_STYLE } from '@/lib/themes'
 import type { Day, Segment, MediaLite } from './trip-types'
-import { pad2 } from '@/lib/trip-format'
+import { pad2, fmtDayDate, addDaysISO } from '@/lib/trip-format'
 
 type ItineraryProps = {
   theme: ThemeId
   itinerary: Day[]
   media: MediaLite[]
+  /** Trip's first-day ISO date — used to compute per-day date when a Day
+   *  object doesn't carry its own `date` field (older trips, or backend
+   *  versions before pipeline_days v8). */
+  datesStart?: string | null
+  /** ISO 639-1 language for the per-day date formatting (weekday locale). */
+  language?: string | null
   /**
    * Renderer for a day's title — owner mode wraps with EditableField, public
    * mode renders plain text. If the renderer returns null and the data is
@@ -29,6 +35,33 @@ function getDayPhoto(media: MediaLite[], dayId: string): string | null {
   return m ? m.url : null
 }
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * Resolve the ISO date for a given day. Order:
+ *   1. day.date if it's a strict ISO YYYY-MM-DD (set by pipeline_days v8+).
+ *   2. computed from datesStart + (dayNumber - 1) — handles older trips
+ *      where the pipeline didn't yet write per-day dates.
+ *   3. null — both unavailable; the day will simply not show a date.
+ */
+function resolveDayDate(day: Day, datesStart?: string | null): string | null {
+  if (day.date && ISO_DATE_RE.test(day.date)) return day.date
+  if (datesStart && ISO_DATE_RE.test(datesStart) && typeof day.dayNumber === 'number') {
+    return addDaysISO(datesStart, day.dayNumber - 1)
+  }
+  return null
+}
+
+/** Inline style for the per-day date label so it renders consistently across
+ *  themes without needing CSS additions. Themes can later override via
+ *  `.day-date` selector if they want different placement. */
+const dayDateStyle: React.CSSProperties = {
+  fontSize: 12,
+  letterSpacing: '0.04em',
+  color: 'var(--ink-mute)',
+  marginTop: 2,
+}
+
 /**
  * Itinerary — single component, three structural variants per TZ-6 §6.4:
  *   editorial  → timeline    (large day numeral on left, content on right)
@@ -41,7 +74,7 @@ function getDayPhoto(media: MediaLite[], dayId: string): string | null {
  * meta), only the visual presentation differs.
  */
 export function TripItinerary(props: ItineraryProps) {
-  const { theme, itinerary } = props
+  const { theme, itinerary, datesStart, language } = props
   if (!Array.isArray(itinerary) || itinerary.length === 0) return null
   const itineraryStyle = ITINERARY_STYLE[theme]
 
@@ -62,6 +95,7 @@ export function TripItinerary(props: ItineraryProps) {
           {itinerary.map((day) => {
             const photo = getDayPhoto(props.media, day.id)
             const accommodation = accommodationName(day.accommodation)
+            const dayDateLabel = fmtDayDate(resolveDayDate(day, datesStart), language)
             return (
               <article
                 key={day.id || `day-${day.dayNumber}`}
@@ -71,7 +105,10 @@ export function TripItinerary(props: ItineraryProps) {
                 <div className="tp-container" style={{ padding: 0, position: 'relative', zIndex: 1 }}>
                   <div className="day-head">
                     <span className="day-num">{pad2(day.dayNumber)}</span>
-                    <h3 className="day-title">{props.renderDayTitle(day)}</h3>
+                    <div>
+                      <h3 className="day-title">{props.renderDayTitle(day)}</h3>
+                      {dayDateLabel && <div className="day-date" style={dayDateStyle}>{dayDateLabel}</div>}
+                    </div>
                   </div>
                   <DayDescription>{props.renderDayDescription(day)}</DayDescription>
                   {Array.isArray(day.segments) && day.segments.length > 0 && (
@@ -116,10 +153,12 @@ export function TripItinerary(props: ItineraryProps) {
             {itinerary.map((day) => {
               const photo = getDayPhoto(props.media, day.id)
               const accommodation = accommodationName(day.accommodation)
+              const dayDateLabel = fmtDayDate(resolveDayDate(day, datesStart), language)
               return (
                 <article key={day.id || `day-${day.dayNumber}`} className="day">
                   <div className="day-head">
                     <span className="day-num">DAY {pad2(day.dayNumber)}</span>
+                    {dayDateLabel && <span className="day-date" style={dayDateStyle}>{dayDateLabel}</span>}
                   </div>
                   <h3 className="day-title">{props.renderDayTitle(day)}</h3>
                   {photo && (
@@ -156,11 +195,13 @@ export function TripItinerary(props: ItineraryProps) {
         <div className="tp-itin--timeline">
           {itinerary.map((day) => {
             const accommodation = accommodationName(day.accommodation)
+            const dayDateLabel = fmtDayDate(resolveDayDate(day, datesStart), language)
             return (
               <article key={day.id || `day-${day.dayNumber}`} className="day">
                 <div className="day-num">{pad2(day.dayNumber)}</div>
                 <div>
                   <h3 className="day-title">{props.renderDayTitle(day)}</h3>
+                  {dayDateLabel && <div className="day-date" style={dayDateStyle}>{dayDateLabel}</div>}
                   <DayDescription>{props.renderDayDescription(day)}</DayDescription>
                   {Array.isArray(day.segments) && day.segments.length > 0 && (
                     <div className="segs">
@@ -255,3 +296,4 @@ function accommodationName(value: Day['accommodation']): string | null {
 function sortedSegments(segs: Segment[]): Segment[] {
   return [...segs].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 }
+

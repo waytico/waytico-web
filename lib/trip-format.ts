@@ -37,6 +37,41 @@ export function fmtDate(iso: string | null | undefined): string | null {
 }
 
 /**
+ * Format a single day's date with weekday for itinerary entries.
+ * "Jun 9, Tuesday" (en), "9 июня, вторник" (ru), "9 de junio, martes" (es), etc.
+ *
+ * Accepts only strict ISO YYYY-MM-DD; anything else returns null so legacy
+ * values like "May 11" don't render as broken `Invalid Date` strings.
+ *
+ * Locale comes from the project's language; defaults to 'en' if unknown.
+ * Locales the runtime can't resolve fall back to en-US automatically.
+ */
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+export function fmtDayDate(
+  iso: string | null | undefined,
+  language?: string | null,
+): string | null {
+  if (!iso || !ISO_DATE_RE.test(iso)) return null
+  const d = new Date(`${iso}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return null
+  const lang = language && language.length > 0 ? language : 'en'
+  try {
+    return new Intl.DateTimeFormat(lang, {
+      month: 'short',
+      day: 'numeric',
+      weekday: 'long',
+    }).format(d)
+  } catch {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      weekday: 'long',
+    }).format(d)
+  }
+}
+
+/**
  * Coerce price_per_person / price_total to a clean number.
  * Backend serialises NUMERIC as string ("3450.00") — TZ-6 §3 mandates we
  * normalise once at the top of trip-page-client and forward the number.
@@ -86,3 +121,4 @@ export function pad2(n: number | null | undefined): string {
 export function dayNumeral(n: number | null | undefined): string {
   return pad2(n)
 }
+

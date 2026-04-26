@@ -25,6 +25,7 @@ export type Segment = {
 export type Day = {
   id: string
   dayNumber: number
+  date?: string | null
   title: string | null
   description: string | null
   accommodation: { name: string } | string | null
@@ -79,3 +80,4 @@ export type Mutations = {
   saveDayPatch: (dayId: string, patch: Record<string, unknown>) => Promise<boolean>
   saveSegmentPatch: (dayId: string, segmentId: string, patch: Record<string, unknown>) => Promise<boolean>
 }
+
