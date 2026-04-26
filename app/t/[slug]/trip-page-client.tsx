@@ -445,6 +445,79 @@ export default function TripPageClient({ slug, initialData }: Props) {
       </span>
     ) : null
 
+  // ── Hero stat tiles — owner mode wraps each scalar with EditableField. ──
+  // Hero.tsx accepts these as ReactNode slots (dateStatSlot / durationStatSlot /
+  // groupStatSlot / priceStatSlot). When undefined, Hero falls back to the
+  // pre-formatted scalar values it also receives. Public mode passes
+  // undefined so the formatted strings render as before.
+
+  const dateStatSlot: ReactNode | undefined = ed ? (
+    <span style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
+      <EditableField
+        as="date"
+        editable
+        value={p.dates_start}
+        placeholder="Start"
+        onSave={(v) => saveProjectPatch({ datesStart: v })}
+      />
+      <span style={{ color: 'var(--ink-mute)' }}>–</span>
+      <EditableField
+        as="date"
+        editable
+        value={p.dates_end}
+        placeholder="End"
+        onSave={(v) => saveProjectPatch({ datesEnd: v })}
+      />
+    </span>
+  ) : undefined
+
+  const durationStatSlot: ReactNode | undefined = ed ? (
+    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'baseline' }}>
+      <EditableField
+        as="number"
+        editable
+        value={p.duration_days}
+        placeholder="0"
+        onSave={(v) => saveProjectPatch({ durationDays: v })}
+      />
+      <span style={{ color: 'var(--ink-mute)' }}>{UI.days}</span>
+    </span>
+  ) : undefined
+
+  const groupStatSlot: ReactNode | undefined = ed ? (
+    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'baseline' }}>
+      <EditableField
+        as="number"
+        editable
+        value={p.group_size}
+        placeholder="0"
+        onSave={(v) => saveProjectPatch({ groupSize: v })}
+      />
+      <span style={{ color: 'var(--ink-mute)' }}>{UI.travelers}</span>
+    </span>
+  ) : undefined
+
+  const priceStatSlot: ReactNode | undefined = ed ? (
+    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'baseline' }}>
+      <EditableField
+        as="text"
+        editable
+        value={p.currency || 'USD'}
+        placeholder="USD"
+        maxLength={3}
+        className="uppercase"
+        onSave={(v) => saveProjectPatch({ currency: v.toUpperCase() })}
+      />
+      <EditableField
+        as="number"
+        editable
+        value={pricePerPersonNum}
+        placeholder="0"
+        onSave={(v) => saveProjectPatch({ pricePerPerson: v })}
+      />
+    </span>
+  ) : undefined
+
   // Render an Included list block — owner mode: EditableField; public mode: parsed list.
   const includedBodySlot: ReactNode = (() => {
     if (ed) {
@@ -720,6 +793,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
             regionEyebrowSlot={regionEyebrowSlot}
             titleSlot={titleSlot}
             descriptionSlot={heroDescriptionSlot}
+            dateStatSlot={dateStatSlot}
+            durationStatSlot={durationStatSlot}
+            groupStatSlot={groupStatSlot}
+            priceStatSlot={priceStatSlot}
             ownerOverlay={
               showOwnerUI ? (
                 <HeroOwnerOverlay
