@@ -130,9 +130,10 @@ export function TripHero(props: HeroProps) {
           <div
             className="tp-hero-photo"
             style={heroPhoto ? { backgroundImage: `url(${heroPhoto})` } : undefined}
-          />
+          >
+            {ownerOverlay}
+          </div>
         </div>
-        {ownerOverlay}
       </header>
     )
   }
@@ -145,9 +146,10 @@ export function TripHero(props: HeroProps) {
         <div
           className="tp-hero-image"
           style={heroPhoto ? { backgroundImage: `url(${heroPhoto})` } : undefined}
-        />
+        >
+          {ownerOverlay}
+        </div>
       </div>
-      {ownerOverlay}
     </header>
   )
 }
