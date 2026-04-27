@@ -9,6 +9,8 @@
 
 export type ProjectStatus = 'draft' | 'quoted' | 'active' | 'completed' | 'archived'
 
+export type PricingMode = 'per_group' | 'per_traveler' | 'other'
+
 export type Segment = {
   id: string
   sortOrder: number
@@ -79,6 +81,12 @@ export type ProjectLite = {
   price_per_person: number | null
   price_total: number | null
   currency: string | null
+  /** Headline price render mode: per_group (default) shows total,
+   *  per_traveler shows per-head, other uses pricing_label as the suffix.
+   *  null = legacy row with no prices yet. */
+  pricing_mode: PricingMode | null
+  /** Custom suffix shown when pricing_mode='other'. */
+  pricing_label: string | null
   included: string | null
   not_included: string | null
   terms: string | null

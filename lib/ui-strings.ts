@@ -18,6 +18,7 @@ export const UI = {
     contacts: 'Contacts',
   },
   perTraveler: 'per traveler',
+  forTheGroup: 'for the group',
   travelers: 'travelers',
   traveler: 'traveler',
   days: 'days',

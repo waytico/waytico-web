@@ -23,6 +23,10 @@ type HeroProps = {
   dateRange: string | null
   /** Pre-formatted price including currency glyph (or null). */
   pricePerPersonFormatted: string | null
+  /** Label below the price stat tile. Defaults to "per traveler" when
+   *  omitted (legacy behaviour). Pricing-mode-aware callers pass the
+   *  resolved label here ("for the group", custom label, etc). */
+  priceLabel?: string
   /** Plain numbers for non-editable cases. */
   durationDays: number | null
   groupSize: number | null
@@ -231,7 +235,7 @@ export function TripHero(props: HeroProps) {
               fallback={props.groupSize != null ? `${props.groupSize} ${UI.travelers}` : null}
             />
             <CardSideStat
-              label={UI.perTraveler}
+              label={props.priceLabel ?? UI.perTraveler}
               valueSlot={props.priceStatSlot}
               fallback={props.pricePerPersonFormatted}
             />
@@ -300,7 +304,7 @@ function HeroStats(props: HeroProps) {
     stats.push(
       <div className="tp-hero-stat" key="price">
         <span className="v">{priceValue}</span>
-        <span className="l">{UI.perTraveler}</span>
+        <span className="l">{props.priceLabel ?? UI.perTraveler}</span>
       </div>,
     )
   }

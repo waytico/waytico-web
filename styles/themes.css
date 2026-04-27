@@ -430,8 +430,96 @@
 
 /* ===================== PRICE ===================== */
 .tp-price-block { display: block; }
-.tp-price-amount { font-family: var(--font-display); font-weight: var(--display-weight); font-size: clamp(64px, 8vw, 128px); line-height: 1; letter-spacing: var(--display-tracking); }
-.tp-price-meta { color: var(--ink-mute); font-size: 12px; letter-spacing: var(--eyebrow-tracking); text-transform: uppercase; margin-top: 12px; }
+
+/* Headline price — significantly smaller than before. The previous size
+   (clamp 64–128px) overwhelmed the page; now it reads as a clear
+   statement without dominating. */
+.tp-price-amount {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  font-size: clamp(38px, 5vw, 72px);
+  line-height: 1;
+  letter-spacing: var(--display-tracking);
+}
+
+.tp-price-headline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.tp-price-meta {
+  color: var(--ink-mute);
+  font-size: 12px;
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+/* Secondary line (the per-traveler / total split). Bumped up from the
+   tiny 14px line so it reads alongside the headline rather than as a
+   footnote. */
+.tp-price-secondary {
+  margin-top: 28px;
+  font-size: 16px;
+  color: var(--ink-soft);
+}
+
+/* Owner-mode amount input matches the headline scale. */
+.tp-price-input {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  font-size: clamp(38px, 5vw, 72px);
+  line-height: 1;
+  letter-spacing: var(--display-tracking);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 4px 10px;
+  color: var(--ink);
+  outline: none;
+  width: clamp(220px, 40vw, 480px);
+}
+.tp-price-input:focus { border-color: var(--accent); }
+
+/* Mode dropdown sits where the public 'per traveler' label used to be —
+   inherits the same eyebrow type so it reads as the same affordance. */
+.tp-price-mode {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tp-price-mode-select {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 4px 28px 4px 8px;
+  cursor: pointer;
+  outline: none;
+}
+.tp-price-mode-select:hover { color: var(--ink); border-color: var(--ink-mute); }
+.tp-price-mode-select:focus { border-color: var(--accent); color: var(--ink); }
+
+.tp-price-mode-label { font-size: 13px; color: var(--ink-soft); }
+.tp-price-mode-label-input {
+  font: inherit;
+  font-size: 13px;
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: var(--ink);
+  outline: none;
+  width: clamp(200px, 30vw, 360px);
+}
+.tp-price-mode-label-input:focus { border-color: var(--accent); }
 
 /* ===================== TERMS / FOOTER ===================== */
 .tp-terms { background: var(--paper); padding: 64px 0 24px; }

@@ -30,6 +30,7 @@ import { TripTerms } from '@/components/trip/terms'
 import { TripAccommodations } from '@/components/trip/accommodations'
 import { TripContacts } from '@/components/trip/contacts'
 import { HeroOwnerOverlay, HeroDropZone } from '@/components/trip/owner-extras'
+import type { PricingMode } from '@/components/trip/trip-types'
 
 import { apiFetch } from '@/lib/api'
 import { resolveTheme } from '@/lib/themes'
@@ -339,6 +340,20 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const priceTotalNum = coercePrice(p.price_total)
   const priceFormatted = fmtPrice(pricePerPersonNum, p.currency)
   const totalFormatted = fmtPrice(priceTotalNum, p.currency)
+
+  // Hero stat tile + Price block share a "headline price" — the side
+  // (per-person vs total) selected by pricing_mode. Backend keeps both
+  // sides in sync so we just pick which to render here.
+  const pricingMode = (p.pricing_mode || 'per_group') as PricingMode
+  const heroHeadlineNum =
+    pricingMode === 'per_traveler' ? pricePerPersonNum : priceTotalNum
+  const heroHeadlineFormatted = fmtPrice(heroHeadlineNum, p.currency)
+  const heroPriceLabel =
+    pricingMode === 'per_traveler'
+      ? UI.perTraveler
+      : pricingMode === 'other'
+        ? p.pricing_label || UI.forTheGroup
+        : UI.forTheGroup
   const dateRange = fmtDateRange(p.dates_start, p.dates_end)
 
   const resolvedTheme = resolveTheme(p.design_theme)
@@ -507,9 +522,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
       <EditableField
         as="number"
         editable
-        value={pricePerPersonNum}
+        value={heroHeadlineNum}
         placeholder="0"
-        onSave={(v) => saveProjectPatch({ pricePerPerson: v })}
+        onSave={(v) =>
+          saveProjectPatch(
+            pricingMode === 'per_traveler'
+              ? { pricePerPerson: v }
+              : { priceTotal: v },
+          )
+        }
       />
     </span>
   ) : undefined
@@ -553,35 +574,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
   const includedVisible = ed || !!(p.included && p.included.trim()) || !!(p.not_included && p.not_included.trim())
 
-  // Price slot — owner: editable currency + amount. Public: pre-formatted string.
-  const priceAmountSlot: ReactNode = (() => {
-    if (ed) {
-      return (
-        <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
-          <EditableField
-            as="text"
-            editable
-            value={p.currency || 'USD'}
-            maxLength={3}
-            className="uppercase"
-            onSave={(v) => saveProjectPatch({ currency: v.toUpperCase() })}
-          />
-          <EditableField
-            as="number"
-            editable
-            value={pricePerPersonNum}
-            placeholder="Price"
-            min={0}
-            step={1}
-            onSave={(v) => saveProjectPatch({ pricePerPerson: v })}
-          />
-        </span>
-      )
-    }
-    return priceFormatted
-  })()
-
-  const priceVisible = ed || pricePerPersonNum != null
+  // Price section now renders both modes, dropdown, and headline editor
+  // internally — see components/trip/price.tsx. trip-page-client only
+  // forwards raw price fields + a single visibility flag.
+  const priceVisible = ed || pricePerPersonNum != null || priceTotalNum != null
 
   const termsBodySlot: ReactNode = ed ? (
     <EditableField
@@ -824,7 +820,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
             dateRange={dateRange}
             durationDays={p.duration_days}
             groupSize={p.group_size}
-            pricePerPersonFormatted={priceFormatted}
+            pricePerPersonFormatted={heroHeadlineFormatted}
+            priceLabel={heroPriceLabel}
             activityChipSlot={activityChipSlot}
             regionEyebrowSlot={regionEyebrowSlot}
             titleSlot={titleSlot}
@@ -931,9 +928,14 @@ export default function TripPageClient({ slug, initialData }: Props) {
         />
 
         <TripPrice
-          amountSlot={priceAmountSlot}
-          totalFormatted={totalFormatted}
+          pricingMode={pricingMode}
+          pricingLabel={p.pricing_label ?? null}
+          pricePerPerson={pricePerPersonNum}
+          priceTotal={priceTotalNum}
+          currency={p.currency}
           groupSize={p.group_size}
+          editable={ed}
+          saveProjectPatch={ed ? saveProjectPatch : undefined}
           visible={priceVisible}
         />
 
