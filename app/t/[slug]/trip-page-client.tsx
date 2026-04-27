@@ -601,6 +601,22 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
   const overviewVisible = ed || !!(p.description && p.description.trim())
 
+  // Visibility flags for sections that don't already export one — used by
+  // both the section's own conditional render and by the TripNav so the
+  // anchor menu doesn't link to phantom sections.
+  const itineraryVisible = ed || itinerary.length > 0
+  const accommodationsVisible = ed || accommodations.length > 0
+  const contactsVisible =
+    ed ||
+    !!(owner && (
+      owner.brand_name || owner.brand_email || owner.brand_phone ||
+      owner.brand_whatsapp || owner.brand_telegram || owner.brand_website
+    )) ||
+    !!(operatorContact && (
+      operatorContact.name || operatorContact.email || operatorContact.phone ||
+      operatorContact.whatsapp || operatorContact.telegram || operatorContact.website
+    ))
+
   // ── Itinerary slot renderers ──
   const renderDayTitle = (day: any): ReactNode =>
     ed ? (
@@ -856,7 +872,17 @@ export default function TripPageClient({ slug, initialData }: Props) {
           />
         </HeroDropZone>
 
-        <TripNav />
+        <TripNav
+          visibility={{
+            overview: overviewVisible,
+            itinerary: itineraryVisible,
+            accommodations: accommodationsVisible,
+            price: priceVisible,
+            included: includedVisible,
+            terms: termsVisible,
+            contacts: contactsVisible,
+          }}
+        />
 
         {showOwnerUI && (
           <input
