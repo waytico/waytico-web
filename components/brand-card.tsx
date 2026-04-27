@@ -39,17 +39,16 @@ export default function BrandCard() {
   const { getToken } = useAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [contactsOpen, setContactsOpen] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const [logoUploading, setLogoUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Initial load
   useEffect(() => {
     let active = true
     ;(async () => {
       try {
         const token = await getToken()
-        const res = await apiFetch('/api/users/me', { token })
+        const res = await apiFetch('/api/users/me', { token, cache: 'no-store' })
         if (!res.ok) {
           if (active) setLoading(false)
           return
@@ -101,8 +100,6 @@ export default function BrandCard() {
   async function saveContact(key: ChannelKey, value: string): Promise<boolean> {
     const next: DefaultContacts = { ...(profile?.default_contacts || {}) }
     next[key] = value || null
-    // If every channel ends up empty, send null instead of an empty object —
-    // the column then goes back to NULL on the server.
     const hasAny = Object.values(next).some((v) => v !== null && v !== '')
     return patchUser({ defaultContacts: hasAny ? next : null })
   }
@@ -119,7 +116,6 @@ export default function BrandCard() {
     setLogoUploading(true)
     try {
       const token = await getToken()
-      // 1. Presign
       const presignRes = await apiFetch('/api/users/me/brand-logo/presign', {
         method: 'POST',
         token,
@@ -134,16 +130,13 @@ export default function BrandCard() {
         throw new Error(err.error || `Presign failed (${presignRes.status})`)
       }
       const { uploadUrl, cdnUrl } = (await presignRes.json()) as { uploadUrl: string; cdnUrl: string }
-      // 2. PUT to S3
       const putRes = await fetch(uploadUrl, {
         method: 'PUT',
         headers: { 'Content-Type': file.type },
         body: file,
       })
       if (!putRes.ok) throw new Error(`Upload failed (${putRes.status})`)
-      // 3. Attach to profile
       await patchUser({ brandLogoUrl: cdnUrl })
-      toast.success('Logo updated')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Upload failed'
       toast.error(msg)
@@ -159,18 +152,9 @@ export default function BrandCard() {
 
   if (loading) {
     return (
-      <div className="mb-8 rounded-xl border border-border bg-card p-5 animate-pulse">
-        <div className="flex items-center gap-4">
-          <div className="h-16 w-16 rounded-lg bg-secondary" />
-          <div className="flex-1 space-y-2">
-            <div className="h-4 w-32 bg-secondary rounded" />
-            <div className="h-3 w-48 bg-secondary rounded" />
-          </div>
-        </div>
-      </div>
+      <div className="mb-6 rounded-md bg-secondary/50 h-12 animate-pulse" />
     )
   }
-
   if (!profile) return null
 
   const initials = (profile.business_name || profile.name || profile.email || '?')
@@ -183,40 +167,86 @@ export default function BrandCard() {
 
   const contacts = profile.default_contacts || {}
   const contactsCount = Object.values(contacts).filter((v) => v && v !== '').length
+  const businessName = profile.business_name || 'Your business name'
+  const emailDisplay = profile.email || 'email pending'
 
-  return (
-    <div className="mb-8 rounded-xl border border-border bg-card p-5">
-      <p className="text-xs uppercase tracking-wider text-foreground/50 mb-3 font-sans">
-        Your brand · auto-fills into every trip
-      </p>
-      <div className="flex items-start gap-4">
-        {/* Logo */}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={logoUploading}
-          className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 border-dashed border-border bg-secondary/40 hover:border-accent/50 hover:bg-secondary/60 transition-colors flex items-center justify-center group"
-          aria-label={profile.brand_logo_url ? 'Change logo' : 'Upload logo'}
-        >
+  // ─── Collapsed (default) ───────────────────────────────
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="w-full mb-6 flex items-center gap-3 px-3 py-2 rounded-md bg-secondary/50 hover:bg-secondary transition-colors text-left"
+        aria-label="Edit brand"
+      >
+        <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 bg-background border border-border">
           {profile.brand_logo_url ? (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={profile.brand_logo_url}
-                alt="Brand logo"
-                className="h-full w-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <Upload className="h-5 w-5 text-white" />
-              </div>
-            </>
-          ) : logoUploading ? (
-            <Loader2 className="h-6 w-6 animate-spin text-foreground/60" />
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={profile.brand_logo_url} alt="" className="w-full h-full object-cover" />
           ) : (
-            <div className="flex flex-col items-center gap-1 text-foreground/50 group-hover:text-foreground/80">
-              <span className="text-xl font-serif font-semibold">{initials || '+'}</span>
-              <span className="text-[10px] uppercase tracking-wider">Logo</span>
+            <div className="w-full h-full flex items-center justify-center text-[10px] font-medium text-foreground/60">
+              {initials}
             </div>
+          )}
+        </div>
+        <span className={`text-sm font-medium truncate ${!profile.business_name ? 'text-foreground/50 italic' : ''}`}>
+          {businessName}
+        </span>
+        <span className="text-foreground/30 text-sm">·</span>
+        <span className="text-sm text-foreground/60 truncate hidden sm:inline">{emailDisplay}</span>
+        <span className="text-foreground/30 text-sm hidden sm:inline">·</span>
+        <span className="text-sm text-foreground/60 hidden sm:inline">
+          {contactsCount > 0 ? `${contactsCount} contact${contactsCount === 1 ? '' : 's'}` : 'no contacts yet'}
+        </span>
+        <span className="ml-auto text-xs text-foreground/60 flex items-center gap-1 flex-shrink-0">
+          Edit <ChevronDown className="w-3.5 h-3.5" />
+        </span>
+      </button>
+    )
+  }
+
+  // ─── Expanded ───────────────────────────────────────────
+  return (
+    <div className="mb-6 rounded-lg border border-border bg-card p-5">
+      <div className="flex items-start gap-4">
+        {/* Logo with hover-trash */}
+        <div className="relative h-20 w-20 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={logoUploading}
+            className="group/logo h-full w-full overflow-hidden rounded-lg border-2 border-dashed border-border bg-secondary/40 hover:border-accent/50 hover:bg-secondary/60 transition-colors flex items-center justify-center"
+            aria-label={profile.brand_logo_url ? 'Change logo' : 'Upload logo'}
+          >
+            {profile.brand_logo_url ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={profile.brand_logo_url} alt="Brand logo" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/logo:opacity-100 transition-opacity flex items-center justify-center">
+                  <Upload className="h-5 w-5 text-white" />
+                </div>
+              </>
+            ) : logoUploading ? (
+              <Loader2 className="h-6 w-6 animate-spin text-foreground/60" />
+            ) : (
+              <div className="flex flex-col items-center gap-1 text-foreground/50">
+                <span className="text-xl font-serif font-semibold">{initials || '+'}</span>
+                <span className="text-[10px] uppercase tracking-wider">Logo</span>
+              </div>
+            )}
+          </button>
+          {/* Hover trash on logo itself */}
+          {profile.brand_logo_url && (
+            <button
+              type="button"
+              onClick={removeLogo}
+              className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 hover:bg-destructive text-white opacity-0 hover:opacity-100 group-hover/logo:opacity-100 transition-opacity flex items-center justify-center"
+              aria-label="Remove logo"
+              style={{ opacity: 1 }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
           )}
           <input
             ref={fileInputRef}
@@ -228,7 +258,7 @@ export default function BrandCard() {
               if (f) handleLogoSelect(f)
             }}
           />
-        </button>
+        </div>
 
         {/* Identity */}
         <div className="flex-1 min-w-0 space-y-1.5">
@@ -248,57 +278,33 @@ export default function BrandCard() {
             inputClassName="text-sm"
           />
           <p className="text-xs text-foreground/50 font-sans">
-            {profile.email || <span className="italic">Email pending — verify in Account</span>}
+            {profile.email || <span className="italic">Email pending — verify in account</span>}
           </p>
         </div>
 
-        {/* Logo remove (only if logo present) */}
-        {profile.brand_logo_url && (
-          <button
-            type="button"
-            onClick={removeLogo}
-            className="text-xs text-foreground/50 hover:text-destructive transition-colors flex items-center gap-1"
-            aria-label="Remove logo"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            <span>Logo</span>
-          </button>
-        )}
-      </div>
-
-      {/* Default contacts (collapsed by default) */}
-      <div className="mt-4 pt-4 border-t border-border/50">
+        {/* Collapse */}
         <button
           type="button"
-          onClick={() => setContactsOpen((v) => !v)}
-          className="flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
-          aria-expanded={contactsOpen}
+          onClick={() => setExpanded(false)}
+          className="text-xs text-foreground/50 hover:text-foreground transition-colors flex items-center gap-1"
+          aria-label="Collapse"
         >
-          {contactsOpen ? (
-            <ChevronDown className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
-          <span className="font-medium">Default contacts</span>
-          <span className="text-foreground/40 text-xs">
-            {contactsCount > 0 ? `${contactsCount} set` : 'none yet'}
-          </span>
+          Collapse <ChevronRight className="w-3.5 h-3.5 rotate-90" />
         </button>
+      </div>
 
-        {contactsOpen && (
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {CHANNELS.map((ch) => (
-              <ContactRow
-                key={ch.key}
-                label={ch.label}
-                value={(contacts as Record<string, string | null>)[ch.key] || null}
-                placeholder={ch.placeholder}
-                type={ch.type}
-                onSave={(v) => saveContact(ch.key, v)}
-              />
-            ))}
-          </div>
-        )}
+      {/* Contacts — visible inline, no accordion */}
+      <div className="mt-5 pt-4 border-t border-border/50 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {CHANNELS.map((ch) => (
+          <ContactRow
+            key={ch.key}
+            label={ch.label}
+            value={(contacts as Record<string, string | null>)[ch.key] || null}
+            placeholder={ch.placeholder}
+            type={ch.type}
+            onSave={(v) => saveContact(ch.key, v)}
+          />
+        ))}
       </div>
     </div>
   )
@@ -315,14 +321,7 @@ type InlineTextProps = {
   required?: boolean
 }
 
-function InlineText({
-  value,
-  placeholder,
-  onSave,
-  className,
-  inputClassName,
-  required,
-}: InlineTextProps) {
+function InlineText({ value, placeholder, onSave, className, inputClassName, required }: InlineTextProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value || '')
   const [saving, setSaving] = useState(false)
@@ -358,11 +357,6 @@ function InlineText({
     else setDraft(value || '')
   }
 
-  function cancel() {
-    setDraft(value || '')
-    setEditing(false)
-  }
-
   if (editing) {
     return (
       <input
@@ -378,7 +372,8 @@ function InlineText({
           }
           if (e.key === 'Escape') {
             e.preventDefault()
-            cancel()
+            setDraft(value || '')
+            setEditing(false)
           }
         }}
         disabled={saving}
@@ -441,9 +436,7 @@ function ContactRow({ label, value, placeholder, type, onSave }: ContactRowProps
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[11px] uppercase tracking-wider text-foreground/50 font-sans">
-        {label}
-      </label>
+      <label className="text-[11px] uppercase tracking-wider text-foreground/50 font-sans">{label}</label>
       {editing ? (
         <input
           ref={inputRef}

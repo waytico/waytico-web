@@ -23,6 +23,14 @@ export type Project = {
   client_name?: string | null
   client_email?: string | null
   client_phone?: string | null
+  // Used by TripRow for compact dashboard rows
+  dates_start?: string | null
+  dates_end?: string | null
+  duration_days?: number | null
+  group_size?: number | null
+  price_per_person?: number | null
+  price_total?: number | null
+  currency?: string | null
 }
 
 type Props = {
@@ -267,3 +275,4 @@ export default function ProjectCard({ project, onUpdate, onDelete }: Props) {
     </div>
   )
 }
+

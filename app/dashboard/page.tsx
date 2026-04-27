@@ -3,83 +3,61 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, Search } from 'lucide-react'
 import BrandCard from '@/components/brand-card'
 import ChatFlow from '@/components/chat-flow'
 import Header from '@/components/header'
-import ProjectCard, { type Project, type ProjectStatus } from '@/components/project-card'
+import TripRow from '@/components/trip-row'
+import type { Project } from '@/components/project-card'
+import { GROUP_TITLES, groupTrips, type GroupKey } from '@/lib/trip-grouping'
 import { apiFetch } from '@/lib/api'
 
-type SortOption =
-  | 'updated_desc'
-  | 'updated_asc'
-  | 'title_asc'
-  | 'title_desc'
-  | 'region_asc'
+const VISIBLE_GROUPS: GroupKey[] = ['attention', 'awaiting', 'progress', 'completed']
 
-const ACTIVE_GROUP_ORDER: ProjectStatus[] = ['draft', 'quoted', 'active', 'completed']
-const GROUP_LABEL: Record<ProjectStatus, string> = {
-  draft: 'Draft',
-  quoted: 'Quoted',
-  active: 'Active',
-  completed: 'Completed',
-  archived: 'Archived',
+function SkeletonRow() {
+  return <div className="animate-pulse bg-secondary/50 rounded-md h-14 mb-2" />
 }
 
-function SkeletonList() {
+function GroupSection({
+  title,
+  count,
+  children,
+  emptyHint,
+}: {
+  title: string
+  count: number
+  children: React.ReactNode
+  emptyHint?: string
+}) {
+  if (count === 0 && !emptyHint) return null
   return (
-    <div className="space-y-3">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div
-          key={i}
-          className="animate-pulse bg-[#E8DFD5] rounded-lg h-20"
-        />
-      ))}
-    </div>
+    <section className="mb-7">
+      <div className="flex items-baseline gap-2 px-4 mb-2">
+        <h3 className="text-sm font-medium text-foreground">{title}</h3>
+        <span className="text-xs text-foreground/40 font-sans">{count}</span>
+      </div>
+      {count === 0 ? (
+        <div className="px-4 py-3 border-t border-border/50">
+          <p className="text-xs text-foreground/50 italic">{emptyHint}</p>
+        </div>
+      ) : (
+        children
+      )}
+    </section>
   )
 }
 
-function EmptyState() {
-  return (
-    <div className="w-full max-w-2xl mx-auto text-center space-y-6">
-      <h2 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-        Create your first trip
-      </h2>
-      <ChatFlow />
-    </div>
-  )
-}
-
-function sortProjects(list: Project[], sort: SortOption): Project[] {
-  const arr = [...list]
-  const cmpStr = (a: string | null, b: string | null) =>
-    (a ?? '').localeCompare(b ?? '', 'en', { sensitivity: 'base' })
-  switch (sort) {
-    case 'updated_desc':
-      arr.sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at))
-      break
-    case 'updated_asc':
-      arr.sort((a, b) => +new Date(a.updated_at) - +new Date(b.updated_at))
-      break
-    case 'title_asc':
-      arr.sort((a, b) => cmpStr(a.title, b.title))
-      break
-    case 'title_desc':
-      arr.sort((a, b) => cmpStr(b.title, a.title))
-      break
-    case 'region_asc':
-      arr.sort((a, b) => cmpStr(a.region, b.region))
-      break
-  }
-  return arr
+const EMPTY_HINTS: Partial<Record<GroupKey, string>> = {
+  progress: 'No active trips. Activate a quote to start preparing for the trip.',
 }
 
 export default function DashboardPage() {
   const { isLoaded, isSignedIn, getToken } = useAuth()
   const router = useRouter()
   const [projects, setProjects] = useState<Project[] | null>(null)
-  const [sort, setSort] = useState<SortOption>('updated_desc')
-  const [archivedOpen, setArchivedOpen] = useState(false)
+  const [archiveOpen, setArchiveOpen] = useState(false)
+  const [showNewTrip, setShowNewTrip] = useState(false)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.replace('/sign-in')
@@ -91,7 +69,7 @@ export default function DashboardPage() {
     ;(async () => {
       try {
         const token = await getToken()
-        const res = await apiFetch('/api/projects', { token })
+        const res = await apiFetch('/api/projects', { token, cache: 'no-store' })
         if (!res.ok) {
           if (active) setProjects([])
           return
@@ -109,139 +87,170 @@ export default function DashboardPage() {
   }, [isLoaded, isSignedIn, getToken])
 
   function handleUpdate(updated: Project) {
-    setProjects((prev) =>
-      prev ? prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)) : prev,
-    )
+    setProjects((prev) => (prev ? prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)) : prev))
   }
 
   function handleDelete(id: string) {
     setProjects((prev) => (prev ? prev.filter((p) => p.id !== id) : prev))
   }
 
-  const groups = useMemo(() => {
+  // Filter by search query first, then group
+  const filteredProjects = useMemo(() => {
     if (!projects) return null
-    const sorted = sortProjects(projects, sort)
-    const g: Record<ProjectStatus, Project[]> = {
-      draft: [],
-      quoted: [],
-      active: [],
-      completed: [],
-      archived: [],
-    }
-    for (const p of sorted) {
-      if (g[p.status]) g[p.status].push(p)
-    }
-    return g
-  }, [projects, sort])
+    if (!search.trim()) return projects
+    const q = search.toLowerCase().trim()
+    return projects.filter((p) => {
+      const hay = [p.title, p.region, p.country, p.client_name, p.client_email]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return hay.includes(q)
+    })
+  }, [projects, search])
 
-  const hasAnyActive = groups
-    ? ACTIVE_GROUP_ORDER.some((s) => groups[s].length > 0)
-    : false
-  const archivedCount = groups ? groups.archived.length : 0
+  const grouped = useMemo(() => (filteredProjects ? groupTrips(filteredProjects) : null), [filteredProjects])
+
+  const totalActive = grouped
+    ? grouped.attention.length + grouped.awaiting.length + grouped.progress.length + grouped.completed.length
+    : 0
+  const archivedCount = grouped ? grouped.archive.length : 0
+  const hasAnyTrip = projects !== null && projects.length > 0
 
   return (
     <>
       <Header />
       <div className="min-h-[calc(100vh-73px)] bg-background text-foreground">
-        <main className="max-w-4xl mx-auto px-4 py-10">
-          {(!isLoaded || projects === null) && <SkeletonList />}
+        <main className="max-w-4xl mx-auto px-4 py-8">
+          {/* Brand strip — always at top */}
+          {isLoaded && projects !== null && <BrandCard />}
 
-          {isLoaded && projects !== null && (
-            <BrandCard />
+          {/* Search + New trip */}
+          {hasAnyTrip && (
+            <div className="flex items-center gap-3 mb-6 px-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
+                <input
+                  type="search"
+                  placeholder="Search trips, clients…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 h-9 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewTrip(true)}
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity rounded-md"
+              >
+                <Plus className="w-4 h-4" /> New trip
+              </button>
+            </div>
           )}
 
-          {isLoaded && projects !== null && projects.length === 0 && <EmptyState />}
+          {/* Loading state */}
+          {(!isLoaded || projects === null) && (
+            <div className="space-y-2 px-4">
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+            </div>
+          )}
 
-          {isLoaded && projects !== null && projects.length > 0 && groups && (
-            <>
-              <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-                <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight">
-                  Your trips
-                </h1>
-                <label className="flex items-center gap-2 text-sm text-foreground/70">
-                  <span className="sr-only sm:not-sr-only">Sort:</span>
-                  <select
-                    value={sort}
-                    onChange={(e) => setSort(e.target.value as SortOption)}
-                    className="bg-card border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
-                    aria-label="Sort projects"
-                  >
-                    <option value="updated_desc">Newest updated</option>
-                    <option value="updated_asc">Oldest updated</option>
-                    <option value="title_asc">Title A–Z</option>
-                    <option value="title_desc">Title Z–A</option>
-                    <option value="region_asc">Region A–Z</option>
-                  </select>
-                </label>
-              </div>
+          {/* Empty state — first-time user */}
+          {isLoaded && projects !== null && projects.length === 0 && (
+            <div className="mt-8 px-4">
+              <h2 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-6 text-center">
+                Create your first trip
+              </h2>
+              <ChatFlow />
+            </div>
+          )}
 
-              {!hasAnyActive && archivedCount === 0 && (
-                <p className="text-foreground/60 text-sm">
-                  No trips yet.
-                </p>
-              )}
-
-              {!hasAnyActive && archivedCount > 0 && (
-                <p className="text-foreground/60 text-sm mb-4">
-                  No active trips. Only archived below.
-                </p>
-              )}
-
-              <div className="space-y-10">
-                {ACTIVE_GROUP_ORDER.map((status) => {
-                  const items = groups[status]
-                  if (items.length === 0) return null
-                  return (
-                    <section key={status}>
-                      <h2 className="font-serif text-2xl tracking-tight mb-3">
-                        {GROUP_LABEL[status]}
-                        <span className="text-foreground/50 text-base font-sans ml-2">
-                          {items.length}
-                        </span>
-                      </h2>
-                      <div className="space-y-3">
-                        {items.map((p) => (
-                          <ProjectCard
-                            key={p.id}
-                            project={p}
-                            onUpdate={handleUpdate}
-                            onDelete={handleDelete}
-                          />
-                        ))}
-                      </div>
-                    </section>
-                  )
-                })}
-              </div>
-
-              {archivedCount > 0 && (
-                <section className="mt-10 pt-6 border-t border-border/50">
+          {/* New trip modal — overlay over dashboard */}
+          {showNewTrip && (
+            <div
+              className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center pt-12 px-4 overflow-y-auto"
+              onClick={() => setShowNewTrip(false)}
+            >
+              <div
+                className="bg-background rounded-lg shadow-2xl max-w-2xl w-full p-6 my-8"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-serif text-2xl font-bold">New trip</h2>
                   <button
                     type="button"
-                    onClick={() => setArchivedOpen((v) => !v)}
-                    className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors group"
-                    aria-expanded={archivedOpen}
-                    aria-controls="archived-list"
+                    onClick={() => setShowNewTrip(false)}
+                    className="text-foreground/60 hover:text-foreground"
+                    aria-label="Close"
                   >
-                    {archivedOpen ? (
-                      <ChevronDown className="w-4 h-4" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4" />
-                    )}
-                    <span className="font-serif text-xl tracking-tight">
-                      Archived
-                    </span>
-                    <span className="text-foreground/40 text-sm font-sans">
-                      {archivedCount}
-                    </span>
+                    ✕
                   </button>
+                </div>
+                <ChatFlow />
+              </div>
+            </div>
+          )}
 
-                  {archivedOpen && (
-                    <div id="archived-list" className="space-y-3 mt-4">
-                      {groups.archived.map((p) => (
-                        <ProjectCard
+          {/* Sections */}
+          {isLoaded && grouped && hasAnyTrip && (
+            <>
+              {totalActive === 0 && search.trim() === '' && (
+                <p className="text-sm text-foreground/60 px-4 mb-4">
+                  No active trips. Browse the archive below or start a new one.
+                </p>
+              )}
+              {totalActive === 0 && search.trim() !== '' && (
+                <p className="text-sm text-foreground/60 px-4 mb-4">
+                  No matches for “{search}”.
+                </p>
+              )}
+
+              {VISIBLE_GROUPS.map((key) => {
+                const items = grouped[key]
+                const hint = EMPTY_HINTS[key]
+                if (items.length === 0 && !hint) return null
+                return (
+                  <GroupSection
+                    key={key}
+                    title={GROUP_TITLES[key]}
+                    count={items.length}
+                    emptyHint={hint}
+                  >
+                    {items.map((p) => (
+                      <TripRow
+                        key={p.id}
+                        project={p}
+                        showAttention={key === 'attention'}
+                        dimmed={key === 'completed'}
+                        onUpdate={handleUpdate}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </GroupSection>
+                )
+              })}
+
+              {/* Archive — collapsible at the bottom */}
+              {archivedCount > 0 && (
+                <section className="mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setArchiveOpen((v) => !v)}
+                    className="flex items-center gap-2 px-4 py-3 text-sm text-foreground/60 hover:text-foreground w-full transition-colors border-t border-border/50"
+                    aria-expanded={archiveOpen}
+                  >
+                    {archiveOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    <span className="font-medium">Archive</span>
+                    <span className="text-xs text-foreground/40 font-sans">{archivedCount}</span>
+                  </button>
+                  {archiveOpen && (
+                    <div>
+                      {grouped.archive.map((p) => (
+                        <TripRow
                           key={p.id}
                           project={p}
+                          dimmed
                           onUpdate={handleUpdate}
                           onDelete={handleDelete}
                         />
@@ -257,4 +266,3 @@ export default function DashboardPage() {
     </>
   )
 }
-
