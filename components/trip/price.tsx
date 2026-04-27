@@ -142,7 +142,7 @@ function HeadlineAmountEditor({
     <input
       className="tp-price-input"
       type="number"
-      step="0.01"
+      step="1"
       min="0"
       value={draft}
       autoFocus
