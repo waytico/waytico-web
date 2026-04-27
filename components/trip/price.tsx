@@ -26,7 +26,6 @@ export function TripPrice({ amountSlot, totalFormatted, groupSize, visible }: Pr
       <div className="tp-container">
         <header className="tp-section-head">
           <h2 className="tp-display tp-section-title">{UI.sectionLabels.price}</h2>
-          <span className="tp-section-num">04</span>
         </header>
         <div className="tp-price-block">
           <div>

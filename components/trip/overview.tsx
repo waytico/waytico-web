@@ -20,7 +20,6 @@ export function TripOverview({ bodySlot, visible }: OverviewProps) {
       <div className="tp-container">
         <header className="tp-section-head">
           <h2 className="tp-display tp-section-title">{UI.sectionLabels.overview}</h2>
-          <span className="tp-section-num">01</span>
         </header>
         <div className="tp-overview-body">{bodySlot}</div>
       </div>

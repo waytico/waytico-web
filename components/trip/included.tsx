@@ -27,7 +27,6 @@ export function TripIncluded({ includedBodySlot, notIncludedBodySlot, visible }:
       <div className="tp-container">
         <header className="tp-section-head">
           <h2 className="tp-display tp-section-title">{UI.sectionLabels.included}</h2>
-          <span className="tp-section-num">03</span>
         </header>
         <div className="tp-incl-grid">
           <div className="tp-incl-card">

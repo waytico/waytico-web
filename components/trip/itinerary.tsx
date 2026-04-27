@@ -77,7 +77,7 @@ export function TripItinerary(props: ItineraryProps) {
     <header className="tp-section-head">
       <h2 className="tp-display tp-section-title">{UI.sectionLabels.itinerary}</h2>
       <span className="tp-section-num">
-        02 · {itinerary.length} {UI.days}
+        {itinerary.length} {UI.days}
       </span>
     </header>
   )
