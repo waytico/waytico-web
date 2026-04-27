@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { useAuth, useClerk } from '@clerk/nextjs'
 import { ChevronDown, ChevronRight, Loader2, Trash2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiFetch } from '@/lib/api'
@@ -37,6 +37,7 @@ const CHANNELS: Array<{ key: ChannelKey; label: string; placeholder: string; typ
 
 export default function BrandCard() {
   const { getToken } = useAuth()
+  const { openUserProfile } = useClerk()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(false)
@@ -173,12 +174,7 @@ export default function BrandCard() {
   // ─── Collapsed (default) ───────────────────────────────
   if (!expanded) {
     return (
-      <button
-        type="button"
-        onClick={() => setExpanded(true)}
-        className="w-full mb-6 flex items-center gap-3 px-3 py-2 rounded-md bg-secondary/50 hover:bg-secondary transition-colors text-left"
-        aria-label="Edit brand"
-      >
+      <div className="w-full mb-6 flex items-center gap-3 px-3 py-2 rounded-md bg-secondary/50 hover:bg-secondary/70 transition-colors">
         <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 bg-background border border-border">
           {profile.brand_logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -189,19 +185,38 @@ export default function BrandCard() {
             </div>
           )}
         </div>
-        <span className={`text-sm font-medium truncate ${!profile.business_name ? 'text-foreground/50 italic' : ''}`}>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className={`text-sm font-medium truncate hover:underline ${!profile.business_name ? 'text-foreground/50 italic' : ''}`}
+        >
           {businessName}
-        </span>
-        <span className="text-foreground/30 text-sm">·</span>
-        <span className="text-sm text-foreground/60 truncate hidden sm:inline">{emailDisplay}</span>
+        </button>
         <span className="text-foreground/30 text-sm hidden sm:inline">·</span>
-        <span className="text-sm text-foreground/60 hidden sm:inline">
+        <button
+          type="button"
+          onClick={() => openUserProfile()}
+          className="text-sm text-foreground/60 hover:text-foreground hover:underline truncate hidden sm:inline-flex transition-colors"
+          aria-label="Edit email"
+        >
+          {emailDisplay}
+        </button>
+        <span className="text-foreground/30 text-sm hidden sm:inline">·</span>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="text-sm text-foreground/60 hover:text-foreground hover:underline hidden sm:inline transition-colors"
+        >
           {contactsCount > 0 ? `${contactsCount} contact${contactsCount === 1 ? '' : 's'}` : 'no contacts yet'}
-        </span>
-        <span className="ml-auto text-xs text-foreground/60 flex items-center gap-1 flex-shrink-0">
+        </button>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="ml-auto text-xs text-foreground/60 hover:text-foreground flex items-center gap-1 flex-shrink-0 transition-colors"
+        >
           Edit <ChevronDown className="w-3.5 h-3.5" />
-        </span>
-      </button>
+        </button>
+      </div>
     )
   }
 
@@ -277,9 +292,19 @@ export default function BrandCard() {
             className="text-sm text-foreground/70 block"
             inputClassName="text-sm"
           />
-          <p className="text-xs text-foreground/50 font-sans">
-            {profile.email || <span className="italic">Email pending — verify in account</span>}
-          </p>
+          <button
+            type="button"
+            onClick={() => openUserProfile()}
+            className="text-xs text-foreground/50 hover:text-foreground hover:underline transition-colors font-sans inline-flex items-center gap-1.5 group/email"
+            aria-label="Edit email in account settings"
+          >
+            <span>
+              {profile.email || <span className="italic">Email pending — click to verify</span>}
+            </span>
+            <span className="text-[10px] text-foreground/30 group-hover/email:text-foreground/60">
+              · edit
+            </span>
+          </button>
         </div>
 
         {/* Collapse */}

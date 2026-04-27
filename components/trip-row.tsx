@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
+import { ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiFetch } from '@/lib/api'
-import ActionMenu from './action-menu'
 import { ArchiveDialog } from './trip/archive-dialog'
+import { ActivateStubModal } from './activate-stub-modal'
 import { buildTripMenu, getStatusMeta } from '@/lib/trip-status'
 import { attentionReason } from '@/lib/trip-grouping'
 import type { Project } from './project-card'
@@ -51,6 +52,28 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
   const { getToken } = useAuth()
   const [busy, setBusy] = useState(false)
   const [archiveOpen, setArchiveOpen] = useState(false)
+  const [activateOpen, setActivateOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const triggerWrapRef = useRef<HTMLDivElement>(null)
+
+  // Close menu on outside click / Esc
+  useEffect(() => {
+    if (!menuOpen) return
+    function handleDown(e: MouseEvent) {
+      if (triggerWrapRef.current && !triggerWrapRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleDown)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleDown)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [menuOpen])
 
   async function patchStatus(status: string) {
     setBusy(true)
@@ -107,11 +130,13 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
     }
   }
 
+  // Same menu shape as trip-action-bar — pill is the trigger, not a separate ⋮
   const menuItems = buildTripMenu(project.status, {
     changeStatus: (next) => patchStatus(next),
     requestArchive: () => setArchiveOpen(true),
     requestDelete: deleteProject,
     restore,
+    onActivate: () => setActivateOpen(true),
   })
 
   const reason = attentionReason(project)
@@ -122,25 +147,24 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
   const priceStr = fmtPrice(project.price_per_person, project.price_total, project.currency)
   const region = [project.region, project.country].filter(Boolean).join(', ')
 
-  // Status pill — contextual when showAttention, default otherwise
-  const statusMeta = getStatusMeta(project.status)
-  const pillText = showAttention && reason ? reason : statusMeta.label
+  const meta = getStatusMeta(project.status)
+  const pillText = showAttention && reason ? reason : meta.label
+  // Contextual urgency pill colors only override for "Needs attention".
   const pillClass = showAttention && reason
     ? project.status === 'active'
       ? 'bg-destructive/10 text-destructive'
       : 'bg-accent/15 text-accent'
-    : statusMeta.chipClass
+    : meta.chipClass
 
   return (
     <>
       <div
-        className={`flex items-center gap-3 px-4 py-3 border-t border-border/50 hover:bg-secondary/40 transition-colors ${dimmed ? 'opacity-70' : ''}`}
+        className={`flex items-center gap-3 px-4 py-3 border-t border-border/50 hover:bg-secondary/30 transition-colors ${dimmed ? 'opacity-70' : ''}`}
       >
         <Link
           href={`/t/${project.slug}`}
           className="flex items-center gap-3 flex-1 min-w-0 group"
         >
-          {/* Thumb */}
           <div className="w-12 h-8 rounded-md overflow-hidden flex-shrink-0 bg-secondary">
             {project.cover_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -154,7 +178,6 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
             ) : null}
           </div>
 
-          {/* Title + meta */}
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2 min-w-0">
               <span className="text-sm font-medium truncate group-hover:underline">
@@ -174,16 +197,55 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
           </div>
         </Link>
 
-        {/* Status pill */}
-        <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-medium rounded-full whitespace-nowrap flex-shrink-0 ${pillClass}`}
-        >
-          {statusMeta.hasDot && !showAttention && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
-          {pillText}
-        </span>
+        {/* Status pill = dropdown trigger (matches trip-action-bar). */}
+        <div ref={triggerWrapRef} className="relative inline-block flex-shrink-0">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              if (menuItems.length > 0) setMenuOpen((v) => !v)
+            }}
+            disabled={busy || menuItems.length === 0}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-medium rounded-full transition-opacity hover:opacity-80 disabled:opacity-60 whitespace-nowrap ${pillClass}`}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+          >
+            {meta.hasDot && !showAttention && (
+              <span className="w-1.5 h-1.5 rounded-full bg-current" />
+            )}
+            <span>{pillText}</span>
+            {menuItems.length > 0 && <ChevronDown className="w-3 h-3" />}
+          </button>
 
-        {/* Action menu */}
-        <ActionMenu items={menuItems} />
+          {menuOpen && menuItems.length > 0 && (
+            <div
+              role="menu"
+              className="absolute right-0 mt-2 w-48 rounded-lg bg-background border border-border shadow-lg py-1 z-30"
+            >
+              {menuItems.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    item.onClick()
+                  }}
+                  disabled={busy}
+                  className={
+                    'block w-full text-left px-4 py-2 text-sm transition-colors disabled:opacity-60 ' +
+                    (item.variant === 'danger'
+                      ? 'text-destructive hover:bg-destructive/10'
+                      : 'hover:bg-secondary')
+                  }
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <ArchiveDialog
@@ -201,6 +263,8 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
           onUpdate({ ...project, status: 'archived' })
         }}
       />
+
+      <ActivateStubModal open={activateOpen} onClose={() => setActivateOpen(false)} />
     </>
   )
 }
