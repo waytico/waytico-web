@@ -52,7 +52,7 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
   const [busy, setBusy] = useState(false)
   const [archiveOpen, setArchiveOpen] = useState(false)
 
-  async function patchStatus(status: Project['status']) {
+  async function patchStatus(status: string) {
     setBusy(true)
     try {
       const token = await getToken()
@@ -63,7 +63,7 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
       })
       if (!res.ok) throw new Error()
       const data = await res.json()
-      onUpdate({ ...project, ...data.project })
+      onUpdate({ ...project, ...data.project } as Project)
     } catch {
       toast.error('Status change failed')
     } finally {
@@ -81,7 +81,7 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
       })
       if (!res.ok) throw new Error()
       const data = await res.json()
-      onUpdate({ ...project, ...data.project })
+      onUpdate({ ...project, ...data.project } as Project)
     } catch {
       toast.error('Restore failed')
     } finally {
