@@ -49,6 +49,86 @@ function truncateName(name: string, max = 32) {
   return base.slice(0, max - ext.length - 1) + '…' + ext
 }
 
+type StepDef = {
+  label: string
+  done: boolean
+  active: boolean
+  sub: string[]
+}
+
+/**
+ * Generating view with sub-task rotation inside the active step.
+ *
+ * The pipeline emits 5 SSE events but the slowest block ("days") takes
+ * ~17 seconds of OpenAI work between events. Without something to read,
+ * the user thinks the page is frozen. Sub-tasks rotate every 4 seconds
+ * inside the active step — describing what's really happening in that
+ * block, not faking progress. As soon as the SSE event for the next
+ * block arrives, the active step ticks over and the rotation moves on.
+ */
+function GeneratingView({ steps }: { steps: StepDef[] }) {
+  const activeIdx = steps.findIndex((s) => s.active)
+  const [subIdx, setSubIdx] = useState(0)
+
+  // Reset and start cycling whenever a new step becomes active.
+  useEffect(() => {
+    setSubIdx(0)
+    if (activeIdx === -1) return
+    const subs = steps[activeIdx].sub
+    if (subs.length <= 1) return
+    const id = setInterval(() => {
+      setSubIdx((prev) => (prev + 1) % subs.length)
+    }, 4000)
+    return () => clearInterval(id)
+  }, [activeIdx, steps])
+
+  return (
+    <div className="w-full max-w-2xl space-y-6">
+      <div className="flex flex-col items-center gap-6 py-12">
+        <p className="text-lg text-foreground/80">Creating your quote page</p>
+        <ul className="flex flex-col gap-3 w-full max-w-md">
+          {steps.map((s, i) => {
+            const isActive = s.active
+            const subText = isActive ? s.sub[subIdx % s.sub.length] : null
+            return (
+              <li
+                key={i}
+                className={`flex items-start gap-3 text-sm transition-opacity ${
+                  s.done ? 'text-foreground' : isActive ? 'text-foreground' : 'text-foreground/40'
+                }`}
+              >
+                <span className="w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  {s.done ? (
+                    <span className="w-5 h-5 rounded-full bg-accent/15 text-accent flex items-center justify-center">
+                      <Check className="w-3 h-3" />
+                    </span>
+                  ) : isActive ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-foreground/20" />
+                  )}
+                </span>
+                <span className="flex-1">
+                  <span className="block">{s.label}</span>
+                  {subText && (
+                    <span
+                      key={subText}
+                      className="block text-xs text-foreground/50 mt-0.5 transition-opacity duration-300"
+                    >
+                      {subText}
+                    </span>
+                  )}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+        <p className="text-xs text-muted-foreground">This usually takes 30–60 seconds</p>
+      </div>
+    </div>
+  )
+}
+
 export default function ChatFlow() {
   const router = useRouter()
   const { getToken, isLoaded, isSignedIn } = useAuth()
@@ -251,53 +331,40 @@ export default function ChatFlow() {
         label: 'Drafting the trip overview',
         done: blocks.hero,
         active: !blocks.hero,
+        // Hero is fast (~4s) — single subtitle, no rotation needed.
+        sub: ['Pulling out title, dates, and pricing'],
       },
       {
         label: 'Building the itinerary, day by day',
         done: blocks.days,
         active: blocks.hero && !blocks.days,
+        // Days is the slow block (~17s). Keep the user engaged with
+        // sub-tasks that describe what's actually happening inside.
+        sub: [
+          'Sketching the route between stops',
+          'Picking key activities for each day',
+          'Adding meals and transitions',
+          'Aligning timing across the days',
+        ],
       },
       {
         label: 'Mapping locations and writing description',
         done: mapAndDescribeDone,
         active: blocks.days && !mapAndDescribeDone,
+        sub: [
+          'Plotting points on the map',
+          'Writing the trip description',
+        ],
       },
       {
         label: 'Final polish',
         done: blocks.validate,
         active: mapAndDescribeDone && !blocks.validate,
+        sub: ['Cross-checking everything'],
       },
     ]
     return (
-      <div className="w-full max-w-2xl space-y-6">
-        <div className="flex flex-col items-center gap-6 py-12">
-          <p className="text-lg text-foreground/80">Creating your quote page</p>
-          <ul className="flex flex-col gap-3 w-full max-w-md">
-            {steps.map((s, i) => (
-              <li
-                key={i}
-                className={`flex items-center gap-3 text-sm transition-opacity ${
-                  s.done ? 'text-foreground' : s.active ? 'text-foreground' : 'text-foreground/40'
-                }`}
-              >
-                <span className="w-5 h-5 flex items-center justify-center flex-shrink-0">
-                  {s.done ? (
-                    <span className="w-5 h-5 rounded-full bg-accent/15 text-accent flex items-center justify-center">
-                      <Check className="w-3 h-3" />
-                    </span>
-                  ) : s.active ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-accent" />
-                  ) : (
-                    <span className="w-2 h-2 rounded-full bg-foreground/20" />
-                  )}
-                </span>
-                <span>{s.label}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-xs text-muted-foreground">This usually takes 30–60 seconds</p>
-        </div>
-      </div>
+      <GeneratingView steps={steps} />
     )
   }
 
@@ -421,4 +488,5 @@ export default function ChatFlow() {
     </div>
   )
 }
+
 
