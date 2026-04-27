@@ -12,6 +12,18 @@ type Phase = 'idle' | 'sending' | 'chatting' | 'generating'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
+// Time-based fake progress steps. Total ~40s, calibrated to median pipeline
+// timing (Hero ~4s, Days ~17s, Overview/Locations/Validate ~12s combined).
+// If backend finishes earlier we fast-forward through remaining steps and
+// redirect; if it takes longer we stick on the last step with "Almost there…"
+const GEN_STEPS: { label: string; duration: number }[] = [
+  { label: 'Reading your brief',                 duration: 4000 },
+  { label: 'Mapping out the route',              duration: 6000 },
+  { label: 'Crafting day-by-day itinerary',      duration: 15000 },
+  { label: 'Picking highlights and locations',   duration: 9000 },
+  { label: 'Polishing the proposal',             duration: 6000 },
+]
+
 const ALLOWED_MIMES = [
   'application/pdf',
   'image/jpeg',
@@ -57,6 +69,11 @@ export default function ChatFlow() {
   const [projectId, setProjectId] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  // Fake-progress state for the generating phase
+  const [stepIndex, setStepIndex] = useState(0)
+  const [stuck, setStuck] = useState(false)
+  const [finishing, setFinishing] = useState(false)
+  const readySlugRef = useRef<string | null>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -80,13 +97,8 @@ export default function ChatFlow() {
             const data = await res.json()
             const status = data.project?.status
             if (status === 'quoted' || status === 'active' || status === 'completed') {
-              const realSlug = data.project?.slug || slug
-              try {
-                if (!isSignedIn) {
-                  sessionStorage.setItem(`waytico:anon-owns-${projectId}`, '1')
-                }
-              } catch {}
-              router.push(`/t/${realSlug}`)
+              readySlugRef.current = data.project?.slug || slug
+              setFinishing(true)
               return
             }
           }
@@ -96,7 +108,60 @@ export default function ChatFlow() {
     }
     poll()
     return () => { active = false }
-  }, [phase, projectId, slug, router, isSignedIn])
+  }, [phase, projectId, slug])
+
+  // Slow step advance during generation (idle until backend reports ready,
+  // then the fast-forward effect below takes over by setting `finishing`)
+  useEffect(() => {
+    if (phase !== 'generating' || finishing) return
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const tick = (idx: number) => {
+      if (cancelled) return
+      setStepIndex(idx)
+      if (idx >= GEN_STEPS.length - 1) {
+        // Last step is reached — once its duration is up, mark stuck.
+        timer = setTimeout(() => { if (!cancelled) setStuck(true) }, GEN_STEPS[idx].duration)
+        return
+      }
+      timer = setTimeout(() => tick(idx + 1), GEN_STEPS[idx].duration)
+    }
+    tick(0)
+
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
+  }, [phase, finishing])
+
+  // Fast-forward through remaining steps, then redirect.
+  useEffect(() => {
+    if (!finishing) return
+    let cancelled = false
+
+    const finish = async () => {
+      // Take whatever step we're on and march to the end with short ticks.
+      let i = stepIndex
+      while (i <= GEN_STEPS.length) {
+        if (cancelled) return
+        setStepIndex(i)
+        await new Promise(r => setTimeout(r, i === GEN_STEPS.length ? 450 : 220))
+        i += 1
+      }
+      if (cancelled) return
+      try {
+        if (!isSignedIn && projectId) {
+          sessionStorage.setItem(`waytico:anon-owns-${projectId}`, '1')
+        }
+      } catch {}
+      router.push(`/t/${readySlugRef.current || slug}`)
+    }
+    finish()
+
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finishing])
 
   const validateAndSetFile = (file: File): boolean => {
     if (file.size > MAX_FILE_SIZE) {
@@ -201,13 +266,76 @@ export default function ChatFlow() {
   }
 
   if (phase === 'generating') {
+    const total = GEN_STEPS.length
+    const progressPct = stepIndex >= total
+      ? 100
+      : stuck
+        ? 90
+        : Math.round(((stepIndex + 0.6) / total) * 100)
+
     return (
-      <div className="w-full max-w-2xl space-y-6">
-        <div className="flex flex-col items-center gap-4 py-12">
-          <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-          <p className="text-lg text-foreground/70">Creating your trip page…</p>
-          <p className="text-sm text-muted-foreground">This usually takes 30–60 seconds</p>
+      <div className="w-full max-w-xl mx-auto py-10">
+        {/* slim progress bar */}
+        <div className="w-full h-[3px] bg-secondary rounded-full overflow-hidden mb-10">
+          <div
+            className="h-full bg-accent transition-[width] duration-700 ease-out"
+            style={{ width: `${progressPct}%` }}
+          />
         </div>
+
+        {/* step list */}
+        <ul className="space-y-4">
+          {GEN_STEPS.map((step, i) => {
+            const isDone = i < stepIndex
+            const isActive = i === stepIndex && stepIndex < total
+            const isPending = i > stepIndex
+
+            return (
+              <li key={i} className="flex items-center gap-3">
+                <span className="w-5 h-5 flex items-center justify-center flex-shrink-0">
+                  {isDone && (
+                    <svg viewBox="0 0 20 20" className="w-5 h-5 text-accent" aria-hidden>
+                      <path
+                        d="M5 10.5l3.5 3.5L15 7"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                  {isActive && (
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-accent opacity-60 animate-ping" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent" />
+                    </span>
+                  )}
+                  {isPending && (
+                    <span className="block w-2 h-2 rounded-full bg-muted-foreground/25" />
+                  )}
+                </span>
+                <span
+                  className={
+                    isDone
+                      ? 'text-base text-muted-foreground'
+                      : isActive
+                        ? 'text-base text-foreground font-medium'
+                        : 'text-base text-muted-foreground/60'
+                  }
+                >
+                  {step.label}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+
+        <p className="text-sm text-muted-foreground text-center mt-10">
+          {stuck && stepIndex < total
+            ? 'Almost there…'
+            : 'This usually takes 30–60 seconds'}
+        </p>
       </div>
     )
   }
