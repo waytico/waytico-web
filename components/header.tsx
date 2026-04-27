@@ -22,16 +22,16 @@ export default function Header() {
           </SignedOut>
           <SignedIn>
             <Link
+              href="/"
+              className="inline-flex items-center gap-1 h-7 px-2.5 text-xs font-medium border border-accent/40 text-accent hover:bg-accent/10 transition-colors rounded-md"
+            >
+              <Plus className="w-3.5 h-3.5" /> New quote
+            </Link>
+            <Link
               href="/dashboard"
               className="text-foreground/70 hover:text-foreground transition-colors font-medium"
             >
               Dashboard
-            </Link>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 h-9 px-3.5 text-sm font-medium bg-accent text-accent-foreground hover:opacity-90 transition-opacity rounded-md"
-            >
-              <Plus className="w-4 h-4" /> New quote
             </Link>
             <UserButton afterSignOutUrl="/" />
           </SignedIn>
@@ -40,4 +40,5 @@ export default function Header() {
     </header>
   )
 }
+
 
