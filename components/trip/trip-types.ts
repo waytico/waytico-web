@@ -58,6 +58,7 @@ export type OwnerBrand = {
   brand_website?: string | null
   brand_logo_url?: string | null
   brand_tagline?: string | null
+  brand_terms?: string | null
 } | null
 
 export type ProjectLite = {

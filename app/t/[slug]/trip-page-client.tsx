@@ -589,21 +589,54 @@ export default function TripPageClient({ slug, initialData }: Props) {
   // forwards raw price fields + a single visibility flag.
   const priceVisible = ed || pricePerPersonNum != null || priceTotalNum != null
 
+  // Effective terms: per-trip override wins, otherwise inherit from the
+  // brand-level Default Terms set on the owner profile. This makes
+  // edits to brand_terms reflect on the trip page in real time without
+  // having to copy text into every trip — and per-trip terms still take
+  // precedence whenever they exist (operator override).
+  const tripTermsTrimmed = (p.terms || '').trim()
+  const brandTermsTrimmed = (owner?.brand_terms || '').trim()
+  const effectiveTerms = tripTermsTrimmed || brandTermsTrimmed || null
+  const termsAreInherited = !tripTermsTrimmed && !!brandTermsTrimmed
+
   const termsBodySlot: ReactNode = ed ? (
-    <EditableField
-      as="multiline"
-      editable
-      value={p.terms}
-      placeholder="Click to add terms"
-      rows={4}
-      className="w-full"
-      onSave={(v) => saveProjectPatch({ terms: v })}
-    />
+    <>
+      <EditableField
+        as="multiline"
+        editable
+        value={p.terms}
+        placeholder={
+          brandTermsTrimmed
+            ? 'Click to override the default terms for this trip'
+            : 'Click to add terms'
+        }
+        rows={4}
+        className="w-full"
+        onSave={(v) => saveProjectPatch({ terms: v })}
+        renderDisplay={() =>
+          effectiveTerms ? (
+            <DescriptionParagraphs text={effectiveTerms} />
+          ) : null
+        }
+      />
+      {termsAreInherited && (
+        <p
+          style={{
+            fontSize: 12,
+            color: 'var(--ink-mute)',
+            marginTop: 8,
+            fontStyle: 'italic',
+          }}
+        >
+          Showing your brand default terms. Click above to write trip-specific terms.
+        </p>
+      )}
+    </>
   ) : (
-    <DescriptionParagraphs text={p.terms} />
+    <DescriptionParagraphs text={effectiveTerms} />
   )
 
-  const termsVisible = ed || !!(p.terms && p.terms.trim())
+  const termsVisible = ed || !!effectiveTerms
 
   const overviewVisible = ed || !!(p.description && p.description.trim())
 
