@@ -508,32 +508,27 @@ export default function TripPageClient({ slug, initialData }: Props) {
     </span>
   ) : undefined
 
-  const priceStatSlot: ReactNode | undefined = ed ? (
-    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'baseline' }}>
-      <EditableField
-        as="text"
-        editable
-        value={p.currency || 'USD'}
-        placeholder="USD"
-        maxLength={3}
-        className="uppercase"
-        onSave={(v) => saveProjectPatch({ currency: v.toUpperCase() })}
-      />
-      <EditableField
-        as="number"
-        editable
-        value={heroHeadlineNum}
-        placeholder="0"
-        onSave={(v) =>
-          saveProjectPatch(
-            pricingMode === 'per_traveler'
-              ? { pricePerPerson: v }
-              : { priceTotal: v },
-          )
-        }
-      />
-    </span>
-  ) : undefined
+  // Hero price tile is read-only even in owner mode: actual editing happens
+  // in the Price block below, where the mode dropdown lives. A bare inline
+  // editor here would let the operator change the number without showing
+  // them that there's a "for the group / per traveler / other" choice
+  // attached to it — and one inline number can't represent the whole trio.
+  // Click scrolls down to the Price section instead.
+  const priceStatSlot: ReactNode | undefined = ed
+    ? (
+        <a
+          href="#price"
+          title="Edit in the Price section below"
+          style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
+          onClick={(e) => {
+            e.preventDefault()
+            document.getElementById('price')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }}
+        >
+          {heroHeadlineFormatted ?? <span style={{ color: 'var(--ink-mute)' }}>Add price</span>}
+        </a>
+      )
+    : undefined
 
   // Render an Included list block — owner mode: EditableField; public mode: parsed list.
   const includedBodySlot: ReactNode = (() => {
