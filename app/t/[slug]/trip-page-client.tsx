@@ -482,18 +482,33 @@ export default function TripPageClient({ slug, initialData }: Props) {
     </span>
   ) : undefined
 
-  const durationStatSlot: ReactNode | undefined = ed ? (
-    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'baseline' }}>
-      <EditableField
-        as="number"
-        editable
-        value={p.duration_days}
-        placeholder="0"
-        onSave={(v) => saveProjectPatch({ durationDays: v })}
-      />
-      <span style={{ color: 'var(--ink-mute)' }}>{UI.days}</span>
-    </span>
-  ) : undefined
+  // Hero duration tile is read-only even in owner mode. The tile is a
+  // computed reflection of the itinerary's length; editing it inline gave
+  // a false affordance — the operator could overwrite the number with
+  // anything and the days below didn't reshape to match (in fact the only
+  // robust way to change duration is to add/remove a day in the itinerary
+  // itself, which then propagates dates through reconcileDates on the
+  // backend). Click scrolls down to the Itinerary so the operator manages
+  // duration where it actually lives.
+  const durationStatSlot: ReactNode | undefined = ed
+    ? (
+        <a
+          href="#itinerary"
+          title="Add or remove days in the itinerary below"
+          style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
+          onClick={(e) => {
+            e.preventDefault()
+            document
+              .getElementById('itinerary')
+              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }}
+        >
+          {p.duration_days != null
+            ? `${p.duration_days} ${UI.days}`
+            : <span style={{ color: 'var(--ink-mute)' }}>—</span>}
+        </a>
+      )
+    : undefined
 
   const groupStatSlot: ReactNode | undefined = ed ? (
     <span style={{ display: 'inline-flex', gap: 4, alignItems: 'baseline' }}>
