@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useAuth, useClerk } from '@clerk/nextjs'
+import { useAuth } from '@clerk/nextjs'
 import { ChevronDown, ChevronRight, Loader2, Trash2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiFetch } from '@/lib/api'
@@ -19,6 +19,7 @@ type DefaultContacts = {
 type UserProfile = {
   id: string
   email: string | null
+  contact_email: string | null
   name: string | null
   business_name: string | null
   brand_logo_url: string | null
@@ -37,7 +38,6 @@ const CHANNELS: Array<{ key: ChannelKey; label: string; placeholder: string; typ
 
 export default function BrandCard() {
   const { getToken } = useAuth()
-  const { openUserProfile } = useClerk()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(false)
@@ -96,6 +96,15 @@ export default function BrandCard() {
 
   async function saveTagline(value: string): Promise<boolean> {
     return patchUser({ brandTagline: value || null })
+  }
+
+  async function saveContactEmail(value: string): Promise<boolean> {
+    const trimmed = value.trim()
+    if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      toast.error('Not a valid email')
+      return false
+    }
+    return patchUser({ contactEmail: trimmed || null })
   }
 
   async function saveContact(key: ChannelKey, value: string): Promise<boolean> {
@@ -169,7 +178,10 @@ export default function BrandCard() {
   const contacts = profile.default_contacts || {}
   const contactsCount = Object.values(contacts).filter((v) => v && v !== '').length
   const businessName = profile.business_name || 'Your business name'
-  const emailDisplay = profile.email || 'email pending'
+  // Public-facing email: contact_email (operator-edited) takes precedence,
+  // login email is the fallback so a fresh signup shows something useful.
+  const publicEmail = profile.contact_email || profile.email || ''
+  const emailDisplay = publicEmail || 'Add a contact email'
 
   // ─── Collapsed (default) ───────────────────────────────
   if (!expanded) {
@@ -195,9 +207,9 @@ export default function BrandCard() {
         <span className="text-foreground/30 text-sm hidden sm:inline">·</span>
         <button
           type="button"
-          onClick={() => openUserProfile()}
+          onClick={() => setExpanded(true)}
           className="text-sm text-foreground/60 hover:text-foreground hover:underline truncate hidden sm:inline-flex transition-colors"
-          aria-label="Edit email"
+          aria-label="Edit contact email"
         >
           {emailDisplay}
         </button>
@@ -292,19 +304,21 @@ export default function BrandCard() {
             className="text-sm text-foreground/70 block"
             inputClassName="text-sm"
           />
-          <button
-            type="button"
-            onClick={() => openUserProfile()}
-            className="text-xs text-foreground/50 hover:text-foreground hover:underline transition-colors font-sans inline-flex items-center gap-1.5 group/email"
-            aria-label="Edit email in account settings"
-          >
-            <span>
-              {profile.email || <span className="italic">Email pending — click to verify</span>}
-            </span>
-            <span className="text-[10px] text-foreground/30 group-hover/email:text-foreground/60">
-              · edit
-            </span>
-          </button>
+          <div className="pt-1">
+            <InlineText
+              value={profile.contact_email || profile.email || ''}
+              placeholder="your.business@email.com"
+              onSave={saveContactEmail}
+              className="text-xs text-foreground/60 block"
+              inputClassName="text-xs"
+            />
+            <p className="text-[10px] text-foreground/40 mt-0.5 px-2">
+              Public email shown to clients on every trip page.
+              {!profile.contact_email && profile.email && (
+                <> Currently using your login email — edit to use a different one.</>
+              )}
+            </p>
+          </div>
         </div>
 
         {/* Collapse */}
@@ -498,3 +512,4 @@ function ContactRow({ label, value, placeholder, type, onSave }: ContactRowProps
     </div>
   )
 }
+
