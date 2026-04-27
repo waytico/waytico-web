@@ -94,15 +94,6 @@ export function fmtPrice(amount: number | null | undefined, currency: string | n
 }
 
 /**
- * Currency glyph alone (e.g. `$`, `€`, `CA$`, `JPY `) — used in editable
- * price fields where the user types the number separately from the symbol.
- */
-export function currencySymbol(code: string | null | undefined): string {
-  const c = (code || 'USD').toUpperCase().trim()
-  return CURRENCY_GLYPH[c] || (/^[A-Z]{3}$/.test(c) ? `${c} ` : '$')
-}
-
-/**
  * Add N days to an ISO date and return ISO date (no time component).
  * Used for the proposal "valid until = today + 7 days" footer.
  */
