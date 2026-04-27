@@ -248,7 +248,7 @@ export default function BrandCard() {
             inputClassName="text-sm"
           />
           <p className="text-xs text-foreground/50 font-sans">
-            {profile.email}
+            {profile.email || <span className="italic">Email pending — verify in Account</span>}
           </p>
         </div>
 
