@@ -3,15 +3,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
-import { Check, Loader2, Plus, X, FileText, Image as ImageIcon, FileSpreadsheet, File as FileIcon } from 'lucide-react'
+import { Plus, X, FileText, Image as ImageIcon, FileSpreadsheet, File as FileIcon } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 
 type Message = { role: 'user' | 'assistant'; text: string }
 type Phase = 'idle' | 'sending' | 'chatting' | 'generating'
-
-type BlockName = 'hero' | 'days' | 'overview' | 'locations' | 'validate'
-type Blocks = Record<BlockName, boolean>
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
@@ -49,86 +46,6 @@ function truncateName(name: string, max = 32) {
   return base.slice(0, max - ext.length - 1) + '…' + ext
 }
 
-type StepDef = {
-  label: string
-  done: boolean
-  active: boolean
-  sub: string[]
-}
-
-/**
- * Generating view with sub-task rotation inside the active step.
- *
- * The pipeline emits 5 SSE events but the slowest block ("days") takes
- * ~17 seconds of OpenAI work between events. Without something to read,
- * the user thinks the page is frozen. Sub-tasks rotate every 4 seconds
- * inside the active step — describing what's really happening in that
- * block, not faking progress. As soon as the SSE event for the next
- * block arrives, the active step ticks over and the rotation moves on.
- */
-function GeneratingView({ steps }: { steps: StepDef[] }) {
-  const activeIdx = steps.findIndex((s) => s.active)
-  const [subIdx, setSubIdx] = useState(0)
-
-  // Reset and start cycling whenever a new step becomes active.
-  useEffect(() => {
-    setSubIdx(0)
-    if (activeIdx === -1) return
-    const subs = steps[activeIdx].sub
-    if (subs.length <= 1) return
-    const id = setInterval(() => {
-      setSubIdx((prev) => (prev + 1) % subs.length)
-    }, 4000)
-    return () => clearInterval(id)
-  }, [activeIdx, steps])
-
-  return (
-    <div className="w-full max-w-2xl space-y-6">
-      <div className="flex flex-col items-center gap-6 py-12">
-        <p className="text-lg text-foreground/80">Creating your quote page</p>
-        <ul className="flex flex-col gap-3 w-full max-w-md">
-          {steps.map((s, i) => {
-            const isActive = s.active
-            const subText = isActive ? s.sub[subIdx % s.sub.length] : null
-            return (
-              <li
-                key={i}
-                className={`flex items-start gap-3 text-sm transition-opacity ${
-                  s.done ? 'text-foreground' : isActive ? 'text-foreground' : 'text-foreground/40'
-                }`}
-              >
-                <span className="w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  {s.done ? (
-                    <span className="w-5 h-5 rounded-full bg-accent/15 text-accent flex items-center justify-center">
-                      <Check className="w-3 h-3" />
-                    </span>
-                  ) : isActive ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-accent" />
-                  ) : (
-                    <span className="w-2 h-2 rounded-full bg-foreground/20" />
-                  )}
-                </span>
-                <span className="flex-1">
-                  <span className="block">{s.label}</span>
-                  {subText && (
-                    <span
-                      key={subText}
-                      className="block text-xs text-foreground/50 mt-0.5 transition-opacity duration-300"
-                    >
-                      {subText}
-                    </span>
-                  )}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
-        <p className="text-xs text-muted-foreground">This usually takes 30–60 seconds</p>
-      </div>
-    </div>
-  )
-}
-
 export default function ChatFlow() {
   const router = useRouter()
   const { getToken, isLoaded, isSignedIn } = useAuth()
@@ -140,13 +57,6 @@ export default function ChatFlow() {
   const [projectId, setProjectId] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [blocks, setBlocks] = useState<Blocks>({
-    hero: false,
-    days: false,
-    overview: false,
-    locations: false,
-    validate: false,
-  })
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -158,38 +68,7 @@ export default function ChatFlow() {
     if (el) el.scrollTop = el.scrollHeight
   }, [messages])
 
-  // Stream pipeline progress via SSE (real-time block-done events).
-  // Polling below is the fallback that picks up state on first connect
-  // and drives the final redirect when status flips to "quoted".
-  useEffect(() => {
-    if (phase !== 'generating' || !projectId) return
-    const url = `${API_URL}/api/projects/${projectId}/stream`
-    const es = new EventSource(url)
-    es.onmessage = (msg) => {
-      try {
-        const event = JSON.parse(msg.data)
-        if (event.block && (event.status === undefined || event.status === 'ok')) {
-          setBlocks((prev) => ({ ...prev, [event.block as BlockName]: true }))
-        }
-        if (event.status === 'complete' || event.status === 'failed') {
-          es.close()
-        }
-      } catch {}
-    }
-    es.onerror = () => {
-      // Fall back to polling silently — generation_blocks in DB will be
-      // observed by the polling loop below.
-      es.close()
-    }
-    return () => {
-      es.close()
-    }
-  }, [phase, projectId])
-
-  // Poll by projectId after generation starts. Used only to drive the
-  // final redirect once status flips to 'quoted' — block-level progress
-  // comes from the SSE stream above (which replays already-completed
-  // blocks on connect, so this loop doesn't need to know about them).
+  // Poll by projectId after generation starts
   useEffect(() => {
     if (phase !== 'generating' || !projectId) return
     let active = true
@@ -322,49 +201,14 @@ export default function ChatFlow() {
   }
 
   if (phase === 'generating') {
-    // 4 logical steps mapped to backend pipeline blocks.
-    // overview + locations run in parallel — we collapse them into one
-    // visible step that completes only when both are done.
-    const mapAndDescribeDone = blocks.overview && blocks.locations
-    const steps = [
-      {
-        label: 'Drafting the trip overview',
-        done: blocks.hero,
-        active: !blocks.hero,
-        // Hero is fast (~4s) — single subtitle, no rotation needed.
-        sub: ['Pulling out title, dates, and pricing'],
-      },
-      {
-        label: 'Building the itinerary, day by day',
-        done: blocks.days,
-        active: blocks.hero && !blocks.days,
-        // Days is the slow block (~17s). Keep the user engaged with
-        // sub-tasks that describe what's actually happening inside.
-        sub: [
-          'Sketching the route between stops',
-          'Picking key activities for each day',
-          'Adding meals and transitions',
-          'Aligning timing across the days',
-        ],
-      },
-      {
-        label: 'Mapping locations and writing description',
-        done: mapAndDescribeDone,
-        active: blocks.days && !mapAndDescribeDone,
-        sub: [
-          'Plotting points on the map',
-          'Writing the trip description',
-        ],
-      },
-      {
-        label: 'Final polish',
-        done: blocks.validate,
-        active: mapAndDescribeDone && !blocks.validate,
-        sub: ['Cross-checking everything'],
-      },
-    ]
     return (
-      <GeneratingView steps={steps} />
+      <div className="w-full max-w-2xl space-y-6">
+        <div className="flex flex-col items-center gap-4 py-12">
+          <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          <p className="text-lg text-foreground/70">Creating your trip page…</p>
+          <p className="text-sm text-muted-foreground">This usually takes 30–60 seconds</p>
+        </div>
+      </div>
     )
   }
 
@@ -488,5 +332,4 @@ export default function ChatFlow() {
     </div>
   )
 }
-
 
