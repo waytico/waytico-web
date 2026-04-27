@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
-import { ChevronDown, ChevronRight, Plus, Search } from 'lucide-react'
+import { ChevronDown, ChevronRight, Search } from 'lucide-react'
 import BrandCard from '@/components/brand-card'
 import ChatFlow from '@/components/chat-flow'
 import Header from '@/components/header'
@@ -56,7 +56,6 @@ export default function DashboardPage() {
   const router = useRouter()
   const [projects, setProjects] = useState<Project[] | null>(null)
   const [archiveOpen, setArchiveOpen] = useState(false)
-  const [showNewTrip, setShowNewTrip] = useState(false)
   const [search, setSearch] = useState('')
 
   useEffect(() => {
@@ -124,7 +123,7 @@ export default function DashboardPage() {
           {/* Brand strip — always at top */}
           {isLoaded && projects !== null && <BrandCard />}
 
-          {/* Search + New trip */}
+          {/* Search */}
           {hasAnyTrip && (
             <div className="flex items-center gap-3 mb-6 px-4">
               <div className="relative flex-1 max-w-sm">
@@ -137,13 +136,6 @@ export default function DashboardPage() {
                   className="w-full pl-8 pr-3 h-9 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent"
                 />
               </div>
-              <button
-                type="button"
-                onClick={() => setShowNewTrip(true)}
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity rounded-md"
-              >
-                <Plus className="w-4 h-4" /> New trip
-              </button>
             </div>
           )}
 
@@ -160,35 +152,9 @@ export default function DashboardPage() {
           {isLoaded && projects !== null && projects.length === 0 && (
             <div className="mt-8 px-4">
               <h2 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-6 text-center">
-                Create your first trip
+                Create your first quote
               </h2>
               <ChatFlow />
-            </div>
-          )}
-
-          {/* New trip modal — overlay over dashboard */}
-          {showNewTrip && (
-            <div
-              className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center pt-12 px-4 overflow-y-auto"
-              onClick={() => setShowNewTrip(false)}
-            >
-              <div
-                className="bg-background rounded-lg shadow-2xl max-w-2xl w-full p-6 my-8"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-serif text-2xl font-bold">New trip</h2>
-                  <button
-                    type="button"
-                    onClick={() => setShowNewTrip(false)}
-                    className="text-foreground/60 hover:text-foreground"
-                    aria-label="Close"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <ChatFlow />
-              </div>
             </div>
           )}
 
@@ -266,3 +232,4 @@ export default function DashboardPage() {
     </>
   )
 }
+

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { Plus } from 'lucide-react'
 import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
 
 export default function Header() {
@@ -26,6 +27,12 @@ export default function Header() {
             >
               Dashboard
             </Link>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 text-sm font-medium bg-accent text-accent-foreground hover:opacity-90 transition-opacity rounded-md"
+            >
+              <Plus className="w-4 h-4" /> New quote
+            </Link>
             <UserButton afterSignOutUrl="/" />
           </SignedIn>
         </div>
@@ -33,3 +40,4 @@ export default function Header() {
     </header>
   )
 }
+
