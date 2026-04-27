@@ -495,6 +495,19 @@ export default function TripPageClient({ slug, initialData }: Props) {
     <DescriptionParagraphs text={p.description} />
   )
 
+  /**
+   * Hero lede — first paragraph of the description, used by Cinematic and
+   * Clean variants. Owner edits the full text in the Overview block; the
+   * lede here is read-only on purpose (avoid two competing edit affordances
+   * for the same field). Hidden when description is empty in either mode.
+   */
+  const heroLedeSlot: ReactNode = (() => {
+    const text = (p.description || '').trim()
+    if (!text) return null
+    const para = text.split(/\n\n+/)[0]
+    return para ? <span>{para}</span> : null
+  })()
+
   // ── Hero stat tiles — owner mode wraps each scalar with EditableField. ──
   // Removed after Hero was simplified to title+photo. Stats now live only
   // in the Overview block. Owner edits these scalars via the AI command bar.
@@ -806,11 +819,12 @@ export default function TripPageClient({ slug, initialData }: Props) {
             theme={resolvedTheme}
             heroPhoto={heroPhoto?.url || null}
             titleSlot={titleSlot}
+            activityTypeSlot={activityTypeSlot}
+            descriptionLedeSlot={heroLedeSlot}
             dateRangeSlot={dateRangeSlot}
             durationSlot={durationSlot}
             groupSizeSlot={groupSizeSlot}
             pricePerTravelerSlot={pricePerTravelerSlot}
-            activityTypeSlot={activityTypeSlot}
             regionSlot={regionSlot}
             countrySlot={countrySlot}
             ownerOverlay={
