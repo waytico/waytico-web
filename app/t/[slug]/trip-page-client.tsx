@@ -340,12 +340,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const hasHeroBg = !!heroPhoto
 
   // Proposal lifecycle dates — read from DB (auto-filled at create: today + 14d).
-  // Falls back to created_at-based defaults if missing for legacy projects.
+  // DB returns ISO timestamps like "2026-04-27T00:00:00.000Z"; fmtDate only
+  // accepts strict "YYYY-MM-DD", so slice. Falls back to created_at-based
+  // defaults if missing for legacy projects.
   const proposalDateISO: string | null =
-    p.proposal_date || (p.created_at ? p.created_at.slice(0, 10) : null)
+    (p.proposal_date ? String(p.proposal_date).slice(0, 10) : null) ||
+    (p.created_at ? String(p.created_at).slice(0, 10) : null)
   const validUntilISO: string | null =
-    p.valid_until ||
-    (p.created_at ? addDaysISO(p.created_at.slice(0, 10), 14) : null)
+    (p.valid_until ? String(p.valid_until).slice(0, 10) : null) ||
+    (p.created_at ? addDaysISO(String(p.created_at).slice(0, 10), 14) : null)
   const operatorContact = (p.operator_contact || null) as
     | { name?: string | null; email?: string | null; phone?: string | null; whatsapp?: string | null; telegram?: string | null; website?: string | null }
     | null
