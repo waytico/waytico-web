@@ -19,7 +19,7 @@ import { apiFetch } from '@/lib/api'
  * State is managed by the caller; this hook only mutates it via setters.
  */
 
-type ProjectPayload = { project: any; tasks: any[]; locations: any[]; media: any[] } | null
+type ProjectPayload = { project: any; tasks: any[]; media: any[] } | null
 
 type Options = {
   projectId: string | undefined

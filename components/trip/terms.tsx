@@ -1,23 +1,18 @@
 import type { ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
-import { fmtDate } from '@/lib/trip-format'
 
 type TermsProps = {
   /** Slot for the terms body — owner: EditableField, public: paragraph(s). */
   bodySlot: ReactNode
-  /** Today's ISO date — used for "Proposal · {today}" footer. */
-  proposalISO: string
-  /** Today + 7 days ISO — used for "Valid until {date}" footer. */
-  validUntilISO: string
   /** True when terms text exists OR owner mode wants the placeholder shown. */
   visible: boolean
 }
 
 /**
  * Terms — shared structure across all themes (TZ-6 §6.7).
- * Multi-paragraph terms body + colophon footer.
+ * Multi-paragraph terms body. Proposal/valid dates moved to Hero.
  */
-export function TripTerms({ bodySlot, proposalISO, validUntilISO, visible }: TermsProps) {
+export function TripTerms({ bodySlot, visible }: TermsProps) {
   if (!visible) return null
   return (
     <footer className="tp-terms" id="terms">
@@ -30,9 +25,6 @@ export function TripTerms({ bodySlot, proposalISO, validUntilISO, visible }: Ter
         <div className="tp-terms-body">{bodySlot}</div>
         <div className="tp-foot">
           <span>Waytico · waytico.com</span>
-          <span>
-            {`${UI.proposal} · ${fmtDate(proposalISO)}`} · {UI.validUntil} {fmtDate(validUntilISO)}
-          </span>
         </div>
       </div>
     </footer>

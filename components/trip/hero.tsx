@@ -2,6 +2,16 @@ import type { ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
 import type { ThemeId } from '@/lib/themes'
 import { HERO_STYLE } from '@/lib/themes'
+import { fmtDate } from '@/lib/trip-format'
+
+export type HeroOperatorContact = {
+  name?: string | null
+  email?: string | null
+  phone?: string | null
+  whatsapp?: string | null
+  telegram?: string | null
+  website?: string | null
+} | null | undefined
 
 type HeroProps = {
   theme: ThemeId
@@ -34,12 +44,90 @@ type HeroProps = {
    *  delete-hero button, "Add hero photo" empty state). When present, the
    *  themed component still renders — we just paint the chrome on top. */
   ownerOverlay?: ReactNode
+  /** Proposal lifecycle dates (ISO YYYY-MM-DD). Render as a small top-right
+   *  validity badge across all theme variants. Hidden if both null. */
+  proposalDate?: string | null
+  validUntil?: string | null
+  /** Operator contact strip rendered at the bottom of the meta block.
+   *  Hidden if every channel is empty. Theme-tokenised, no chrome styling. */
+  operatorContact?: HeroOperatorContact
+  /** Whether overlay theme is in light/dark mode — affects validity badge color */
+  isDarkBg?: boolean
 }
 
 function StatusPill({ status }: { status: string | null | undefined }) {
   if (!status) return null
   if (!['quoted', 'active', 'completed'].includes(status)) return null
   return <span className="tp-status">{UI.status[status] || status}</span>
+}
+
+/** Top-right badge: Proposal · {date} / Valid until {date}.
+ *  Positioned absolutely — relies on the parent header carrying position:relative. */
+function ValidityBadge({
+  proposalDate,
+  validUntil,
+  onPhoto = false,
+}: {
+  proposalDate?: string | null
+  validUntil?: string | null
+  onPhoto?: boolean
+}) {
+  if (!proposalDate && !validUntil) return null
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        zIndex: 3,
+        textAlign: 'right',
+        fontSize: 11,
+        lineHeight: 1.5,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        fontFamily: 'var(--font-mono)',
+        color: onPhoto ? 'rgba(255,255,255,0.85)' : 'var(--ink-mute)',
+        textShadow: onPhoto ? '0 1px 4px rgba(0,0,0,0.4)' : undefined,
+        pointerEvents: 'none',
+      }}
+    >
+      {proposalDate && <div>{UI.proposal} · {fmtDate(proposalDate)}</div>}
+      {validUntil && <div>{UI.validUntil} {fmtDate(validUntil)}</div>}
+    </div>
+  )
+}
+
+/** Bottom-of-meta operator contact strip: "From {name} · {email} · {phone}". */
+function OperatorStrip({ contact }: { contact: HeroOperatorContact }) {
+  if (!contact) return null
+  const parts: string[] = []
+  if (contact.name) parts.push(contact.name as string)
+  if (contact.email) parts.push(contact.email as string)
+  if (contact.phone) parts.push(contact.phone as string)
+  if (parts.length === 0) return null
+  return (
+    <div
+      style={{
+        marginTop: 20,
+        paddingTop: 16,
+        borderTop: '1px solid var(--rule)',
+        fontSize: 13,
+        color: 'var(--ink-soft)',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 6,
+        alignItems: 'baseline',
+      }}
+    >
+      <span style={{ opacity: 0.7 }}>From</span>
+      {parts.map((p, i) => (
+        <span key={i} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
+          {i > 0 && <span style={{ opacity: 0.4 }}>·</span>}
+          <span>{p}</span>
+        </span>
+      ))}
+    </div>
+  )
 }
 
 /**
@@ -56,7 +144,7 @@ function StatusPill({ status }: { status: string | null | undefined }) {
  * CTA, drag indicator) are passed in via slot props.
  */
 export function TripHero(props: HeroProps) {
-  const { theme, heroPhoto, status, ownerOverlay } = props
+  const { theme, heroPhoto, status, ownerOverlay, proposalDate, validUntil, operatorContact } = props
   const heroStyle = HERO_STYLE[theme]
 
   // Shared meta block — same data, same labels, restyled per theme via tokens.
@@ -74,16 +162,18 @@ export function TripHero(props: HeroProps) {
         </p>
       )}
       <HeroStats {...props} />
+      <OperatorStrip contact={operatorContact} />
     </>
   )
 
   if (heroStyle === 'overlay') {
     return (
-      <header className="tp-hero--overlay">
+      <header className="tp-hero--overlay" style={{ position: 'relative' }}>
         <div
           className="tp-hero-bg"
           style={heroPhoto ? { backgroundImage: `url(${heroPhoto})` } : undefined}
         />
+        <ValidityBadge proposalDate={proposalDate} validUntil={validUntil} onPhoto={!!heroPhoto} />
         <div className="tp-container" style={{ position: 'relative', zIndex: 1 }}>
           <div className="tp-hero-meta">{meta}</div>
         </div>
@@ -94,7 +184,8 @@ export function TripHero(props: HeroProps) {
 
   if (heroStyle === 'card') {
     return (
-      <header>
+      <header style={{ position: 'relative' }}>
+        <ValidityBadge proposalDate={proposalDate} validUntil={validUntil} />
         <div className="tp-container tp-hero--card">
           <div className="tp-hero-meta" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -108,6 +199,7 @@ export function TripHero(props: HeroProps) {
                 {props.descriptionSlot}
               </p>
             )}
+            <OperatorStrip contact={operatorContact} />
           </div>
           <aside className="tp-hero-card-side">
             <CardSideStat label="Dates" valueSlot={props.dateStatSlot} fallback={props.dateRange} />
@@ -140,7 +232,8 @@ export function TripHero(props: HeroProps) {
 
   // split — editorial (default)
   return (
-    <header>
+    <header style={{ position: 'relative' }}>
+      <ValidityBadge proposalDate={proposalDate} validUntil={validUntil} />
       <div className="tp-container tp-hero--split">
         <div className="tp-hero-meta">{meta}</div>
         <div

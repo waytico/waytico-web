@@ -36,22 +36,15 @@ import {
   fmtDateRange,
   fmtPrice,
   coercePrice,
-  todayISO,
   addDaysISO,
 } from '@/lib/trip-format'
 import { useTripMutations } from '@/hooks/use-trip-mutations'
 import { usePhotoUpload, type MediaRecord } from '@/hooks/use-photo-upload'
 import { useTripData } from '@/hooks/use-trip-data'
 
-type Location = {
-  id: string; name: string; type: string
-  latitude: string; longitude: string
-  day_number: number; notes: string | null
-}
-
 type Props = {
   slug: string
-  initialData: { project: Record<string, any>; tasks: any[]; locations: Location[]; media: any[] } | null
+  initialData: { project: Record<string, any>; tasks: any[]; media: any[] } | null
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
@@ -346,8 +339,16 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const heroPhoto = media.find((m) => m.placement === 'hero') || null
   const hasHeroBg = !!heroPhoto
 
-  const today = todayISO()
-  const validUntil = addDaysISO(today, 7)
+  // Proposal lifecycle dates — read from DB (auto-filled at create: today + 14d).
+  // Falls back to created_at-based defaults if missing for legacy projects.
+  const proposalDateISO: string | null =
+    p.proposal_date || (p.created_at ? p.created_at.slice(0, 10) : null)
+  const validUntilISO: string | null =
+    p.valid_until ||
+    (p.created_at ? addDaysISO(p.created_at.slice(0, 10), 14) : null)
+  const operatorContact = (p.operator_contact || null) as
+    | { name?: string | null; email?: string | null; phone?: string | null; whatsapp?: string | null; telegram?: string | null; website?: string | null }
+    | null
 
   // ── Slot builders (owner mode wraps with EditableField, public uses static values) ──
 
@@ -835,6 +836,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
             durationStatSlot={durationStatSlot}
             groupStatSlot={groupStatSlot}
             priceStatSlot={priceStatSlot}
+            proposalDate={proposalDateISO}
+            validUntil={validUntilISO}
+            operatorContact={operatorContact}
             ownerOverlay={
               showOwnerUI ? (
                 <HeroOwnerOverlay
@@ -916,8 +920,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
         <TripTerms
           bodySlot={termsBodySlot}
-          proposalISO={today}
-          validUntilISO={validUntil}
           visible={termsVisible}
         />
 
