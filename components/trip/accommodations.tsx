@@ -1,8 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { useAuth } from '@clerk/nextjs'
+import { toast } from 'sonner'
 import { UI } from '@/lib/ui-strings'
 import type { Accommodation, Mutations } from './trip-types'
+import { uploadAccommodationPhoto, ALLOWED_MIME, MAX_FILE_SIZE } from '@/lib/upload-photo'
 
 type Props = {
   accommodations: Accommodation[]
@@ -77,15 +80,13 @@ function AccommodationCard({
 
   return (
     <article className="tp-acc-card">
-      {item.image_url ? (
-        <div
-          className="tp-acc-photo"
-          style={{ backgroundImage: `url(${item.image_url})` }}
-          aria-label={item.name}
-        />
-      ) : (
-        <div className="tp-acc-photo tp-acc-photo--empty" aria-hidden="true" />
-      )}
+      <AccommodationPhoto
+        item={item}
+        editable={editable}
+        onChange={async (cdnUrl) => {
+          if (onUpdate) await onUpdate(item.id, { imageUrl: cdnUrl })
+        }}
+      />
 
       <div className="tp-acc-body">
         {editingName ? (
@@ -175,6 +176,117 @@ function AccommodationCard({
         )}
       </div>
     </article>
+  )
+}
+
+/* ── Photo (click + drop to upload) ── */
+
+function AccommodationPhoto({
+  item,
+  editable,
+  onChange,
+}: {
+  item: Accommodation
+  editable: boolean
+  onChange: (cdnUrl: string) => Promise<void>
+}) {
+  const { getToken } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+  const inputRef = useRef<HTMLInputElement | null>(null)
+
+  // Public mode: render the photo as-is, or hide the block when there's none.
+  if (!editable) {
+    if (!item.image_url) return null
+    return (
+      <div
+        className="tp-acc-photo"
+        style={{ backgroundImage: `url(${item.image_url})` }}
+        aria-label={item.name}
+      />
+    )
+  }
+
+  const handleFile = async (file: File) => {
+    if (busy) return
+    if (!ALLOWED_MIME.includes(file.type)) {
+      toast.error('Use JPEG, PNG, or WebP.')
+      return
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(`File too large (max ${MAX_FILE_SIZE / 1024 / 1024}MB).`)
+      return
+    }
+    setBusy(true)
+    try {
+      const token = await getToken()
+      if (!token) {
+        toast.error('Sign in to upload')
+        return
+      }
+      const { cdnUrl } = await uploadAccommodationPhoto(item.id, file, token)
+      await onChange(cdnUrl)
+    } catch (e: any) {
+      toast.error(e?.message || 'Upload failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onClick = () => {
+    if (!busy) inputRef.current?.click()
+  }
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) handleFile(file)
+  }
+
+  const hasPhoto = !!item.image_url
+
+  return (
+    <div
+      className={`tp-acc-photo${hasPhoto ? '' : ' tp-acc-photo--empty'}${
+        dragOver ? ' tp-acc-photo--drag' : ''
+      }`}
+      style={hasPhoto ? { backgroundImage: `url(${item.image_url})` } : undefined}
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+      onDragOver={(e) => {
+        e.preventDefault()
+        setDragOver(true)
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={onDrop}
+      aria-label={hasPhoto ? `Replace photo for ${item.name}` : `Add photo for ${item.name}`}
+    >
+      {/* Hint overlay — shown when empty (always) or when busy/hovering with a photo. */}
+      {(!hasPhoto || busy || dragOver) && (
+        <div className="tp-acc-photo-hint">
+          {busy ? 'Uploading…' : hasPhoto ? 'Replace photo' : '+ Add photo'}
+        </div>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) handleFile(f)
+          e.target.value = ''
+        }}
+      />
+    </div>
   )
 }
 

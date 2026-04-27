@@ -203,3 +203,56 @@ export async function fetchOwnerMedia(
   const { media } = (await res.json()) as { media: MediaRecord[] }
   return media
 }
+
+/**
+ * Upload a single image and return its CDN URL — used for accommodation
+ * card photos. Two steps: presign via the accommodation endpoint, then
+ * PUT to S3. The caller is responsible for then PATCHing the
+ * accommodation with imageUrl=cdnUrl (we don't do it here so the UI can
+ * decide whether to apply optimistically before the PATCH lands).
+ */
+export async function uploadAccommodationPhoto(
+  accommodationId: string,
+  file: File,
+  token: string,
+): Promise<{ cdnUrl: string }> {
+  if (!ALLOWED_MIME.includes(file.type)) {
+    throw new Error(`Unsupported format: ${file.type || 'unknown'}. Use JPEG, PNG, or WebP.`)
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 15MB.`)
+  }
+
+  const presignRes = await apiFetch(
+    `/api/accommodations/${accommodationId}/photo/presign`,
+    {
+      method: 'POST',
+      token,
+      body: JSON.stringify({
+        fileName: file.name,
+        contentType: file.type,
+        fileSize: file.size,
+      }),
+    },
+  )
+  if (!presignRes.ok) {
+    const err = await presignRes.json().catch(() => ({}))
+    throw new Error(err.error || `Presign failed (${presignRes.status})`)
+  }
+  const { uploadUrl, cdnUrl } = (await presignRes.json()) as {
+    uploadUrl: string
+    cdnUrl: string
+    key: string
+  }
+
+  const putRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  })
+  if (!putRes.ok) {
+    throw new Error(`Upload to S3 failed (${putRes.status})`)
+  }
+
+  return { cdnUrl }
+}
