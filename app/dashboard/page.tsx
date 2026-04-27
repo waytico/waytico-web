@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import BrandCard from '@/components/brand-card'
 import ChatFlow from '@/components/chat-flow'
 import Header from '@/components/header'
 import ProjectCard, { type Project, type ProjectStatus } from '@/components/project-card'
@@ -145,6 +146,10 @@ export default function DashboardPage() {
         <main className="max-w-4xl mx-auto px-4 py-10">
           {(!isLoaded || projects === null) && <SkeletonList />}
 
+          {isLoaded && projects !== null && (
+            <BrandCard />
+          )}
+
           {isLoaded && projects !== null && projects.length === 0 && <EmptyState />}
 
           {isLoaded && projects !== null && projects.length > 0 && groups && (
@@ -252,3 +257,4 @@ export default function DashboardPage() {
     </>
   )
 }
+
