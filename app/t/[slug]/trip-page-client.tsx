@@ -420,33 +420,23 @@ export default function TripPageClient({ slug, initialData }: Props) {
       </span>
     ) : null
 
+  // Region was removed from the hero eyebrow — operators kept leaving it empty
+  // or duplicating the country, and the noise outweighed the clarity. The
+  // column stays in the DB so historical data isn't lost; it just doesn't
+  // render here anymore. Eyebrow now shows only the country.
   const regionEyebrowSlot: ReactNode | null =
-    p.region || p.country || ed ? (
+    p.country || ed ? (
       <span className="tp-eyebrow">
         {ed ? (
-          <>
-            <EditableField
-              as="text"
-              editable
-              value={p.region}
-              placeholder="Region"
-              onSave={(v) => saveProjectPatch({ region: v })}
-            />
-            {(p.country || ed) && (
-              <>
-                <span style={{ opacity: 0.6 }}>, </span>
-                <EditableField
-                  as="text"
-                  editable
-                  value={p.country}
-                  placeholder="Country"
-                  onSave={(v) => saveProjectPatch({ country: v })}
-                />
-              </>
-            )}
-          </>
+          <EditableField
+            as="text"
+            editable
+            value={p.country}
+            placeholder="Country"
+            onSave={(v) => saveProjectPatch({ country: v })}
+          />
         ) : (
-          [p.region, p.country].filter(Boolean).join(', ').toUpperCase()
+          (p.country || '').toUpperCase()
         )}
       </span>
     ) : null

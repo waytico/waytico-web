@@ -15,11 +15,28 @@ const CURRENCY_GLYPH: Record<string, string> = {
   CHF: 'CHF ',
 }
 
+const ISO_DATE_HEAD_RE = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * Reduce any ISO-shaped value to bare YYYY-MM-DD. Postgres TIMESTAMPTZ
+ * serialises as "2026-06-17T00:00:00.000Z" — passing that into other
+ * formatters that then concatenate `T00:00:00` produces nonsense like
+ * "2026-06-17T00:00:00.000ZT00:00:00" → Invalid Date → null. Slice the
+ * head and validate. Returns null for anything that still doesn't match.
+ */
+function toDateHead(v: string | null | undefined): string | null {
+  if (typeof v !== 'string' || v.length < 10) return null
+  const head = v.slice(0, 10)
+  return ISO_DATE_HEAD_RE.test(head) ? head : null
+}
+
 /** "Jun 18–21, 2026" if same month, else "Jun 18 – Jul 2, 2026". */
 export function fmtDateRange(startISO: string | null | undefined, endISO: string | null | undefined): string | null {
-  if (!startISO || !endISO) return null
-  const s = new Date(`${startISO}T00:00:00`)
-  const e = new Date(`${endISO}T00:00:00`)
+  const a = toDateHead(startISO)
+  const b = toDateHead(endISO)
+  if (!a || !b) return null
+  const s = new Date(`${a}T00:00:00`)
+  const e = new Date(`${b}T00:00:00`)
   if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null
   const sameMonth = s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()
   if (sameMonth) {
@@ -30,8 +47,9 @@ export function fmtDateRange(startISO: string | null | undefined, endISO: string
 
 /** "Apr 22, 2026" */
 export function fmtDate(iso: string | null | undefined): string | null {
-  if (!iso) return null
-  const d = new Date(`${iso}T00:00:00`)
+  const head = toDateHead(iso)
+  if (!head) return null
+  const d = new Date(`${head}T00:00:00`)
   if (Number.isNaN(d.getTime())) return null
   return `${MONTH_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`
 }
@@ -40,20 +58,20 @@ export function fmtDate(iso: string | null | undefined): string | null {
  * Format a single day's date with weekday for itinerary entries.
  * "Jun 9, Tuesday" (en), "9 июня, вторник" (ru), "9 de junio, martes" (es), etc.
  *
- * Accepts only strict ISO YYYY-MM-DD; anything else returns null so legacy
- * values like "May 11" don't render as broken `Invalid Date` strings.
+ * Accepts strict ISO YYYY-MM-DD or full TIMESTAMPTZ; both are normalised.
+ * Anything else returns null so legacy values like "May 11" don't render as
+ * broken `Invalid Date` strings.
  *
  * Locale comes from the project's language; defaults to 'en' if unknown.
  * Locales the runtime can't resolve fall back to en-US automatically.
  */
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-
 export function fmtDayDate(
   iso: string | null | undefined,
   language?: string | null,
 ): string | null {
-  if (!iso || !ISO_DATE_RE.test(iso)) return null
-  const d = new Date(`${iso}T00:00:00`)
+  const head = toDateHead(iso)
+  if (!head) return null
+  const d = new Date(`${head}T00:00:00`)
   if (Number.isNaN(d.getTime())) return null
   const lang = language && language.length > 0 ? language : 'en'
   try {
