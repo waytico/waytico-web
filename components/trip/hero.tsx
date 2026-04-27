@@ -48,6 +48,10 @@ type HeroProps = {
    *  validity badge across all theme variants. Hidden if both null. */
   proposalDate?: string | null
   validUntil?: string | null
+  /** Owner-mode slots that wrap the dates with EditableField. When passed,
+   *  override the formatted scalar inside the badge. */
+  proposalSlot?: ReactNode
+  validUntilSlot?: ReactNode
   /** Operator contact strip rendered at the bottom of the meta block.
    *  Hidden if every channel is empty. Theme-tokenised, no chrome styling. */
   operatorContact?: HeroOperatorContact
@@ -67,12 +71,18 @@ function ValidityBadge({
   proposalDate,
   validUntil,
   onPhoto = false,
+  proposalSlot,
+  validUntilSlot,
 }: {
   proposalDate?: string | null
   validUntil?: string | null
   onPhoto?: boolean
+  /** When provided, replaces the proposal-line text. Used by the owner page
+   *  to wrap the date in an EditableField. */
+  proposalSlot?: ReactNode
+  validUntilSlot?: ReactNode
 }) {
-  if (!proposalDate && !validUntil) return null
+  if (!proposalDate && !validUntil && !proposalSlot && !validUntilSlot) return null
   return (
     <div
       style={{
@@ -88,11 +98,18 @@ function ValidityBadge({
         fontFamily: 'var(--font-mono)',
         color: onPhoto ? 'rgba(255,255,255,0.85)' : 'var(--ink-mute)',
         textShadow: onPhoto ? '0 1px 4px rgba(0,0,0,0.4)' : undefined,
-        pointerEvents: 'none',
       }}
     >
-      {proposalDate && <div>{UI.proposal} · {fmtDate(proposalDate)}</div>}
-      {validUntil && <div>{UI.validUntil} {fmtDate(validUntil)}</div>}
+      {(proposalSlot || proposalDate) && (
+        <div>
+          {UI.proposal} · {proposalSlot ?? (proposalDate ? fmtDate(proposalDate) : null)}
+        </div>
+      )}
+      {(validUntilSlot || validUntil) && (
+        <div>
+          {UI.validUntil} {validUntilSlot ?? (validUntil ? fmtDate(validUntil) : null)}
+        </div>
+      )}
     </div>
   )
 }
@@ -173,7 +190,7 @@ export function TripHero(props: HeroProps) {
           className="tp-hero-bg"
           style={heroPhoto ? { backgroundImage: `url(${heroPhoto})` } : undefined}
         />
-        <ValidityBadge proposalDate={proposalDate} validUntil={validUntil} onPhoto={!!heroPhoto} />
+        <ValidityBadge proposalDate={proposalDate} validUntil={validUntil} proposalSlot={props.proposalSlot} validUntilSlot={props.validUntilSlot} onPhoto={!!heroPhoto} />
         <div className="tp-container" style={{ position: 'relative', zIndex: 1 }}>
           <div className="tp-hero-meta">{meta}</div>
         </div>
@@ -185,7 +202,7 @@ export function TripHero(props: HeroProps) {
   if (heroStyle === 'card') {
     return (
       <header style={{ position: 'relative' }}>
-        <ValidityBadge proposalDate={proposalDate} validUntil={validUntil} />
+        <ValidityBadge proposalDate={proposalDate} validUntil={validUntil} proposalSlot={props.proposalSlot} validUntilSlot={props.validUntilSlot} />
         <div className="tp-container tp-hero--card">
           <div className="tp-hero-meta" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -233,7 +250,7 @@ export function TripHero(props: HeroProps) {
   // split — editorial (default)
   return (
     <header style={{ position: 'relative' }}>
-      <ValidityBadge proposalDate={proposalDate} validUntil={validUntil} />
+      <ValidityBadge proposalDate={proposalDate} validUntil={validUntil} proposalSlot={props.proposalSlot} validUntilSlot={props.validUntilSlot} />
       <div className="tp-container tp-hero--split">
         <div className="tp-hero-meta">{meta}</div>
         <div

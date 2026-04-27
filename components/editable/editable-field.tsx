@@ -57,9 +57,24 @@ function toIsoDate(v: string | null | undefined): string {
   if (!v) return ''
   // already YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
-  const d = new Date(v)
-  if (isNaN(d.getTime())) return ''
-  return d.toISOString().slice(0, 10)
+  // Postgres TIMESTAMPTZ comes back as "2026-06-08T00:00:00.000Z" — slice the
+  // first 10 chars and validate. Never round-trip through `new Date(v)` here:
+  // the Z suffix would force UTC parsing, then rendering in a negative-offset
+  // local zone (e.g. Vancouver -7/-8) flips the date back by one day.
+  const head = typeof v === 'string' ? v.slice(0, 10) : ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(head)) return head
+  return ''
+}
+
+/** Format YYYY-MM-DD as "Jun 8, 2026" without going through Date() — pure
+ *  string manipulation so timezone offsets can never shift the day. */
+function fmtIsoDate(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  if (!m) return iso
+  const [, y, mo, d] = m
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  return `${months[parseInt(mo, 10) - 1]} ${parseInt(d, 10)}, ${y}`
 }
 
 export function EditableField(props: Props) {
@@ -100,7 +115,7 @@ export function EditableField(props: Props) {
     if (props.as === 'date') {
       const fmt = props.formatDisplay
         ? props.formatDisplay(displayStr)
-        : new Date(displayStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : fmtIsoDate(displayStr)
       return <span className={props.className}>{fmt}</span>
     }
     if (props.as === 'number') {
@@ -210,7 +225,7 @@ export function EditableField(props: Props) {
       if (props.as === 'date') {
         const fmt = props.formatDisplay
           ? props.formatDisplay(displayStr)
-          : new Date(displayStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : fmtIsoDate(displayStr)
         return (
           <span
             role="button"

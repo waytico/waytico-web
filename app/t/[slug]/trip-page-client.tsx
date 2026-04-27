@@ -434,7 +434,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             />
             {(p.country || ed) && (
               <>
-                {p.region ? ', ' : ''}
+                <span style={{ opacity: 0.6 }}>, </span>
                 <EditableField
                   as="text"
                   editable
@@ -829,6 +829,26 @@ export default function TripPageClient({ slug, initialData }: Props) {
             priceStatSlot={priceStatSlot}
             proposalDate={proposalDateISO}
             validUntil={validUntilISO}
+            proposalSlot={
+              ed ? (
+                <EditableField
+                  as="date"
+                  editable
+                  value={proposalDateISO}
+                  onSave={(v) => saveProjectPatch({ proposalDate: v || null })}
+                />
+              ) : undefined
+            }
+            validUntilSlot={
+              ed ? (
+                <EditableField
+                  as="date"
+                  editable
+                  value={validUntilISO}
+                  onSave={(v) => saveProjectPatch({ validUntil: v || null })}
+                />
+              ) : undefined
+            }
             operatorContact={operatorContact}
             ownerOverlay={
               showOwnerUI ? (
