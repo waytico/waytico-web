@@ -15,7 +15,7 @@ export default function Home() {
               <Sparkles className="w-4 h-4 text-accent flex-shrink-0 mt-0.5 sm:mt-0" />
               <p className="text-sm text-foreground/80 leading-snug">
                 <span className="font-medium text-foreground">New here?</span>{' '}
-                Tell us about a tour below — we&apos;ll turn it into a shareable proposal page you can send to clients. No signup needed to try.
+                Describe a trip your client is asking about. We&apos;ll turn it into a polished proposal page you can share with them. No signup needed to try.
               </p>
             </div>
           </SignedOut>
@@ -31,4 +31,5 @@ export default function Home() {
     </div>
   )
 }
+
 
