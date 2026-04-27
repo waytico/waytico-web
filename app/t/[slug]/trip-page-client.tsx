@@ -27,6 +27,8 @@ import { TripItinerary } from '@/components/trip/itinerary'
 import { TripIncluded, IncludedList } from '@/components/trip/included'
 import { TripPrice } from '@/components/trip/price'
 import { TripTerms } from '@/components/trip/terms'
+import { TripAccommodations } from '@/components/trip/accommodations'
+import { TripContacts } from '@/components/trip/contacts'
 import { HeroOwnerOverlay, HeroDropZone } from '@/components/trip/owner-extras'
 
 import { apiFetch } from '@/lib/api'
@@ -134,8 +136,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
     saveProjectPatch,
     saveTaskPatch,
     saveDayPatch,
-    saveSegmentPatch,
     saveWhatToBring,
+    saveAccommodationCreate,
+    saveAccommodationPatch,
+    saveAccommodationDelete,
     handleDeleteProject: _handleDeleteProject,
   } = useTripMutations({
     projectId: data?.project?.id,
@@ -324,6 +328,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
   const p = data.project
   const itinerary: any[] = Array.isArray(p.itinerary) ? p.itinerary : []
+  const accommodations: any[] = Array.isArray((data as any).accommodations) ? (data as any).accommodations : []
+  const owner = ((data as any).owner || null) as any
   const shareUrl = `${APP_URL}/t/${slug}`
   const ed = showOwnerUI
 
@@ -368,12 +374,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
     p.title || ''
   )
 
-  const firstParagraph = (text: string | null | undefined): string | null => {
-    if (!text) return null
-    const para = text.split('\n\n')[0]
-    return para || null
-  }
-
   const overviewBodySlot: ReactNode = ed ? (
     <EditableField
       as="multiline"
@@ -388,14 +388,18 @@ export default function TripPageClient({ slug, initialData }: Props) {
     <DescriptionParagraphs text={p.description} />
   )
 
-  const heroDescriptionSlot: ReactNode = (() => {
-    const para = firstParagraph(p.description)
-    if (ed) {
-      // Show first paragraph plain — full editing happens in Overview body.
-      return para ? <span>{para}</span> : null
-    }
-    return para
-  })()
+  const heroTaglineSlot: ReactNode = ed ? (
+    <EditableField
+      as="text"
+      editable
+      value={p.tagline}
+      placeholder="Add a one-line subtitle"
+      maxLength={300}
+      onSave={(v) => saveProjectPatch({ tagline: v })}
+    />
+  ) : (
+    p.tagline ? <span>{p.tagline}</span> : null
+  )
 
   const activityChipSlot: ReactNode | null =
     p.activity_type || ed ? (
@@ -639,22 +643,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
     return day.description || null
   }
 
-  const renderSegmentTitle = (day: any, s: any): ReactNode =>
-    ed ? (
-      <EditableField
-        as="text"
-        editable
-        value={s.title}
-        required
-        className="w-full"
-        onSave={(v) =>
-          day.id && s.id ? saveSegmentPatch(day.id, s.id, { title: v }) : Promise.resolve(false)
-        }
-      />
-    ) : (
-      s.title || ''
-    )
-
   const renderDayExtras = (day: any): ReactNode => {
     if (!ed && !day.id) return null
     const dayMedia = media.filter((m) => m.day_id && m.day_id === day.id)
@@ -834,7 +822,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             activityChipSlot={activityChipSlot}
             regionEyebrowSlot={regionEyebrowSlot}
             titleSlot={titleSlot}
-            descriptionSlot={heroDescriptionSlot}
+            taglineSlot={heroTaglineSlot}
             dateStatSlot={dateStatSlot}
             durationStatSlot={durationStatSlot}
             groupStatSlot={groupStatSlot}
@@ -885,16 +873,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           />
         )}
 
-        <TripOverview
-          dateRange={dateRange}
-          durationDays={p.duration_days}
-          groupSize={p.group_size}
-          activityType={p.activity_type}
-          region={p.region}
-          country={p.country}
-          bodySlot={overviewBodySlot}
-          visible={overviewVisible}
-        />
+        <TripOverview bodySlot={overviewBodySlot} visible={overviewVisible} />
 
         <TripItinerary
           theme={resolvedTheme}
@@ -904,14 +883,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
           language={p.language ?? 'en'}
           renderDayTitle={renderDayTitle}
           renderDayDescription={renderDayDescription}
-          renderSegmentTitle={renderSegmentTitle}
           renderDayExtras={renderDayExtras}
         />
 
-        <TripIncluded
-          includedBodySlot={includedBodySlot}
-          notIncludedBodySlot={notIncludedBodySlot}
-          visible={includedVisible}
+        <TripAccommodations
+          accommodations={accommodations as any}
+          editable={ed}
+          onCreate={ed ? saveAccommodationCreate : undefined}
+          onUpdate={ed ? saveAccommodationPatch : undefined}
+          onDelete={ed ? saveAccommodationDelete : undefined}
         />
 
         <TripPrice
@@ -921,9 +901,22 @@ export default function TripPageClient({ slug, initialData }: Props) {
           visible={priceVisible}
         />
 
+        <TripIncluded
+          includedBodySlot={includedBodySlot}
+          notIncludedBodySlot={notIncludedBodySlot}
+          visible={includedVisible}
+        />
+
         <TripTerms
           bodySlot={termsBodySlot}
           visible={termsVisible}
+        />
+
+        <TripContacts
+          owner={owner}
+          operatorContact={operatorContact}
+          editable={ed}
+          saveProjectPatch={ed ? saveProjectPatch : undefined}
         />
 
         {/* Active-trip sections — render as themed sections that reuse the
@@ -945,8 +938,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
           />
         )}
 
-        {/* What-to-bring — kept inside themed surface so colours track theme. */}
-        {((p.what_to_bring?.length > 0) || showOwnerUI) && (
+        {/* What-to-bring — active phase only. On the quote (status='quoted')
+            the section is hidden so the page stays focused on the proposal
+            decision; it appears once the trip flips to active. */}
+        {p.status === 'active' && ((p.what_to_bring?.length > 0) || showOwnerUI) && (
           <WhatToBringSection
             categories={p.what_to_bring || []}
             showOwnerUI={showOwnerUI}

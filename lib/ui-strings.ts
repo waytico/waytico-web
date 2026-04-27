@@ -11,9 +11,11 @@ export const UI = {
   sectionLabels: {
     overview: 'Overview',
     itinerary: 'Itinerary',
+    accommodations: 'Accommodations',
     included: "What's included",
     price: 'Price',
     terms: 'Terms',
+    contacts: 'Contacts',
   },
   perTraveler: 'per traveler',
   travelers: 'travelers',

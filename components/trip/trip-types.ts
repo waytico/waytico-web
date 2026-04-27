@@ -28,10 +28,35 @@ export type Day = {
   date?: string | null
   title: string | null
   description: string | null
-  accommodation: { name: string } | string | null
-  highlights?: string[] | null
-  segments?: Segment[]
 }
+
+export type Accommodation = {
+  id: string
+  name: string
+  description: string | null
+  image_url: string | null
+  sort_order: number
+}
+
+export type OperatorContact = {
+  name?: string | null
+  phone?: string | null
+  email?: string | null
+  whatsapp?: string | null
+  telegram?: string | null
+  website?: string | null
+} | null
+
+export type OwnerBrand = {
+  brand_name?: string | null
+  brand_email?: string | null
+  brand_phone?: string | null
+  brand_whatsapp?: string | null
+  brand_telegram?: string | null
+  brand_website?: string | null
+  brand_logo_url?: string | null
+  brand_tagline?: string | null
+} | null
 
 export type ProjectLite = {
   id: string
@@ -40,6 +65,9 @@ export type ProjectLite = {
   design_theme?: string | null
   language?: string | null
   title: string | null
+  /** Short poetic subtitle in the hero (5-12 words). Replaces the long
+   *  description on the rendered hero — description still feeds the Overview. */
+  tagline: string | null
   description: string | null
   region: string | null
   country: string | null
@@ -55,6 +83,10 @@ export type ProjectLite = {
   not_included: string | null
   terms: string | null
   itinerary: Day[]
+  /** Per-trip override of the operator's contact channels. */
+  operator_contact?: OperatorContact
+  proposal_date?: string | null
+  valid_until?: string | null
 }
 
 export type MediaLite = {
@@ -78,6 +110,9 @@ export type MediaLite = {
 export type Mutations = {
   saveProjectPatch: (patch: Record<string, unknown>) => Promise<boolean>
   saveDayPatch: (dayId: string, patch: Record<string, unknown>) => Promise<boolean>
-  saveSegmentPatch: (dayId: string, segmentId: string, patch: Record<string, unknown>) => Promise<boolean>
+  /** Accommodations are a separate entity (not nested per-day). */
+  saveAccommodationCreate: (input: { name: string; description?: string | null; imageUrl?: string | null }) => Promise<Accommodation | null>
+  saveAccommodationPatch: (id: string, patch: Record<string, unknown>) => Promise<boolean>
+  saveAccommodationDelete: (id: string) => Promise<boolean>
 }
 

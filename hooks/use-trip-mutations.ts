@@ -132,34 +132,74 @@ export function useTripMutations({ projectId, setData, setTasks }: Options) {
     [projectId, getToken, setData],
   )
 
-  const saveSegmentPatch = useCallback(
-    async (dayId: string, segmentId: string, patch: Record<string, any>): Promise<boolean> => {
-      if (!projectId) return false
+  const saveAccommodationCreate = useCallback(
+    async (input: {
+      name: string
+      description?: string | null
+      imageUrl?: string | null
+    }): Promise<any> => {
+      if (!projectId) return null
+      try {
+        const token = await getToken()
+        if (!token) {
+          toast.error('Sign in to edit')
+          return null
+        }
+        const res = await apiFetch(`/api/projects/${projectId}/accommodations`, {
+          method: 'POST',
+          token,
+          body: JSON.stringify(input),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          toast.error(err?.error || 'Add failed')
+          return null
+        }
+        const { accommodation } = await res.json()
+        setData((prev) => {
+          if (!prev) return prev
+          const cur = Array.isArray((prev as any).accommodations)
+            ? (prev as any).accommodations
+            : []
+          return { ...prev, accommodations: [...cur, accommodation] } as any
+        })
+        return accommodation
+      } catch {
+        toast.error('Add failed')
+        return null
+      }
+    },
+    [projectId, getToken, setData],
+  )
+
+  const saveAccommodationPatch = useCallback(
+    async (id: string, patch: Record<string, any>): Promise<boolean> => {
       try {
         const token = await getToken()
         if (!token) {
           toast.error('Sign in to edit')
           return false
         }
-        const res = await apiFetch(
-          `/api/projects/${projectId}/days/${dayId}/segments/${segmentId}`,
-          { method: 'PATCH', token, body: JSON.stringify(patch) },
-        )
+        const res = await apiFetch(`/api/accommodations/${id}`, {
+          method: 'PATCH',
+          token,
+          body: JSON.stringify(patch),
+        })
         if (!res.ok) {
           const err = await res.json().catch(() => ({}))
           toast.error(err?.error || 'Save failed')
           return false
         }
-        const { segment } = await res.json()
+        const { accommodation } = await res.json()
         setData((prev) => {
-          if (!prev?.project) return prev
-          const it = Array.isArray(prev.project.itinerary) ? prev.project.itinerary : []
-          const newIt = it.map((d: any) => {
-            if (d.id !== dayId) return d
-            const segs = Array.isArray(d.segments) ? d.segments : []
-            return { ...d, segments: segs.map((s: any) => (s.id === segmentId ? segment : s)) }
-          })
-          return { ...prev, project: { ...prev.project, itinerary: newIt } }
+          if (!prev) return prev
+          const cur = Array.isArray((prev as any).accommodations)
+            ? (prev as any).accommodations
+            : []
+          return {
+            ...prev,
+            accommodations: cur.map((a: any) => (a.id === id ? accommodation : a)),
+          } as any
         })
         return true
       } catch {
@@ -167,7 +207,40 @@ export function useTripMutations({ projectId, setData, setTasks }: Options) {
         return false
       }
     },
-    [projectId, getToken, setData],
+    [getToken, setData],
+  )
+
+  const saveAccommodationDelete = useCallback(
+    async (id: string): Promise<boolean> => {
+      try {
+        const token = await getToken()
+        if (!token) {
+          toast.error('Sign in to edit')
+          return false
+        }
+        const res = await apiFetch(`/api/accommodations/${id}`, {
+          method: 'DELETE',
+          token,
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          toast.error(err?.error || 'Delete failed')
+          return false
+        }
+        setData((prev) => {
+          if (!prev) return prev
+          const cur = Array.isArray((prev as any).accommodations)
+            ? (prev as any).accommodations
+            : []
+          return { ...prev, accommodations: cur.filter((a: any) => a.id !== id) } as any
+        })
+        return true
+      } catch {
+        toast.error('Delete failed')
+        return false
+      }
+    },
+    [getToken, setData],
   )
 
   const saveWhatToBring = useCallback(
@@ -239,7 +312,9 @@ export function useTripMutations({ projectId, setData, setTasks }: Options) {
     saveProjectPatch,
     saveTaskPatch,
     saveDayPatch,
-    saveSegmentPatch,
+    saveAccommodationCreate,
+    saveAccommodationPatch,
+    saveAccommodationDelete,
     saveWhatToBring,
     handleDeleteProject,
   }

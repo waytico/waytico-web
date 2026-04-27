@@ -18,7 +18,13 @@ import type { MediaRecord } from '@/hooks/use-photo-upload'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
-type Payload = { project: any; tasks: any[]; media: any[] } | null
+type Payload = {
+  project: any
+  tasks: any[]
+  media: any[]
+  accommodations?: any[]
+  owner?: any
+} | null
 
 type Options = {
   slug: string

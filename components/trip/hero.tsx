@@ -31,7 +31,7 @@ type HeroProps = {
   regionEyebrowSlot?: ReactNode
   titleSlot: ReactNode
   /** First paragraph of the description. */
-  descriptionSlot?: ReactNode
+  taglineSlot?: ReactNode
   /** Individual stat overrides. If a slot is undefined, the formatted scalar
    *  above is used. If null, the stat hides (public mode w/ no data).
    *  Owner mode passes EditableField wrappers as slots.
@@ -156,9 +156,9 @@ export function TripHero(props: HeroProps) {
         <StatusPill status={status} />
       </div>
       <h1 className="tp-display tp-hero-title">{props.titleSlot}</h1>
-      {props.descriptionSlot && (
+      {props.taglineSlot && (
         <p style={{ color: 'var(--ink-soft)', fontSize: 18, lineHeight: 1.6, maxWidth: '56ch' }}>
-          {props.descriptionSlot}
+          {props.taglineSlot}
         </p>
       )}
       <HeroStats {...props} />
@@ -194,9 +194,9 @@ export function TripHero(props: HeroProps) {
               <StatusPill status={status} />
             </div>
             <h1 className="tp-display tp-hero-title">{props.titleSlot}</h1>
-            {props.descriptionSlot && (
+            {props.taglineSlot && (
               <p style={{ color: 'var(--ink-soft)', fontSize: 17, lineHeight: 1.6, maxWidth: '56ch' }}>
-                {props.descriptionSlot}
+                {props.taglineSlot}
               </p>
             )}
             <OperatorStrip contact={operatorContact} />
