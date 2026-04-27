@@ -23,9 +23,6 @@ export function TripTerms({ bodySlot, visible }: TermsProps) {
           </h2>
         </header>
         <div className="tp-terms-body">{bodySlot}</div>
-        <div className="tp-foot">
-          <span>Waytico · waytico.com</span>
-        </div>
       </div>
     </footer>
   )
