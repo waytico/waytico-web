@@ -221,10 +221,19 @@
 
 /* nav */
 .tp-nav {
-  position: sticky; top: 0; z-index: 5;
+  position: sticky;
+  top: 0;
+  z-index: 5;
   background: color-mix(in oklab, var(--bg) 92%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--rule);
+}
+
+/* When viewed by the owner, the action bar above is sticky-pinned to the
+   top, so the in-theme nav has to sit below it (~48px) instead of at 0.
+   Public viewers don't see the action bar — for them top:0 is correct. */
+[data-owner-view="true"] .tp-nav {
+  top: 48px;
 }
 .tp-nav-inner {
   max-width: 1120px; margin: 0 auto; padding: 14px 32px;
