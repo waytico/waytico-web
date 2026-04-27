@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
+import { ImagePlus, Loader2 } from 'lucide-react'
 import { UI } from '@/lib/ui-strings'
 import type { Accommodation, Mutations } from './trip-types'
 import { uploadAccommodationPhoto, ALLOWED_MIME, MAX_FILE_SIZE } from '@/lib/upload-photo'
@@ -246,34 +247,78 @@ function AccommodationPhoto({
 
   const hasPhoto = !!item.image_url
 
-  return (
-    <div
-      className={`tp-acc-photo${hasPhoto ? '' : ' tp-acc-photo--empty'}${
-        dragOver ? ' tp-acc-photo--drag' : ''
-      }`}
-      style={hasPhoto ? { backgroundImage: `url(${item.image_url})` } : undefined}
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+  // With a photo: render the image and surface a "Replace" hint on hover/drop.
+  if (hasPhoto) {
+    return (
+      <div
+        className={`tp-acc-photo${dragOver ? ' tp-acc-photo--drag' : ''}`}
+        style={{ backgroundImage: `url(${item.image_url})` }}
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onClick()
+          }
+        }}
+        onDragOver={(e) => {
           e.preventDefault()
-          onClick()
-        }
-      }}
+          setDragOver(true)
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+        aria-label={`Replace photo for ${item.name}`}
+      >
+        {(busy || dragOver) && (
+          <div className="tp-acc-photo-hint">
+            {busy ? 'Uploading…' : 'Replace photo'}
+          </div>
+        )}
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) handleFile(f)
+            e.target.value = ''
+          }}
+        />
+      </div>
+    )
+  }
+
+  // Empty state: dashed drop-zone styled to match the day-level Add photos
+  // block (photos-block.tsx). aspect-ratio matches the loaded photo so the
+  // card height doesn't jump after upload.
+  return (
+    <button
+      type="button"
+      onClick={onClick}
       onDragOver={(e) => {
         e.preventDefault()
         setDragOver(true)
       }}
       onDragLeave={() => setDragOver(false)}
       onDrop={onDrop}
-      aria-label={hasPhoto ? `Replace photo for ${item.name}` : `Add photo for ${item.name}`}
+      className={`flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border text-muted-foreground transition-colors hover:border-accent hover:text-accent ${
+        dragOver ? 'border-accent text-accent' : ''
+      }`}
+      style={{ aspectRatio: '4 / 3' }}
+      aria-label={`Add photo for ${item.name}`}
     >
-      {/* Hint overlay — shown when empty (always) or when busy/hovering with a photo. */}
-      {(!hasPhoto || busy || dragOver) && (
-        <div className="tp-acc-photo-hint">
-          {busy ? 'Uploading…' : hasPhoto ? 'Replace photo' : '+ Add photo'}
-        </div>
+      {busy ? (
+        <>
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span className="text-xs">Uploading…</span>
+        </>
+      ) : (
+        <>
+          <ImagePlus className="h-6 w-6" />
+          <span className="text-xs">Add photo</span>
+        </>
       )}
       <input
         ref={inputRef}
@@ -286,7 +331,7 @@ function AccommodationPhoto({
           e.target.value = ''
         }}
       />
-    </div>
+    </button>
   )
 }
 
