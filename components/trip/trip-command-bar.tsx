@@ -64,6 +64,28 @@ export function TripCommandBar({
   const [isSending, setIsSending] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [sessionId, setSessionId] = useState<string | undefined>()
+  /** True when the page footer enters the viewport — we fade the
+   *  command bar out so it doesn't sit on top of the footer's links.
+   *  trip-page-client renders an element with id="site-footer" at the
+   *  end of the page; if it's not present (e.g. on a stripped-down
+   *  preview), the observer just never fires and the bar stays. */
+  const [footerVisible, setFooterVisible] = useState(false)
+
+  useEffect(() => {
+    const target = document.getElementById('site-footer')
+    if (!target || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(
+      (entries) => {
+        const e = entries[0]
+        // Trigger as soon as any sliver of the footer reaches the
+        // viewport — at that point the bar would start overlapping links.
+        setFooterVisible(e.isIntersecting && e.intersectionRatio > 0)
+      },
+      { threshold: [0, 0.01, 0.1] },
+    )
+    io.observe(target)
+    return () => io.disconnect()
+  }, [])
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -163,11 +185,21 @@ export function TripCommandBar({
   }, [input, selectedFile, isSending, sessionId, projectId, getToken, onTripUpdated])
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-auto max-w-3xl px-4 py-3 md:px-6">
+    <div
+      className={`pointer-events-none fixed inset-x-0 z-30 px-4 transition-opacity duration-200 ease-out pb-[calc(env(safe-area-inset-bottom)+16px)] ${
+        footerVisible ? 'opacity-0' : 'opacity-100'
+      }`}
+      style={{ bottom: 0 }}
+      aria-hidden={footerVisible ? 'true' : undefined}
+    >
+      <div
+        className={`mx-auto max-w-4xl ${
+          footerVisible ? 'pointer-events-none' : 'pointer-events-auto'
+        }`}
+      >
         {selectedFile && (
           <div className="mb-2 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 border border-accent/30 px-3 py-1.5 text-xs text-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 border border-accent/30 px-3 py-1.5 text-xs text-foreground shadow-md">
               <span>{getFileIcon(selectedFile.type)}</span>
               <span className="max-w-[240px] truncate">{selectedFile.name}</span>
               <button
@@ -182,7 +214,7 @@ export function TripCommandBar({
           </div>
         )}
 
-        <div className="flex items-end gap-2 rounded-2xl border border-border bg-background px-3 py-2 focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-colors">
+        <div className="flex items-end gap-2 rounded-2xl border border-border bg-background/95 backdrop-blur-md px-3 py-2 focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-colors shadow-lg">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}

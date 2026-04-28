@@ -31,6 +31,7 @@ import { TripAccommodations } from '@/components/trip/accommodations'
 import { TripContacts } from '@/components/trip/contacts'
 import { HeroOwnerOverlay, HeroDropZone } from '@/components/trip/owner-extras'
 import type { PricingMode } from '@/components/trip/trip-types'
+import Footer from '@/components/footer'
 
 import { apiFetch } from '@/lib/api'
 import { resolveTheme } from '@/lib/themes'
@@ -1073,9 +1074,18 @@ export default function TripPageClient({ slug, initialData }: Props) {
       {showOwnerUI && (
         <>
           <TripCommandBar projectId={p.id} getToken={getToken} onTripUpdated={handleTripUpdated} />
-          <div className="h-24 md:h-28" aria-hidden="true" />
+          {/* Owner-only breathing room between the last section and the
+              footer. The command bar floats over the page; this spacer
+              gives the operator empty space where the bar can rest
+              without overlapping content, and lets them scroll just past
+              the last section to read the bottom edge of any block.
+              ~160-176px — tall enough that the floating pill (≈64px high
+              including padding) sits with margin above and below. */}
+          <div className="h-40 md:h-44" aria-hidden="true" />
         </>
       )}
+
+      <Footer />
 
       <ScrollToTop bottomOffset={showOwnerUI ? 88 : 24} />
     </div>
