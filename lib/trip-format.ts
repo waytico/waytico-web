@@ -15,6 +15,12 @@ const CURRENCY_GLYPH: Record<string, string> = {
   CHF: 'CHF ',
 }
 
+/** Glyph for a currency code, or the uppercased code as fallback. */
+export function currencyGlyph(currency: string | null | undefined): string {
+  if (!currency) return ''
+  return CURRENCY_GLYPH[currency.toUpperCase()] || `${currency.toUpperCase()} `
+}
+
 const ISO_DATE_HEAD_RE = /^\d{4}-\d{2}-\d{2}$/
 
 /**

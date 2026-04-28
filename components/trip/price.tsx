@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { UI } from '@/lib/ui-strings'
 import type { PricingMode, Mutations } from './trip-types'
-import { fmtPrice } from '@/lib/trip-format'
+import { fmtPrice, currencyGlyph } from '@/lib/trip-format'
 
 type PriceProps = {
   pricingMode: PricingMode | null
@@ -62,27 +62,22 @@ export function TripPrice(props: PriceProps) {
           {/* Headline row: amount + suffix (suffix is a dropdown in owner mode). */}
           <div className="tp-price-headline">
             {props.editable ? (
-              <>
-                <CurrencyPicker
-                  value={props.currency || 'USD'}
-                  onSave={async (v) => {
-                    if (!props.saveProjectPatch) return false
-                    return props.saveProjectPatch({ currency: v })
-                  }}
-                />
-                <HeadlineAmountEditor
-                  value={headline}
-                  currency={props.currency || 'USD'}
-                  onSave={async (v) => {
-                    if (!props.saveProjectPatch) return false
-                    const patch: Record<string, any> =
-                      mode === 'per_traveler'
-                        ? { pricePerPerson: v }
-                        : { priceTotal: v }
-                    return props.saveProjectPatch(patch)
-                  }}
-                />
-              </>
+              <HeadlineAmountEditor
+                value={headline}
+                currency={props.currency || 'USD'}
+                onSave={async (v) => {
+                  if (!props.saveProjectPatch) return false
+                  const patch: Record<string, any> =
+                    mode === 'per_traveler'
+                      ? { pricePerPerson: v }
+                      : { priceTotal: v }
+                  return props.saveProjectPatch(patch)
+                }}
+                onSaveCurrency={async (next) => {
+                  if (!props.saveProjectPatch) return false
+                  return props.saveProjectPatch({ currency: next })
+                }}
+              />
             ) : (
               <span className="tp-price-amount">
                 {headlineFormatted ?? '—'}
@@ -123,55 +118,87 @@ function HeadlineAmountEditor({
   value,
   currency,
   onSave,
+  onSaveCurrency,
 }: {
   value: number | null
   currency: string
   onSave: (v: number | null) => Promise<boolean>
+  onSaveCurrency: (next: string) => Promise<boolean>
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value != null ? String(value) : '')
 
+  const glyph = currencyGlyph(currency)
+  const numberPart = value != null ? value.toLocaleString('en-US') : null
+
   if (!editing) {
-    const formatted = fmtPrice(value, currency)
     return (
-      <span
-        className="tp-price-amount"
-        onClick={() => {
-          setDraft(value != null ? String(value) : '')
-          setEditing(true)
-        }}
-        style={{ cursor: 'text' }}
-      >
-        {formatted ?? <span style={{ color: 'var(--ink-mute)' }}>Add price</span>}
+      <span className="tp-price-amount">
+        {/* Glyph is the currency picker. The native <select> sits on
+            top of it as a transparent overlay so a click anywhere on
+            the glyph opens the OS dropdown — no separate UI element,
+            no popover. The visual character (\$, €, …) is the trigger. */}
+        <span className="tp-price-currency-trigger">
+          <span aria-hidden="true">{glyph}</span>
+          <select
+            className="tp-price-currency-overlay"
+            aria-label="Currency"
+            value={currency.toUpperCase()}
+            onChange={async (e) => {
+              const next = e.target.value
+              if (next !== currency.toUpperCase()) {
+                await onSaveCurrency(next)
+              }
+            }}
+          >
+            {SUPPORTED_CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </span>
+        <span
+          onClick={() => {
+            setDraft(value != null ? String(value) : '')
+            setEditing(true)
+          }}
+          style={{ cursor: 'text' }}
+        >
+          {numberPart ?? <span style={{ color: 'var(--ink-mute)' }}>Add price</span>}
+        </span>
       </span>
     )
   }
 
   return (
-    <input
-      className="tp-price-input"
-      type="number"
-      step="1"
-      min="0"
-      value={draft}
-      autoFocus
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={async () => {
-        const trimmed = draft.trim()
-        const next = trimmed === '' ? null : Number(trimmed)
-        if (next !== value && (next === null || !Number.isNaN(next))) {
-          await onSave(next)
-        }
-        setEditing(false)
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-        if (e.key === 'Escape') {
-          setDraft(value != null ? String(value) : '')
+    <span className="tp-price-amount">
+      <span aria-hidden="true">{glyph}</span>
+      <input
+        className="tp-price-input"
+        type="number"
+        step="1"
+        min="0"
+        value={draft}
+        autoFocus
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={async () => {
+          const trimmed = draft.trim()
+          const next = trimmed === '' ? null : Number(trimmed)
+          if (next !== value && (next === null || !Number.isNaN(next))) {
+            await onSave(next)
+          }
           setEditing(false)
-        }
-      }}
-    />
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+          if (e.key === 'Escape') {
+            setDraft(value != null ? String(value) : '')
+            setEditing(false)
+          }
+        }}
+      />
+    </span>
   )
 }
 
@@ -269,13 +296,11 @@ function PriceModeSuffix({
   )
 }
 
-/* ── Currency picker (owner mode) ── */
+/* ── Currency choices (used by the headline glyph picker) ── */
 //
-// Native <select> styled to read as part of the headline — keeps the
-// markup simple, gets free keyboard + a11y, and avoids a custom popover
-// that would conflict with the price inline-edit input next to it.
-// Currency list mirrors lib/trip-format.ts:CURRENCY_GLYPH so the
-// formatter and the picker stay in lock-step.
+// Mirrors lib/trip-format.ts:CURRENCY_GLYPH so the formatter and the
+// picker stay in lock-step. The glyph itself is the trigger — no
+// standalone select component.
 
 const SUPPORTED_CURRENCIES: Array<{ code: string; label: string }> = [
   { code: 'USD', label: 'USD ($)' },
@@ -286,31 +311,3 @@ const SUPPORTED_CURRENCIES: Array<{ code: string; label: string }> = [
   { code: 'JPY', label: 'JPY (¥)' },
   { code: 'CHF', label: 'CHF' },
 ]
-
-function CurrencyPicker({
-  value,
-  onSave,
-}: {
-  value: string
-  onSave: (next: string) => Promise<boolean>
-}) {
-  return (
-    <select
-      className="tp-price-currency-select"
-      aria-label="Currency"
-      value={value.toUpperCase()}
-      onChange={async (e) => {
-        const next = e.target.value
-        if (next !== value.toUpperCase()) {
-          await onSave(next)
-        }
-      }}
-    >
-      {SUPPORTED_CURRENCIES.map((c) => (
-        <option key={c.code} value={c.code}>
-          {c.label}
-        </option>
-      ))}
-    </select>
-  )
-}
