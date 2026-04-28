@@ -600,38 +600,63 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const termsAreInherited = !tripTermsTrimmed && !!brandTermsTrimmed
 
   const termsBodySlot: ReactNode = ed ? (
-    <>
+    tripTermsTrimmed ? (
+      // Operator has set a per-trip override — let them edit it directly.
       <EditableField
         as="multiline"
         editable
         value={p.terms}
-        placeholder={
-          brandTermsTrimmed
-            ? 'Click to override the default terms for this trip'
-            : 'Click to add terms'
-        }
-        rows={4}
+        placeholder="Click to add terms"
+        rows={6}
         className="w-full"
         onSave={(v) => saveProjectPatch({ terms: v })}
-        renderDisplay={() =>
-          effectiveTerms ? (
-            <DescriptionParagraphs text={effectiveTerms} />
-          ) : null
-        }
       />
-      {termsAreInherited && (
+    ) : termsAreInherited ? (
+      // Inherited from brand_terms. Render the resolved text for clarity,
+      // plus an explicit "Override for this trip" button that, when
+      // clicked, seeds the override field with the current brand text so
+      // the operator can tweak it instead of starting from a blank slate.
+      <>
+        <DescriptionParagraphs text={effectiveTerms} />
         <p
           style={{
             fontSize: 12,
             color: 'var(--ink-mute)',
-            marginTop: 8,
+            marginTop: 12,
             fontStyle: 'italic',
           }}
         >
-          Showing your brand default terms. Click above to write trip-specific terms.
+          Showing your brand default terms.{' '}
+          <button
+            type="button"
+            onClick={() => saveProjectPatch({ terms: brandTermsTrimmed })}
+            style={{
+              color: 'var(--accent)',
+              textDecoration: 'underline',
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              font: 'inherit',
+              fontStyle: 'italic',
+            }}
+          >
+            Override for this trip
+          </button>
         </p>
-      )}
-    </>
+      </>
+    ) : (
+      // No trip override and no brand default — placeholder editor.
+      <EditableField
+        as="multiline"
+        editable
+        value={p.terms}
+        placeholder="Click to add terms"
+        rows={4}
+        className="w-full"
+        onSave={(v) => saveProjectPatch({ terms: v })}
+      />
+    )
   ) : (
     <DescriptionParagraphs text={effectiveTerms} />
   )
