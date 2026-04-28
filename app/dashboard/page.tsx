@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { ArrowDown, ArrowUp, ChevronDown, Search } from 'lucide-react'
 import BrandCard from '@/components/brand-card'
+import PreferencesCard from '@/components/preferences-card'
 import ChatFlow from '@/components/chat-flow'
 import Header from '@/components/header'
 import TripRow from '@/components/trip-row'
@@ -242,6 +243,7 @@ export default function DashboardPage() {
       <div className="min-h-[calc(100vh-73px)] bg-background text-foreground">
         <main className="max-w-4xl mx-auto px-4 py-8">
           {isLoaded && projects !== null && <BrandCard />}
+          {isLoaded && projects !== null && <PreferencesCard />}
 
           {(!isLoaded || projects === null) && (
             <div className="space-y-2 px-4">
