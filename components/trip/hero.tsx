@@ -3,6 +3,7 @@ import { UI } from '@/lib/ui-strings'
 import type { ThemeId } from '@/lib/themes'
 import { HERO_STYLE } from '@/lib/themes'
 import { fmtDate } from '@/lib/trip-format'
+import { PublicStatusPill } from './public-status-pill'
 
 export type HeroOperatorContact = {
   name?: string | null
@@ -61,59 +62,110 @@ type HeroProps = {
   operatorContact?: HeroOperatorContact
   /** Whether overlay theme is in light/dark mode — affects validity badge color */
   isDarkBg?: boolean
+  /** Top-strip slot — rendered on the right side of the hero top bar
+   *  next to the validity dates. Public-side trip-page-client passes a
+   *  ContactAgentMenu factory here; owner side leaves it undefined.
+   *  Receives `onPhoto` so the slot can adjust contrast over the
+   *  Expedition theme's full-bleed photo background. */
+  contactAgentSlot?: (ctx: { onPhoto: boolean }) => ReactNode
 }
 
-function StatusPill({ status }: { status: string | null | undefined }) {
-  if (!status) return null
-  if (!['quoted', 'active', 'completed'].includes(status)) return null
-  return <span className="tp-status">{UI.status[status] || status}</span>
-}
-
-/** Top-right badge: Proposal · {date} / Valid until {date}.
- *  Positioned absolutely — relies on the parent header carrying position:relative. */
-function ValidityBadge({
+/**
+ * Hero top strip — full-width horizontal bar layered above the hero,
+ * common to all three theme variants. Shows the trip's public status
+ * pill on the left, contact-agent dropdown + Issued / Valid-until dates
+ * on the right.
+ *
+ * Replaces the previous absolute-positioned ValidityBadge: the dates
+ * are still in the top-right slot (in a single row now, separated by
+ * "·"), but they share the strip with the new status pill and contact
+ * dropdown so the page has one consistent header line instead of
+ * floating elements.
+ *
+ * Renders nothing when no piece of content is present (no status, no
+ * dates, no contact agent slot) — preserves the empty-hero behaviour.
+ */
+function HeroTopStrip({
+  status,
   proposalDate,
   validUntil,
-  onPhoto = false,
   proposalSlot,
   validUntilSlot,
+  contactAgentSlot,
+  onPhoto = false,
 }: {
+  status?: string | null
   proposalDate?: string | null
   validUntil?: string | null
-  onPhoto?: boolean
-  /** When provided, replaces the proposal-line text. Used by the owner page
-   *  to wrap the date in an EditableField. */
   proposalSlot?: ReactNode
   validUntilSlot?: ReactNode
+  contactAgentSlot?: (ctx: { onPhoto: boolean }) => ReactNode
+  onPhoto?: boolean
 }) {
-  if (!proposalDate && !validUntil && !proposalSlot && !validUntilSlot) return null
+  const hasStatus = !!status && ['quoted', 'active', 'completed'].includes(status)
+  const hasProposal = !!(proposalDate || proposalSlot)
+  const hasValidUntil = !!(validUntil || validUntilSlot)
+  const hasDates = hasProposal || hasValidUntil
+  const renderedContactAgent = contactAgentSlot ? contactAgentSlot({ onPhoto }) : null
+  const hasContactAgent = !!renderedContactAgent
+
+  if (!hasStatus && !hasDates && !hasContactAgent) return null
+
+  const datesStyle: React.CSSProperties = {
+    fontSize: 11,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    fontFamily: 'var(--font-mono)',
+    color: onPhoto ? 'rgba(255,255,255,0.85)' : 'var(--ink-mute)',
+    textShadow: onPhoto ? '0 1px 4px rgba(0,0,0,0.4)' : undefined,
+  }
+
   return (
     <div
       style={{
         position: 'absolute',
         top: 16,
+        left: 16,
         right: 16,
         zIndex: 3,
-        textAlign: 'right',
-        fontSize: 11,
-        lineHeight: 1.5,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        fontFamily: 'var(--font-mono)',
-        color: onPhoto ? 'rgba(255,255,255,0.85)' : 'var(--ink-mute)',
-        textShadow: onPhoto ? '0 1px 4px rgba(0,0,0,0.4)' : undefined,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        flexWrap: 'wrap',
+        pointerEvents: 'none',
       }}
     >
-      {(proposalSlot || proposalDate) && (
-        <div>
-          {UI.proposal} · {proposalSlot ?? (proposalDate ? fmtDate(proposalDate) : null)}
-        </div>
-      )}
-      {(validUntilSlot || validUntil) && (
-        <div>
-          {UI.validUntil} {validUntilSlot ?? (validUntil ? fmtDate(validUntil) : null)}
-        </div>
-      )}
+      <div style={{ display: 'flex', alignItems: 'center', pointerEvents: 'auto' }}>
+        {hasStatus && <PublicStatusPill status={status} />}
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flexWrap: 'wrap',
+          justifyContent: 'flex-end',
+          pointerEvents: 'auto',
+        }}
+      >
+        {hasContactAgent && renderedContactAgent}
+        {hasDates && (
+          <div style={datesStyle}>
+            {hasProposal && (
+              <>
+                {UI.proposal} · {proposalSlot ?? (proposalDate ? fmtDate(proposalDate) : null)}
+              </>
+            )}
+            {hasProposal && hasValidUntil && <span>{' · '}</span>}
+            {hasValidUntil && (
+              <>
+                {UI.validUntil} {validUntilSlot ?? (validUntil ? fmtDate(validUntil) : null)}
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -169,12 +221,12 @@ export function TripHero(props: HeroProps) {
   const heroStyle = HERO_STYLE[theme]
 
   // Shared meta block — same data, same labels, restyled per theme via tokens.
+  // Status pill moved to HeroTopStrip — no longer rendered alongside chips.
   const meta = (
     <>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         {props.activityChipSlot}
         {props.regionEyebrowSlot}
-        <StatusPill status={status} />
       </div>
       <h1 className="tp-display tp-hero-title">{props.titleSlot}</h1>
       {props.taglineSlot && (
@@ -194,7 +246,15 @@ export function TripHero(props: HeroProps) {
           className="tp-hero-bg"
           style={heroPhoto ? { backgroundImage: `url(${heroPhoto})` } : undefined}
         />
-        <ValidityBadge proposalDate={proposalDate} validUntil={validUntil} proposalSlot={props.proposalSlot} validUntilSlot={props.validUntilSlot} onPhoto={!!heroPhoto} />
+        <HeroTopStrip
+          status={status}
+          proposalDate={proposalDate}
+          validUntil={validUntil}
+          proposalSlot={props.proposalSlot}
+          validUntilSlot={props.validUntilSlot}
+          contactAgentSlot={props.contactAgentSlot}
+          onPhoto={!!heroPhoto}
+        />
         <div className="tp-container" style={{ position: 'relative', zIndex: 1 }}>
           <div className="tp-hero-meta">{meta}</div>
         </div>
@@ -206,13 +266,19 @@ export function TripHero(props: HeroProps) {
   if (heroStyle === 'card') {
     return (
       <header style={{ position: 'relative' }}>
-        <ValidityBadge proposalDate={proposalDate} validUntil={validUntil} proposalSlot={props.proposalSlot} validUntilSlot={props.validUntilSlot} />
+        <HeroTopStrip
+          status={status}
+          proposalDate={proposalDate}
+          validUntil={validUntil}
+          proposalSlot={props.proposalSlot}
+          validUntilSlot={props.validUntilSlot}
+          contactAgentSlot={props.contactAgentSlot}
+        />
         <div className="tp-container tp-hero--card">
           <div className="tp-hero-meta" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
               {props.activityChipSlot}
               {props.regionEyebrowSlot}
-              <StatusPill status={status} />
             </div>
             <h1 className="tp-display tp-hero-title">{props.titleSlot}</h1>
             {props.taglineSlot && (
@@ -254,7 +320,14 @@ export function TripHero(props: HeroProps) {
   // split — editorial (default)
   return (
     <header style={{ position: 'relative' }}>
-      <ValidityBadge proposalDate={proposalDate} validUntil={validUntil} proposalSlot={props.proposalSlot} validUntilSlot={props.validUntilSlot} />
+      <HeroTopStrip
+        status={status}
+        proposalDate={proposalDate}
+        validUntil={validUntil}
+        proposalSlot={props.proposalSlot}
+        validUntilSlot={props.validUntilSlot}
+        contactAgentSlot={props.contactAgentSlot}
+      />
       <div className="tp-container tp-hero--split">
         <div className="tp-hero-meta">{meta}</div>
         <div

@@ -25,7 +25,7 @@ export const UI = {
   day: 'day',
   notIncluded: 'Not included',
   included: 'Included',
-  proposal: 'Proposal',
+  proposal: 'Issued',
   validUntil: 'Valid until',
   totalPrice: 'Total',
   bookCta: 'Reserve dates',

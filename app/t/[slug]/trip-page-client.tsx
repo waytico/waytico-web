@@ -23,6 +23,7 @@ import { EditableField } from '@/components/editable/editable-field'
 import { ThemeRoot } from '@/components/trip/theme-root'
 import { TripNav } from '@/components/trip/nav'
 import { TripHero } from '@/components/trip/hero'
+import { ContactAgentMenu } from '@/components/trip/contact-agent-menu'
 import { TripOverview } from '@/components/trip/overview'
 import { TripItinerary } from '@/components/trip/itinerary'
 import { TripIncluded, IncludedList } from '@/components/trip/included'
@@ -960,6 +961,17 @@ export default function TripPageClient({ slug, initialData }: Props) {
               ) : undefined
             }
             operatorContact={operatorContact}
+            contactAgentSlot={
+              !showOwnerUI
+                ? ({ onPhoto }) => (
+                    <ContactAgentMenu
+                      owner={owner}
+                      operatorContact={operatorContact}
+                      onPhoto={onPhoto}
+                    />
+                  )
+                : undefined
+            }
             ownerOverlay={
               showOwnerUI ? (
                 <HeroOwnerOverlay
