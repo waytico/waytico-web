@@ -1,7 +1,17 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Lock, User, Mail, Phone, Tag } from 'lucide-react'
+import {
+  Lock,
+  User,
+  Mail,
+  Phone,
+  Tag,
+  Hash,
+  Sparkles,
+  StickyNote,
+  Compass,
+} from 'lucide-react'
 import type { Mutations } from './trip-types'
 
 type Props = {
@@ -9,6 +19,10 @@ type Props = {
   clientName: string | null
   clientEmail: string | null
   clientPhone: string | null
+  bookingRef: string | null
+  internalNotes: string | null
+  specialRequests: string | null
+  source: string | null
   saveProjectPatch: Mutations['saveProjectPatch']
 }
 
@@ -33,6 +47,10 @@ export function ClientInfo({
   clientName,
   clientEmail,
   clientPhone,
+  bookingRef,
+  internalNotes,
+  specialRequests,
+  source,
   saveProjectPatch,
 }: Props) {
   return (
@@ -44,16 +62,14 @@ export function ClientInfo({
         <div className="flex items-center gap-2 mb-3">
           <Lock size={14} className="text-amber-700 dark:text-amber-400" aria-hidden="true" />
           <h2 className="text-xs uppercase tracking-wider font-semibold text-amber-900 dark:text-amber-200">
-            For your eyes only · Client info
+            For your eyes only · Service info
           </h2>
         </div>
         <p className="text-[11px] text-amber-800/80 dark:text-amber-200/70 mb-4">
-          Not visible to the client. Used for trip reminders and your own records.
+          Not visible to the client. Used for your own records, reminders, and tracking.
         </p>
 
-        {/* Nickname — full-width row. Drives the dashboard primary
-            heading for this trip, so it gets a wider field + a hint
-            explaining what it does. */}
+        {/* Nickname — full-width, drives dashboard heading. */}
         <div className="mb-4">
           <ClientField
             Icon={Tag}
@@ -66,7 +82,8 @@ export function ClientInfo({
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Client contact — 3 cols */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
           <ClientField
             Icon={User}
             label="Name"
@@ -92,6 +109,50 @@ export function ClientInfo({
             onSave={(v) => saveProjectPatch({ clientPhone: v })}
           />
         </div>
+
+        {/* Booking + source — 2 cols */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+          <ClientField
+            Icon={Hash}
+            label="Booking ref"
+            value={bookingRef}
+            placeholder="Booking, contract, or invoice number"
+            type="text"
+            onSave={(v) => saveProjectPatch({ bookingRef: v })}
+          />
+          <ClientField
+            Icon={Compass}
+            label="Source"
+            value={source}
+            placeholder="Where did this lead come from?"
+            type="text"
+            onSave={(v) => saveProjectPatch({ source: v })}
+          />
+        </div>
+
+        {/* Multiline blocks — full width, taller editor */}
+        <div className="mb-3">
+          <ClientField
+            Icon={Sparkles}
+            label="Special requests"
+            value={specialRequests}
+            placeholder="Diet, mobility, allergies, preferences from the client"
+            type="text"
+            multiline
+            onSave={(v) => saveProjectPatch({ specialRequests: v })}
+          />
+        </div>
+        <div>
+          <ClientField
+            Icon={StickyNote}
+            label="Internal notes"
+            value={internalNotes}
+            placeholder="Your private notes about this trip"
+            type="text"
+            multiline
+            onSave={(v) => saveProjectPatch({ internalNotes: v })}
+          />
+        </div>
       </div>
     </section>
   )
@@ -104,6 +165,7 @@ function ClientField({
   placeholder,
   type,
   hint,
+  multiline,
   onSave,
 }: {
   Icon: React.ComponentType<any>
@@ -112,19 +174,25 @@ function ClientField({
   placeholder: string
   type: 'text' | 'email' | 'tel'
   hint?: string
+  multiline?: boolean
   onSave: (v: string | null) => Promise<boolean>
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value || '')
   const [saving, setSaving] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    if (editing) {
+    if (!editing) return
+    if (multiline) {
+      textareaRef.current?.focus()
+      textareaRef.current?.select?.()
+    } else {
       inputRef.current?.focus()
       inputRef.current?.select()
     }
-  }, [editing])
+  }, [editing, multiline])
 
   useEffect(() => {
     if (!editing) setDraft(value || '')
@@ -145,6 +213,15 @@ function ClientField({
     else setDraft(value || '')
   }
 
+  // First line only for multiline collapsed view so a long block of
+  // notes doesn't push the next field out of view; full text appears
+  // as soon as the operator clicks to edit.
+  const displayValue = value
+    ? multiline
+      ? value.split('\n')[0]
+      : value
+    : null
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1.5">
@@ -154,27 +231,51 @@ function ClientField({
         </label>
       </div>
       {editing ? (
-        <input
-          ref={inputRef}
-          type={type}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              commit()
-            }
-            if (e.key === 'Escape') {
-              e.preventDefault()
-              setDraft(value || '')
-              setEditing(false)
-            }
-          }}
-          disabled={saving}
-          placeholder={placeholder}
-          className="bg-background border border-amber-300/70 rounded px-2 py-1 text-sm outline-none focus:border-amber-500 ml-[20px]"
-        />
+        multiline ? (
+          <textarea
+            ref={textareaRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                setDraft(value || '')
+                setEditing(false)
+              }
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                commit()
+              }
+            }}
+            disabled={saving}
+            rows={3}
+            placeholder={placeholder}
+            className="bg-background border border-amber-300/70 rounded px-2 py-1.5 text-sm outline-none focus:border-amber-500 ml-[20px] resize-y"
+          />
+        ) : (
+          <input
+            ref={inputRef}
+            type={type}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                commit()
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                setDraft(value || '')
+                setEditing(false)
+              }
+            }}
+            disabled={saving}
+            placeholder={placeholder}
+            className="bg-background border border-amber-300/70 rounded px-2 py-1 text-sm outline-none focus:border-amber-500 ml-[20px]"
+          />
+        )
       ) : (
         <button
           type="button"
@@ -183,7 +284,7 @@ function ClientField({
             !value ? 'text-amber-900/40 dark:text-amber-200/40 italic' : 'text-foreground'
           }`}
         >
-          {value || placeholder}
+          {displayValue || placeholder}
         </button>
       )}
       {hint && (

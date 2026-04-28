@@ -1067,6 +1067,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
           clientName={p.client_name ?? null}
           clientEmail={p.client_email ?? null}
           clientPhone={p.client_phone ?? null}
+          bookingRef={p.booking_ref ?? null}
+          internalNotes={p.internal_notes ?? null}
+          specialRequests={p.special_requests ?? null}
+          source={p.source ?? null}
           saveProjectPatch={saveProjectPatch}
         />
       )}

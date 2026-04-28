@@ -121,6 +121,14 @@ export type ProjectLite = {
    *  becomes the dashboard's primary heading for this trip. Falls back
    *  to title when null. Internal-only. */
   client_nickname?: string | null
+  /** Booking / contract / invoice reference. Internal-only. */
+  booking_ref?: string | null
+  /** Operator's freeform notes about the trip / client. Internal-only. */
+  internal_notes?: string | null
+  /** Client's stated needs: diet, mobility, allergies, prefs. */
+  special_requests?: string | null
+  /** Lead source (Instagram, referral, etc.) — operator marketing. */
+  source?: string | null
 }
 
 export type MediaLite = {
