@@ -6,26 +6,24 @@
  * you working on right now?".
  *
  * Order of precedence per trip (first match wins):
- *   1. Needs attention      — drafts, stale quotes, imminent active starts
- *   2. Awaiting client reply — fresh quoted (≤ 7d, no urgency yet)
- *   3. In progress           — active trips that haven't started yet OR are running
- *   4. Recently completed    — completed within last 30 days
- *   5. Archive               — everything else (archived + old completed)
+ *   1. Needs attention   — drafts, stale quotes, imminent active starts
+ *   2. Active            — fresh quotes + active trips not imminent /
+ *                          already running
+ *   3. Recently completed — completed within last 30 days
+ *   4. Archive           — everything else (archived + old completed)
  */
 
 import type { Project } from '@/components/project-card'
 
 export type GroupKey =
   | 'attention'
-  | 'awaiting'
-  | 'progress'
+  | 'active'
   | 'completed'
   | 'archive'
 
 export type GroupedTrips = {
   attention: Project[]
-  awaiting: Project[]
-  progress: Project[]
+  active: Project[]
   completed: Project[]
   archive: Project[]
 }
@@ -77,8 +75,7 @@ export function attentionReason(p: Project): string | null {
 export function groupTrips(projects: Project[]): GroupedTrips {
   const out: GroupedTrips = {
     attention: [],
-    awaiting: [],
-    progress: [],
+    active: [],
     completed: [],
     archive: [],
   }
@@ -94,13 +91,10 @@ export function groupTrips(projects: Project[]): GroupedTrips {
       continue
     }
 
-    if (p.status === 'quoted') {
-      out.awaiting.push(p)
-      continue
-    }
-
-    if (p.status === 'active') {
-      out.progress.push(p)
+    // Fresh quoted (no stale flag) + active (not imminent / already
+    // running with no urgency flag) collapse into one 'in flight' bucket.
+    if (p.status === 'quoted' || p.status === 'active') {
+      out.active.push(p)
       continue
     }
 
@@ -121,7 +115,7 @@ export function groupTrips(projects: Project[]): GroupedTrips {
   // Sort within each group: attention by age desc (oldest first = most urgent),
   // others by updated_at desc (newest first).
   out.attention.sort((a, b) => +new Date(a.updated_at) - +new Date(b.updated_at))
-  for (const k of ['awaiting', 'progress', 'completed', 'archive'] as const) {
+  for (const k of ['active', 'completed', 'archive'] as const) {
     out[k].sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at))
   }
 
@@ -130,8 +124,7 @@ export function groupTrips(projects: Project[]): GroupedTrips {
 
 export const GROUP_TITLES: Record<GroupKey, string> = {
   attention: 'Needs your attention',
-  awaiting: 'Awaiting client reply',
-  progress: 'In progress',
+  active: 'Active',
   completed: 'Recently completed',
   archive: 'Archive',
 }
