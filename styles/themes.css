@@ -596,46 +596,72 @@
 .tp-price-mode-label-input:focus { border-color: var(--accent); }
 
 /* ===================== TERMS / FOOTER ===================== */
-.tp-terms { background: var(--paper); padding: 64px 0 24px; }
+.tp-terms { padding: 64px 0 24px; }
 .tp-terms-body { color: var(--ink-soft); font-size: 14px; max-width: 64ch; }
 
-/* Collapsed Terms (public view) — native <details> with a custom
-   marker. The summary is a click-target spanning the title; default
-   browser marker is hidden, replaced by a chevron that rotates on
-   open. Cursor + accent on hover signals that the row is interactive. */
-.tp-terms-details { width: 100%; }
-.tp-terms-details summary {
-  list-style: none;
-  cursor: pointer;
+/* Collapsible Terms (public view) — preview-with-fade pattern.
+   Body is height-clamped; the bottom of the visible region fades
+   into the page background, signalling "more behind the cut" without
+   any decorative chrome. The toggle pill below is the affordance. */
+.tp-terms-body--collapsible {
+  position: relative;
+  overflow: hidden;
+  max-height: 132px;        /* ~6 lines of body text */
+  transition: max-height 320ms ease;
+}
+.tp-terms-body--collapsible.is-open {
+  max-height: 4000px;       /* large enough that any reasonable Terms fit;
+                               transitions to a fixed value, then auto’s
+                               unsupported by transition. */
+}
+.tp-terms-fade {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 80px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--bg) 0%, transparent),
+    var(--bg) 90%
+  );
+  pointer-events: none;
+}
+
+.tp-terms-toggle-row {
   display: flex;
+  justify-content: flex-start;
+  margin-top: 16px;
+}
+.tp-terms-toggle {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 4px 0;
-  transition: color 120ms ease;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
 }
-.tp-terms-details summary::-webkit-details-marker { display: none; }
-.tp-terms-details summary::marker { content: ''; }
-.tp-terms-summary-title {
-  font-size: 28px;
-  margin: 0;
-  flex: 1;
-  min-width: 0;
+.tp-terms-toggle:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
-.tp-terms-details summary::after {
-  content: '';
+.tp-terms-toggle-caret {
   display: inline-block;
-  width: 14px;
-  height: 14px;
-  border-right: 2px solid var(--ink-mute);
-  border-bottom: 2px solid var(--ink-mute);
-  transform: rotate(-45deg) translate(-2px, -2px);
-  transition: transform 200ms ease, border-color 120ms ease;
-  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -1px);
+  transition: transform 200ms ease;
 }
-.tp-terms-details summary:hover { color: var(--accent); }
-.tp-terms-details summary:hover::after { border-color: var(--accent); }
-.tp-terms-details[open] summary::after {
-  transform: rotate(45deg) translate(-2px, -2px);
+.tp-terms-toggle-caret.is-up {
+  transform: rotate(-135deg) translate(-1px, -1px);
 }
 .tp-foot {
   display: flex; justify-content: space-between; align-items: baseline;

@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react'
+'use client'
+
+import { useState, type ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
 
 type TermsProps = {
@@ -9,11 +11,9 @@ type TermsProps = {
   /** Optional helper rendered under the heading. Owner mode passes a
    *  one-liner explaining the scope of edits; omitted in public view. */
   ownerHint?: ReactNode
-  /** When true, render the body inside a collapsed <details> with the
-   *  section title as the <summary>. Used for the public/client view —
-   *  Terms can run long and most clients won't read them, so we keep
-   *  them out of the way until clicked. Owner mode keeps the body
-   *  always visible so edits stay one click away. */
+  /** When true, the public view starts collapsed: a few preview lines
+   *  fade into the page, with a Read-full-terms button revealing the
+   *  rest. Owner mode passes false so editing stays one click away. */
   collapsible?: boolean
 }
 
@@ -21,39 +21,21 @@ type TermsProps = {
  * Terms — shared structure across all themes (TZ-6 §6.7).
  * Multi-paragraph terms body. Proposal/valid dates moved to Hero.
  *
- * Renders as <section> (not <footer>) — Terms used to be the last block
- * before a Waytico footer, but Contacts now sits below it. Keeping the
- * <footer> tag here visually swallows everything beneath when the terms
- * body is long: the section claims page-end semantics + bottom padding
- * cascades. Switching to <section> matches the rest of the trip page.
+ * Public view (collapsible=true): the body opens with a soft preview
+ * of the first lines, fading into the section background, plus a
+ * Read-full-terms / Collapse pill below. The fade is the affordance —
+ * clients see the content exists and that there's more behind the
+ * cut. No accordion arrow, no detached chrome.
+ *
+ * Owner view: flat, always expanded.
  */
 export function TripTerms({ bodySlot, visible, ownerHint, collapsible }: TermsProps) {
   if (!visible) return null
 
-  // Public/client view: a native <details> accordion. The section title
-  // moves into the <summary> so we don't render the heading twice. The
-  // disclosure arrow is provided by the browser's default marker, which
-  // we restyle in themes.css to match the section's typography. Most
-  // clients skim past Terms — collapsing keeps the page tight.
   if (collapsible) {
-    return (
-      <section className="tp-terms" id="terms">
-        <div className="tp-container">
-          <details className="tp-terms-details">
-            <summary className="tp-terms-summary">
-              <h2 className="tp-display tp-terms-summary-title">
-                {UI.sectionLabels.terms}
-              </h2>
-            </summary>
-            <div className="tp-terms-body" style={{ marginTop: 16 }}>{bodySlot}</div>
-          </details>
-        </div>
-      </section>
-    )
+    return <CollapsibleTerms bodySlot={bodySlot} />
   }
 
-  // Owner view: flat, always expanded. Editing the terms shouldn't
-  // require opening an accordion every time.
   return (
     <section className="tp-terms" id="terms">
       <div className="tp-container">
@@ -75,6 +57,44 @@ export function TripTerms({ bodySlot, visible, ownerHint, collapsible }: TermsPr
           )}
         </header>
         <div className="tp-terms-body">{bodySlot}</div>
+      </div>
+    </section>
+  )
+}
+
+function CollapsibleTerms({ bodySlot }: { bodySlot: ReactNode }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <section className="tp-terms" id="terms">
+      <div className="tp-container">
+        <header className="tp-section-head" style={{ marginBottom: 24 }}>
+          <h2 className="tp-display" style={{ fontSize: 28 }}>
+            {UI.sectionLabels.terms}
+          </h2>
+        </header>
+
+        <div
+          className={
+            'tp-terms-body tp-terms-body--collapsible' +
+            (open ? ' is-open' : '')
+          }
+        >
+          {bodySlot}
+          {!open && <div className="tp-terms-fade" aria-hidden="true" />}
+        </div>
+
+        <div className="tp-terms-toggle-row">
+          <button
+            type="button"
+            className="tp-terms-toggle"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+          >
+            {open ? 'Show less' : 'Read full terms'}
+            <span className={'tp-terms-toggle-caret' + (open ? ' is-up' : '')} aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </section>
   )
