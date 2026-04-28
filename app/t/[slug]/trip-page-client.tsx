@@ -1067,6 +1067,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         <TripTerms
           bodySlot={termsBodySlot}
           visible={termsVisible}
+          collapsible={!ed}
           ownerHint={
             ed
               ? 'Edits here apply to this trip only. Update your profile terms to change them across this and future trips.'

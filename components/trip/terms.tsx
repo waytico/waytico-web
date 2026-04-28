@@ -9,6 +9,12 @@ type TermsProps = {
   /** Optional helper rendered under the heading. Owner mode passes a
    *  one-liner explaining the scope of edits; omitted in public view. */
   ownerHint?: ReactNode
+  /** When true, render the body inside a collapsed <details> with the
+   *  section title as the <summary>. Used for the public/client view —
+   *  Terms can run long and most clients won't read them, so we keep
+   *  them out of the way until clicked. Owner mode keeps the body
+   *  always visible so edits stay one click away. */
+  collapsible?: boolean
 }
 
 /**
@@ -21,8 +27,33 @@ type TermsProps = {
  * body is long: the section claims page-end semantics + bottom padding
  * cascades. Switching to <section> matches the rest of the trip page.
  */
-export function TripTerms({ bodySlot, visible, ownerHint }: TermsProps) {
+export function TripTerms({ bodySlot, visible, ownerHint, collapsible }: TermsProps) {
   if (!visible) return null
+
+  // Public/client view: a native <details> accordion. The section title
+  // moves into the <summary> so we don't render the heading twice. The
+  // disclosure arrow is provided by the browser's default marker, which
+  // we restyle in themes.css to match the section's typography. Most
+  // clients skim past Terms — collapsing keeps the page tight.
+  if (collapsible) {
+    return (
+      <section className="tp-terms" id="terms">
+        <div className="tp-container">
+          <details className="tp-terms-details">
+            <summary className="tp-terms-summary">
+              <h2 className="tp-display tp-terms-summary-title">
+                {UI.sectionLabels.terms}
+              </h2>
+            </summary>
+            <div className="tp-terms-body" style={{ marginTop: 16 }}>{bodySlot}</div>
+          </details>
+        </div>
+      </section>
+    )
+  }
+
+  // Owner view: flat, always expanded. Editing the terms shouldn't
+  // require opening an accordion every time.
   return (
     <section className="tp-terms" id="terms">
       <div className="tp-container">

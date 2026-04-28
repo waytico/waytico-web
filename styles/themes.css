@@ -598,6 +598,45 @@
 /* ===================== TERMS / FOOTER ===================== */
 .tp-terms { background: var(--paper); padding: 64px 0 24px; }
 .tp-terms-body { color: var(--ink-soft); font-size: 14px; max-width: 64ch; }
+
+/* Collapsed Terms (public view) — native <details> with a custom
+   marker. The summary is a click-target spanning the title; default
+   browser marker is hidden, replaced by a chevron that rotates on
+   open. Cursor + accent on hover signals that the row is interactive. */
+.tp-terms-details { width: 100%; }
+.tp-terms-details summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  transition: color 120ms ease;
+}
+.tp-terms-details summary::-webkit-details-marker { display: none; }
+.tp-terms-details summary::marker { content: ''; }
+.tp-terms-summary-title {
+  font-size: 28px;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+.tp-terms-details summary::after {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-right: 2px solid var(--ink-mute);
+  border-bottom: 2px solid var(--ink-mute);
+  transform: rotate(-45deg) translate(-2px, -2px);
+  transition: transform 200ms ease, border-color 120ms ease;
+  flex-shrink: 0;
+}
+.tp-terms-details summary:hover { color: var(--accent); }
+.tp-terms-details summary:hover::after { border-color: var(--accent); }
+.tp-terms-details[open] summary::after {
+  transform: rotate(45deg) translate(-2px, -2px);
+}
 .tp-foot {
   display: flex; justify-content: space-between; align-items: baseline;
   padding-top: 32px; margin-top: 48px;
