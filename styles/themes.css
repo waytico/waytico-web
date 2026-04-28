@@ -567,8 +567,15 @@
   border: 0;
   padding: 0;
   margin: 0;
-  font: inherit;
-  /* IE/old-Edge fallback for the visible dropdown chevron */
+  /* The element itself is invisible (opacity 0) but its computed
+     font-size is what the OS uses to render popup options on most
+     browsers. Inheriting from the headline blew them up to display
+     size — pin to a normal reading size. */
+  font-size: 14px;
+  line-height: 1.4;
+  font-family: var(--font-body);
+  font-weight: normal;
+  letter-spacing: 0;
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
