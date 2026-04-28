@@ -35,20 +35,15 @@ export function TripFooter({ owner, operatorContact, editable }: Props) {
       id="site-footer"
       className="w-full border-t border-border/50 bg-secondary"
     >
-      <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col md:flex-row items-center md:justify-between gap-2 text-xs text-muted-foreground">
-        <span>
-          © {year} {name}
-        </span>
+      <div className="max-w-4xl mx-auto px-4 py-6 text-center text-xs text-muted-foreground">
+        © {year} {name} · Powered by{' '}
         <Link
           href="/"
-          className="hover:text-foreground transition-colors"
+          className="font-serif font-semibold text-foreground/70 hover:text-foreground transition-colors"
           target="_blank"
           rel="noopener noreferrer"
         >
-          Powered by{' '}
-          <span className="font-serif font-semibold text-foreground/70">
-            Waytico
-          </span>
+          Waytico
         </Link>
       </div>
     </footer>
