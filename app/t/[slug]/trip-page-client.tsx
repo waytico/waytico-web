@@ -1041,6 +1041,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
         <TripTerms
           bodySlot={termsBodySlot}
           visible={termsVisible}
+          ownerHint={
+            ed
+              ? 'Edits here apply to this trip only. Update your profile terms to change them across this and future trips.'
+              : undefined
+          }
         />
 
         <TripContacts
@@ -1482,4 +1487,5 @@ function WhatToBringSection({
     </section>
   )
 }
+
 
