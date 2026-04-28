@@ -126,9 +126,9 @@ export function ClientInfo({
       aria-label="Client info — operator only"
       className="w-full bg-secondary/60 border-b border-border"
     >
-      <div className="max-w-4xl mx-auto px-5 py-4">
+      <div className="max-w-4xl mx-auto px-5 py-3">
         {/* Header */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Lock size={13} className="text-foreground/60" aria-hidden="true" />
             <h2 className="text-xs uppercase tracking-[0.12em] font-semibold text-foreground/80">
@@ -141,7 +141,7 @@ export function ClientInfo({
         </div>
 
         {/* ── Identity ───────────────────────────────────────── */}
-        <div className="mb-3">
+        <div className="mb-1.5">
           <Field
             Icon={Tag}
             label="Nickname"
@@ -149,10 +149,9 @@ export function ClientInfo({
             placeholder='Short label, e.g. "Amina" or "Anna 2 pax"'
             onSave={(v) => saveClientField('nickname', v)}
             wide
-            primary
           />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-2 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-1.5 mb-3">
           <Field
             Icon={User}
             label="Name"
@@ -186,11 +185,11 @@ export function ClientInfo({
         </div>
 
         {/* ── Channels ───────────────────────────────────────── */}
-        <div className="border-t border-border/70 pt-3 mb-4">
-          <div className="text-[10px] uppercase tracking-[0.12em] font-medium text-foreground/50 mb-2">
+        <div className="border-t border-border/70 pt-2.5 mb-3">
+          <div className="text-[10px] uppercase tracking-[0.12em] font-medium text-foreground/50 mb-1.5">
             Channels
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-1.5">
             <Field
               Icon={WhatsAppIcon}
               label="WhatsApp"
@@ -198,7 +197,7 @@ export function ClientInfo({
               value={localClient?.whatsapp ?? null}
               placeholder="+1 604 555 1234"
               onSave={(v) => saveClientField('whatsapp', v)}
-              compact
+
             />
             <Field
               Icon={TelegramIcon}
@@ -206,7 +205,7 @@ export function ClientInfo({
               value={localClient?.telegram ?? null}
               placeholder="@username"
               onSave={(v) => saveClientField('telegram', v)}
-              compact
+
             />
             <Field
               Icon={InstagramIcon}
@@ -214,7 +213,7 @@ export function ClientInfo({
               value={localClient?.instagram ?? null}
               placeholder="@username"
               onSave={(v) => saveClientField('instagram', v)}
-              compact
+
             />
             <Field
               Icon={FacebookIcon}
@@ -222,7 +221,7 @@ export function ClientInfo({
               value={localClient?.facebook ?? null}
               placeholder="facebook.com/…"
               onSave={(v) => saveClientField('facebook', v)}
-              compact
+
             />
             <Field
               Icon={YouTubeIcon}
@@ -230,7 +229,7 @@ export function ClientInfo({
               value={localClient?.youtube ?? null}
               placeholder="youtube.com/@…"
               onSave={(v) => saveClientField('youtube', v)}
-              compact
+
             />
             <Field
               Icon={TikTokIcon}
@@ -238,17 +237,17 @@ export function ClientInfo({
               value={localClient?.tiktok ?? null}
               placeholder="@username"
               onSave={(v) => saveClientField('tiktok', v)}
-              compact
+
             />
           </div>
         </div>
 
         {/* ── Trip-only ──────────────────────────────────────── */}
-        <div className="border-t border-border/70 pt-3">
-          <div className="text-[10px] uppercase tracking-[0.12em] font-medium text-foreground/50 mb-2">
+        <div className="border-t border-border/70 pt-2.5">
+          <div className="text-[10px] uppercase tracking-[0.12em] font-medium text-foreground/50 mb-1.5">
             This trip
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 mb-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1.5 mb-1.5">
             <Field
               Icon={Hash}
               label="Booking ref"
@@ -283,10 +282,8 @@ export function ClientInfo({
 // ─── Field ──────────────────────────────────────────────────────
 //
 // Variants:
-//   default   — icon + label above + click-to-edit white pill below
+//   default   — icon + click-to-edit pill on a single line
 //   wide      — pill spans the full row width
-//   primary   — slightly taller pill, used for the nickname header
-//   compact   — channels grid: same shape but tighter padding
 //   multiline — edit opens a textarea; Cmd/Ctrl+Enter commits
 
 function Field({
@@ -297,8 +294,6 @@ function Field({
   type = 'text',
   onSave,
   wide,
-  primary,
-  compact,
   multiline,
 }: {
   Icon: React.ComponentType<any>
@@ -308,8 +303,6 @@ function Field({
   type?: 'text' | 'email' | 'tel'
   onSave: (v: string | null) => Promise<boolean>
   wide?: boolean
-  primary?: boolean
-  compact?: boolean
   multiline?: boolean
 }) {
   const [editing, setEditing] = useState(false)
@@ -359,17 +352,20 @@ function Field({
   // signal of "what's already captured" without an extra meter.
   const iconColor = filled ? 'text-accent' : 'text-foreground/30'
 
-  const padY = compact ? 'py-1' : primary ? 'py-1.5' : 'py-1'
-  const baseBox = 'w-full border rounded-md text-sm leading-tight transition-colors'
+  // One-line layout: icon | pill. The icon's `title` attribute carries
+  // the field name for hover/accessibility — there's no visible label
+  // because the placeholder text + icon shape already say what the
+  // field is for.
+  const baseBox =
+    'flex-1 min-w-0 border rounded-md text-sm leading-tight px-2.5 py-1 transition-colors'
 
   return (
-    <div className={`flex flex-col gap-1 ${wide ? 'w-full' : 'min-w-0'}`}>
-      <div className="flex items-center gap-1.5">
-        <Icon size={13} className={`shrink-0 ${iconColor}`} aria-hidden="true" />
-        <label className="text-[10px] uppercase tracking-[0.1em] text-foreground/50 font-medium">
-          {label}
-        </label>
-      </div>
+    <div className={`flex items-center gap-2 ${wide ? 'w-full' : 'min-w-0'}`}>
+      <Icon
+        size={14}
+        className={`shrink-0 ${iconColor}`}
+        aria-hidden="true"
+      />
       {editing ? (
         multiline ? (
           <textarea
@@ -391,7 +387,8 @@ function Field({
             disabled={saving}
             rows={2}
             placeholder={placeholder}
-            className={`${baseBox} bg-card border-accent px-2.5 ${padY} outline-none resize-y`}
+            aria-label={label}
+            className={`${baseBox} bg-card border-accent outline-none resize-y`}
           />
         ) : (
           <input
@@ -413,14 +410,17 @@ function Field({
             }}
             disabled={saving}
             placeholder={placeholder}
-            className={`${baseBox} bg-card border-accent px-2.5 ${padY} outline-none`}
+            aria-label={label}
+            className={`${baseBox} bg-card border-accent outline-none`}
           />
         )
       ) : (
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className={`${baseBox} text-left px-2.5 ${padY} truncate ${
+          title={label}
+          aria-label={label}
+          className={`${baseBox} text-left truncate ${
             filled
               ? 'bg-card border-border hover:border-foreground/30 text-foreground'
               : 'bg-card/40 border-dashed border-border hover:border-foreground/30 text-foreground/40 italic'
