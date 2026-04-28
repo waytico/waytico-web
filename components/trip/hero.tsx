@@ -113,58 +113,76 @@ function HeroTopStrip({
 
   const datesStyle: React.CSSProperties = {
     fontSize: 11,
-    letterSpacing: '0.08em',
+    letterSpacing: '0.12em',
     textTransform: 'uppercase',
     fontFamily: 'var(--font-mono)',
-    color: onPhoto ? 'rgba(255,255,255,0.85)' : 'var(--ink-mute)',
+    color: onPhoto ? 'rgba(255,255,255,0.92)' : 'var(--ink-mute)',
     textShadow: onPhoto ? '0 1px 4px rgba(0,0,0,0.4)' : undefined,
   }
 
+  // Outer wrapper is absolutely positioned over the hero so it lays
+  // above the photo on the Cinematic overlay theme. The inner div
+  // re-establishes the page's max-w-7xl + px-4 horizontal alignment
+  // so the strip's left edge aligns with the hero title and its right
+  // edge with the rest of the page content (was: stretching to the
+  // viewport edges, leaving a wide visual gap on large screens).
   return (
     <div
       style={{
         position: 'absolute',
-        top: 16,
-        left: 16,
-        right: 16,
+        top: 0,
+        left: 0,
+        right: 0,
         zIndex: 3,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-        flexWrap: 'wrap',
         pointerEvents: 'none',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', pointerEvents: 'auto' }}>
-        {hasStatus && <PublicStatusPill status={status} />}
-      </div>
       <div
+        className="max-w-7xl mx-auto px-4"
         style={{
+          paddingTop: 20,
+          paddingBottom: 20,
           display: 'flex',
           alignItems: 'center',
-          gap: 12,
+          justifyContent: 'space-between',
+          gap: 16,
           flexWrap: 'wrap',
-          justifyContent: 'flex-end',
-          pointerEvents: 'auto',
         }}
       >
-        {hasContactAgent && renderedContactAgent}
-        {hasDates && (
-          <div style={datesStyle}>
-            {hasProposal && (
-              <>
-                {UI.proposal} · {proposalSlot ?? (proposalDate ? fmtDate(proposalDate) : null)}
-              </>
-            )}
-            {hasProposal && hasValidUntil && <span>{' · '}</span>}
-            {hasValidUntil && (
-              <>
-                {UI.validUntil} {validUntilSlot ?? (validUntil ? fmtDate(validUntil) : null)}
-              </>
-            )}
-          </div>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', pointerEvents: 'auto' }}>
+          {hasStatus && <PublicStatusPill status={status} onPhoto={onPhoto} />}
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 20,
+            flexWrap: 'wrap',
+            justifyContent: 'flex-end',
+            pointerEvents: 'auto',
+          }}
+        >
+          {hasContactAgent && renderedContactAgent}
+          {hasDates && (
+            <div style={datesStyle}>
+              {hasProposal && (
+                <>
+                  {UI.proposal}{' '}
+                  {proposalSlot ?? (proposalDate ? fmtDate(proposalDate) : null)}
+                </>
+              )}
+              {hasProposal && hasValidUntil && (
+                <span style={{ margin: '0 0.6em', opacity: 0.5 }}>—</span>
+              )}
+              {hasValidUntil && (
+                <>
+                  {UI.validUntil}{' '}
+                  {validUntilSlot ?? (validUntil ? fmtDate(validUntil) : null)}
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

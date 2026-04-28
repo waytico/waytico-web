@@ -79,12 +79,14 @@ export function ContactAgentMenu({ owner, operatorContact, onPhoto = false }: Pr
 
   // Trigger styling matches the validity strip's typography — small
   // monospace uppercase, muted color, lifted on dark photo backgrounds.
+  // Affordance: subtle underline on hover (no border, no chrome) so it
+  // reads as part of the document's metadata register, not a button.
   const triggerStyle: React.CSSProperties = {
     fontSize: 11,
-    letterSpacing: '0.08em',
+    letterSpacing: '0.12em',
     textTransform: 'uppercase',
     fontFamily: 'var(--font-mono)',
-    color: onPhoto ? 'rgba(255,255,255,0.85)' : 'var(--ink-mute)',
+    color: onPhoto ? 'rgba(255,255,255,0.92)' : 'var(--ink-mute)',
     textShadow: onPhoto ? '0 1px 4px rgba(0,0,0,0.4)' : undefined,
   }
 
@@ -93,13 +95,15 @@ export function ContactAgentMenu({ owner, operatorContact, onPhoto = false }: Pr
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 px-1 py-0.5 hover:opacity-70 transition-opacity"
+        className="inline-flex items-center gap-1.5 py-0.5 group cursor-pointer"
         style={triggerStyle}
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <span>Contact agent</span>
-        <ChevronDown size={12} aria-hidden="true" />
+        <span className="border-b border-current/0 group-hover:border-current/40 transition-colors">
+          Contact agent
+        </span>
+        <ChevronDown size={11} aria-hidden="true" />
       </button>
 
       {open && (
