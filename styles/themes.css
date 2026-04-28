@@ -714,20 +714,42 @@
 .tp-acc-add-form { display: block; margin-top: 8px; }
 
 /* ===================== CONTACTS ===================== */
-.tp-contacts {
+.tp-contacts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px 32px;
-  max-width: 720px;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px 48px;
+  max-width: 880px;
+}
+@media (max-width: 720px) {
+  .tp-contacts-grid { grid-template-columns: 1fr; }
+}
+
+.tp-contacts-col {
+  display: flex;
+  flex-direction: column;
 }
 
 .tp-contact-row {
   display: grid;
-  grid-template-columns: 100px 1fr;
-  gap: 16px;
+  /* icon | label | value — label width is fixed so values line up
+     vertically across rows; icon column collapses gracefully when no
+     icon is present (Name row has no icon but still aligns). */
+  grid-template-columns: 24px 88px 1fr;
+  gap: 12px;
   align-items: baseline;
   padding: 10px 0;
   border-bottom: 1px solid var(--rule);
+  min-height: 38px;
+}
+
+.tp-contact-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  color: var(--ink-mute);
+  /* icon is aligned with the label baseline, but SVGs sit on their box,
+     so a tiny nudge brings the centre of the glyph onto the text line. */
+  transform: translateY(2px);
 }
 
 .tp-contact-label {
@@ -743,8 +765,8 @@
   word-break: break-word;
 }
 .tp-contact-value--placeholder { color: var(--ink-mute); font-style: italic; }
-a.tp-contact-value { color: var(--accent); text-decoration: none; }
-a.tp-contact-value:hover { text-decoration: underline; }
+a.tp-contact-value { color: var(--ink); text-decoration: none; }
+a.tp-contact-value:hover { color: var(--accent); }
 
 .tp-contact-input {
   width: 100%;
@@ -756,5 +778,9 @@ a.tp-contact-value:hover { text-decoration: underline; }
   padding: 4px 6px;
   color: var(--ink);
   outline: none;
+}
+.tp-contact-input--multiline {
+  resize: vertical;
+  min-height: 56px;
 }
 .tp-contact-input:focus { border-color: var(--accent); }

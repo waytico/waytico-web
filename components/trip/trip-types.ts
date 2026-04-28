@@ -47,6 +47,11 @@ export type OperatorContact = {
   whatsapp?: string | null
   telegram?: string | null
   website?: string | null
+  address?: string | null
+  instagram?: string | null
+  facebook?: string | null
+  youtube?: string | null
+  tiktok?: string | null
 } | null
 
 export type OwnerBrand = {
@@ -56,6 +61,11 @@ export type OwnerBrand = {
   brand_whatsapp?: string | null
   brand_telegram?: string | null
   brand_website?: string | null
+  brand_address?: string | null
+  brand_instagram?: string | null
+  brand_facebook?: string | null
+  brand_youtube?: string | null
+  brand_tiktok?: string | null
   brand_logo_url?: string | null
   brand_tagline?: string | null
   brand_terms?: string | null

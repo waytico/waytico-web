@@ -14,6 +14,11 @@ type DefaultContacts = {
   whatsapp?: string | null
   telegram?: string | null
   website?: string | null
+  address?: string | null
+  instagram?: string | null
+  facebook?: string | null
+  youtube?: string | null
+  tiktok?: string | null
 }
 
 type UserProfile = {
@@ -28,13 +33,36 @@ type UserProfile = {
   default_contacts: DefaultContacts | null
 }
 
-type ChannelKey = 'phone' | 'whatsapp' | 'telegram' | 'website'
+type ChannelKey =
+  | 'phone'
+  | 'whatsapp'
+  | 'telegram'
+  | 'website'
+  | 'address'
+  | 'instagram'
+  | 'facebook'
+  | 'youtube'
+  | 'tiktok'
 
-const CHANNELS: Array<{ key: ChannelKey; label: string; placeholder: string; type: string }> = [
+type ChannelDef = {
+  key: ChannelKey
+  label: string
+  placeholder: string
+  type: string
+  /** Render as a multiline textarea instead of a single-line input. */
+  multiline?: boolean
+}
+
+const CHANNELS: ChannelDef[] = [
   { key: 'phone', label: 'Phone', placeholder: '+1 604 555 1234', type: 'tel' },
   { key: 'whatsapp', label: 'WhatsApp', placeholder: '+1 604 555 1234', type: 'tel' },
   { key: 'telegram', label: 'Telegram', placeholder: '@username', type: 'text' },
   { key: 'website', label: 'Website', placeholder: 'https://yourbrand.com', type: 'url' },
+  { key: 'address', label: 'Address', placeholder: '123 Main St, Vancouver BC', type: 'text', multiline: true },
+  { key: 'instagram', label: 'Instagram', placeholder: '@yourbrand', type: 'text' },
+  { key: 'facebook', label: 'Facebook', placeholder: 'facebook.com/yourbrand', type: 'text' },
+  { key: 'youtube', label: 'YouTube', placeholder: 'youtube.com/@yourbrand', type: 'text' },
+  { key: 'tiktok', label: 'TikTok', placeholder: '@yourbrand', type: 'text' },
 ]
 
 export default function BrandCard() {
@@ -346,6 +374,7 @@ export default function BrandCard() {
             value={(contacts as Record<string, string | null>)[ch.key] || null}
             placeholder={ch.placeholder}
             type={ch.type}
+            multiline={ch.multiline}
             onSave={(v) => saveContact(ch.key, v)}
           />
         ))}
@@ -453,21 +482,27 @@ type ContactRowProps = {
   value: string | null
   placeholder: string
   type: string
+  multiline?: boolean
   onSave: (v: string) => Promise<boolean>
 }
 
-function ContactRow({ label, value, placeholder, type, onSave }: ContactRowProps) {
+function ContactRow({ label, value, placeholder, type, multiline, onSave }: ContactRowProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value || '')
   const [saving, setSaving] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    if (editing) {
+    if (!editing) return
+    if (multiline) {
+      textareaRef.current?.focus()
+      textareaRef.current?.select?.()
+    } else {
       inputRef.current?.focus()
       inputRef.current?.select()
     }
-  }, [editing])
+  }, [editing, multiline])
 
   useEffect(() => {
     if (!editing) setDraft(value || '')
@@ -487,40 +522,73 @@ function ContactRow({ label, value, placeholder, type, onSave }: ContactRowProps
     else setDraft(value || '')
   }
 
+  // First line only for the collapsed display so a multi-line address
+  // doesn't break the strip rhythm — full text appears as soon as the
+  // operator clicks to edit.
+  const displayValue = value
+    ? multiline
+      ? value.split('\n')[0]
+      : value
+    : null
+
   return (
     <div className="flex flex-col gap-1">
       <label className="text-[11px] uppercase tracking-wider text-foreground/50 font-sans">{label}</label>
       {editing ? (
-        <input
-          ref={inputRef}
-          type={type}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              commit()
-            }
-            if (e.key === 'Escape') {
-              e.preventDefault()
-              setDraft(value || '')
-              setEditing(false)
-            }
-          }}
-          disabled={saving}
-          placeholder={placeholder}
-          className="bg-background border border-accent/40 rounded px-2 py-1.5 text-sm outline-none focus:border-accent"
-        />
+        multiline ? (
+          <textarea
+            ref={textareaRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                setDraft(value || '')
+                setEditing(false)
+              }
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                commit()
+              }
+            }}
+            disabled={saving}
+            rows={2}
+            placeholder={placeholder}
+            className="bg-background border border-accent/40 rounded px-2 py-1.5 text-sm outline-none focus:border-accent resize-y"
+          />
+        ) : (
+          <input
+            ref={inputRef}
+            type={type}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                commit()
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                setDraft(value || '')
+                setEditing(false)
+              }
+            }}
+            disabled={saving}
+            placeholder={placeholder}
+            className="bg-background border border-accent/40 rounded px-2 py-1.5 text-sm outline-none focus:border-accent"
+          />
+        )
       ) : (
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className={`text-left text-sm hover:bg-secondary/40 rounded px-2 py-1.5 -mx-2 transition-colors border border-transparent hover:border-border ${
+          className={`text-left text-sm hover:bg-secondary/40 rounded px-2 py-1.5 -mx-2 transition-colors border border-transparent hover:border-border truncate ${
             !value ? 'text-foreground/40 italic' : 'text-foreground'
           }`}
         >
-          {value || placeholder}
+          {displayValue || placeholder}
         </button>
       )}
     </div>
