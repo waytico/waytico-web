@@ -801,15 +801,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
       <ActivationToast />
 
       {previewAsClient && (
-        <div className="sticky top-0 z-40 bg-foreground text-background">
+        <div className="sticky top-0 z-40 bg-accent text-accent-foreground">
           <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
             <p className="text-sm flex-1 min-w-0 flex items-center gap-2">
               <Eye className="w-4 h-4 flex-shrink-0" />
-              <span>You're previewing as your client sees this page.</span>
+              <span>You&apos;re previewing as your client sees this page.</span>
             </p>
             <button
               onClick={() => setPreviewAsClient(false)}
-              className="text-sm font-semibold underline underline-offset-2 hover:opacity-80 flex-shrink-0"
+              className="text-sm font-semibold px-3 py-1 rounded-full bg-accent-foreground/15 hover:bg-accent-foreground/25 transition-colors animate-pulse flex-shrink-0"
             >
               Exit preview
             </button>
