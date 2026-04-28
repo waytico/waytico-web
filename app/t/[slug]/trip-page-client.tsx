@@ -1099,7 +1099,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       {showOwnerUI && (
         <>
-          <TripCommandBar projectId={p.id} getToken={getToken} onTripUpdated={handleTripUpdated} status={p.status} />
+          <TripCommandBar projectId={p.id} getToken={getToken} onTripUpdated={handleTripUpdated} status={p.status} theme={resolvedTheme} />
           {/* Owner-only breathing room between the last section and the
               footer. The command bar floats over the page; this spacer
               gives the operator empty space where the bar can rest

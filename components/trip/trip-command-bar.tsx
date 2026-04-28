@@ -49,6 +49,10 @@ interface TripCommandBarProps {
    *  'active' / 'completed'; on the quote phase there's nothing
    *  to parse, so the bar stays text-only. */
   status?: string | null
+  /** Active trip-page theme. Drives --bar-* tokens via a wrapping
+   *  data-theme attribute so the bar inverts cleanly on any theme
+   *  (dark bar on light pages, light bar on dark). */
+  theme?: string | null
 }
 
 function getFileIcon(type: string): string {
@@ -64,6 +68,7 @@ export function TripCommandBar({
   getToken,
   onTripUpdated,
   status,
+  theme,
 }: TripCommandBarProps) {
   // File upload is only useful once the trip is active — that's when
   // bookings, tickets and other documents start flowing in. On a quote
@@ -198,6 +203,7 @@ export function TripCommandBar({
 
   return (
     <div
+      data-theme={theme || 'editorial'}
       className={`pointer-events-none fixed inset-x-0 z-30 px-4 transition-opacity duration-200 ease-out pb-[calc(env(safe-area-inset-bottom)+16px)] ${
         footerVisible ? 'opacity-0' : 'opacity-100'
       }`}
@@ -211,12 +217,11 @@ export function TripCommandBar({
       >
         {selectedFile && (
           <div className="mb-2 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 border border-accent/30 px-3 py-1.5 text-xs text-foreground shadow-md">
+            <span className="tp-cmdbar-file-pill">
               <span>{getFileIcon(selectedFile.type)}</span>
               <span className="max-w-[240px] truncate">{selectedFile.name}</span>
               <button
                 onClick={() => setSelectedFile(null)}
-                className="ml-1 text-muted-foreground hover:text-foreground"
                 aria-label="Remove file"
                 disabled={isSending}
               >
@@ -226,13 +231,13 @@ export function TripCommandBar({
           </div>
         )}
 
-        <div className="flex items-end gap-2 rounded-2xl border border-border bg-background/95 backdrop-blur-md px-3 py-2 focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-colors shadow-lg">
+        <div className="tp-cmdbar">
           {allowFileUpload && (
             <>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-border text-muted-foreground hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
+                className="tp-cmdbar-attach"
                 title="Attach file"
                 aria-label="Attach file"
                 disabled={isSending}
@@ -266,17 +271,16 @@ export function TripCommandBar({
             placeholder={
               isSending
                 ? 'Working on it…'
-                : 'Add a rest day between days 3 and 4\nPolish the description for [hotel name] / day 2'
+                : 'Try: "add a rest day between 3 and 4" or "polish the description for [hotel name] / day 2"'
             }
             disabled={isSending}
-            className="flex-1 resize-none bg-transparent py-2 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[72px] disabled:opacity-60"
-            style={{ maxHeight: 240 }}
+            className="tp-cmdbar-input"
           />
           <button
             type="button"
             onClick={send}
             disabled={(!input.trim() && !selectedFile) || isSending}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground transition-opacity disabled:opacity-40"
+            className="tp-cmdbar-send"
             aria-label="Send command"
           >
             {isSending ? (
