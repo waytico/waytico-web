@@ -124,18 +124,21 @@ export function ClientInfo({
   return (
     <section
       aria-label="Client info — operator only"
-      className="w-full bg-secondary/60 border-b border-border"
+      className="w-full bg-highlight/70 border-y border-accent/20"
     >
       <div className="max-w-4xl mx-auto px-5 py-3">
         {/* Header */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Lock size={13} className="text-foreground/60" aria-hidden="true" />
+        <div className="flex items-center justify-between mb-2 gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Lock size={13} className="text-foreground/60 shrink-0" aria-hidden="true" />
             <h2 className="text-xs uppercase tracking-[0.12em] font-semibold text-foreground/80">
               Client
             </h2>
+            <span className="text-[10px] text-foreground/50 italic truncate">
+              · all fields optional
+            </span>
           </div>
-          <span className="text-[10px] uppercase tracking-wider text-foreground/40">
+          <span className="text-[10px] uppercase tracking-wider font-semibold text-accent bg-accent/10 px-2 py-0.5 rounded-full whitespace-nowrap">
             For your eyes only
           </span>
         </div>
@@ -203,7 +206,7 @@ export function ClientInfo({
               Icon={TelegramIcon}
               label="Telegram"
               value={localClient?.telegram ?? null}
-              placeholder="@username"
+              placeholder="@username or phone"
               onSave={(v) => saveClientField('telegram', v)}
 
             />
