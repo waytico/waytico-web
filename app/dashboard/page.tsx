@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
-import { Search } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, Search } from 'lucide-react'
 import BrandCard from '@/components/brand-card'
 import ChatFlow from '@/components/chat-flow'
 import Header from '@/components/header'
@@ -12,6 +12,7 @@ import type { Project, ProjectStatus } from '@/components/project-card'
 import { apiFetch } from '@/lib/api'
 
 type SortMode = 'state' | 'created'
+type SortDir = 'asc' | 'desc'
 type StatusFilter = 'all' | ProjectStatus
 type PerPage = 10 | 25 | 50 | 100
 
@@ -32,10 +33,102 @@ const STATUS_FILTER_OPTIONS: { key: StatusFilter; label: string }[] = [
   { key: 'archived', label: 'Archived' },
 ]
 
+const SORT_OPTIONS: { key: SortMode; label: string }[] = [
+  { key: 'state', label: 'By state' },
+  { key: 'created', label: 'By date created' },
+]
+
 const PER_PAGE_OPTIONS: PerPage[] = [10, 25, 50, 100]
 
 function SkeletonRow() {
   return <div className="animate-pulse bg-secondary/50 rounded-md h-14 mb-2" />
+}
+
+function SortDropdown({
+  mode,
+  dir,
+  onChange,
+}: {
+  mode: SortMode
+  dir: SortDir
+  onChange: (mode: SortMode, dir: SortDir) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  function pick(next: SortMode) {
+    if (next === mode) {
+      onChange(mode, dir === 'asc' ? 'desc' : 'asc')
+    } else {
+      onChange(next, 'asc')
+    }
+    setOpen(false)
+  }
+
+  const current = SORT_OPTIONS.find((o) => o.key === mode)?.label ?? ''
+  const ArrowIcon = dir === 'asc' ? ArrowDown : ArrowUp
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        className="h-8 px-2 text-xs bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent inline-flex items-center gap-1.5 hover:bg-secondary/40 transition-colors"
+      >
+        <span>{current}</span>
+        <ArrowIcon className="w-3 h-3" />
+        <ChevronDown className="w-3 h-3 opacity-50" />
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          className="absolute right-0 top-full mt-1 z-20 min-w-[180px] bg-card border border-border rounded-md shadow-lg p-1"
+        >
+          {SORT_OPTIONS.map((opt) => {
+            const isActive = opt.key === mode
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                role="option"
+                aria-selected={isActive}
+                onClick={() => pick(opt.key)}
+                className={`w-full flex items-center justify-between gap-3 px-2.5 py-1.5 rounded text-xs transition-colors ${
+                  isActive ? 'bg-secondary/60' : 'hover:bg-secondary/40'
+                }`}
+              >
+                <span>{opt.label}</span>
+                {isActive && (
+                  <span className="inline-flex items-center gap-1 text-foreground/60">
+                    {dir}
+                    <ArrowIcon className="w-3 h-3" />
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function DashboardPage() {
@@ -44,13 +137,14 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[] | null>(null)
   const [search, setSearch] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('state')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [perPage, setPerPage] = useState<PerPage>(25)
   const [page, setPage] = useState(1)
 
   useEffect(() => {
     setPage(1)
-  }, [search, sortMode, statusFilter, perPage])
+  }, [search, sortMode, sortDir, statusFilter, perPage])
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.replace('/sign-in')
@@ -126,8 +220,10 @@ export default function DashboardPage() {
       sorted.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
     }
 
+    if (sortDir === 'desc') sorted.reverse()
+
     return sorted
-  }, [projects, search, statusFilter, sortMode])
+  }, [projects, search, statusFilter, sortMode, sortDir])
 
   const totalCount = visible?.length ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / perPage))
@@ -178,17 +274,17 @@ export default function DashboardPage() {
                   />
                 </div>
 
-                <label className="flex items-center gap-1.5 text-xs text-foreground/60">
+                <div className="flex items-center gap-1.5 text-xs text-foreground/60">
                   Sort
-                  <select
-                    value={sortMode}
-                    onChange={(e) => setSortMode(e.target.value as SortMode)}
-                    className="h-8 px-2 text-xs bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent"
-                  >
-                    <option value="state">By state</option>
-                    <option value="created">By date created</option>
-                  </select>
-                </label>
+                  <SortDropdown
+                    mode={sortMode}
+                    dir={sortDir}
+                    onChange={(nextMode, nextDir) => {
+                      setSortMode(nextMode)
+                      setSortDir(nextDir)
+                    }}
+                  />
+                </div>
 
                 <label className="flex items-center gap-1.5 text-xs text-foreground/60">
                   Show
