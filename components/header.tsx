@@ -9,13 +9,12 @@ export default function Header() {
 
   // Sticky for signed-in operators so the top nav stays reachable while
   // they scroll long trip pages. Public pages keep the static header so
-  // the hero gets the full vertical canvas. The 64px figure matches
-  // py-4 + contents — other sticky elements on trip-page (action bar,
-  // preview banner, anon banner) are offset by the same value to stack
-  // cleanly under it.
+  // the hero gets the full vertical canvas. Solid background — half-
+  // transparent surfaces let the page content bleed through during
+  // scroll, which reads as a glitch, not a design choice.
   const stickyClasses = isSignedIn
-    ? 'sticky top-0 z-30 bg-background/95 backdrop-blur'
-    : 'bg-background/80 backdrop-blur-sm'
+    ? 'sticky top-0 z-30 bg-background'
+    : 'bg-background'
 
   return (
     <header className={`w-full border-b border-border/50 ${stickyClasses}`}>
