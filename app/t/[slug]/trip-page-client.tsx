@@ -31,7 +31,7 @@ import { TripAccommodations } from '@/components/trip/accommodations'
 import { TripContacts } from '@/components/trip/contacts'
 import { HeroOwnerOverlay, HeroDropZone } from '@/components/trip/owner-extras'
 import type { PricingMode } from '@/components/trip/trip-types'
-import Footer from '@/components/footer'
+import { TripFooter } from '@/components/trip/trip-footer'
 
 import { apiFetch } from '@/lib/api'
 import { resolveTheme } from '@/lib/themes'
@@ -1085,7 +1085,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         </>
       )}
 
-      <Footer />
+      <TripFooter owner={owner} operatorContact={operatorContact} />
 
       <ScrollToTop bottomOffset={showOwnerUI ? 88 : 24} />
     </div>
