@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Lock, User, Mail, Phone } from 'lucide-react'
+import { Lock, User, Mail, Phone, Tag } from 'lucide-react'
 import type { Mutations } from './trip-types'
 
 type Props = {
+  clientNickname: string | null
   clientName: string | null
   clientEmail: string | null
   clientPhone: string | null
@@ -28,6 +29,7 @@ type Props = {
  * one section confuses the resolution logic and the visual reading.
  */
 export function ClientInfo({
+  clientNickname,
   clientName,
   clientEmail,
   clientPhone,
@@ -48,6 +50,21 @@ export function ClientInfo({
         <p className="text-[11px] text-amber-800/80 dark:text-amber-200/70 mb-4">
           Not visible to the client. Used for trip reminders and your own records.
         </p>
+
+        {/* Nickname — full-width row. Drives the dashboard primary
+            heading for this trip, so it gets a wider field + a hint
+            explaining what it does. */}
+        <div className="mb-4">
+          <ClientField
+            Icon={Tag}
+            label="Nickname"
+            value={clientNickname}
+            placeholder='e.g. "Amina" or "Anna 2 pax"'
+            type="text"
+            hint="Shown as the primary heading on your dashboard for this trip."
+            onSave={(v) => saveProjectPatch({ clientNickname: v })}
+          />
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <ClientField
@@ -86,6 +103,7 @@ function ClientField({
   value,
   placeholder,
   type,
+  hint,
   onSave,
 }: {
   Icon: React.ComponentType<any>
@@ -93,6 +111,7 @@ function ClientField({
   value: string | null
   placeholder: string
   type: 'text' | 'email' | 'tel'
+  hint?: string
   onSave: (v: string | null) => Promise<boolean>
 }) {
   const [editing, setEditing] = useState(false)
@@ -166,6 +185,11 @@ function ClientField({
         >
           {value || placeholder}
         </button>
+      )}
+      {hint && (
+        <p className="text-[10px] text-amber-800/60 dark:text-amber-200/50 ml-[20px] mt-0.5">
+          {hint}
+        </p>
       )}
     </div>
   )

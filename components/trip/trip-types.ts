@@ -117,6 +117,10 @@ export type ProjectLite = {
   client_name?: string | null
   client_email?: string | null
   client_phone?: string | null
+  /** Operator-friendly short label (e.g. "Amina", "Anna 2 pax") that
+   *  becomes the dashboard's primary heading for this trip. Falls back
+   *  to title when null. Internal-only. */
+  client_nickname?: string | null
 }
 
 export type MediaLite = {

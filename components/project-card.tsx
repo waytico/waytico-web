@@ -23,6 +23,9 @@ export type Project = {
   client_name?: string | null
   client_email?: string | null
   client_phone?: string | null
+  /** Operator-friendly short label that replaces the title as the
+   *  primary heading on dashboard cards/rows when set. */
+  client_nickname?: string | null
   // Used by TripRow for compact dashboard rows
   dates_start?: string | null
   dates_end?: string | null
@@ -235,6 +238,23 @@ export default function ProjectCard({ project, onUpdate, onDelete }: Props) {
               className="font-serif text-xl w-full border-b border-accent bg-transparent outline-none disabled:opacity-60"
               aria-label="Edit project title"
             />
+          ) : project.client_nickname ? (
+            // Two-line heading: nickname (bold operator-facing label)
+            // on top, trip title as secondary line underneath. The
+            // inline title editor still edits project.title only —
+            // nickname is managed from the trip page's service block.
+            <>
+              <h3 className="font-serif text-xl leading-tight">
+                {project.client_nickname}
+              </h3>
+              <div
+                onClick={() => setEditing(true)}
+                className="text-sm text-foreground/60 cursor-text leading-snug mt-0.5 truncate"
+                title="Click to rename"
+              >
+                {project.title}
+              </div>
+            </>
           ) : (
             <h3
               onClick={() => setEditing(true)}

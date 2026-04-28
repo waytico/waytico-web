@@ -1063,6 +1063,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       {showOwnerUI && (
         <ClientInfo
+          clientNickname={p.client_nickname ?? null}
           clientName={p.client_name ?? null}
           clientEmail={p.client_email ?? null}
           clientPhone={p.client_phone ?? null}

@@ -179,21 +179,41 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2 min-w-0">
-              <span className="text-sm font-medium truncate group-hover:underline">
-                {project.title || 'Untitled'}
-              </span>
-              {region && (
-                <span className="text-xs text-foreground/50 truncate hidden sm:inline">
-                  {region}
-                </span>
-              )}
-            </div>
-            <div className="text-xs text-foreground/60 mt-0.5 truncate">
-              {[datesStr, groupStr, priceStr].filter(Boolean).join('  ·  ') || (
-                <span className="italic text-foreground/40">No details yet</span>
-              )}
-            </div>
+            {project.client_nickname ? (
+              // Operator-friendly nickname becomes the primary heading
+              // ("Amina", "Anna 2 pax"); trip title moves to the meta
+              // line below so the dashboard scans by client first.
+              <>
+                <div className="text-sm font-semibold truncate group-hover:underline">
+                  {project.client_nickname}
+                </div>
+                <div className="text-xs text-foreground/60 mt-0.5 truncate">
+                  <span className="text-foreground/70">{project.title || 'Untitled'}</span>
+                  {region && <> · {region}</>}
+                  {[datesStr, groupStr, priceStr].filter(Boolean).length > 0 && (
+                    <> · {[datesStr, groupStr, priceStr].filter(Boolean).join('  ·  ')}</>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-baseline gap-2 min-w-0">
+                  <span className="text-sm font-medium truncate group-hover:underline">
+                    {project.title || 'Untitled'}
+                  </span>
+                  {region && (
+                    <span className="text-xs text-foreground/50 truncate hidden sm:inline">
+                      {region}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-foreground/60 mt-0.5 truncate">
+                  {[datesStr, groupStr, priceStr].filter(Boolean).join('  ·  ') || (
+                    <span className="italic text-foreground/40">No details yet</span>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </Link>
 
