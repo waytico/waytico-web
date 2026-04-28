@@ -293,10 +293,10 @@ export default function BrandCard() {
 
   // ─── Expanded ───────────────────────────────────────────
   return (
-    <div className="mb-6 rounded-lg border border-border bg-card p-5">
-      <div className="flex items-start gap-4">
+    <div className="mb-6 rounded-lg border border-border bg-card p-4">
+      <div className="flex items-start gap-3">
         {/* Logo with hover-trash */}
-        <div className="relative h-20 w-20 flex-shrink-0">
+        <div className="relative h-16 w-16 flex-shrink-0">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -381,7 +381,7 @@ export default function BrandCard() {
           right field instead of reading every label. Each row has a
           leading icon matching the brand mark on the trip page so the
           dashboard and the live page reinforce each other visually. */}
-      <div className="mt-4 pt-4 border-t border-border/50 space-y-4">
+      <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
         {CHANNEL_GROUPS.map((group) => (
           <section key={group.title}>
             <div className="mb-2">
@@ -395,9 +395,12 @@ export default function BrandCard() {
               )}
             </div>
             <div className={`grid gap-x-6 gap-y-1 ${
-              // Single-channel groups (Visit/Address) get a wide row;
-              // multi-channel groups go 2-column on sm+.
-              group.channels.length > 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
+              // Single → wide row; 2-4 → 2 cols; 5+ (Online) → 3 cols.
+              group.channels.length === 1
+                ? 'grid-cols-1'
+                : group.channels.length >= 5
+                  ? 'grid-cols-1 sm:grid-cols-3'
+                  : 'grid-cols-1 sm:grid-cols-2'
             }`}>
               {/* Email pinned to the top of the Reach group — uses a
                   separate save handler because it lives on
@@ -438,7 +441,7 @@ export default function BrandCard() {
           channel groups above (eyebrow title + hint + content). Brand
           defaults flow into every new trip's terms; per-trip overrides
           on the trip page take precedence. */}
-      <section className="mt-4 pt-4 border-t border-border/50">
+      <section className="mt-3 pt-3 border-t border-border/50">
         <div className="mb-2">
           <h3 className="text-[10px] uppercase tracking-wider font-semibold text-foreground/60">
             Default trip terms
@@ -824,3 +827,4 @@ function BrandTermsRow({ value, onSave }: BrandTermsRowProps) {
     </div>
   )
 }
+
