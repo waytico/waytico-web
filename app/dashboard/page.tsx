@@ -3,20 +3,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
-import { ChevronDown, ChevronRight, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import BrandCard from '@/components/brand-card'
 import ChatFlow from '@/components/chat-flow'
 import Header from '@/components/header'
 import TripRow from '@/components/trip-row'
 import type { Project, ProjectStatus } from '@/components/project-card'
-import { GROUP_TITLES, groupTrips, type GroupKey } from '@/lib/trip-grouping'
 import { apiFetch } from '@/lib/api'
-
-const VISIBLE_GROUPS: GroupKey[] = ['attention', 'active', 'completed']
 
 type SortMode = 'state' | 'created'
 type StatusFilter = 'all' | ProjectStatus
 type PerPage = 10 | 25 | 50 | 100
+
+const STATUS_ORDER: Record<ProjectStatus, number> = {
+  draft: 0,
+  quoted: 1,
+  active: 2,
+  completed: 3,
+  archived: 4,
+}
 
 const STATUS_FILTER_OPTIONS: { key: StatusFilter; label: string }[] = [
   { key: 'all', label: 'All trips' },
@@ -29,58 +34,20 @@ const STATUS_FILTER_OPTIONS: { key: StatusFilter; label: string }[] = [
 
 const PER_PAGE_OPTIONS: PerPage[] = [10, 25, 50, 100]
 
-
 function SkeletonRow() {
   return <div className="animate-pulse bg-secondary/50 rounded-md h-14 mb-2" />
-}
-
-function GroupSection({
-  title,
-  count,
-  children,
-  emptyHint,
-}: {
-  title: string
-  count: number
-  children: React.ReactNode
-  emptyHint?: string
-}) {
-  if (count === 0 && !emptyHint) return null
-  return (
-    <section className="mb-7">
-      <div className="flex items-baseline gap-2 px-4 mb-2">
-        <h3 className="text-sm font-medium text-foreground">{title}</h3>
-        <span className="text-xs text-foreground/40 font-sans">{count}</span>
-      </div>
-      {count === 0 ? (
-        <div className="px-4 py-3 border-t border-border/50">
-          <p className="text-xs text-foreground/50 italic">{emptyHint}</p>
-        </div>
-      ) : (
-        children
-      )}
-    </section>
-  )
-}
-
-const EMPTY_HINTS: Partial<Record<GroupKey, string>> = {
-  active: 'No active trips. Create a new quote to get started.',
 }
 
 export default function DashboardPage() {
   const { isLoaded, isSignedIn, getToken } = useAuth()
   const router = useRouter()
   const [projects, setProjects] = useState<Project[] | null>(null)
-  const [archiveOpen, setArchiveOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('state')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [perPage, setPerPage] = useState<PerPage>(25)
   const [page, setPage] = useState(1)
 
-  // Reset to page 1 whenever the visible result set changes shape
-  // (search, filter, sort, perPage). Without this, switching from
-  // page 3 → a tighter filter could leave you on an empty page.
   useEffect(() => {
     setPage(1)
   }, [search, sortMode, statusFilter, perPage])
@@ -120,86 +87,66 @@ export default function DashboardPage() {
     setProjects((prev) => (prev ? prev.filter((p) => p.id !== id) : prev))
   }
 
-  // 1. Search filter
-  const searched = useMemo(() => {
+  // Search → filter → sort.
+  const visible = useMemo(() => {
     if (!projects) return null
-    if (!search.trim()) return projects
-    const q = search.toLowerCase().trim()
-    return projects.filter((p) => {
-      const hay = [
-        p.title,
-        p.region,
-        p.country,
-        p.client?.nickname,
-        p.client?.name,
-        p.client?.email,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-      return hay.includes(q)
-    })
-  }, [projects, search])
+    let list = projects
 
-  // 2. Status filter
-  const filtered = useMemo(() => {
-    if (!searched) return null
-    if (statusFilter === 'all') return searched
-    return searched.filter((p) => p.status === statusFilter)
-  }, [searched, statusFilter])
+    if (search.trim()) {
+      const q = search.toLowerCase().trim()
+      list = list.filter((p) => {
+        const hay = [
+          p.title,
+          p.region,
+          p.country,
+          p.client?.nickname,
+          p.client?.name,
+          p.client?.email,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        return hay.includes(q)
+      })
+    }
 
-  // 3. Two render shapes: grouped (state mode + all statuses) vs flat
-  // (any other combination — created mode, or a specific status pin
-  // — both make the by-state grouping irrelevant).
-  const isGrouped = sortMode === 'state' && statusFilter === 'all'
+    if (statusFilter !== 'all') {
+      list = list.filter((p) => p.status === statusFilter)
+    }
 
-  const grouped = useMemo(
-    () => (isGrouped && filtered ? groupTrips(filtered) : null),
-    [isGrouped, filtered],
-  )
+    const sorted = [...list]
+    if (sortMode === 'state') {
+      sorted.sort((a, b) => {
+        const sa = STATUS_ORDER[a.status as ProjectStatus] ?? 99
+        const sb = STATUS_ORDER[b.status as ProjectStatus] ?? 99
+        if (sa !== sb) return sa - sb
+        return +new Date(b.created_at) - +new Date(a.created_at)
+      })
+    } else {
+      sorted.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
+    }
 
-  // Flat list — used in created-mode or when a status filter is on.
-  // Archive is INCLUDED here (no separate collapsible) so the operator
-  // sees what they asked for in one continuous list.
-  const flatList = useMemo(() => {
-    if (!filtered) return null
-    if (isGrouped) return null
-    const sorted = [...filtered].sort(
-      (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
-    )
     return sorted
-  }, [filtered, isGrouped])
+  }, [projects, search, statusFilter, sortMode])
 
-  // Pagination only applies in flat mode. Grouped mode keeps every
-  // section in full because attention/recent are typically small and
-  // chopping them mid-section confuses the grouping signal.
-  const totalCount = flatList?.length ?? 0
+  const totalCount = visible?.length ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / perPage))
   const currentPage = Math.min(page, totalPages)
   const pagedList = useMemo(() => {
-    if (!flatList) return null
+    if (!visible) return null
     const start = (currentPage - 1) * perPage
-    return flatList.slice(start, start + perPage)
-  }, [flatList, currentPage, perPage])
+    return visible.slice(start, start + perPage)
+  }, [visible, currentPage, perPage])
 
-  const totalActive = grouped
-    ? grouped.attention.length + grouped.active.length + grouped.completed.length
-    : 0
-  const archivedCount = grouped ? grouped.archive.length : 0
   const hasAnyTrip = projects !== null && projects.length > 0
-  const noResults =
-    (isGrouped && totalActive === 0 && archivedCount === 0) ||
-    (!isGrouped && totalCount === 0)
 
   return (
     <>
       <Header />
       <div className="min-h-[calc(100vh-73px)] bg-background text-foreground">
         <main className="max-w-4xl mx-auto px-4 py-8">
-          {/* Brand strip — always at top */}
           {isLoaded && projects !== null && <BrandCard />}
 
-          {/* Loading state */}
           {(!isLoaded || projects === null) && (
             <div className="space-y-2 px-4">
               <SkeletonRow />
@@ -208,7 +155,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Empty state — first-time user */}
           {isLoaded && projects !== null && projects.length === 0 && (
             <div className="mt-8 px-4">
               <h2 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-6 text-center">
@@ -218,14 +164,8 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Trips panel — wraps toolbar + list + pagination in a card
-              that mirrors the BrandCard above so the dashboard reads as
-              two stacked sections (profile, trips) instead of a strip-
-              then-loose-list. Slightly cooler tone (card vs secondary)
-              so it doesn't echo the brand panel exactly. */}
           {isLoaded && hasAnyTrip && (
             <div className="rounded-lg border border-border bg-card mt-4 mb-6">
-              {/* Toolbar */}
               <div className="border-b border-border/70 px-4 py-3 flex flex-wrap items-center gap-3">
                 <div className="relative flex-1 min-w-[180px] max-w-sm">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
@@ -238,7 +178,6 @@ export default function DashboardPage() {
                   />
                 </div>
 
-                {/* Sort */}
                 <label className="flex items-center gap-1.5 text-xs text-foreground/60">
                   Sort
                   <select
@@ -251,7 +190,6 @@ export default function DashboardPage() {
                   </select>
                 </label>
 
-                {/* Status filter */}
                 <label className="flex items-center gap-1.5 text-xs text-foreground/60">
                   Show
                   <select
@@ -268,77 +206,13 @@ export default function DashboardPage() {
                 </label>
               </div>
 
-              {/* No-results placeholder inside the panel */}
-              {noResults && (
+              {totalCount === 0 ? (
                 <div className="px-4 py-8 text-sm text-foreground/50 text-center">
                   {search.trim() ? `No matches for “${search}”.` : 'Nothing to show with these filters.'}
                 </div>
-              )}
-
-              {/* Grouped render (state + all statuses) */}
-              {isGrouped && grouped && !noResults && (
-                <div className="py-2">
-                  {VISIBLE_GROUPS.map((key) => {
-                    const items = grouped[key]
-                    const hint = EMPTY_HINTS[key]
-                    if (items.length === 0 && !hint) return null
-                    return (
-                      <GroupSection
-                        key={key}
-                        title={GROUP_TITLES[key]}
-                        count={items.length}
-                        emptyHint={hint}
-                      >
-                        {items.map((p) => (
-                          <TripRow
-                            key={p.id}
-                            project={p}
-                            showAttention={key === 'attention'}
-                            dimmed={key === 'completed'}
-                            onUpdate={handleUpdate}
-                            onDelete={handleDelete}
-                          />
-                        ))}
-                      </GroupSection>
-                    )
-                  })}
-
-                  {/* Archive — only in grouped mode (otherwise archived
-                      trips already mix into the flat list). */}
-                  {archivedCount > 0 && (
-                    <section className="mt-2 border-t border-border/50">
-                      <button
-                        type="button"
-                        onClick={() => setArchiveOpen((v) => !v)}
-                        className="flex items-center gap-2 px-4 py-3 text-sm text-foreground/60 hover:text-foreground w-full transition-colors"
-                        aria-expanded={archiveOpen}
-                      >
-                        {archiveOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                        <span className="font-medium">Archive</span>
-                        <span className="text-xs text-foreground/40 font-sans">{archivedCount}</span>
-                      </button>
-                      {archiveOpen && (
-                        <div>
-                          {grouped.archive.map((p) => (
-                            <TripRow
-                              key={p.id}
-                              project={p}
-                              dimmed
-                              onUpdate={handleUpdate}
-                              onDelete={handleDelete}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </section>
-                  )}
-                </div>
-              )}
-
-              {/* Flat render (created mode, or any specific status filter) */}
-              {!isGrouped && pagedList && pagedList.length > 0 && (
+              ) : (
                 <div className="py-1">
-                  {pagedList.map((p) => (
+                  {pagedList?.map((p) => (
                     <TripRow
                       key={p.id}
                       project={p}
@@ -350,8 +224,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Pagination footer — only meaningful in flat mode. */}
-              {!isGrouped && totalCount > 0 && (
+              {totalCount > 0 && (
                 <div className="border-t border-border/70 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-foreground/60">
                   <div>
                     {((currentPage - 1) * perPage + 1).toLocaleString()}–
@@ -406,4 +279,3 @@ export default function DashboardPage() {
     </>
   )
 }
-
