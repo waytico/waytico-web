@@ -7,29 +7,23 @@
  *
  * Order of precedence per trip (first match wins):
  *   1. Needs attention   — drafts, stale quotes, imminent active starts
- *   2. In flight         — fresh quotes + active trips not imminent /
+ *   2. Active            — fresh quotes + active trips not imminent /
  *                          already running
  *   3. Recently completed — completed within last 30 days
  *   4. Archive           — everything else (archived + old completed)
- *
- * Why 'flight' and not 'active': both quoted and active-status trips
- * land in this bucket, and using the word 'active' as the bucket name
- * would collide with the 'active' status pill rendered on each row —
- * an operator scanning would think the count meant "trips with status
- * = active" rather than "trips currently in your workflow".
  */
 
 import type { Project } from '@/components/project-card'
 
 export type GroupKey =
   | 'attention'
-  | 'flight'
+  | 'active'
   | 'completed'
   | 'archive'
 
 export type GroupedTrips = {
   attention: Project[]
-  flight: Project[]
+  active: Project[]
   completed: Project[]
   archive: Project[]
 }
@@ -81,7 +75,7 @@ export function attentionReason(p: Project): string | null {
 export function groupTrips(projects: Project[]): GroupedTrips {
   const out: GroupedTrips = {
     attention: [],
-    flight: [],
+    active: [],
     completed: [],
     archive: [],
   }
@@ -100,7 +94,7 @@ export function groupTrips(projects: Project[]): GroupedTrips {
     // Fresh quoted (no stale flag) + active (not imminent / already
     // running with no urgency flag) collapse into one 'in flight' bucket.
     if (p.status === 'quoted' || p.status === 'active') {
-      out.flight.push(p)
+      out.active.push(p)
       continue
     }
 
@@ -121,7 +115,7 @@ export function groupTrips(projects: Project[]): GroupedTrips {
   // Sort within each group: attention by age desc (oldest first = most urgent),
   // others by updated_at desc (newest first).
   out.attention.sort((a, b) => +new Date(a.updated_at) - +new Date(b.updated_at))
-  for (const k of ['flight', 'completed', 'archive'] as const) {
+  for (const k of ['active', 'completed', 'archive'] as const) {
     out[k].sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at))
   }
 
@@ -130,7 +124,7 @@ export function groupTrips(projects: Project[]): GroupedTrips {
 
 export const GROUP_TITLES: Record<GroupKey, string> = {
   attention: 'Needs your attention',
-  flight: 'In flight',
+  active: 'Active',
   completed: 'Recently completed',
   archive: 'Archive',
 }
