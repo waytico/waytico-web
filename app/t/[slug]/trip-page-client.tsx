@@ -29,6 +29,7 @@ import { TripPrice } from '@/components/trip/price'
 import { TripTerms } from '@/components/trip/terms'
 import { TripAccommodations } from '@/components/trip/accommodations'
 import { TripContacts } from '@/components/trip/contacts'
+import { ClientInfo } from '@/components/trip/client-info'
 import { HeroOwnerOverlay, HeroDropZone } from '@/components/trip/owner-extras'
 import type { PricingMode } from '@/components/trip/trip-types'
 import { TripFooter } from '@/components/trip/trip-footer'
@@ -1059,6 +1060,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
           />
         )}
       </ThemeRoot>
+
+      {showOwnerUI && (
+        <ClientInfo
+          clientName={p.client_name ?? null}
+          clientEmail={p.client_email ?? null}
+          clientPhone={p.client_phone ?? null}
+          saveProjectPatch={saveProjectPatch}
+        />
+      )}
 
       <PhotoLightbox
         media={lightbox}

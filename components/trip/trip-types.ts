@@ -111,6 +111,12 @@ export type ProjectLite = {
   operator_contact?: OperatorContact
   proposal_date?: string | null
   valid_until?: string | null
+  /** Internal-only — operator-managed client contact for this trip.
+   *  Not surfaced on the public page; used for email reminders and the
+   *  owner-only "Client info" service block. */
+  client_name?: string | null
+  client_email?: string | null
+  client_phone?: string | null
 }
 
 export type MediaLite = {
