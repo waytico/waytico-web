@@ -606,7 +606,7 @@
 .tp-terms-body--collapsible {
   position: relative;
   overflow: hidden;
-  max-height: 132px;        /* ~6 lines of body text */
+  max-height: 90px;         /* ~4 lines of body text */
   transition: max-height 320ms ease;
 }
 .tp-terms-body--collapsible.is-open {
@@ -616,12 +616,14 @@
 }
 .tp-terms-fade {
   position: absolute;
-  inset: auto 0 0 0;
-  height: 80px;
+  /* Fade tall enough to cover most of the visible body so the bottom
+     line is genuinely soft, not a hard cut with a faint vignette. */
+  inset: 0 0 0 0;
   background: linear-gradient(
     to bottom,
-    color-mix(in oklab, var(--bg) 0%, transparent),
-    var(--bg) 90%
+    transparent 0%,
+    transparent 35%,
+    var(--bg) 100%
   );
   pointer-events: none;
 }
