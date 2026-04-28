@@ -116,7 +116,11 @@ function AccommodationCard({
         ) : (
           <h3
             className="tp-acc-name"
-            onClick={() => editable && setEditingName(true)}
+            onClick={() => {
+              if (!editable) return
+              setDraftName(item.name)
+              setEditingName(true)
+            }}
             style={editable ? { cursor: 'text' } : undefined}
           >
             {item.name}
@@ -148,7 +152,11 @@ function AccommodationCard({
         ) : item.description ? (
           <p
             className="tp-acc-desc"
-            onClick={() => editable && setEditingDesc(true)}
+            onClick={() => {
+              if (!editable) return
+              setDraftDesc(item.description || '')
+              setEditingDesc(true)
+            }}
             style={editable ? { cursor: 'text' } : undefined}
           >
             {item.description}
@@ -156,7 +164,10 @@ function AccommodationCard({
         ) : editable ? (
           <p
             className="tp-acc-desc tp-acc-desc--placeholder"
-            onClick={() => setEditingDesc(true)}
+            onClick={() => {
+              setDraftDesc(item.description || '')
+              setEditingDesc(true)
+            }}
           >
             Add description
           </p>
