@@ -45,6 +45,10 @@ interface TripCommandBarProps {
   projectId: string
   getToken: () => Promise<string | null>
   onTripUpdated?: () => void
+  /** Trip status — file upload (the `+` button) only renders on
+   *  'active' / 'completed'; on the quote phase there's nothing
+   *  to parse, so the bar stays text-only. */
+  status?: string | null
 }
 
 function getFileIcon(type: string): string {
@@ -59,7 +63,12 @@ export function TripCommandBar({
   projectId,
   getToken,
   onTripUpdated,
+  status,
 }: TripCommandBarProps) {
+  // File upload is only useful once the trip is active — that's when
+  // bookings, tickets and other documents start flowing in. On a quote
+  // there's nothing to parse, so we keep the bar text-only.
+  const allowFileUpload = status === 'active' || status === 'completed'
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -218,27 +227,31 @@ export function TripCommandBar({
         )}
 
         <div className="flex items-end gap-2 rounded-2xl border border-border bg-background/95 backdrop-blur-md px-3 py-2 focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-colors shadow-lg">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-border text-muted-foreground hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
-            title="Attach file"
-            aria-label="Attach file"
-            disabled={isSending}
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) handleFileSelect(file)
-              e.target.value = ''
-            }}
-          />
+          {allowFileUpload && (
+            <>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-border text-muted-foreground hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
+                title="Attach file"
+                aria-label="Attach file"
+                disabled={isSending}
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleFileSelect(file)
+                  e.target.value = ''
+                }}
+              />
+            </>
+          )}
           <textarea
             ref={textareaRef}
             value={input}
@@ -253,7 +266,7 @@ export function TripCommandBar({
             placeholder={
               isSending
                 ? 'Working on it…'
-                : 'Tell me what to change (e.g. "add a task: book transfer")'
+                : 'Add a rest day between days 3 and 4\nPolish the description for [hotel name] / day 2'
             }
             disabled={isSending}
             className="flex-1 resize-none bg-transparent py-2 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[72px] disabled:opacity-60"
