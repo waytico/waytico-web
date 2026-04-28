@@ -339,7 +339,7 @@ export default function BrandCard() {
           />
           <InlineText
             value={profile.brand_tagline}
-            placeholder="Add a short tagline (optional)"
+            placeholder="Add a short tagline"
             onSave={saveTagline}
             className="text-sm text-foreground/70 block"
             inputClassName="text-sm"
@@ -357,13 +357,13 @@ export default function BrandCard() {
         </button>
       </div>
 
-      {/* Contacts — one flat 2-column grid, no section labels.
-          Order is meaningful: email/phone are the top row, then the
-          rest of the direct-reach channels, address sits on the
-          location row next to the website, social channels stack at
-          the bottom. The icon plus the placeholder example identify
-          each channel — no separate text label needed. */}
+      {/* Block-level note — applies to every field below. Mirror of the
+          per-trip Terms hint but in reverse: this sets the defaults,
+          per-trip tweaks happen on the trip page. */}
       <div className="mt-3 pt-3 border-t border-border/50">
+        <p className="text-xs italic text-foreground/55 mb-3 px-1">
+          All optional. Whatever you fill in shows up on every new trip — you can still tweak any of it per-trip.
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0.5">
           {ROWS.map((row) => {
             const isEmail = row.key === 'email'
