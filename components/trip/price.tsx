@@ -62,18 +62,27 @@ export function TripPrice(props: PriceProps) {
           {/* Headline row: amount + suffix (suffix is a dropdown in owner mode). */}
           <div className="tp-price-headline">
             {props.editable ? (
-              <HeadlineAmountEditor
-                value={headline}
-                currency={props.currency || 'USD'}
-                onSave={async (v) => {
-                  if (!props.saveProjectPatch) return false
-                  const patch: Record<string, any> =
-                    mode === 'per_traveler'
-                      ? { pricePerPerson: v }
-                      : { priceTotal: v }
-                  return props.saveProjectPatch(patch)
-                }}
-              />
+              <>
+                <CurrencyPicker
+                  value={props.currency || 'USD'}
+                  onSave={async (v) => {
+                    if (!props.saveProjectPatch) return false
+                    return props.saveProjectPatch({ currency: v })
+                  }}
+                />
+                <HeadlineAmountEditor
+                  value={headline}
+                  currency={props.currency || 'USD'}
+                  onSave={async (v) => {
+                    if (!props.saveProjectPatch) return false
+                    const patch: Record<string, any> =
+                      mode === 'per_traveler'
+                        ? { pricePerPerson: v }
+                        : { priceTotal: v }
+                    return props.saveProjectPatch(patch)
+                  }}
+                />
+              </>
             ) : (
               <span className="tp-price-amount">
                 {headlineFormatted ?? '—'}
@@ -257,5 +266,51 @@ function PriceModeSuffix({
         </div>
       )}
     </div>
+  )
+}
+
+/* ── Currency picker (owner mode) ── */
+//
+// Native <select> styled to read as part of the headline — keeps the
+// markup simple, gets free keyboard + a11y, and avoids a custom popover
+// that would conflict with the price inline-edit input next to it.
+// Currency list mirrors lib/trip-format.ts:CURRENCY_GLYPH so the
+// formatter and the picker stay in lock-step.
+
+const SUPPORTED_CURRENCIES: Array<{ code: string; label: string }> = [
+  { code: 'USD', label: 'USD ($)' },
+  { code: 'EUR', label: 'EUR (€)' },
+  { code: 'GBP', label: 'GBP (£)' },
+  { code: 'CAD', label: 'CAD (CA$)' },
+  { code: 'AUD', label: 'AUD (A$)' },
+  { code: 'JPY', label: 'JPY (¥)' },
+  { code: 'CHF', label: 'CHF' },
+]
+
+function CurrencyPicker({
+  value,
+  onSave,
+}: {
+  value: string
+  onSave: (next: string) => Promise<boolean>
+}) {
+  return (
+    <select
+      className="tp-price-currency-select"
+      aria-label="Currency"
+      value={value.toUpperCase()}
+      onChange={async (e) => {
+        const next = e.target.value
+        if (next !== value.toUpperCase()) {
+          await onSave(next)
+        }
+      }}
+    >
+      {SUPPORTED_CURRENCIES.map((c) => (
+        <option key={c.code} value={c.code}>
+          {c.label}
+        </option>
+      ))}
+    </select>
   )
 }

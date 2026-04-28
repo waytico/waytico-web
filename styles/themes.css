@@ -544,6 +544,27 @@
 .tp-price-mode-select:hover { color: var(--ink); border-color: var(--ink-mute); }
 .tp-price-mode-select:focus { border-color: var(--accent); color: var(--ink); }
 
+/* Currency picker — sits inline with the headline amount in owner mode.
+   Mono, small, monochrome — visually subordinate to the big number so it
+   reads as metadata, not as competing typography. */
+.tp-price-currency-select {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 4px 24px 4px 8px;
+  cursor: pointer;
+  outline: none;
+  align-self: center;
+  margin-right: 8px;
+}
+.tp-price-currency-select:hover { color: var(--ink); border-color: var(--ink-mute); }
+.tp-price-currency-select:focus { border-color: var(--accent); color: var(--ink); }
+
 .tp-price-mode-label { font-size: 13px; color: var(--ink-soft); }
 .tp-price-mode-label-input {
   font: inherit;
