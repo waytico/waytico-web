@@ -385,7 +385,7 @@ export default function BrandCard() {
         {CHANNEL_GROUPS.map((group) => (
           <section key={group.title}>
             <div className="mb-2">
-              <h3 className="text-[10px] uppercase tracking-wider font-semibold text-foreground/60">
+              <h3 className="text-xs uppercase tracking-wider font-semibold text-foreground/60">
                 {group.title}
               </h3>
               {group.hint && (
@@ -443,7 +443,7 @@ export default function BrandCard() {
           on the trip page take precedence. */}
       <section className="mt-3 pt-3 border-t border-border/50">
         <div className="mb-2">
-          <h3 className="text-[10px] uppercase tracking-wider font-semibold text-foreground/60">
+          <h3 className="text-xs uppercase tracking-wider font-semibold text-foreground/60">
             Default trip terms
           </h3>
           <p className="text-[10px] text-foreground/40 mt-0.5">
@@ -609,21 +609,17 @@ function ContactRow({
       : value
     : null
 
-  // Multiline (Address) keeps its own layout — label on top, textarea
-  // below, since a 500-char address won't fit on one inline line.
+  // Multiline (Address) keeps a textarea but uses the same icon-left
+  // layout as single-line rows — no separate label row, the icon and
+  // placeholder identify the field.
   if (multiline) {
     return (
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-1.5">
-          {Icon && (
-            <span className="text-foreground/50 shrink-0" aria-hidden="true">
-              <Icon size={13} />
-            </span>
-          )}
-          <label className="text-[10px] uppercase tracking-wider text-foreground/60 font-sans font-medium">
-            {label}
-          </label>
-        </div>
+      <div className="flex items-start gap-2 py-1">
+        {Icon && (
+          <span className="text-foreground/60 shrink-0 pt-1.5" aria-hidden="true">
+            <Icon size={16} />
+          </span>
+        )}
         {editing ? (
           <textarea
             ref={textareaRef}
@@ -644,13 +640,15 @@ function ContactRow({
             disabled={saving}
             rows={2}
             placeholder={placeholder}
-            className="bg-background border border-accent/40 rounded px-2 py-1 text-sm outline-none focus:border-accent resize-y"
+            aria-label={label}
+            className="flex-1 min-w-0 bg-background border border-accent/40 rounded px-2 py-1 text-sm outline-none focus:border-accent resize-y"
           />
         ) : (
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className={`text-left text-sm hover:bg-secondary/40 rounded px-2 py-1 -mx-2 transition-colors border border-transparent hover:border-border truncate ${
+            aria-label={`Edit ${label}`}
+            className={`flex-1 min-w-0 text-left text-sm hover:bg-secondary/40 rounded px-2 py-1 -mx-2 transition-colors border border-transparent hover:border-border truncate ${
               !value ? 'text-foreground/40 italic' : 'text-foreground'
             }`}
           >
@@ -661,19 +659,17 @@ function ContactRow({
     )
   }
 
-  // Single-line: icon + LABEL + value inline. Editing swaps value for
-  // an input that takes the remaining row width.
+  // Single-line: icon + value/input fills the rest of the row. Placeholder
+  // doubles as field hint ("@yourbrand", "+1 604 555 1234"); the icon
+  // identifies which channel this is.
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-2 py-1">
         {Icon && (
-          <span className="text-foreground/50 shrink-0" aria-hidden="true">
-            <Icon size={13} />
+          <span className="text-foreground/60 shrink-0" aria-hidden="true">
+            <Icon size={16} />
           </span>
         )}
-        <label className="text-[10px] uppercase tracking-wider text-foreground/60 font-sans font-medium shrink-0 w-16">
-          {label}
-        </label>
         {editing ? (
           <input
             ref={inputRef}
@@ -694,12 +690,14 @@ function ContactRow({
             }}
             disabled={saving}
             placeholder={placeholder}
+            aria-label={label}
             className="flex-1 bg-background border border-accent/40 rounded px-2 py-0.5 text-sm outline-none focus:border-accent min-w-0"
           />
         ) : (
           <button
             type="button"
             onClick={() => setEditing(true)}
+            aria-label={`Edit ${label}`}
             className={`flex-1 text-left text-sm hover:bg-secondary/40 rounded px-2 py-0.5 -mx-2 transition-colors border border-transparent hover:border-border truncate min-w-0 ${
               !value ? 'text-foreground/40 italic' : 'text-foreground'
             }`}
@@ -709,7 +707,7 @@ function ContactRow({
         )}
       </div>
       {hint && (
-        <p className="text-[10px] text-foreground/40 ml-[88px] -mt-0.5">{hint}</p>
+        <p className="text-[10px] text-foreground/40 ml-6 -mt-0.5">{hint}</p>
       )}
     </div>
   )
@@ -756,7 +754,8 @@ function BrandTermsRow({ value, onSave }: BrandTermsRowProps) {
     else setDraft(value || '')
   }
 
-  // Display: single-row strip, label left, value (truncated) middle, Edit right.
+  // Display: single-row strip, value (truncated) left, Edit right.
+  // Section heading already says "Default trip terms" — no need to repeat it.
   if (!editing) {
     return (
       <button
@@ -764,9 +763,6 @@ function BrandTermsRow({ value, onSave }: BrandTermsRowProps) {
         onClick={() => setEditing(true)}
         className="w-full flex items-center gap-3 px-2 py-1.5 -mx-2 rounded text-left text-sm hover:bg-secondary/40 border border-transparent hover:border-border transition-colors"
       >
-        <span className="text-xs uppercase tracking-wider text-foreground/50 shrink-0 w-28">
-          Default terms
-        </span>
         <span
           className={`flex-1 min-w-0 truncate ${
             value ? 'text-foreground' : 'text-foreground/40 italic'
@@ -827,4 +823,5 @@ function BrandTermsRow({ value, onSave }: BrandTermsRowProps) {
     </div>
   )
 }
+
 
