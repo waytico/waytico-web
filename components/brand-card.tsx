@@ -62,54 +62,35 @@ type ChannelKey =
   | 'youtube'
   | 'tiktok'
 
-type ChannelDef = {
-  key: ChannelKey
+/** Row keys = ChannelKey + the special 'email' row, which lives on
+ *  users.contact_email rather than default_contacts. */
+type RowKey = ChannelKey | 'email'
+
+type RowDef = {
+  key: RowKey
   label: string
   placeholder: string
   type: string
-  /** Render as a multiline textarea instead of a single-line input. */
-  multiline?: boolean
   /** Permissive type so both lucide forwardRef components and our
    *  brand-mark FCs from lib/contact-icons fit. */
   Icon: React.ComponentType<any>
 }
 
-/** Channel groupings — same shape as the trip-page Contacts section
- *  but reorganised around what the operator is filling in: who wants to
- *  reach me directly, where can clients find me online, where do I
- *  physically operate from. */
-type ChannelGroup = {
-  title: string
-  hint?: string
-  channels: ChannelDef[]
-}
-
-const CHANNEL_GROUPS: ChannelGroup[] = [
-  {
-    title: 'Reach you directly',
-    hint: 'Shown to clients on every trip page so they can ask questions.',
-    channels: [
-      { key: 'phone', label: 'Phone', placeholder: '+1 604 555 1234', type: 'tel', Icon: Phone },
-      { key: 'whatsapp', label: 'WhatsApp', placeholder: '+1 604 555 1234', type: 'tel', Icon: WhatsAppIcon },
-      { key: 'telegram', label: 'Telegram', placeholder: '@username', type: 'text', Icon: TelegramIcon },
-    ],
-  },
-  {
-    title: 'Find you online',
-    channels: [
-      { key: 'website', label: 'Website', placeholder: 'https://yourbrand.com', type: 'url', Icon: Globe },
-      { key: 'instagram', label: 'Instagram', placeholder: '@yourbrand', type: 'text', Icon: InstagramIcon },
-      { key: 'facebook', label: 'Facebook', placeholder: 'facebook.com/yourbrand', type: 'text', Icon: FacebookIcon },
-      { key: 'youtube', label: 'YouTube', placeholder: 'youtube.com/@yourbrand', type: 'text', Icon: YouTubeIcon },
-      { key: 'tiktok', label: 'TikTok', placeholder: '@yourbrand', type: 'text', Icon: TikTokIcon },
-    ],
-  },
-  {
-    title: 'Visit you',
-    channels: [
-      { key: 'address', label: 'Address', placeholder: '123 Main St, Vancouver BC', type: 'text', multiline: true, Icon: MapPin },
-    ],
-  },
+/** Flat list of all ten contact channels, ordered so the most
+ *  important reach methods (email, phone) sit at the top of the grid
+ *  and social channels stack at the bottom. The two-column grid in
+ *  the JSX consumes this array row-by-row, left-to-right. */
+const ROWS: RowDef[] = [
+  { key: 'email',     label: 'Email',     placeholder: 'you@business.com',          type: 'email', Icon: Mail },
+  { key: 'phone',     label: 'Phone',     placeholder: '+1 604 555 1234',           type: 'tel',   Icon: Phone },
+  { key: 'whatsapp',  label: 'WhatsApp',  placeholder: '+1 604 555 1234',           type: 'tel',   Icon: WhatsAppIcon },
+  { key: 'telegram',  label: 'Telegram',  placeholder: '@username',                 type: 'text',  Icon: TelegramIcon },
+  { key: 'address',   label: 'Address',   placeholder: '123 Main St, Vancouver BC', type: 'text',  Icon: MapPin },
+  { key: 'website',   label: 'Website',   placeholder: 'https://yourbrand.com',     type: 'url',   Icon: Globe },
+  { key: 'instagram', label: 'Instagram', placeholder: '@yourbrand',                type: 'text',  Icon: InstagramIcon },
+  { key: 'facebook',  label: 'Facebook',  placeholder: 'facebook.com/yourbrand',    type: 'text',  Icon: FacebookIcon },
+  { key: 'youtube',   label: 'YouTube',   placeholder: 'youtube.com/@yourbrand',    type: 'text',  Icon: YouTubeIcon },
+  { key: 'tiktok',    label: 'TikTok',    placeholder: '@yourbrand',                type: 'text',  Icon: TikTokIcon },
 ]
 
 export default function BrandCard() {
@@ -376,82 +357,48 @@ export default function BrandCard() {
         </button>
       </div>
 
-      {/* Channel groups — same content as before, but grouped by intent
-          (Reach / Online / Visit) so the operator can scan and find the
-          right field instead of reading every label. Each row has a
-          leading icon matching the brand mark on the trip page so the
-          dashboard and the live page reinforce each other visually. */}
-      <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
-        {CHANNEL_GROUPS.map((group) => (
-          <section key={group.title}>
-            <div className="mb-2">
-              <h3 className="text-xs uppercase tracking-wider font-semibold text-foreground/60">
-                {group.title}
-              </h3>
-              {group.hint && (
-                <p className="text-[10px] text-foreground/40 mt-0.5">
-                  {group.hint}
-                </p>
-              )}
-            </div>
-            <div className={`grid gap-x-6 gap-y-1 ${
-              // Single → wide row; 2-4 → 2 cols; 5+ (Online) → 3 cols.
-              group.channels.length === 1
-                ? 'grid-cols-1'
-                : group.channels.length >= 5
-                  ? 'grid-cols-1 sm:grid-cols-3'
-                  : 'grid-cols-1 sm:grid-cols-2'
-            }`}>
-              {/* Email pinned to the top of the Reach group — uses a
-                  separate save handler because it lives on
-                  users.contact_email, not default_contacts. */}
-              {group.title === 'Reach you directly' && (
-                <ContactRow
-                  label="Email"
-                  Icon={Mail}
-                  value={profile.contact_email || profile.email || null}
-                  placeholder="your.business@email.com"
-                  type="email"
-                  hint={
-                    !profile.contact_email && profile.email
-                      ? 'Currently using your login email.'
-                      : undefined
-                  }
-                  onSave={saveContactEmail}
-                />
-              )}
-              {group.channels.map((ch) => (
-                <ContactRow
-                  key={ch.key}
-                  label={ch.label}
-                  Icon={ch.Icon}
-                  value={(contacts as Record<string, string | null>)[ch.key] || null}
-                  placeholder={ch.placeholder}
-                  type={ch.type}
-                  multiline={ch.multiline}
-                  onSave={(v) => saveContact(ch.key, v)}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
+      {/* Contacts — one flat 2-column grid, no section labels.
+          Order is meaningful: email/phone are the top row, then the
+          rest of the direct-reach channels, address sits on the
+          location row next to the website, social channels stack at
+          the bottom. The icon plus the placeholder example identify
+          each channel — no separate text label needed. */}
+      <div className="mt-3 pt-3 border-t border-border/50">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0.5">
+          {ROWS.map((row) => {
+            const isEmail = row.key === 'email'
+            const value = isEmail
+              ? profile.contact_email || profile.email || null
+              : (contacts as Record<string, string | null>)[row.key] || null
+            const hint =
+              isEmail && !profile.contact_email && profile.email
+                ? 'Currently using your login email.'
+                : undefined
+            return (
+              <ContactRow
+                key={row.key}
+                label={row.label}
+                Icon={row.Icon}
+                value={value}
+                placeholder={row.placeholder}
+                type={row.type}
+                hint={hint}
+                onSave={(v) =>
+                  isEmail
+                    ? saveContactEmail(v)
+                    : saveContact(row.key as ChannelKey, v)
+                }
+              />
+            )
+          })}
+        </div>
       </div>
 
-      {/* Default Terms — fourth group, matches the rhythm of the
-          channel groups above (eyebrow title + hint + content). Brand
-          defaults flow into every new trip's terms; per-trip overrides
-          on the trip page take precedence. */}
-      <section className="mt-3 pt-3 border-t border-border/50">
-        <div className="mb-2">
-          <h3 className="text-xs uppercase tracking-wider font-semibold text-foreground/60">
-            Default trip terms
-          </h3>
-          <p className="text-[10px] text-foreground/40 mt-0.5">
-            Auto-applied to every new trip. Cancellation, deposit, force majeure.
-          </p>
-        </div>
+      {/* Default trip terms — single strip, no heading. Empty state
+          carries the explanation in the placeholder. */}
+      <div className="mt-2 pt-2 border-t border-border/50">
         <BrandTermsRow value={profile.brand_terms} onSave={saveTerms} />
-      </section>
+      </div>
     </div>
   )
 }
@@ -768,7 +715,7 @@ function BrandTermsRow({ value, onSave }: BrandTermsRowProps) {
             value ? 'text-foreground' : 'text-foreground/40 italic'
           }`}
         >
-          {value || 'Add default terms (cancellation policy, deposits, etc.)'}
+          {value || 'Default terms — auto-applied to every new trip. Cancellation, deposit, etc.'}
         </span>
         <span className="text-xs text-foreground/50 shrink-0">Edit</span>
       </button>
@@ -823,5 +770,6 @@ function BrandTermsRow({ value, onSave }: BrandTermsRowProps) {
     </div>
   )
 }
+
 
 
