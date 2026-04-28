@@ -24,6 +24,7 @@ type Payload = {
   media: any[]
   accommodations?: any[]
   owner?: any
+  client?: any
 } | null
 
 type Options = {
@@ -106,6 +107,17 @@ export function useTripData({
       setIsOwner(true)
       if (Array.isArray(payload.tasks)) setTasks(payload.tasks)
       if (Array.isArray(payload.media)) setMedia(payload.media as MediaRecord[])
+      // Overlay owner brand + linked client onto the payload so themed
+      // components and the operator service block can read them.
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              owner: payload.owner ?? prev.owner ?? null,
+              client: payload.client ?? null,
+            }
+          : prev
+      )
       return true
     } catch {
       return false

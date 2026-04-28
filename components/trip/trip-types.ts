@@ -111,24 +111,36 @@ export type ProjectLite = {
   operator_contact?: OperatorContact
   proposal_date?: string | null
   valid_until?: string | null
-  /** Internal-only — operator-managed client contact for this trip.
-   *  Not surfaced on the public page; used for email reminders and the
-   *  owner-only "Client info" service block. */
-  client_name?: string | null
-  client_email?: string | null
-  client_phone?: string | null
-  /** Operator-friendly short label (e.g. "Amina", "Anna 2 pax") that
-   *  becomes the dashboard's primary heading for this trip. Falls back
-   *  to title when null. Internal-only. */
-  client_nickname?: string | null
-  /** Booking / contract / invoice reference. Internal-only. */
+  /** FK to the agent's per-agent clients table; null until the operator
+   *  fills the service block on the trip page. */
+  client_id?: string | null
+  /** Per-trip service fields (NOT per-client). */
   booking_ref?: string | null
-  /** Operator's freeform notes about the trip / client. Internal-only. */
   internal_notes?: string | null
-  /** Client's stated needs: diet, mobility, allergies, prefs. */
   special_requests?: string | null
-  /** Lead source (Instagram, referral, etc.) — operator marketing. */
-  source?: string | null
+}
+
+/**
+ * Per-agent client roster row, as returned by /api/clients/* endpoints
+ * and embedded in /api/projects/:id/full payloads.
+ */
+export type Client = {
+  id: string
+  agent_id: string
+  nickname: string | null
+  name: string | null
+  email: string | null
+  phone: string | null
+  whatsapp: string | null
+  telegram: string | null
+  instagram: string | null
+  facebook: string | null
+  youtube: string | null
+  tiktok: string | null
+  source: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
 }
 
 export type MediaLite = {

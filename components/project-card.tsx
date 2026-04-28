@@ -20,12 +20,16 @@ export type Project = {
   cover_url: string | null
   updated_at: string
   created_at: string
-  client_name?: string | null
-  client_email?: string | null
-  client_phone?: string | null
-  /** Operator-friendly short label that replaces the title as the
-   *  primary heading on dashboard cards/rows when set. */
-  client_nickname?: string | null
+  client_id?: string | null
+  /** Embedded client roster row when the dashboard endpoint joins
+   *  clients. Drives the bold primary heading on cards/rows. */
+  client?: {
+    id: string
+    nickname: string | null
+    name: string | null
+    email: string | null
+    phone: string | null
+  } | null
   // Used by TripRow for compact dashboard rows
   dates_start?: string | null
   dates_end?: string | null
@@ -238,14 +242,14 @@ export default function ProjectCard({ project, onUpdate, onDelete }: Props) {
               className="font-serif text-xl w-full border-b border-accent bg-transparent outline-none disabled:opacity-60"
               aria-label="Edit project title"
             />
-          ) : project.client_nickname ? (
+          ) : project.client?.nickname ? (
             // Two-line heading: nickname (bold operator-facing label)
             // on top, trip title as secondary line underneath. The
             // inline title editor still edits project.title only —
             // nickname is managed from the trip page's service block.
             <>
               <h3 className="font-serif text-xl leading-tight">
-                {project.client_nickname}
+                {project.client.nickname}
               </h3>
               <div
                 onClick={() => setEditing(true)}
@@ -283,9 +287,9 @@ export default function ProjectCard({ project, onUpdate, onDelete }: Props) {
         projectId={project.id}
         projectTitle={project.title}
         currentContact={{
-          name: project.client_name,
-          email: project.client_email,
-          phone: project.client_phone,
+          name: project.client?.name ?? null,
+          email: project.client?.email ?? null,
+          phone: project.client?.phone ?? null,
         }}
         onClose={() => setArchiveOpen(false)}
         onArchived={() => {

@@ -99,7 +99,14 @@ export default function DashboardPage() {
     if (!search.trim()) return projects
     const q = search.toLowerCase().trim()
     return projects.filter((p) => {
-      const hay = [p.title, p.region, p.country, p.client_name, p.client_email]
+      const hay = [
+        p.title,
+        p.region,
+        p.country,
+        p.client?.nickname,
+        p.client?.name,
+        p.client?.email,
+      ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()

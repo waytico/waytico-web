@@ -179,13 +179,13 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
           </div>
 
           <div className="flex-1 min-w-0">
-            {project.client_nickname ? (
+            {project.client?.nickname ? (
               // Operator-friendly nickname becomes the primary heading
               // ("Amina", "Anna 2 pax"); trip title moves to the meta
               // line below so the dashboard scans by client first.
               <>
                 <div className="text-sm font-semibold truncate group-hover:underline">
-                  {project.client_nickname}
+                  {project.client.nickname}
                 </div>
                 <div className="text-xs text-foreground/60 mt-0.5 truncate">
                   <span className="text-foreground/70">{project.title || 'Untitled'}</span>
@@ -273,9 +273,9 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
         projectId={project.id}
         projectTitle={project.title || 'this trip'}
         currentContact={{
-          name: project.client_name,
-          email: project.client_email,
-          phone: project.client_phone,
+          name: project.client?.name ?? null,
+          email: project.client?.email ?? null,
+          phone: project.client?.phone ?? null,
         }}
         onClose={() => setArchiveOpen(false)}
         onArchived={() => {

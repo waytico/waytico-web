@@ -759,12 +759,32 @@ export default function TripPageClient({ slug, initialData }: Props) {
         />
       )}
 
+      {/* Operator service block — top placement under the action bar.
+          Persists identity through the per-agent clients table; trip-
+          only fields (booking ref, notes, special requests) go through
+          saveProjectPatch directly. */}
+      {showOwnerUI && p.id && (
+        <ClientInfo
+          projectId={p.id}
+          client={(data as any).client ?? null}
+          bookingRef={p.booking_ref ?? null}
+          internalNotes={p.internal_notes ?? null}
+          specialRequests={p.special_requests ?? null}
+          saveProjectPatch={saveProjectPatch}
+          onClientChanged={() => setOwnerRefreshKey((k) => k + 1)}
+        />
+      )}
+
       {showOwnerUI && p.id && (
         <ArchiveDialog
           open={archiveOpen}
           projectId={p.id}
           projectTitle={p.title}
-          currentContact={{ name: p.client_name, email: p.client_email, phone: p.client_phone }}
+          currentContact={{
+            name: ((data as any).client?.name as string | null) ?? null,
+            email: ((data as any).client?.email as string | null) ?? null,
+            phone: ((data as any).client?.phone as string | null) ?? null,
+          }}
           onClose={() => setArchiveOpen(false)}
           onArchived={() => {
             setOwnerRefreshKey((k) => k + 1)
@@ -1060,20 +1080,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
           />
         )}
       </ThemeRoot>
-
-      {showOwnerUI && (
-        <ClientInfo
-          clientNickname={p.client_nickname ?? null}
-          clientName={p.client_name ?? null}
-          clientEmail={p.client_email ?? null}
-          clientPhone={p.client_phone ?? null}
-          bookingRef={p.booking_ref ?? null}
-          internalNotes={p.internal_notes ?? null}
-          specialRequests={p.special_requests ?? null}
-          source={p.source ?? null}
-          saveProjectPatch={saveProjectPatch}
-        />
-      )}
 
       <PhotoLightbox
         media={lightbox}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import {
   Lock,
   User,
@@ -12,145 +13,265 @@ import {
   StickyNote,
   Compass,
 } from 'lucide-react'
-import type { Mutations } from './trip-types'
+import { toast } from 'sonner'
+import { apiFetch } from '@/lib/api'
+import {
+  WhatsAppIcon,
+  TelegramIcon,
+  InstagramIcon,
+  FacebookIcon,
+  YouTubeIcon,
+  TikTokIcon,
+} from '@/lib/contact-icons'
+import type { Client, Mutations } from './trip-types'
 
 type Props = {
-  clientNickname: string | null
-  clientName: string | null
-  clientEmail: string | null
-  clientPhone: string | null
+  projectId: string
+  client: Client | null
   bookingRef: string | null
   internalNotes: string | null
   specialRequests: string | null
-  source: string | null
   saveProjectPatch: Mutations['saveProjectPatch']
+  /** Notify the page when the linked client changes — caller can
+   *  refetch /full so the dashboard sees the new nickname. */
+  onClientChanged?: (client: Client) => void
 }
 
 /**
- * Owner-only service block at the bottom of /t/[slug]. Outside ThemeRoot
- * — uses shadcn semantic tokens (bg-secondary / border / etc.) rather
- * than theme variables, so it reads as the operator's private
- * workspace, distinct from the themed proposal content above.
+ * Owner-only service block. Sits at the very top of the trip page,
+ * directly under the sticky TripActionBar — operators reach it with
+ * one glance instead of scrolling to the bottom.
  *
- * Currently holds the client's contact info for email reminders. The
- * block is designed to grow: add booking refs, internal notes, etc.
- * here as more service-only fields appear.
+ * Visual model: neutral slate panel, NOT a themed proposal section.
+ * Icons lead every field so the block scans top-to-bottom even when
+ * channels are unfilled.
  *
- * Why a "service" block instead of just three fields in the Contacts
- * section: the operator's "Contacts" group is the OPERATOR's contacts
- * (what the client uses to reach the agent). Client info is the
- * inverse — what the agent uses to reach the client. Mixing them in
- * one section confuses the resolution logic and the visual reading.
+ * Persistence
+ * ───────────
+ * Identity (nickname/name/email/phone/source) and channels go to the
+ * agent's per-agent clients table via /api/clients/upsert when no
+ * client is linked yet, or PATCH /api/clients/:id once linked. After
+ * the first save we PATCH the trip to attach client_id.
+ *
+ * Trip-only fields (booking_ref, internal_notes, special_requests) go
+ * through saveProjectPatch — they live on the trip itself.
  */
 export function ClientInfo({
-  clientNickname,
-  clientName,
-  clientEmail,
-  clientPhone,
+  client,
   bookingRef,
   internalNotes,
   specialRequests,
-  source,
   saveProjectPatch,
+  onClientChanged,
 }: Props) {
+  const { getToken } = useAuth()
+  const [localClient, setLocalClient] = useState<Client | null>(client)
+
+  // Sync from props when /full re-fetches (e.g. after a tool call from
+  // the AI command bar updated the client).
+  useEffect(() => setLocalClient(client), [client])
+
+  /**
+   * Persist a single client field. Routes through upsert (creates or
+   * matches by email/phone) on the first save when there's no linked
+   * client yet, then through PATCH /:id for subsequent edits.
+   */
+  async function saveClientField(
+    key: keyof Client,
+    value: string | null,
+  ): Promise<boolean> {
+    try {
+      const token = await getToken()
+      if (!token) return false
+      const payload: Record<string, any> = { [key]: value }
+
+      let saved: Client | null = null
+      if (localClient) {
+        const res = await apiFetch(`/api/clients/${localClient.id}`, {
+          method: 'PATCH',
+          token,
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) {
+          if (res.status === 409) {
+            toast.error('Another client already uses that email or phone.')
+            return false
+          }
+          toast.error('Could not save')
+          return false
+        }
+        saved = ((await res.json()).client as Client) ?? null
+      } else {
+        const res = await apiFetch('/api/clients/upsert', {
+          method: 'POST',
+          token,
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) {
+          toast.error('Could not save')
+          return false
+        }
+        saved = ((await res.json()).client as Client) ?? null
+        if (saved) {
+          await saveProjectPatch({ clientId: saved.id })
+        }
+      }
+
+      if (saved) {
+        setLocalClient(saved)
+        onClientChanged?.(saved)
+      }
+      return true
+    } catch {
+      toast.error('Could not save')
+      return false
+    }
+  }
+
   return (
     <section
-      aria-label="Internal client info"
-      className="w-full border-y border-amber-200/60 bg-amber-50/60 dark:bg-amber-950/30 dark:border-amber-900/40"
+      aria-label="Client info — for operator only"
+      className="w-full border-b border-slate-200 bg-slate-50 dark:bg-slate-900/40 dark:border-slate-800"
     >
-      <div className="max-w-4xl mx-auto px-4 py-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Lock size={14} className="text-amber-700 dark:text-amber-400" aria-hidden="true" />
-          <h2 className="text-xs uppercase tracking-wider font-semibold text-amber-900 dark:text-amber-200">
-            For your eyes only · Service info
-          </h2>
+      <div className="max-w-4xl mx-auto px-4 py-3.5">
+        {/* Header strip */}
+        <div className="flex items-center gap-1.5 mb-2.5">
+          <Lock size={12} className="text-slate-500 dark:text-slate-400" aria-hidden="true" />
+          <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-600 dark:text-slate-300">
+            Client info
+          </span>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500">·</span>
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 italic">
+            for your eyes only
+          </span>
         </div>
-        <p className="text-[11px] text-amber-800/80 dark:text-amber-200/70 mb-4">
-          Not visible to the client. Used for your own records, reminders, and tracking.
-        </p>
 
-        {/* Nickname — full-width, drives dashboard heading. */}
-        <div className="mb-4">
-          <ClientField
+        {/* Nickname — full-width, drives dashboard heading */}
+        <div className="mb-2.5">
+          <Field
             Icon={Tag}
             label="Nickname"
-            value={clientNickname}
-            placeholder='e.g. "Amina" or "Anna 2 pax"'
-            type="text"
-            hint="Shown as the primary heading on your dashboard for this trip."
-            onSave={(v) => saveProjectPatch({ clientNickname: v })}
+            value={localClient?.nickname ?? null}
+            placeholder='Short label, e.g. "Amina" or "Anna 2 pax"'
+            onSave={(v) => saveClientField('nickname', v)}
+            wide
           />
         </div>
 
-        {/* Client contact — 3 cols */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-          <ClientField
+        {/* Identity row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1.5 mb-3">
+          <Field
             Icon={User}
             label="Name"
-            value={clientName}
-            placeholder="Add client name"
-            type="text"
-            onSave={(v) => saveProjectPatch({ clientName: v })}
+            value={localClient?.name ?? null}
+            placeholder="Client name"
+            onSave={(v) => saveClientField('name', v)}
           />
-          <ClientField
+          <Field
             Icon={Mail}
             label="Email"
-            value={clientEmail}
-            placeholder="Add client email"
             type="email"
-            onSave={(v) => saveProjectPatch({ clientEmail: v })}
+            value={localClient?.email ?? null}
+            placeholder="email@example.com"
+            onSave={(v) => saveClientField('email', v)}
           />
-          <ClientField
+          <Field
             Icon={Phone}
             label="Phone"
-            value={clientPhone}
-            placeholder="Add client phone"
             type="tel"
-            onSave={(v) => saveProjectPatch({ clientPhone: v })}
+            value={localClient?.phone ?? null}
+            placeholder="+1 604 555 1234"
+            onSave={(v) => saveClientField('phone', v)}
           />
-        </div>
-
-        {/* Booking + source — 2 cols */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-          <ClientField
-            Icon={Hash}
-            label="Booking ref"
-            value={bookingRef}
-            placeholder="Booking, contract, or invoice number"
-            type="text"
-            onSave={(v) => saveProjectPatch({ bookingRef: v })}
-          />
-          <ClientField
+          <Field
             Icon={Compass}
             label="Source"
-            value={source}
-            placeholder="Where did this lead come from?"
-            type="text"
-            onSave={(v) => saveProjectPatch({ source: v })}
+            value={localClient?.source ?? null}
+            placeholder="Where from?"
+            onSave={(v) => saveClientField('source', v)}
           />
         </div>
 
-        {/* Multiline blocks — full width, taller editor */}
-        <div className="mb-3">
-          <ClientField
-            Icon={Sparkles}
-            label="Special requests"
-            value={specialRequests}
-            placeholder="Diet, mobility, allergies, preferences from the client"
-            type="text"
-            multiline
-            onSave={(v) => saveProjectPatch({ specialRequests: v })}
+        {/* Channels — icon-priority row */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-3 gap-y-1.5 mb-3">
+          <Field
+            Icon={WhatsAppIcon}
+            label="WhatsApp"
+            type="tel"
+            value={localClient?.whatsapp ?? null}
+            placeholder="+1 604 555…"
+            onSave={(v) => saveClientField('whatsapp', v)}
+            iconOnly
+          />
+          <Field
+            Icon={TelegramIcon}
+            label="Telegram"
+            value={localClient?.telegram ?? null}
+            placeholder="@user"
+            onSave={(v) => saveClientField('telegram', v)}
+            iconOnly
+          />
+          <Field
+            Icon={InstagramIcon}
+            label="Instagram"
+            value={localClient?.instagram ?? null}
+            placeholder="@user"
+            onSave={(v) => saveClientField('instagram', v)}
+            iconOnly
+          />
+          <Field
+            Icon={FacebookIcon}
+            label="Facebook"
+            value={localClient?.facebook ?? null}
+            placeholder="fb.com/…"
+            onSave={(v) => saveClientField('facebook', v)}
+            iconOnly
+          />
+          <Field
+            Icon={YouTubeIcon}
+            label="YouTube"
+            value={localClient?.youtube ?? null}
+            placeholder="yt.com/@…"
+            onSave={(v) => saveClientField('youtube', v)}
+            iconOnly
+          />
+          <Field
+            Icon={TikTokIcon}
+            label="TikTok"
+            value={localClient?.tiktok ?? null}
+            placeholder="@user"
+            onSave={(v) => saveClientField('tiktok', v)}
+            iconOnly
           />
         </div>
-        <div>
-          <ClientField
+
+        {/* Trip-specific row */}
+        <div className="border-t border-slate-200 dark:border-slate-800 pt-2.5 space-y-1.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+            <Field
+              Icon={Hash}
+              label="Booking ref"
+              value={bookingRef}
+              placeholder="Booking / contract / invoice"
+              onSave={(v) => saveProjectPatch({ bookingRef: v })}
+            />
+            <Field
+              Icon={Sparkles}
+              label="Special requests"
+              value={specialRequests}
+              placeholder="Diet, allergies, mobility…"
+              onSave={(v) => saveProjectPatch({ specialRequests: v })}
+              multiline
+            />
+          </div>
+          <Field
             Icon={StickyNote}
-            label="Internal notes"
+            label="Notes"
             value={internalNotes}
             placeholder="Your private notes about this trip"
-            type="text"
-            multiline
             onSave={(v) => saveProjectPatch({ internalNotes: v })}
+            multiline
+            wide
           />
         </div>
       </div>
@@ -158,24 +279,34 @@ export function ClientInfo({
   )
 }
 
-function ClientField({
+// ─── Field ──────────────────────────────────────────────────────
+//
+// Variants:
+//   default   : icon + small label above + click-to-edit value below
+//   iconOnly  : icon IS the label (channel row); aria-label preserved
+//   wide      : value spans the row's full width
+//   multiline : edit mode opens a textarea, Cmd/Ctrl+Enter commits
+
+function Field({
   Icon,
   label,
   value,
   placeholder,
-  type,
-  hint,
-  multiline,
+  type = 'text',
   onSave,
+  wide,
+  iconOnly,
+  multiline,
 }: {
   Icon: React.ComponentType<any>
   label: string
   value: string | null
   placeholder: string
-  type: 'text' | 'email' | 'tel'
-  hint?: string
-  multiline?: boolean
+  type?: 'text' | 'email' | 'tel'
   onSave: (v: string | null) => Promise<boolean>
+  wide?: boolean
+  iconOnly?: boolean
+  multiline?: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value || '')
@@ -213,20 +344,72 @@ function ClientField({
     else setDraft(value || '')
   }
 
-  // First line only for multiline collapsed view so a long block of
-  // notes doesn't push the next field out of view; full text appears
-  // as soon as the operator clicks to edit.
+  // Multiline collapsed: show first line only so a long notes block
+  // doesn't push later fields out of view.
   const displayValue = value
     ? multiline
       ? value.split('\n')[0]
       : value
     : null
 
+  if (iconOnly) {
+    return (
+      <div className="flex items-center gap-1.5 min-w-0" title={label}>
+        <Icon
+          size={13}
+          className="text-slate-500 dark:text-slate-400 shrink-0"
+          aria-hidden="true"
+        />
+        {editing ? (
+          <input
+            ref={inputRef}
+            type={type}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                commit()
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                setDraft(value || '')
+                setEditing(false)
+              }
+            }}
+            disabled={saving}
+            placeholder={placeholder}
+            aria-label={label}
+            className="flex-1 min-w-0 bg-background border border-slate-300 dark:border-slate-700 rounded px-1.5 py-0.5 text-xs outline-none focus:border-slate-500"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            aria-label={`Edit ${label}`}
+            className={`flex-1 min-w-0 text-left text-xs px-1 py-0.5 rounded transition-colors truncate hover:bg-slate-100 dark:hover:bg-slate-800/60 ${
+              !value
+                ? 'text-slate-400 dark:text-slate-500'
+                : 'text-foreground'
+            }`}
+          >
+            {displayValue || placeholder}
+          </button>
+        )}
+      </div>
+    )
+  }
+
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-1.5">
-        <Icon size={13} className="text-amber-800/70 dark:text-amber-200/70" aria-hidden="true" />
-        <label className="text-[10px] uppercase tracking-wider text-amber-900/70 dark:text-amber-200/70 font-medium">
+    <div className={`flex flex-col ${wide ? 'w-full' : ''} min-w-0`}>
+      <div className="flex items-center gap-1.5 mb-0.5">
+        <Icon
+          size={11}
+          className="text-slate-500 dark:text-slate-400 shrink-0"
+          aria-hidden="true"
+        />
+        <label className="text-[9.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
           {label}
         </label>
       </div>
@@ -249,9 +432,9 @@ function ClientField({
               }
             }}
             disabled={saving}
-            rows={3}
+            rows={2}
             placeholder={placeholder}
-            className="bg-background border border-amber-300/70 rounded px-2 py-1.5 text-sm outline-none focus:border-amber-500 ml-[20px] resize-y"
+            className="bg-background border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm outline-none focus:border-slate-500 resize-y ml-[18px]"
           />
         ) : (
           <input
@@ -273,24 +456,21 @@ function ClientField({
             }}
             disabled={saving}
             placeholder={placeholder}
-            className="bg-background border border-amber-300/70 rounded px-2 py-1 text-sm outline-none focus:border-amber-500 ml-[20px]"
+            className="bg-background border border-slate-300 dark:border-slate-700 rounded px-2 py-0.5 text-sm outline-none focus:border-slate-500 ml-[18px]"
           />
         )
       ) : (
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className={`text-left text-sm hover:bg-amber-100/40 dark:hover:bg-amber-900/30 rounded px-2 py-1 -mx-2 transition-colors border border-transparent hover:border-amber-300/70 truncate ml-[20px] ${
-            !value ? 'text-amber-900/40 dark:text-amber-200/40 italic' : 'text-foreground'
+          className={`text-left text-sm px-2 py-0.5 rounded transition-colors truncate ml-[18px] hover:bg-slate-100 dark:hover:bg-slate-800/60 ${
+            !value
+              ? 'text-slate-400 dark:text-slate-500 italic'
+              : 'text-foreground'
           }`}
         >
           {displayValue || placeholder}
         </button>
-      )}
-      {hint && (
-        <p className="text-[10px] text-amber-800/60 dark:text-amber-200/50 ml-[20px] mt-0.5">
-          {hint}
-        </p>
       )}
     </div>
   )
