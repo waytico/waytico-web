@@ -6,6 +6,9 @@ type TermsProps = {
   bodySlot: ReactNode
   /** True when terms text exists OR owner mode wants the placeholder shown. */
   visible: boolean
+  /** Optional helper rendered under the heading. Owner mode passes a
+   *  one-liner explaining the scope of edits; omitted in public view. */
+  ownerHint?: ReactNode
 }
 
 /**
@@ -18,7 +21,7 @@ type TermsProps = {
  * body is long: the section claims page-end semantics + bottom padding
  * cascades. Switching to <section> matches the rest of the trip page.
  */
-export function TripTerms({ bodySlot, visible }: TermsProps) {
+export function TripTerms({ bodySlot, visible, ownerHint }: TermsProps) {
   if (!visible) return null
   return (
     <section className="tp-terms" id="terms">
@@ -27,9 +30,22 @@ export function TripTerms({ bodySlot, visible }: TermsProps) {
           <h2 className="tp-display" style={{ fontSize: 28 }}>
             {UI.sectionLabels.terms}
           </h2>
+          {ownerHint && (
+            <p
+              style={{
+                fontSize: 13,
+                color: 'var(--ink-mute)',
+                marginTop: 8,
+                lineHeight: 1.5,
+              }}
+            >
+              {ownerHint}
+            </p>
+          )}
         </header>
         <div className="tp-terms-body">{bodySlot}</div>
       </div>
     </section>
   )
 }
+
