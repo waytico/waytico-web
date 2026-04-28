@@ -1085,7 +1085,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         </>
       )}
 
-      <TripFooter owner={owner} operatorContact={operatorContact} />
+      <TripFooter owner={owner} operatorContact={operatorContact} editable={ed} />
 
       <ScrollToTop bottomOffset={showOwnerUI ? 88 : 24} />
     </div>

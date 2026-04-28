@@ -52,6 +52,11 @@ export type OperatorContact = {
   facebook?: string | null
   youtube?: string | null
   tiktok?: string | null
+  /** Channels listed here are suppressed from public render on this
+   *  trip even if a value (override or brand default) exists. Lets the
+   *  operator hide a single channel per-trip without clearing the
+   *  brand default. */
+  hidden_channels?: string[] | null
 } | null
 
 export type OwnerBrand = {

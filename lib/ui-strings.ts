@@ -29,6 +29,7 @@ export const UI = {
   validUntil: 'Valid until',
   totalPrice: 'Total',
   bookCta: 'Reserve dates',
+  contactsHeading: 'Questions about this trip?',
   emptyList: 'Nothing listed.',
   segType: {
     transport: 'Transport',

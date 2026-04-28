@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail, Phone, MapPin, Globe } from 'lucide-react'
+import Link from 'next/link'
+import { Mail, Phone, MapPin, Globe, Eye, EyeOff } from 'lucide-react'
 import { UI } from '@/lib/ui-strings'
 import {
   WhatsAppIcon,
@@ -20,11 +21,9 @@ type Props = {
   saveProjectPatch?: Mutations['saveProjectPatch']
 }
 
-type ContactKey =
-  | 'name'
+type ChannelKey =
   | 'email'
   | 'phone'
-  | 'address'
   | 'whatsapp'
   | 'telegram'
   | 'website'
@@ -33,128 +32,265 @@ type ContactKey =
   | 'youtube'
   | 'tiktok'
 
-type ContactField = {
-  key: ContactKey
+type Channel = {
+  key: ChannelKey
   label: string
-  type: 'text' | 'tel' | 'email' | 'url' | 'multiline'
-  /** Builds an outbound href when public viewers click the value/icon. */
-  href?: (v: string) => string
-  /** Renders the inline icon. lucide-react components and the brand-mark
-   *  components from lib/contact-icons share the same { size } prop API
-   *  but lucide ones are forwardRef-typed; using a permissive type so
-   *  both fit. */
-  Icon?: React.ComponentType<any>
+  /** lucide-react components and our brand-mark components share the
+   *  same { size, className } prop API; permissive type so both fit. */
+  Icon: React.ComponentType<any>
+  /** Outbound URL builder for public viewers. */
+  href: (v: string) => string
+  /** Whether the public render shows the value as text (email/phone)
+   *  or as an icon-only link (social channels). */
+  textInPublic: boolean
 }
 
-const IDENTITY_FIELDS: ContactField[] = [
-  { key: 'name', label: 'Name', type: 'text' },
-  { key: 'email', label: 'Email', type: 'email', href: (v) => `mailto:${v}`, Icon: Mail },
-  { key: 'phone', label: 'Phone', type: 'tel', href: (v) => `tel:${v}`, Icon: Phone },
-  { key: 'address', label: 'Address', type: 'multiline', Icon: MapPin },
-]
-
-const CHANNEL_FIELDS: ContactField[] = [
+const CHANNELS: Channel[] = [
+  {
+    key: 'email',
+    label: 'Email',
+    Icon: Mail,
+    href: (v) => `mailto:${v}`,
+    textInPublic: true,
+  },
+  {
+    key: 'phone',
+    label: 'Phone',
+    Icon: Phone,
+    href: (v) => `tel:${v}`,
+    textInPublic: true,
+  },
   {
     key: 'whatsapp',
     label: 'WhatsApp',
-    type: 'tel',
-    href: (v) => `https://wa.me/${v.replace(/[^\d+]/g, '')}`,
     Icon: WhatsAppIcon,
+    href: (v) => `https://wa.me/${v.replace(/[^\d+]/g, '')}`,
+    textInPublic: false,
   },
   {
     key: 'telegram',
     label: 'Telegram',
-    type: 'text',
-    href: (v) => `https://t.me/${v.replace(/^@/, '').replace(/^https?:\/\/t\.me\//, '')}`,
     Icon: TelegramIcon,
+    href: (v) =>
+      `https://t.me/${v.replace(/^@/, '').replace(/^https?:\/\/t\.me\//, '')}`,
+    textInPublic: false,
   },
   {
     key: 'instagram',
     label: 'Instagram',
-    type: 'text',
-    href: (v) => buildSocialUrl(v, 'instagram.com'),
     Icon: InstagramIcon,
+    href: (v) => buildSocialUrl(v, 'instagram.com'),
+    textInPublic: false,
   },
   {
     key: 'facebook',
     label: 'Facebook',
-    type: 'url',
-    href: (v) => buildSocialUrl(v, 'facebook.com'),
     Icon: FacebookIcon,
+    href: (v) => buildSocialUrl(v, 'facebook.com'),
+    textInPublic: false,
   },
   {
     key: 'youtube',
     label: 'YouTube',
-    type: 'url',
-    href: (v) => buildSocialUrl(v, 'youtube.com'),
     Icon: YouTubeIcon,
+    href: (v) => buildSocialUrl(v, 'youtube.com'),
+    textInPublic: false,
   },
   {
     key: 'tiktok',
     label: 'TikTok',
-    type: 'text',
-    href: (v) => buildSocialUrl(v, 'tiktok.com'),
     Icon: TikTokIcon,
+    href: (v) => buildSocialUrl(v, 'tiktok.com'),
+    textInPublic: false,
   },
   {
     key: 'website',
     label: 'Website',
-    type: 'url',
-    href: (v) => (v.startsWith('http') ? v : `https://${v}`),
     Icon: Globe,
+    href: (v) => (v.startsWith('http') ? v : `https://${v}`),
+    textInPublic: false,
   },
 ]
 
-const ALL_FIELDS: ContactField[] = [...IDENTITY_FIELDS, ...CHANNEL_FIELDS]
-
 /**
- * Contacts — last block on the page. Source order:
+ * Contacts — section block at the end of /t/[slug] in the
+ * "Questions about this trip?" idiom. Replaces the previous tabular
+ * Name/Email/Phone grid; the table layout duplicated visual weight
+ * with the section header without giving travellers any new info.
+ *
+ * Source order (resolveContacts):
  *   1. operator_contact override (per-trip, set on the project)
- *   2. owner brand defaults (set in user profile)
+ *   2. owner brand defaults (from user profile)
  *
- * Layout: identity column (name, email, phone, address) on the left,
- * channel column (WhatsApp / Telegram / Instagram / Facebook / YouTube /
- * TikTok / Website) on the right. Each row has a leading 16px icon.
+ * Hidden channels: operator_contact.hidden_channels — strings naming
+ * channels to suppress on this trip even if a value exists. Public
+ * render skips them entirely; owner render shows them dimmed with an
+ * EyeOff toggle.
  *
- * Owner mode: tap a row to edit. Saves go onto operator_contact, so a
- * blank field falls back to the brand defaults.
+ * Layout
+ * ──────
+ *   Left:  brand identity (logo + name + tagline + address)
+ *   Right: "Questions about this trip?" + email/phone as text rows
+ *          with leading icon + a row of brand-mark icons for social
+ *          channels and Website.
+ *
+ * Owner mode adds, on every channel:
+ *   - inline editable value (click to edit)
+ *   - EyeOff/Eye toggle to hide/show on the public page
+ *   - small hint at the bottom linking to /dashboard for adding the
+ *     channels not configured on the brand yet.
  */
 export function TripContacts({ owner, operatorContact, editable, saveProjectPatch }: Props) {
   const resolved = resolveContacts(owner, operatorContact)
-  const hasAny = ALL_FIELDS.some((f) => resolved[f.key])
+  const hidden = new Set(operatorContact?.hidden_channels || [])
+  const tagline = owner?.brand_tagline || null
+  const logoUrl = owner?.brand_logo_url || null
+  const brandName = pick(operatorContact?.name, owner?.brand_name)
+  const address = pick(operatorContact?.address, owner?.brand_address)
 
-  if (!editable && !hasAny) return null
+  // Visible channels = configured AND not hidden, for the public render.
+  const visibleChannels = CHANNELS.filter(
+    (c) => resolved[c.key] && !hidden.has(c.key),
+  )
+  // Channels with a value, regardless of hidden flag — owner mode
+  // shows these all so the operator can flip visibility without losing
+  // sight of what's there.
+  const configuredChannels = CHANNELS.filter((c) => resolved[c.key])
+  // Channels not yet configured anywhere — surfaced as a "add these
+  // in your profile" hint in owner mode.
+  const missingChannelLabels = CHANNELS.filter((c) => !resolved[c.key]).map(
+    (c) => c.label,
+  )
 
-  const renderRow = (f: ContactField) => (
-    <ContactRow
-      key={f.key}
-      field={f}
-      value={resolved[f.key]}
-      override={(operatorContact?.[f.key] as string | null | undefined) ?? null}
-      editable={editable}
-      onSave={async (next) => {
-        if (!saveProjectPatch) return false
-        const patch: Record<string, any> = {
-          ...(operatorContact || {}),
-          [f.key]: next,
-        }
-        return saveProjectPatch({ operatorContact: patch })
-      }}
-    />
+  if (!editable && visibleChannels.length === 0 && !brandName && !address) {
+    return null
+  }
+
+  const textChannels = (editable ? configuredChannels : visibleChannels).filter(
+    (c) => c.textInPublic,
+  )
+  const iconChannels = (editable ? configuredChannels : visibleChannels).filter(
+    (c) => !c.textInPublic,
   )
 
   return (
     <section className="tp-section" id="contacts">
       <div className="tp-container">
-        <header className="tp-section-head">
-          <h2 className="tp-display tp-section-title">{UI.sectionLabels.contacts}</h2>
-        </header>
-        <div className="tp-contacts-grid">
-          <div className="tp-contacts-col">
-            {IDENTITY_FIELDS.map(renderRow)}
+        <div className="tp-contacts-block">
+          {/* Left: brand identity */}
+          <div className="tp-contacts-brand">
+            {logoUrl && (
+              <img
+                src={logoUrl}
+                alt={brandName || 'Operator'}
+                className="tp-contacts-logo"
+              />
+            )}
+            <div className="tp-contacts-identity">
+              {brandName && (
+                <p className="tp-contacts-brand-name">{brandName}</p>
+              )}
+              {tagline && (
+                <p className="tp-contacts-brand-tagline">{tagline}</p>
+              )}
+              {address && (
+                <p className="tp-contacts-brand-address">
+                  <MapPin size={14} aria-hidden="true" />
+                  <span>{address}</span>
+                </p>
+              )}
+            </div>
           </div>
-          <div className="tp-contacts-col">
-            {CHANNEL_FIELDS.map(renderRow)}
+
+          {/* Right: questions header + reachable channels */}
+          <div className="tp-contacts-channels">
+            <h2 className="tp-contacts-heading">{UI.contactsHeading}</h2>
+
+            {/* Email/phone — text rows with leading icon */}
+            <ul className="tp-contacts-list">
+              {textChannels.map((c) => (
+                <ChannelTextRow
+                  key={c.key}
+                  channel={c}
+                  value={resolved[c.key]!}
+                  override={(operatorContact?.[c.key] as string | null | undefined) ?? null}
+                  hidden={hidden.has(c.key)}
+                  editable={editable}
+                  onSaveValue={(v) =>
+                    saveValue(c.key, v, operatorContact, saveProjectPatch)
+                  }
+                  onToggleHidden={() =>
+                    toggleHidden(c.key, hidden, operatorContact, saveProjectPatch)
+                  }
+                />
+              ))}
+            </ul>
+
+            {/* Social + website — icon row in public, expanded list in owner */}
+            {iconChannels.length > 0 && !editable && (
+              <div className="tp-contacts-icons">
+                {iconChannels.map((c) => {
+                  const v = resolved[c.key]!
+                  const Icon = c.Icon
+                  return (
+                    <a
+                      key={c.key}
+                      href={c.href(v)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={c.label}
+                      aria-label={c.label}
+                      className="tp-contacts-icon-link"
+                    >
+                      <Icon size={20} />
+                    </a>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Owner: editable list for social channels (still icon-led) */}
+            {iconChannels.length > 0 && editable && (
+              <ul className="tp-contacts-list tp-contacts-list--social">
+                {iconChannels.map((c) => (
+                  <ChannelTextRow
+                    key={c.key}
+                    channel={c}
+                    value={resolved[c.key]!}
+                    override={(operatorContact?.[c.key] as string | null | undefined) ?? null}
+                    hidden={hidden.has(c.key)}
+                    editable={editable}
+                    /** In owner mode social channels show their value
+                     *  for clarity even though public sees only an
+                     *  icon — the operator is editing, after all. */
+                    forceTextDisplay
+                    onSaveValue={(v) =>
+                      saveValue(c.key, v, operatorContact, saveProjectPatch)
+                    }
+                    onToggleHidden={() =>
+                      toggleHidden(c.key, hidden, operatorContact, saveProjectPatch)
+                    }
+                  />
+                ))}
+              </ul>
+            )}
+
+            {/* Owner hint about adding more channels */}
+            {editable && missingChannelLabels.length > 0 && (
+              <p className="tp-contacts-hint">
+                Add{' '}
+                {missingChannelLabels.length === 1
+                  ? missingChannelLabels[0]
+                  : missingChannelLabels.slice(0, -1).join(', ') +
+                    ' or ' +
+                    missingChannelLabels.slice(-1)[0]}{' '}
+                in your{' '}
+                <Link href="/dashboard" className="tp-contacts-hint-link">
+                  profile
+                </Link>{' '}
+                to show {missingChannelLabels.length === 1 ? 'it' : 'them'} here.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -162,156 +298,134 @@ export function TripContacts({ owner, operatorContact, editable, saveProjectPatc
   )
 }
 
-function ContactRow({
-  field,
+/** Text-row for a single channel: icon, optional inline editor on
+ *  click (owner mode), value display, eye-toggle for hiding (owner). */
+function ChannelTextRow({
+  channel,
   value,
   override,
+  hidden,
   editable,
-  onSave,
+  forceTextDisplay,
+  onSaveValue,
+  onToggleHidden,
 }: {
-  field: ContactField
-  value: string | null
+  channel: Channel
+  value: string
   override: string | null
+  hidden: boolean
   editable: boolean
-  onSave: (next: string | null) => Promise<boolean>
+  forceTextDisplay?: boolean
+  onSaveValue: (v: string | null) => Promise<boolean>
+  onToggleHidden: () => Promise<boolean>
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(override || '')
-
-  const Icon = field.Icon
-  const isMultiline = field.type === 'multiline'
+  const Icon = channel.Icon
 
   async function commit() {
     const v = draft.trim()
     const next = v.length > 0 ? v : null
     if (next !== override) {
-      await onSave(next)
+      await onSaveValue(next)
     }
     setEditing(false)
   }
 
-  // Owner editor
-  if (editable) {
-    if (editing) {
-      return (
-        <div className="tp-contact-row">
-          {Icon && (
-            <span className="tp-contact-icon" aria-hidden="true">
-              <Icon size={16} />
-            </span>
-          )}
-          <span className="tp-contact-label">{field.label}</span>
-          {isMultiline ? (
-            <textarea
-              className="tp-contact-input tp-contact-input--multiline"
-              value={draft}
-              autoFocus
-              rows={2}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commit}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  setDraft(override || '')
-                  setEditing(false)
-                }
-              }}
-            />
-          ) : (
-            <input
-              className="tp-contact-input"
-              type={field.type === 'multiline' ? 'text' : field.type}
-              value={draft}
-              autoFocus
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commit}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                if (e.key === 'Escape') {
-                  setDraft(override || '')
-                  setEditing(false)
-                }
-              }}
-            />
-          )}
-        </div>
-      )
-    }
-
+  // Public render: value as text rendered as a link.
+  if (!editable) {
     return (
-      <div
-        className="tp-contact-row"
-        onClick={() => setEditing(true)}
-        style={{ cursor: 'text' }}
-      >
-        {Icon && (
-          <span className="tp-contact-icon" aria-hidden="true">
-            <Icon size={16} />
-          </span>
-        )}
-        <span className="tp-contact-label">{field.label}</span>
-        {value ? (
-          <span
-            className="tp-contact-value"
-            style={isMultiline ? { whiteSpace: 'pre-line' } : undefined}
-          >
-            {value}
-          </span>
-        ) : (
-          <span className="tp-contact-value tp-contact-value--placeholder">
-            Add {field.label.toLowerCase()}
-          </span>
-        )}
-      </div>
+      <li>
+        <a
+          href={channel.href(value)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="tp-contacts-link"
+        >
+          <Icon size={14} aria-hidden="true" />
+          <span>{value}</span>
+        </a>
+      </li>
     )
   }
 
-  // Public render
-  if (!value) return null
-
-  const inner = field.href ? (
-    <a
-      className="tp-contact-value"
-      href={field.href(value)}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={isMultiline ? { whiteSpace: 'pre-line' } : undefined}
-    >
-      {displayValue(field, value)}
-    </a>
-  ) : (
-    <span
-      className="tp-contact-value"
-      style={isMultiline ? { whiteSpace: 'pre-line' } : undefined}
-    >
-      {displayValue(field, value)}
-    </span>
-  )
-
+  // Owner render: row with editor + eye-toggle. forceTextDisplay just
+  // distinguishes public icon-row layout from the editor list.
+  void forceTextDisplay
   return (
-    <div className="tp-contact-row">
-      {Icon && (
-        <span className="tp-contact-icon" aria-hidden="true">
-          <Icon size={16} />
-        </span>
+    <li className={hidden ? 'tp-contacts-row tp-contacts-row--hidden' : 'tp-contacts-row'}>
+      <span className="tp-contacts-row-icon" aria-hidden="true">
+        <Icon size={14} />
+      </span>
+      {editing ? (
+        <input
+          type={channel.key === 'email' ? 'email' : channel.key === 'phone' ? 'tel' : 'text'}
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+            if (e.key === 'Escape') {
+              setDraft(override || '')
+              setEditing(false)
+            }
+          }}
+          className="tp-contacts-row-input"
+        />
+      ) : (
+        <button
+          type="button"
+          className="tp-contacts-row-value"
+          onClick={() => setEditing(true)}
+          title="Click to edit"
+        >
+          {value}
+        </button>
       )}
-      <span className="tp-contact-label">{field.label}</span>
-      {inner}
-    </div>
+      <button
+        type="button"
+        onClick={onToggleHidden}
+        className="tp-contacts-row-eye"
+        title={hidden ? 'Show on this trip' : 'Hide from this trip'}
+        aria-label={hidden ? 'Show on this trip' : 'Hide from this trip'}
+      >
+        {hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+      </button>
+    </li>
   )
 }
 
-function displayValue(f: ContactField, v: string): string {
-  if (
-    f.type === 'url' ||
-    f.key === 'website' ||
-    f.key === 'instagram' ||
-    f.key === 'facebook' ||
-    f.key === 'youtube' ||
-    f.key === 'tiktok'
-  ) {
-    return v.replace(/^https?:\/\//, '').replace(/\/$/, '')
+/* ──────────────────────────────────────────────────────────────────── */
+/* Helpers                                                              */
+/* ──────────────────────────────────────────────────────────────────── */
+
+async function saveValue(
+  key: ChannelKey,
+  next: string | null,
+  current: OperatorContact,
+  saveProjectPatch?: Mutations['saveProjectPatch'],
+): Promise<boolean> {
+  if (!saveProjectPatch) return false
+  const patch: Record<string, any> = { ...(current || {}), [key]: next }
+  return saveProjectPatch({ operatorContact: patch })
+}
+
+async function toggleHidden(
+  key: ChannelKey,
+  hidden: Set<string>,
+  current: OperatorContact,
+  saveProjectPatch?: Mutations['saveProjectPatch'],
+): Promise<boolean> {
+  if (!saveProjectPatch) return false
+  const next = new Set(hidden)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  const patch: Record<string, any> = {
+    ...(current || {}),
+    hidden_channels: Array.from(next),
   }
-  return v
+  return saveProjectPatch({ operatorContact: patch })
 }
 
 function buildSocialUrl(v: string, host: string): string {
@@ -323,12 +437,10 @@ function buildSocialUrl(v: string, host: string): string {
 function resolveContacts(
   owner: OwnerBrand,
   override: OperatorContact,
-): Record<ContactKey, string | null> {
+): Record<ChannelKey, string | null> {
   return {
-    name: pick(override?.name, owner?.brand_name),
     email: pick(override?.email, owner?.brand_email),
     phone: pick(override?.phone, owner?.brand_phone),
-    address: pick(override?.address, owner?.brand_address),
     whatsapp: pick(override?.whatsapp, owner?.brand_whatsapp),
     telegram: pick(override?.telegram, owner?.brand_telegram),
     website: pick(override?.website, owner?.brand_website),
