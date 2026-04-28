@@ -377,7 +377,10 @@ function ChannelTextRow({
         <button
           type="button"
           className="tp-contacts-row-value"
-          onClick={() => setEditing(true)}
+          onClick={() => {
+            setDraft(override || '')
+            setEditing(true)
+          }}
           title="Click to edit"
         >
           {value}
