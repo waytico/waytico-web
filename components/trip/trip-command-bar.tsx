@@ -108,7 +108,10 @@ export function TripCommandBar({
     const el = textareaRef.current
     if (!el) return
     el.style.height = 'auto'
-    const maxHeight = 120
+    // 240px ≈ 8 lines at the current 15px / leading-snug font. Vadim
+    // explicitly asked for ~2× the previous height (was 120px). Hard
+    // cap so a runaway paste doesn't push the bar over the page.
+    const maxHeight = 240
     el.style.height = Math.min(el.scrollHeight, maxHeight) + 'px'
   }, [input])
 
@@ -193,7 +196,7 @@ export function TripCommandBar({
       aria-hidden={footerVisible ? 'true' : undefined}
     >
       <div
-        className={`mx-auto max-w-4xl ${
+        className={`mx-auto max-w-3xl ${
           footerVisible ? 'pointer-events-none' : 'pointer-events-auto'
         }`}
       >
@@ -246,15 +249,15 @@ export function TripCommandBar({
                 send()
               }
             }}
-            rows={1}
+            rows={2}
             placeholder={
               isSending
                 ? 'Working on it…'
                 : 'Tell me what to change (e.g. "add a task: book transfer")'
             }
             disabled={isSending}
-            className="flex-1 resize-none bg-transparent py-2 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[36px] disabled:opacity-60"
-            style={{ maxHeight: 120 }}
+            className="flex-1 resize-none bg-transparent py-2 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[72px] disabled:opacity-60"
+            style={{ maxHeight: 240 }}
           />
           <button
             type="button"
