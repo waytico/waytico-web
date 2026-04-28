@@ -32,29 +32,31 @@ type Props = {
   internalNotes: string | null
   specialRequests: string | null
   saveProjectPatch: Mutations['saveProjectPatch']
-  /** Notify the page when the linked client changes — caller can
-   *  refetch /full so the dashboard sees the new nickname. */
   onClientChanged?: (client: Client) => void
 }
 
 /**
- * Owner-only service block. Sits at the very top of the trip page,
- * directly under the sticky TripActionBar — operators reach it with
- * one glance instead of scrolling to the bottom.
+ * Operator service block. Sits at the very top of the trip page,
+ * directly under TripActionBar.
  *
- * Visual model: neutral slate panel, NOT a themed proposal section.
- * Icons lead every field so the block scans top-to-bottom even when
- * channels are unfilled.
+ * Brand-aligned: warm cream secondary bg + white card pills with
+ * border-border, matching the dashboard brand panel and the rest of
+ * the operator chrome. NOT a themed proposal section.
+ *
+ * Three stacked sub-blocks separated by hairline rules:
+ *   1. Identity   — nickname (full-width) + name/email/phone/source
+ *   2. Channels   — WA/TG/IG/FB/YT/TT, 4-col on lg, icon-priority
+ *   3. This trip  — booking ref + special requests + internal notes
+ *
+ * Field iconography uses accent (terracotta) when filled, muted when
+ * empty — at-a-glance signal of which channels are captured.
  *
  * Persistence
  * ───────────
- * Identity (nickname/name/email/phone/source) and channels go to the
- * agent's per-agent clients table via /api/clients/upsert when no
- * client is linked yet, or PATCH /api/clients/:id once linked. After
- * the first save we PATCH the trip to attach client_id.
- *
- * Trip-only fields (booking_ref, internal_notes, special_requests) go
- * through saveProjectPatch — they live on the trip itself.
+ * Identity + channels go to the per-agent clients table via
+ * /api/clients/upsert (first save) or PATCH /api/clients/:id
+ * (subsequent saves). On first save we also PATCH the trip to attach
+ * client_id. Trip-only fields go through saveProjectPatch.
  */
 export function ClientInfo({
   client,
@@ -67,15 +69,8 @@ export function ClientInfo({
   const { getToken } = useAuth()
   const [localClient, setLocalClient] = useState<Client | null>(client)
 
-  // Sync from props when /full re-fetches (e.g. after a tool call from
-  // the AI command bar updated the client).
   useEffect(() => setLocalClient(client), [client])
 
-  /**
-   * Persist a single client field. Routes through upsert (creates or
-   * matches by email/phone) on the first save when there's no linked
-   * client yet, then through PATCH /:id for subsequent edits.
-   */
   async function saveClientField(
     key: keyof Client,
     value: string | null,
@@ -112,9 +107,7 @@ export function ClientInfo({
           return false
         }
         saved = ((await res.json()).client as Client) ?? null
-        if (saved) {
-          await saveProjectPatch({ clientId: saved.id })
-        }
+        if (saved) await saveProjectPatch({ clientId: saved.id })
       }
 
       if (saved) {
@@ -130,24 +123,25 @@ export function ClientInfo({
 
   return (
     <section
-      aria-label="Client info — for operator only"
-      className="w-full border-b border-slate-200 bg-slate-50 dark:bg-slate-900/40 dark:border-slate-800"
+      aria-label="Client info — operator only"
+      className="w-full bg-secondary/60 border-b border-border"
     >
-      <div className="max-w-4xl mx-auto px-4 py-3.5">
-        {/* Header strip */}
-        <div className="flex items-center gap-1.5 mb-2.5">
-          <Lock size={12} className="text-slate-500 dark:text-slate-400" aria-hidden="true" />
-          <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-600 dark:text-slate-300">
-            Client info
-          </span>
-          <span className="text-[10px] text-slate-400 dark:text-slate-500">·</span>
-          <span className="text-[10px] text-slate-500 dark:text-slate-400 italic">
-            for your eyes only
+      <div className="max-w-4xl mx-auto px-5 py-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Lock size={13} className="text-foreground/60" aria-hidden="true" />
+            <h2 className="text-xs uppercase tracking-[0.12em] font-semibold text-foreground/80">
+              Client
+            </h2>
+          </div>
+          <span className="text-[10px] uppercase tracking-wider text-foreground/40">
+            For your eyes only
           </span>
         </div>
 
-        {/* Nickname — full-width, drives dashboard heading */}
-        <div className="mb-2.5">
+        {/* ── Identity ───────────────────────────────────────── */}
+        <div className="mb-3">
           <Field
             Icon={Tag}
             label="Nickname"
@@ -155,16 +149,15 @@ export function ClientInfo({
             placeholder='Short label, e.g. "Amina" or "Anna 2 pax"'
             onSave={(v) => saveClientField('nickname', v)}
             wide
+            primary
           />
         </div>
-
-        {/* Identity row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1.5 mb-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-2 mb-4">
           <Field
             Icon={User}
             label="Name"
             value={localClient?.name ?? null}
-            placeholder="Client name"
+            placeholder="Full name"
             onSave={(v) => saveClientField('name', v)}
           />
           <Field
@@ -187,67 +180,75 @@ export function ClientInfo({
             Icon={Compass}
             label="Source"
             value={localClient?.source ?? null}
-            placeholder="Where from?"
+            placeholder="Instagram, referral…"
             onSave={(v) => saveClientField('source', v)}
           />
         </div>
 
-        {/* Channels — icon-priority row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-3 gap-y-1.5 mb-3">
-          <Field
-            Icon={WhatsAppIcon}
-            label="WhatsApp"
-            type="tel"
-            value={localClient?.whatsapp ?? null}
-            placeholder="+1 604 555…"
-            onSave={(v) => saveClientField('whatsapp', v)}
-            iconOnly
-          />
-          <Field
-            Icon={TelegramIcon}
-            label="Telegram"
-            value={localClient?.telegram ?? null}
-            placeholder="@user"
-            onSave={(v) => saveClientField('telegram', v)}
-            iconOnly
-          />
-          <Field
-            Icon={InstagramIcon}
-            label="Instagram"
-            value={localClient?.instagram ?? null}
-            placeholder="@user"
-            onSave={(v) => saveClientField('instagram', v)}
-            iconOnly
-          />
-          <Field
-            Icon={FacebookIcon}
-            label="Facebook"
-            value={localClient?.facebook ?? null}
-            placeholder="fb.com/…"
-            onSave={(v) => saveClientField('facebook', v)}
-            iconOnly
-          />
-          <Field
-            Icon={YouTubeIcon}
-            label="YouTube"
-            value={localClient?.youtube ?? null}
-            placeholder="yt.com/@…"
-            onSave={(v) => saveClientField('youtube', v)}
-            iconOnly
-          />
-          <Field
-            Icon={TikTokIcon}
-            label="TikTok"
-            value={localClient?.tiktok ?? null}
-            placeholder="@user"
-            onSave={(v) => saveClientField('tiktok', v)}
-            iconOnly
-          />
+        {/* ── Channels ───────────────────────────────────────── */}
+        <div className="border-t border-border/70 pt-3 mb-4">
+          <div className="text-[10px] uppercase tracking-[0.12em] font-medium text-foreground/50 mb-2">
+            Channels
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-2">
+            <Field
+              Icon={WhatsAppIcon}
+              label="WhatsApp"
+              type="tel"
+              value={localClient?.whatsapp ?? null}
+              placeholder="+1 604 555 1234"
+              onSave={(v) => saveClientField('whatsapp', v)}
+              compact
+            />
+            <Field
+              Icon={TelegramIcon}
+              label="Telegram"
+              value={localClient?.telegram ?? null}
+              placeholder="@username"
+              onSave={(v) => saveClientField('telegram', v)}
+              compact
+            />
+            <Field
+              Icon={InstagramIcon}
+              label="Instagram"
+              value={localClient?.instagram ?? null}
+              placeholder="@username"
+              onSave={(v) => saveClientField('instagram', v)}
+              compact
+            />
+            <Field
+              Icon={FacebookIcon}
+              label="Facebook"
+              value={localClient?.facebook ?? null}
+              placeholder="facebook.com/…"
+              onSave={(v) => saveClientField('facebook', v)}
+              compact
+            />
+            <Field
+              Icon={YouTubeIcon}
+              label="YouTube"
+              value={localClient?.youtube ?? null}
+              placeholder="youtube.com/@…"
+              onSave={(v) => saveClientField('youtube', v)}
+              compact
+            />
+            <Field
+              Icon={TikTokIcon}
+              label="TikTok"
+              value={localClient?.tiktok ?? null}
+              placeholder="@username"
+              onSave={(v) => saveClientField('tiktok', v)}
+              compact
+            />
+          </div>
         </div>
 
-        {/* Trip-specific row */}
-        <div className="border-t border-slate-200 dark:border-slate-800 pt-2.5 space-y-1.5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+        {/* ── Trip-only ──────────────────────────────────────── */}
+        <div className="border-t border-border/70 pt-3">
+          <div className="text-[10px] uppercase tracking-[0.12em] font-medium text-foreground/50 mb-2">
+            This trip
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 mb-2">
             <Field
               Icon={Hash}
               label="Booking ref"
@@ -282,10 +283,11 @@ export function ClientInfo({
 // ─── Field ──────────────────────────────────────────────────────
 //
 // Variants:
-//   default   : icon + small label above + click-to-edit value below
-//   iconOnly  : icon IS the label (channel row); aria-label preserved
-//   wide      : value spans the row's full width
-//   multiline : edit mode opens a textarea, Cmd/Ctrl+Enter commits
+//   default   — icon + label above + click-to-edit white pill below
+//   wide      — pill spans the full row width
+//   primary   — slightly taller pill, used for the nickname header
+//   compact   — channels grid: same shape but tighter padding
+//   multiline — edit opens a textarea; Cmd/Ctrl+Enter commits
 
 function Field({
   Icon,
@@ -295,7 +297,8 @@ function Field({
   type = 'text',
   onSave,
   wide,
-  iconOnly,
+  primary,
+  compact,
   multiline,
 }: {
   Icon: React.ComponentType<any>
@@ -305,7 +308,8 @@ function Field({
   type?: 'text' | 'email' | 'tel'
   onSave: (v: string | null) => Promise<boolean>
   wide?: boolean
-  iconOnly?: boolean
+  primary?: boolean
+  compact?: boolean
   multiline?: boolean
 }) {
   const [editing, setEditing] = useState(false)
@@ -344,72 +348,25 @@ function Field({
     else setDraft(value || '')
   }
 
-  // Multiline collapsed: show first line only so a long notes block
-  // doesn't push later fields out of view.
+  const filled = !!value && value.length > 0
   const displayValue = value
     ? multiline
       ? value.split('\n')[0]
       : value
     : null
 
-  if (iconOnly) {
-    return (
-      <div className="flex items-center gap-1.5 min-w-0" title={label}>
-        <Icon
-          size={13}
-          className="text-slate-500 dark:text-slate-400 shrink-0"
-          aria-hidden="true"
-        />
-        {editing ? (
-          <input
-            ref={inputRef}
-            type={type}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commit}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                commit()
-              }
-              if (e.key === 'Escape') {
-                e.preventDefault()
-                setDraft(value || '')
-                setEditing(false)
-              }
-            }}
-            disabled={saving}
-            placeholder={placeholder}
-            aria-label={label}
-            className="flex-1 min-w-0 bg-background border border-slate-300 dark:border-slate-700 rounded px-1.5 py-0.5 text-xs outline-none focus:border-slate-500"
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            aria-label={`Edit ${label}`}
-            className={`flex-1 min-w-0 text-left text-xs px-1 py-0.5 rounded transition-colors truncate hover:bg-slate-100 dark:hover:bg-slate-800/60 ${
-              !value
-                ? 'text-slate-400 dark:text-slate-500'
-                : 'text-foreground'
-            }`}
-          >
-            {displayValue || placeholder}
-          </button>
-        )}
-      </div>
-    )
-  }
+  // Filled icon → accent terracotta; empty → muted. Single visual
+  // signal of "what's already captured" without an extra meter.
+  const iconColor = filled ? 'text-accent' : 'text-foreground/30'
+
+  const padY = compact ? 'py-1' : primary ? 'py-1.5' : 'py-1'
+  const baseBox = 'w-full border rounded-md text-sm leading-tight transition-colors'
 
   return (
-    <div className={`flex flex-col ${wide ? 'w-full' : ''} min-w-0`}>
-      <div className="flex items-center gap-1.5 mb-0.5">
-        <Icon
-          size={11}
-          className="text-slate-500 dark:text-slate-400 shrink-0"
-          aria-hidden="true"
-        />
-        <label className="text-[9.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
+    <div className={`flex flex-col gap-1 ${wide ? 'w-full' : 'min-w-0'}`}>
+      <div className="flex items-center gap-1.5">
+        <Icon size={13} className={`shrink-0 ${iconColor}`} aria-hidden="true" />
+        <label className="text-[10px] uppercase tracking-[0.1em] text-foreground/50 font-medium">
           {label}
         </label>
       </div>
@@ -434,7 +391,7 @@ function Field({
             disabled={saving}
             rows={2}
             placeholder={placeholder}
-            className="bg-background border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm outline-none focus:border-slate-500 resize-y ml-[18px]"
+            className={`${baseBox} bg-card border-accent px-2.5 ${padY} outline-none resize-y`}
           />
         ) : (
           <input
@@ -456,17 +413,17 @@ function Field({
             }}
             disabled={saving}
             placeholder={placeholder}
-            className="bg-background border border-slate-300 dark:border-slate-700 rounded px-2 py-0.5 text-sm outline-none focus:border-slate-500 ml-[18px]"
+            className={`${baseBox} bg-card border-accent px-2.5 ${padY} outline-none`}
           />
         )
       ) : (
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className={`text-left text-sm px-2 py-0.5 rounded transition-colors truncate ml-[18px] hover:bg-slate-100 dark:hover:bg-slate-800/60 ${
-            !value
-              ? 'text-slate-400 dark:text-slate-500 italic'
-              : 'text-foreground'
+          className={`${baseBox} text-left px-2.5 ${padY} truncate ${
+            filled
+              ? 'bg-card border-border hover:border-foreground/30 text-foreground'
+              : 'bg-card/40 border-dashed border-border hover:border-foreground/30 text-foreground/40 italic'
           }`}
         >
           {displayValue || placeholder}
