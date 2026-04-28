@@ -242,8 +242,18 @@ export default function DashboardPage() {
       <Header />
       <div className="min-h-[calc(100vh-73px)] bg-background text-foreground">
         <main className="max-w-4xl mx-auto px-4 py-8">
-          {isLoaded && projects !== null && <BrandCard />}
-          {isLoaded && projects !== null && <PreferencesCard />}
+          {isLoaded && projects !== null && (
+            <>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/55 mb-2 px-1">
+                Profile
+              </h3>
+              <BrandCard />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/55 mb-2 mt-6 px-1">
+                Preferences
+              </h3>
+              <PreferencesCard />
+            </>
+          )}
 
           {(!isLoaded || projects === null) && (
             <div className="space-y-2 px-4">
@@ -263,7 +273,11 @@ export default function DashboardPage() {
           )}
 
           {isLoaded && hasAnyTrip && (
-            <div className="rounded-lg border border-border bg-card mt-4 mb-6">
+            <>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/55 mb-2 mt-6 px-1">
+                Trips
+              </h3>
+              <div className="rounded-lg border border-border bg-card mb-6">
               <div className="border-b border-border/70 px-4 py-3 flex flex-wrap items-center gap-3">
                 <div className="relative flex-1 min-w-[180px] max-w-sm">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
@@ -371,6 +385,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
+            </>
           )}
         </main>
       </div>

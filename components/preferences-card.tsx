@@ -87,9 +87,6 @@ export default function PreferencesCard() {
 
   return (
     <div className="bg-card border border-border rounded-xl p-4 mb-6">
-      <h3 className="text-sm font-semibold text-foreground mb-3 px-1">
-        Preferences
-      </h3>
       <DefaultThemeRow value={profile.default_theme} onSave={saveDefaultTheme} />
     </div>
   )
