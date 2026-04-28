@@ -12,7 +12,7 @@ import type { Project, ProjectStatus } from '@/components/project-card'
 import { GROUP_TITLES, groupTrips, type GroupKey } from '@/lib/trip-grouping'
 import { apiFetch } from '@/lib/api'
 
-const VISIBLE_GROUPS: GroupKey[] = ['attention', 'active', 'completed']
+const VISIBLE_GROUPS: GroupKey[] = ['attention', 'flight', 'completed']
 
 type SortMode = 'state' | 'created'
 type StatusFilter = 'all' | ProjectStatus
@@ -64,7 +64,7 @@ function GroupSection({
 }
 
 const EMPTY_HINTS: Partial<Record<GroupKey, string>> = {
-  active: 'No active trips. Create a new quote to get started.',
+  flight: 'No trips in flight. Create a new quote to get started.',
 }
 
 export default function DashboardPage() {
@@ -183,7 +183,7 @@ export default function DashboardPage() {
   }, [flatList, currentPage, perPage])
 
   const totalActive = grouped
-    ? grouped.attention.length + grouped.active.length + grouped.completed.length
+    ? grouped.attention.length + grouped.flight.length + grouped.completed.length
     : 0
   const archivedCount = grouped ? grouped.archive.length : 0
   const hasAnyTrip = projects !== null && projects.length > 0
