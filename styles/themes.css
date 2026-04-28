@@ -66,16 +66,17 @@
 
   --shadow-card: 0 1px 0 rgba(31,26,20,0.06);
 
-  /* Floating command bar — inverted relative to the page surface so it
-     always reads as an overlay. Tokens are consumed by .tp-cmdbar and
-     friends; component code stays theme-agnostic. */
-  --bar-bg:         var(--ink);
-  --bar-ink:        var(--bg);
-  --bar-ink-mute:   color-mix(in oklab, var(--bg) 55%, transparent);
-  --bar-border:     color-mix(in oklab, var(--bg) 16%, transparent);
+  /* Floating command bar — softly tinted with the theme accent so it
+     reads as a warm card on the page, not an inverted slab. Tokens are
+     consumed by .tp-cmdbar and friends; component code stays
+     theme-agnostic. */
+  --bar-bg:         color-mix(in oklab, var(--accent) 10%, var(--bg));
+  --bar-ink:        var(--ink);
+  --bar-ink-mute:   color-mix(in oklab, var(--ink) 50%, transparent);
+  --bar-border:     color-mix(in oklab, var(--accent) 30%, transparent);
   --bar-accent:     var(--accent);
   --bar-accent-ink: var(--accent-ink);
-  --bar-shadow:     0 8px 32px rgba(20, 14, 10, 0.20);
+  --bar-shadow:     0 6px 24px rgba(20, 14, 10, 0.10);
 
   --hero-style:      "split";
   --itinerary-style: "timeline";
@@ -111,13 +112,13 @@
 
   --shadow-card: none;
 
-  --bar-bg:         var(--ink);
-  --bar-ink:        var(--bg);
-  --bar-ink-mute:   color-mix(in oklab, var(--bg) 55%, transparent);
-  --bar-border:     color-mix(in oklab, var(--bg) 16%, transparent);
+  --bar-bg:         color-mix(in oklab, var(--accent) 14%, var(--bg-alt));
+  --bar-ink:        var(--ink);
+  --bar-ink-mute:   color-mix(in oklab, var(--ink) 55%, transparent);
+  --bar-border:     color-mix(in oklab, var(--accent) 35%, transparent);
   --bar-accent:     var(--accent);
   --bar-accent-ink: var(--accent-ink);
-  --bar-shadow:     0 12px 40px rgba(0, 0, 0, 0.55);
+  --bar-shadow:     0 12px 40px rgba(0, 0, 0, 0.45);
 
   --hero-style:      "overlay";
   --itinerary-style: "photo-cards";
@@ -153,13 +154,13 @@
 
   --shadow-card: 0 1px 2px rgba(21,23,26,0.04), 0 0 0 1px rgba(21,23,26,0.05);
 
-  --bar-bg:         var(--ink);
-  --bar-ink:        var(--bg);
-  --bar-ink-mute:   color-mix(in oklab, var(--bg) 55%, transparent);
-  --bar-border:     color-mix(in oklab, var(--bg) 16%, transparent);
+  --bar-bg:         color-mix(in oklab, var(--accent) 10%, var(--bg-alt));
+  --bar-ink:        var(--ink);
+  --bar-ink-mute:   color-mix(in oklab, var(--ink) 50%, transparent);
+  --bar-border:     color-mix(in oklab, var(--accent) 28%, transparent);
   --bar-accent:     var(--accent);
   --bar-accent-ink: var(--accent-ink);
-  --bar-shadow:     0 8px 32px rgba(21, 23, 26, 0.24);
+  --bar-shadow:     0 6px 24px rgba(21, 23, 26, 0.12);
 
   --hero-style:      "card";
   --itinerary-style: "grid";
