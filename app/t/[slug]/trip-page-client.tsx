@@ -801,7 +801,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
       <ActivationToast />
 
       {previewAsClient && (
-        <div className="sticky top-[64px] z-40 bg-accent text-accent-foreground">
+        <div className="sticky top-0 z-40 bg-accent text-accent-foreground">
           <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
             <p className="text-sm flex-1 min-w-0 flex items-center gap-2">
               <Eye className="w-4 h-4 flex-shrink-0" />
