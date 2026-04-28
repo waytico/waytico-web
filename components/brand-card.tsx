@@ -402,20 +402,20 @@ export default function BrandCard() {
           right field instead of reading every label. Each row has a
           leading icon matching the brand mark on the trip page so the
           dashboard and the live page reinforce each other visually. */}
-      <div className="mt-6 pt-5 border-t border-border/50 space-y-6">
+      <div className="mt-4 pt-4 border-t border-border/50 space-y-4">
         {CHANNEL_GROUPS.map((group) => (
           <section key={group.title}>
-            <div className="mb-3">
-              <h3 className="text-xs uppercase tracking-wider font-semibold text-foreground/70">
+            <div className="mb-2">
+              <h3 className="text-[10px] uppercase tracking-wider font-semibold text-foreground/60">
                 {group.title}
               </h3>
               {group.hint && (
-                <p className="text-[11px] text-foreground/50 mt-0.5">
+                <p className="text-[10px] text-foreground/40 mt-0.5">
                   {group.hint}
                 </p>
               )}
             </div>
-            <div className={`grid gap-3 ${
+            <div className={`grid gap-x-6 gap-y-1 ${
               // Single-channel groups (Visit/Address) get a wide row;
               // multi-channel groups go 2-column on sm+.
               group.channels.length > 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
@@ -459,14 +459,13 @@ export default function BrandCard() {
           channel groups above (eyebrow title + hint + content). Brand
           defaults flow into every new trip's terms; per-trip overrides
           on the trip page take precedence. */}
-      <section className="mt-6 pt-5 border-t border-border/50">
-        <div className="mb-3">
-          <h3 className="text-xs uppercase tracking-wider font-semibold text-foreground/70">
+      <section className="mt-4 pt-4 border-t border-border/50">
+        <div className="mb-2">
+          <h3 className="text-[10px] uppercase tracking-wider font-semibold text-foreground/60">
             Default trip terms
           </h3>
-          <p className="text-[11px] text-foreground/50 mt-0.5">
-            Auto-applied to every new trip. Cancellation policy, deposit,
-            force majeure — anything that doesn&apos;t change between trips.
+          <p className="text-[10px] text-foreground/40 mt-0.5">
+            Auto-applied to every new trip. Cancellation, deposit, force majeure.
           </p>
         </div>
         <BrandTermsRow value={profile.brand_terms} onSave={saveTerms} />
@@ -628,23 +627,22 @@ function ContactRow({
       : value
     : null
 
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
-        {Icon && (
-          <span className="text-foreground/50 shrink-0" aria-hidden="true">
-            <Icon size={14} />
-          </span>
-        )}
-        <label className="text-[11px] uppercase tracking-wider text-foreground/60 font-sans font-medium">
-          {label}
-        </label>
-      </div>
-      {hint && (
-        <p className="text-[10px] text-foreground/40 -mt-0.5 ml-6">{hint}</p>
-      )}
-      {editing ? (
-        multiline ? (
+  // Multiline (Address) keeps its own layout — label on top, textarea
+  // below, since a 500-char address won't fit on one inline line.
+  if (multiline) {
+    return (
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-1.5">
+          {Icon && (
+            <span className="text-foreground/50 shrink-0" aria-hidden="true">
+              <Icon size={13} />
+            </span>
+          )}
+          <label className="text-[10px] uppercase tracking-wider text-foreground/60 font-sans font-medium">
+            {label}
+          </label>
+        </div>
+        {editing ? (
           <textarea
             ref={textareaRef}
             value={draft}
@@ -664,9 +662,37 @@ function ContactRow({
             disabled={saving}
             rows={2}
             placeholder={placeholder}
-            className="bg-background border border-accent/40 rounded px-2 py-1.5 text-sm outline-none focus:border-accent resize-y ml-6"
+            className="bg-background border border-accent/40 rounded px-2 py-1 text-sm outline-none focus:border-accent resize-y"
           />
         ) : (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className={`text-left text-sm hover:bg-secondary/40 rounded px-2 py-1 -mx-2 transition-colors border border-transparent hover:border-border truncate ${
+              !value ? 'text-foreground/40 italic' : 'text-foreground'
+            }`}
+          >
+            {displayValue || placeholder}
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  // Single-line: icon + LABEL + value inline. Editing swaps value for
+  // an input that takes the remaining row width.
+  return (
+    <div className="flex flex-col">
+      <div className="flex items-center gap-2 py-1">
+        {Icon && (
+          <span className="text-foreground/50 shrink-0" aria-hidden="true">
+            <Icon size={13} />
+          </span>
+        )}
+        <label className="text-[10px] uppercase tracking-wider text-foreground/60 font-sans font-medium shrink-0 w-16">
+          {label}
+        </label>
+        {editing ? (
           <input
             ref={inputRef}
             type={type}
@@ -686,19 +712,22 @@ function ContactRow({
             }}
             disabled={saving}
             placeholder={placeholder}
-            className="bg-background border border-accent/40 rounded px-2 py-1.5 text-sm outline-none focus:border-accent ml-6"
+            className="flex-1 bg-background border border-accent/40 rounded px-2 py-0.5 text-sm outline-none focus:border-accent min-w-0"
           />
-        )
-      ) : (
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className={`text-left text-sm hover:bg-secondary/40 rounded px-2 py-1.5 -mx-2 transition-colors border border-transparent hover:border-border truncate ml-6 ${
-            !value ? 'text-foreground/40 italic' : 'text-foreground'
-          }`}
-        >
-          {displayValue || placeholder}
-        </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className={`flex-1 text-left text-sm hover:bg-secondary/40 rounded px-2 py-0.5 -mx-2 transition-colors border border-transparent hover:border-border truncate min-w-0 ${
+              !value ? 'text-foreground/40 italic' : 'text-foreground'
+            }`}
+          >
+            {displayValue || placeholder}
+          </button>
+        )}
+      </div>
+      {hint && (
+        <p className="text-[10px] text-foreground/40 ml-[88px] -mt-0.5">{hint}</p>
       )}
     </div>
   )
