@@ -256,17 +256,15 @@ export default function BrandCard() {
     .toUpperCase()
 
   const contacts = profile.default_contacts || {}
-  const contactsCount = Object.values(contacts).filter((v) => v && v !== '').length
-  const businessName = profile.business_name || 'Your business name'
-  // Public-facing email: contact_email (operator-edited) takes precedence,
-  // login email is the fallback so a fresh signup shows something useful.
-  const publicEmail = profile.contact_email || profile.email || ''
-  const emailDisplay = publicEmail || 'Add a contact email'
 
   // ─── Collapsed (default) ───────────────────────────────
   if (!expanded) {
     return (
-      <div className="w-full mb-6 flex items-center gap-3 px-3 py-2 rounded-md bg-secondary/50 hover:bg-secondary/70 transition-colors">
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="w-full mb-6 flex items-center gap-3 px-3 py-2 rounded-md bg-secondary/50 hover:bg-secondary/70 transition-colors text-left"
+      >
         <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 bg-background border border-border">
           {profile.brand_logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -277,38 +275,19 @@ export default function BrandCard() {
             </div>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className={`text-sm font-medium truncate hover:underline ${!profile.business_name ? 'text-foreground/50 italic' : ''}`}
-        >
-          {businessName}
-        </button>
-        <span className="text-foreground/30 text-sm hidden sm:inline">·</span>
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className="text-sm text-foreground/60 hover:text-foreground hover:underline truncate hidden sm:inline-flex transition-colors"
-          aria-label="Edit contact email"
-        >
-          {emailDisplay}
-        </button>
-        <span className="text-foreground/30 text-sm hidden sm:inline">·</span>
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className="text-sm text-foreground/60 hover:text-foreground hover:underline hidden sm:inline transition-colors"
-        >
-          {contactsCount > 0 ? `${contactsCount} contact${contactsCount === 1 ? '' : 's'}` : 'no contacts yet'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className="ml-auto text-xs text-foreground/60 hover:text-foreground flex items-center gap-1 flex-shrink-0 transition-colors"
-        >
+        <span className="text-sm font-medium text-foreground">Your profile</span>
+        {profile.business_name && (
+          <>
+            <span className="text-foreground/30 text-sm hidden sm:inline">·</span>
+            <span className="text-sm text-foreground/60 truncate hidden sm:inline">
+              {profile.business_name}
+            </span>
+          </>
+        )}
+        <span className="ml-auto text-xs text-foreground/60 flex items-center gap-1 flex-shrink-0">
           Edit <ChevronDown className="w-3.5 h-3.5" />
-        </button>
-      </div>
+        </span>
+      </button>
     )
   }
 
