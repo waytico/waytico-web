@@ -13,6 +13,7 @@ import PhotoLightbox from '@/components/photo-lightbox'
 import Header from '@/components/header'
 import ShareMenu from '@/components/share-menu'
 import AnonUpsellModal from '@/components/anon-upsell-modal'
+import PostClaimUpsellModal from '@/components/post-claim-upsell-modal'
 import { ScrollToTop } from '@/components/scroll-to-top'
 import { TripCommandBar } from '@/components/trip/trip-command-bar'
 import { TripActionBar } from '@/components/trip/trip-action-bar'
@@ -66,6 +67,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const [anonShareOpen, setAnonShareOpen] = useState(false)
   const [sharedOnce, setSharedOnce] = useState(false)
   const [ownerRefreshKey, setOwnerRefreshKey] = useState(0)
+  /** In-memory only: fires once after a successful anon→register→claim
+   *  handshake, never again on this mount. F5 won't replay it. */
+  const [showPostClaimUpsell, setShowPostClaimUpsell] = useState(false)
 
   // Mark anon-creator for non-dismissible banner + 8s upsell modal.
   useEffect(() => {
@@ -101,6 +105,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           setIsAnonCreator(false)
           setSharedOnce(false)
           setOwnerRefreshKey((k) => k + 1)
+          setShowPostClaimUpsell(true)
         }
       } catch {}
       router.replace(`/t/${slug}`)
@@ -894,6 +899,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
           onShareClick={() => setAnonShareOpen(true)}
         />
       )}
+
+      {/* Post-claim upsell — fires once, in-memory, the moment the
+          anon→register→claim handshake succeeds. Walks through five
+          non-obvious things the operator can do with this just-saved
+          quote. F5 won't bring it back. */}
+      <PostClaimUpsellModal
+        show={showPostClaimUpsell}
+        onClose={() => setShowPostClaimUpsell(false)}
+      />
 
       {/* Themed surface — switching data-theme reflows tokens in styles/themes.css.
           Owner edit UX rides through via slot props; structural variants
