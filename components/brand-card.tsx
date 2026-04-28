@@ -2,9 +2,27 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { ChevronDown, ChevronRight, Loader2, Trash2, Upload } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Trash2,
+  Upload,
+  Phone,
+  Mail,
+  Globe,
+  MapPin,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { apiFetch } from '@/lib/api'
+import {
+  WhatsAppIcon,
+  TelegramIcon,
+  InstagramIcon,
+  FacebookIcon,
+  YouTubeIcon,
+  TikTokIcon,
+} from '@/lib/contact-icons'
 
 const ALLOWED_LOGO_MIME = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_LOGO_SIZE = 15 * 1024 * 1024 // 15 MB
@@ -51,18 +69,47 @@ type ChannelDef = {
   type: string
   /** Render as a multiline textarea instead of a single-line input. */
   multiline?: boolean
+  /** Permissive type so both lucide forwardRef components and our
+   *  brand-mark FCs from lib/contact-icons fit. */
+  Icon: React.ComponentType<any>
 }
 
-const CHANNELS: ChannelDef[] = [
-  { key: 'phone', label: 'Phone', placeholder: '+1 604 555 1234', type: 'tel' },
-  { key: 'whatsapp', label: 'WhatsApp', placeholder: '+1 604 555 1234', type: 'tel' },
-  { key: 'telegram', label: 'Telegram', placeholder: '@username', type: 'text' },
-  { key: 'website', label: 'Website', placeholder: 'https://yourbrand.com', type: 'url' },
-  { key: 'address', label: 'Address', placeholder: '123 Main St, Vancouver BC', type: 'text', multiline: true },
-  { key: 'instagram', label: 'Instagram', placeholder: '@yourbrand', type: 'text' },
-  { key: 'facebook', label: 'Facebook', placeholder: 'facebook.com/yourbrand', type: 'text' },
-  { key: 'youtube', label: 'YouTube', placeholder: 'youtube.com/@yourbrand', type: 'text' },
-  { key: 'tiktok', label: 'TikTok', placeholder: '@yourbrand', type: 'text' },
+/** Channel groupings — same shape as the trip-page Contacts section
+ *  but reorganised around what the operator is filling in: who wants to
+ *  reach me directly, where can clients find me online, where do I
+ *  physically operate from. */
+type ChannelGroup = {
+  title: string
+  hint?: string
+  channels: ChannelDef[]
+}
+
+const CHANNEL_GROUPS: ChannelGroup[] = [
+  {
+    title: 'Reach you directly',
+    hint: 'Shown to clients on every trip page so they can ask questions.',
+    channels: [
+      { key: 'phone', label: 'Phone', placeholder: '+1 604 555 1234', type: 'tel', Icon: Phone },
+      { key: 'whatsapp', label: 'WhatsApp', placeholder: '+1 604 555 1234', type: 'tel', Icon: WhatsAppIcon },
+      { key: 'telegram', label: 'Telegram', placeholder: '@username', type: 'text', Icon: TelegramIcon },
+    ],
+  },
+  {
+    title: 'Find you online',
+    channels: [
+      { key: 'website', label: 'Website', placeholder: 'https://yourbrand.com', type: 'url', Icon: Globe },
+      { key: 'instagram', label: 'Instagram', placeholder: '@yourbrand', type: 'text', Icon: InstagramIcon },
+      { key: 'facebook', label: 'Facebook', placeholder: 'facebook.com/yourbrand', type: 'text', Icon: FacebookIcon },
+      { key: 'youtube', label: 'YouTube', placeholder: 'youtube.com/@yourbrand', type: 'text', Icon: YouTubeIcon },
+      { key: 'tiktok', label: 'TikTok', placeholder: '@yourbrand', type: 'text', Icon: TikTokIcon },
+    ],
+  },
+  {
+    title: 'Visit you',
+    channels: [
+      { key: 'address', label: 'Address', placeholder: '123 Main St, Vancouver BC', type: 'text', multiline: true, Icon: MapPin },
+    ],
+  },
 ]
 
 export default function BrandCard() {
@@ -337,21 +384,6 @@ export default function BrandCard() {
             className="text-sm text-foreground/70 block"
             inputClassName="text-sm"
           />
-          <div className="pt-1">
-            <InlineText
-              value={profile.contact_email || profile.email || ''}
-              placeholder="your.business@email.com"
-              onSave={saveContactEmail}
-              className="text-xs text-foreground/60 block"
-              inputClassName="text-xs"
-            />
-            <p className="text-[10px] text-foreground/40 mt-0.5 px-2">
-              Public email shown to clients on every trip page.
-              {!profile.contact_email && profile.email && (
-                <> Currently using your login email — edit to use a different one.</>
-              )}
-            </p>
-          </div>
         </div>
 
         {/* Collapse */}
@@ -365,29 +397,80 @@ export default function BrandCard() {
         </button>
       </div>
 
-      {/* Contacts — visible inline, no accordion */}
-      <div className="mt-5 pt-4 border-t border-border/50 grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {CHANNELS.map((ch) => (
-          <ContactRow
-            key={ch.key}
-            label={ch.label}
-            value={(contacts as Record<string, string | null>)[ch.key] || null}
-            placeholder={ch.placeholder}
-            type={ch.type}
-            multiline={ch.multiline}
-            onSave={(v) => saveContact(ch.key, v)}
-          />
+      {/* Channel groups — same content as before, but grouped by intent
+          (Reach / Online / Visit) so the operator can scan and find the
+          right field instead of reading every label. Each row has a
+          leading icon matching the brand mark on the trip page so the
+          dashboard and the live page reinforce each other visually. */}
+      <div className="mt-6 pt-5 border-t border-border/50 space-y-6">
+        {CHANNEL_GROUPS.map((group) => (
+          <section key={group.title}>
+            <div className="mb-3">
+              <h3 className="text-xs uppercase tracking-wider font-semibold text-foreground/70">
+                {group.title}
+              </h3>
+              {group.hint && (
+                <p className="text-[11px] text-foreground/50 mt-0.5">
+                  {group.hint}
+                </p>
+              )}
+            </div>
+            <div className={`grid gap-3 ${
+              // Single-channel groups (Visit/Address) get a wide row;
+              // multi-channel groups go 2-column on sm+.
+              group.channels.length > 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
+            }`}>
+              {/* Email pinned to the top of the Reach group — uses a
+                  separate save handler because it lives on
+                  users.contact_email, not default_contacts. */}
+              {group.title === 'Reach you directly' && (
+                <ContactRow
+                  label="Email"
+                  Icon={Mail}
+                  value={profile.contact_email || profile.email || null}
+                  placeholder="your.business@email.com"
+                  type="email"
+                  hint={
+                    !profile.contact_email && profile.email
+                      ? 'Currently using your login email.'
+                      : undefined
+                  }
+                  onSave={saveContactEmail}
+                />
+              )}
+              {group.channels.map((ch) => (
+                <ContactRow
+                  key={ch.key}
+                  label={ch.label}
+                  Icon={ch.Icon}
+                  value={(contacts as Record<string, string | null>)[ch.key] || null}
+                  placeholder={ch.placeholder}
+                  type={ch.type}
+                  multiline={ch.multiline}
+                  onSave={(v) => saveContact(ch.key, v)}
+                />
+              ))}
+            </div>
+          </section>
         ))}
       </div>
 
-      {/* Default Terms — single inline strip with an Edit affordance on
-          the right, mirroring the ContactRow strip rhythm. Click anywhere
-          on the row to expand into a textarea. New trips inherit
-          whatever's in this field at create time; per-trip terms can
-          still be overridden by the operator on the trip page. */}
-      <div className="mt-3">
+      {/* Default Terms — fourth group, matches the rhythm of the
+          channel groups above (eyebrow title + hint + content). Brand
+          defaults flow into every new trip's terms; per-trip overrides
+          on the trip page take precedence. */}
+      <section className="mt-6 pt-5 border-t border-border/50">
+        <div className="mb-3">
+          <h3 className="text-xs uppercase tracking-wider font-semibold text-foreground/70">
+            Default trip terms
+          </h3>
+          <p className="text-[11px] text-foreground/50 mt-0.5">
+            Auto-applied to every new trip. Cancellation policy, deposit,
+            force majeure — anything that doesn&apos;t change between trips.
+          </p>
+        </div>
         <BrandTermsRow value={profile.brand_terms} onSave={saveTerms} />
-      </div>
+      </section>
     </div>
   )
 }
@@ -483,10 +566,24 @@ type ContactRowProps = {
   placeholder: string
   type: string
   multiline?: boolean
+  /** Lucide or brand-mark icon — same permissive type as the channel
+   *  defs above so both sources fit. */
+  Icon?: React.ComponentType<any>
+  /** Tiny secondary helper text under the label. */
+  hint?: string
   onSave: (v: string) => Promise<boolean>
 }
 
-function ContactRow({ label, value, placeholder, type, multiline, onSave }: ContactRowProps) {
+function ContactRow({
+  label,
+  value,
+  placeholder,
+  type,
+  multiline,
+  Icon,
+  hint,
+  onSave,
+}: ContactRowProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value || '')
   const [saving, setSaving] = useState(false)
@@ -533,7 +630,19 @@ function ContactRow({ label, value, placeholder, type, multiline, onSave }: Cont
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[11px] uppercase tracking-wider text-foreground/50 font-sans">{label}</label>
+      <div className="flex items-center gap-2">
+        {Icon && (
+          <span className="text-foreground/50 shrink-0" aria-hidden="true">
+            <Icon size={14} />
+          </span>
+        )}
+        <label className="text-[11px] uppercase tracking-wider text-foreground/60 font-sans font-medium">
+          {label}
+        </label>
+      </div>
+      {hint && (
+        <p className="text-[10px] text-foreground/40 -mt-0.5 ml-6">{hint}</p>
+      )}
       {editing ? (
         multiline ? (
           <textarea
@@ -555,7 +664,7 @@ function ContactRow({ label, value, placeholder, type, multiline, onSave }: Cont
             disabled={saving}
             rows={2}
             placeholder={placeholder}
-            className="bg-background border border-accent/40 rounded px-2 py-1.5 text-sm outline-none focus:border-accent resize-y"
+            className="bg-background border border-accent/40 rounded px-2 py-1.5 text-sm outline-none focus:border-accent resize-y ml-6"
           />
         ) : (
           <input
@@ -577,14 +686,14 @@ function ContactRow({ label, value, placeholder, type, multiline, onSave }: Cont
             }}
             disabled={saving}
             placeholder={placeholder}
-            className="bg-background border border-accent/40 rounded px-2 py-1.5 text-sm outline-none focus:border-accent"
+            className="bg-background border border-accent/40 rounded px-2 py-1.5 text-sm outline-none focus:border-accent ml-6"
           />
         )
       ) : (
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className={`text-left text-sm hover:bg-secondary/40 rounded px-2 py-1.5 -mx-2 transition-colors border border-transparent hover:border-border truncate ${
+          className={`text-left text-sm hover:bg-secondary/40 rounded px-2 py-1.5 -mx-2 transition-colors border border-transparent hover:border-border truncate ml-6 ${
             !value ? 'text-foreground/40 italic' : 'text-foreground'
           }`}
         >
