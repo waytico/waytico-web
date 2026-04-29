@@ -34,11 +34,7 @@ const ALLOWED_MIMES = [
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 const PLACEHOLDER_EXAMPLE = `Describe a trip you want to send to a client.
-Dates, places, hotels, prices — anything you'd normally type into Word.
-
-
-
-Drag a file in if you already have a draft.`
+Dates, places, hotels, prices — anything you'd normally type into Word.`
 
 function fileIcon(mime: string) {
   if (mime.startsWith('image/')) return <ImageIcon className="w-4 h-4" />
@@ -409,6 +405,21 @@ export default function ChatFlow() {
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
+          </div>
+        )}
+
+        {/* "Drag a file" hint — sits absolutely above the bottom controls
+            so it lines up next to the + button instead of floating at the
+            top of the textarea (where it'd just look like more
+            placeholder copy). Hidden as soon as the user starts typing or
+            attaches a file, since we don't want this hint cluttering an
+            in-progress prompt. Hidden in chat mode (messages.length>0)
+            for the same reason. */}
+        {messages.length === 0 && !input && !selectedFile && (
+          <div className="absolute bottom-[68px] left-5 pointer-events-none">
+            <p className="text-sm text-muted-foreground">
+              Drag a file in if you already have a draft.
+            </p>
           </div>
         )}
 
