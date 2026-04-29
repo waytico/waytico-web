@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
 import { Trash2, Eye, EyeOff, FileText, Upload, X } from 'lucide-react'
@@ -117,14 +116,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
   // ─── Photos / owner state ──────────────────────────────────
   const [isOwner, setIsOwner] = useState(false)
   const [previewAsClient, setPreviewAsClient] = useState(false)
-  // Showcase mode — the public Paris demo lives at a fixed slug, owned
-  // by a system user. Visitors aren't authenticated against it, but we
-  // want them to see the full editable interface (click-to-edit, drag,
-  // AI chat, photos). No mutation actually reaches the backend; every
-  // save handler short-circuits to a local state update so the shared
-  // showcase content can't be mutated by visitors.
-  const isShowcase = slug === 'paris-weekend-getaway'
-  const showOwnerUI = (isOwner || isShowcase) && !previewAsClient
+  const showOwnerUI = isOwner && !previewAsClient
   const [archiveOpen, setArchiveOpen] = useState(false)
   const [media, setMedia] = useState<MediaRecord[]>(
     (initialData?.media as MediaRecord[]) || [],
@@ -162,7 +154,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
     projectId: data?.project?.id,
     setData: setData as any,
     setTasks: setTasks as any,
-    isShowcase,
   })
 
   const handleDeleteProject = useCallback(async () => {
@@ -194,7 +185,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
     projectId: data?.project?.id,
     media,
     setMedia,
-    isShowcase,
   })
 
   // ─── Visibility toggles (owner only) ──────────────────────────
@@ -811,26 +801,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       <ActivationToast />
 
-      {isShowcase && !previewAsClient && (
-        <div className="sticky top-0 z-40 bg-accent text-accent-foreground">
-          <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
-            <p className="text-sm flex-1 min-w-0">
-              <span className="font-semibold mr-2">DEMO</span>
-              <span>
-                Click any field, drag day cards to reorder them, drop in photos. Your changes
-                stay in this browser only — they reset on refresh.
-              </span>
-            </p>
-            <Link
-              href="/sign-up"
-              className="text-sm font-semibold px-3 py-1 rounded-full bg-accent-foreground/15 hover:bg-accent-foreground/25 transition-colors flex-shrink-0 whitespace-nowrap"
-            >
-              Try on your own trip →
-            </Link>
-          </div>
-        </div>
-      )}
-
       {previewAsClient && (
         <div className="sticky top-0 z-40 bg-accent text-accent-foreground">
           <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
@@ -1167,7 +1137,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       {showOwnerUI && (
         <>
-          <TripCommandBar projectId={p.id} getToken={getToken} onTripUpdated={handleTripUpdated} status={p.status} theme={resolvedTheme} isShowcase={isShowcase} />
+          <TripCommandBar projectId={p.id} getToken={getToken} onTripUpdated={handleTripUpdated} status={p.status} theme={resolvedTheme} />
           {/* Owner-only breathing room between the last section and the
               footer. The command bar floats over the page; this spacer
               gives the operator empty space where the bar can rest

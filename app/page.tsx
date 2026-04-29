@@ -1,6 +1,5 @@
 import { SignedOut } from '@clerk/nextjs'
-import Link from 'next/link'
-import { Sparkles, ArrowRight } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import ChatFlow from '@/components/chat-flow'
 import Footer from '@/components/footer'
 import Header from '@/components/header'
@@ -16,30 +15,16 @@ export default function Home() {
               <Sparkles className="w-4 h-4 text-accent flex-shrink-0 mt-0.5 sm:mt-0" />
               <p className="text-sm text-foreground/80 leading-snug">
                 <span className="font-medium text-foreground">New here?</span>{' '}
-                No signup needed to try — see the example below or write your own.
+                Describe a trip your client is asking about. We&apos;ll turn it into a polished proposal page you can share with them. No signup needed to try.
               </p>
             </div>
           </SignedOut>
-          <div className="space-y-4">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight leading-tight text-balance">
-              Travel pros:
-              <br />
-              stop writing proposals in Word.
-            </h1>
-            <p className="text-lg md:text-xl text-foreground/70 leading-snug max-w-xl mx-auto text-balance">
-              One link your client opens — itinerary, prices, your terms, your brand.
-            </p>
-          </div>
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold tracking-tight leading-tight text-balance">
+            Your tour in.
+            <br />
+            Quote page out.
+          </h1>
           <ChatFlow />
-          <div className="pt-2">
-            <Link
-              href="/t/paris-weekend-getaway"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary border border-border text-sm font-medium text-foreground/80 hover:text-foreground hover:border-accent transition-colors"
-            >
-              Or just look — 3 days in Paris
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
         </div>
       </main>
       <Footer />

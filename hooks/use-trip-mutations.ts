@@ -27,25 +27,14 @@ type Options = {
   setData: (updater: (prev: ProjectPayload) => ProjectPayload) => void
   /** Setter for local tasks array (owner view) */
   setTasks: (updater: (cur: any[]) => any[]) => void
-  /** Demo mode — all save handlers update local state only, never reach
-   *  the backend. Used for the public Paris showcase trip on a fixed
-   *  slug; multiple anonymous visitors can each "edit" their own session
-   *  without polluting the shared shocase content. */
-  isShowcase?: boolean
 }
 
-export function useTripMutations({ projectId, setData, setTasks, isShowcase }: Options) {
+export function useTripMutations({ projectId, setData, setTasks }: Options) {
   const { getToken } = useAuth()
   const router = useRouter()
 
   const saveProjectPatch = useCallback(
     async (patch: Record<string, any>): Promise<boolean> => {
-      if (isShowcase) {
-        setData((prev) =>
-          prev?.project ? { ...prev, project: { ...prev.project, ...patch } } : prev,
-        )
-        return true
-      }
       if (!projectId) return false
       try {
         const token = await getToken()
@@ -73,15 +62,11 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
         return false
       }
     },
-    [projectId, getToken, setData, isShowcase],
+    [projectId, getToken, setData],
   )
 
   const saveTaskPatch = useCallback(
     async (taskId: string, patch: Record<string, any>): Promise<boolean> => {
-      if (isShowcase) {
-        setTasks((cur) => cur.map((t) => (t.id === taskId ? { ...t, ...patch } : t)))
-        return true
-      }
       try {
         const token = await getToken()
         if (!token) {
@@ -109,20 +94,11 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
         return false
       }
     },
-    [getToken, setTasks, isShowcase],
+    [getToken, setTasks],
   )
 
   const saveDayPatch = useCallback(
     async (dayId: string, patch: Record<string, any>): Promise<boolean> => {
-      if (isShowcase) {
-        setData((prev) => {
-          if (!prev?.project) return prev
-          const it = Array.isArray(prev.project.itinerary) ? prev.project.itinerary : []
-          const newIt = it.map((d: any) => (d.id === dayId ? { ...d, ...patch } : d))
-          return { ...prev, project: { ...prev.project, itinerary: newIt } }
-        })
-        return true
-      }
       if (!projectId) return false
       try {
         const token = await getToken()
@@ -153,7 +129,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
         return false
       }
     },
-    [projectId, getToken, setData, isShowcase],
+    [projectId, getToken, setData],
   )
 
   const saveAccommodationCreate = useCallback(
@@ -162,23 +138,6 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
       description?: string | null
       imageUrl?: string | null
     }): Promise<any> => {
-      if (isShowcase) {
-        const accommodation = {
-          id: `showcase-${Date.now()}`,
-          name: input.name,
-          description: input.description ?? null,
-          image_url: input.imageUrl ?? null,
-          sort_order: 0,
-        }
-        setData((prev) => {
-          if (!prev) return prev
-          const cur = Array.isArray((prev as any).accommodations)
-            ? (prev as any).accommodations
-            : []
-          return { ...prev, accommodations: [...cur, accommodation] } as any
-        })
-        return accommodation
-      }
       if (!projectId) return null
       try {
         const token = await getToken()
@@ -210,24 +169,11 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
         return null
       }
     },
-    [projectId, getToken, setData, isShowcase],
+    [projectId, getToken, setData],
   )
 
   const saveAccommodationPatch = useCallback(
     async (id: string, patch: Record<string, any>): Promise<boolean> => {
-      if (isShowcase) {
-        setData((prev) => {
-          if (!prev) return prev
-          const cur = Array.isArray((prev as any).accommodations)
-            ? (prev as any).accommodations
-            : []
-          return {
-            ...prev,
-            accommodations: cur.map((a: any) => (a.id === id ? { ...a, ...patch } : a)),
-          } as any
-        })
-        return true
-      }
       try {
         const token = await getToken()
         if (!token) {
@@ -261,21 +207,11 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
         return false
       }
     },
-    [getToken, setData, isShowcase],
+    [getToken, setData],
   )
 
   const saveAccommodationDelete = useCallback(
     async (id: string): Promise<boolean> => {
-      if (isShowcase) {
-        setData((prev) => {
-          if (!prev) return prev
-          const cur = Array.isArray((prev as any).accommodations)
-            ? (prev as any).accommodations
-            : []
-          return { ...prev, accommodations: cur.filter((a: any) => a.id !== id) } as any
-        })
-        return true
-      }
       try {
         const token = await getToken()
         if (!token) {
@@ -304,18 +240,11 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
         return false
       }
     },
-    [getToken, setData, isShowcase],
+    [getToken, setData],
   )
 
   const saveWhatToBring = useCallback(
     async (next: Array<{ category: string; items: string[] }>): Promise<boolean> => {
-      if (isShowcase) {
-        setData((prev) => {
-          if (!prev?.project) return prev
-          return { ...prev, project: { ...prev.project, what_to_bring: next } }
-        })
-        return true
-      }
       if (!projectId) return false
       try {
         const token = await getToken()
@@ -344,7 +273,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
         return false
       }
     },
-    [projectId, getToken, setData, isShowcase],
+    [projectId, getToken, setData],
   )
 
   const handleDeleteProject = useCallback(
