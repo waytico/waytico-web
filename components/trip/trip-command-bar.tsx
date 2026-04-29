@@ -290,6 +290,17 @@ export function TripCommandBar({
             )}
           </button>
         </div>
+        <div className="mt-1.5 px-1 text-right">
+          <a
+            href="/help/ai-assistant"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-foreground/40 hover:text-foreground/70 transition-colors inline-flex items-center gap-1"
+          >
+            <span>What can the assistant do?</span>
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
       </div>
     </div>
   )

@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 const productLinks = [
   { href: '/how-it-works', label: 'How it works' },
+  { href: '/help/ai-assistant', label: 'AI assistant' },
   { href: '/#pricing', label: 'Pricing' },
   { href: '/sign-in', label: 'Sign in' },
 ]
