@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { ReactNode } from 'react'
-import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { Trash2, Eye, EyeOff, FileText, Upload, X, Sparkles } from 'lucide-react'
+import { Trash2, Eye, EyeOff, FileText, Upload, X } from 'lucide-react'
 
 import ActivationToast from '@/components/activation-toast'
 import PhotosBlock from '@/components/photos-block'
@@ -825,6 +824,12 @@ export default function TripPageClient({ slug, initialData }: Props) {
           onStatusChanged={() => setOwnerRefreshKey((k) => k + 1)}
           onRequestArchive={() => setArchiveOpen(true)}
           onRequestDelete={handleDeleteProject}
+          isShowcase={isShowcase}
+          onLocalThemeChange={(next) => {
+            setData((prev) =>
+              prev?.project ? { ...prev, project: { ...prev.project, design_theme: next } } : prev,
+            )
+          }}
         />
       )}
 
@@ -1215,26 +1220,29 @@ export default function TripPageClient({ slug, initialData }: Props) {
       )}
 
       {/* Showcase mode — interactive demo overlay.
-          Floating pulsing pills (rendered fixed) point at editable hero
-          title, day cards, theme switcher, photo drop zones. The AI bar
-          is replaced with a stub that shows "sign up to try AI editing". */}
+          Pulsing hint pills point at editable hero title, day cards,
+          theme switcher, photo drop zones. The real TripCommandBar is
+          rendered, plumbed to the public showcase chat endpoint via
+          isShowcase + tripContext (no auth, rate-limited, natural-
+          language replies — no DB writes). */}
       {isShowcase && (
         <>
           <ShowcasePills />
-          <div className="fixed bottom-0 left-0 right-0 z-30 pb-3 px-3 pointer-events-none">
-            <div className="max-w-3xl mx-auto rounded-full bg-background/90 backdrop-blur border border-accent/30 shadow-lg pointer-events-auto">
-              <div className="flex items-center gap-2 px-4 py-2.5">
-                <Sparkles className="w-4 h-4 text-accent flex-shrink-0" />
-                <p className="text-sm text-foreground/80 flex-1 leading-snug">
-                  AI editing is part of the real product —{' '}
-                  <Link href="/sign-up" className="font-semibold text-accent hover:underline">
-                    sign up free
-                  </Link>{' '}
-                  to try it on your own trip.
-                </p>
-              </div>
-            </div>
-          </div>
+          <TripCommandBar
+            projectId={p.id}
+            getToken={getToken}
+            status={p.status}
+            theme={resolvedTheme}
+            isShowcase
+            tripContext={
+              `Trip: ${p.title}.\n` +
+              `Region: ${p.region || 'Île-de-France'}, ${p.country || 'France'}.\n` +
+              `Days: ${itinerary
+                .map((d: any) => `Day ${d.dayNumber || ''} — ${d.title || ''}`)
+                .join('; ')}.\n` +
+              `Total: ${heroHeadlineFormatted || ''} ${heroPriceLabel || ''}.`
+            }
+          />
           <div className="h-40 md:h-44" aria-hidden="true" />
         </>
       )}

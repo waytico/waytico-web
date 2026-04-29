@@ -12,22 +12,21 @@ type Props = {
   projectId: string
   /** Current persisted value from the project — null defaults to 'editorial'. */
   value: string | null | undefined
+  /**
+   * Showcase / demo mode. When true, switching never PATCHes; instead
+   * `onLocalChange` is called with the new theme so the parent can update
+   * its local data.project.design_theme. F5 resets — same shared-demo
+   * pattern as the rest of the showcase.
+   */
+  isShowcase?: boolean
+  onLocalChange?: (next: ThemeId) => void
 }
 
 /**
  * Dropdown theme selector. Owner-only — placed in the trip action bar,
  * clients never see it.
- *
- * Items: the 3 selectable themes (Editorial / Expedition / Compact) plus
- * a 4th disabled "Make your own" placeholder with a "Coming soon" hint.
- *
- * Save flow (unchanged from the previous segmented variant):
- *   1. Optimistic UI update (set local state immediately)
- *   2. PATCH /api/projects/:id with { designTheme: '...' }
- *   3. On 200 — router.refresh() so SSR re-fetches with the new theme
- *   4. On error — revert + toast
  */
-export function ThemeSwitcher({ projectId, value }: Props) {
+export function ThemeSwitcher({ projectId, value, isShowcase, onLocalChange }: Props) {
   const router = useRouter()
   const { getToken } = useAuth()
   const [optimistic, setOptimistic] = useState<ThemeId>(resolveTheme(value))
@@ -60,6 +59,15 @@ export function ThemeSwitcher({ projectId, value }: Props) {
     const previous = optimistic
     setOptimistic(next) // optimistic
     setOpen(false)
+
+    // Showcase / demo — never PATCH. Parent owns local state and applies
+    // the new theme through onLocalChange; no router.refresh either,
+    // because SSR data is cached and would clobber the change.
+    if (isShowcase) {
+      onLocalChange?.(next)
+      return
+    }
+
     setBusy(true)
     try {
       const token = await getToken()
@@ -149,3 +157,4 @@ export function ThemeSwitcher({ projectId, value }: Props) {
     </div>
   )
 }
+

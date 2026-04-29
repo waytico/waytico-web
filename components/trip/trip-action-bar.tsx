@@ -23,6 +23,9 @@ type Props = {
   onStatusChanged?: () => void
   onRequestArchive: () => void
   onRequestDelete: () => void
+  /** Showcase / demo plumbing — passed straight to ThemeSwitcher. */
+  isShowcase?: boolean
+  onLocalThemeChange?: (next: 'editorial' | 'expedition' | 'compact') => void
 }
 
 /**
@@ -47,6 +50,8 @@ export function TripActionBar({
   onStatusChanged,
   onRequestArchive,
   onRequestDelete,
+  isShowcase,
+  onLocalThemeChange,
 }: Props) {
   const router = useRouter()
   const { getToken } = useAuth()
@@ -193,7 +198,12 @@ export function TripActionBar({
 
           {/* RIGHT: agent tools */}
           <div className="flex items-center gap-2">
-            <ThemeSwitcher projectId={projectId} value={designTheme} />
+            <ThemeSwitcher
+              projectId={projectId}
+              value={designTheme}
+              isShowcase={isShowcase}
+              onLocalChange={onLocalThemeChange}
+            />
             <div className="w-px h-5 bg-border/60 hidden sm:block" aria-hidden="true" />
             <button
               type="button"
@@ -213,3 +223,4 @@ export function TripActionBar({
     </>
   )
 }
+

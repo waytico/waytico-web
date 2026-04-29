@@ -53,6 +53,18 @@ interface TripCommandBarProps {
    *  data-theme attribute so the bar inverts cleanly on any theme
    *  (dark bar on light pages, light bar on dark). */
   theme?: string | null
+  /**
+   * Showcase / demo mode. When true, the bar talks to the public
+   * `/api/public/showcase/chat` endpoint (no auth, rate-limited,
+   * non-persisting natural-language replies) instead of the auth'd
+   * /edit-chat. File uploads are disabled in showcase.
+   */
+  isShowcase?: boolean
+  /**
+   * Trip context string passed to the showcase endpoint so the AI
+   * can reference specific days. Only read when `isShowcase` is true.
+   */
+  tripContext?: string
 }
 
 function getFileIcon(type: string): string {
@@ -69,11 +81,14 @@ export function TripCommandBar({
   onTripUpdated,
   status,
   theme,
+  isShowcase,
+  tripContext,
 }: TripCommandBarProps) {
   // File upload is only useful once the trip is active — that's when
   // bookings, tickets and other documents start flowing in. On a quote
-  // there's nothing to parse, so we keep the bar text-only.
-  const allowFileUpload = status === 'active' || status === 'completed'
+  // there's nothing to parse, so we keep the bar text-only. Also disabled
+  // in showcase: the public endpoint takes JSON only.
+  const allowFileUpload = !isShowcase && (status === 'active' || status === 'completed')
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -139,6 +154,31 @@ export function TripCommandBar({
     setIsSending(true)
 
     try {
+      // ── Showcase / demo branch ────────────────────────────────
+      // Public endpoint, no auth, no DB writes. Reply is a natural-
+      // language sentence; we surface it as a toast so the operator
+      // sees the AI bar work end-to-end without us inventing fake
+      // tool-call mutations.
+      if (isShowcase) {
+        const res = await fetch(`${API_URL}/api/public/showcase/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: currentText, tripContext: tripContext || '' }),
+        })
+        if (!res.ok) {
+          if (res.status === 429) {
+            toast.error('Demo limit reached for this hour. Sign up free to keep editing.')
+          } else {
+            toast.error('AI temporarily unavailable. Try again in a moment.')
+          }
+          return
+        }
+        const body = await res.json()
+        setInput('')
+        toast.success(body.reply || 'Done.', { duration: 6000 })
+        return
+      }
+
       const token = await getToken()
       if (!token) {
         toast.error('Please sign in again')
@@ -199,7 +239,7 @@ export function TripCommandBar({
       // Keep focus for fast follow-up commands
       setTimeout(() => textareaRef.current?.focus(), 0)
     }
-  }, [input, selectedFile, isSending, sessionId, projectId, getToken, onTripUpdated])
+  }, [input, selectedFile, isSending, sessionId, projectId, getToken, onTripUpdated, isShowcase, tripContext])
 
   return (
     <div
@@ -305,3 +345,4 @@ export function TripCommandBar({
     </div>
   )
 }
+
