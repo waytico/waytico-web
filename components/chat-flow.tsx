@@ -33,8 +33,15 @@ const ALLOWED_MIMES = [
 ]
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
-const PLACEHOLDER_EXAMPLE = `Describe a trip you want to send to a client.
-Dates, places, hotels, prices — anything you'd normally type into Word.`
+// Two starting placeholders — the chat-flow shows one based on auth state.
+//   - SIGNEDOUT: the live demo example below is doing the heavy lifting,
+//     so the textarea just points to it. One short line.
+//   - SIGNEDIN: the example block isn't shown to logged-in operators
+//     (they already know the product), so the textarea has to nudge them
+//     about what to type. Still one line — the H1+Sub above already
+//     carry most of the weight.
+const PLACEHOLDER_SIGNEDOUT = `See the example below ↓`
+const PLACEHOLDER_SIGNEDIN = `Describe a trip you want to send to a client.`
 
 function fileIcon(mime: string) {
   if (mime.startsWith('image/')) return <ImageIcon className="w-4 h-4" />
@@ -365,6 +372,18 @@ export default function ChatFlow() {
         </div>
       )}
 
+      {/* The textarea block is hidden while we're waiting for the briefing
+          agent's first reply (phase==='sending' AND there's already a user
+          message above). At that moment we don't yet know whether the
+          request will be confirmed (→ generate) or needs follow-up (→
+          chatting). Showing the textarea with a "Add details…" placeholder
+          before the agent has even spoken would suggest follow-up is
+          required, when it usually isn't. After the agent answers:
+            - briefConfirmed=true → component re-renders into the
+              generating-spinner screen entirely.
+            - briefConfirmed=false → phase flips to 'chatting' and this
+              block re-appears for the user to type their reply. */}
+      {!(phase === 'sending' && messages.length > 0) && (
       <div
         className="relative"
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
@@ -382,7 +401,7 @@ export default function ChatFlow() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={messages.length === 0
-            ? PLACEHOLDER_EXAMPLE
+            ? (isSignedIn ? PLACEHOLDER_SIGNEDIN : PLACEHOLDER_SIGNEDOUT)
             : 'Add details or type "confirm" to generate…'
           }
           className="min-h-[420px] md:min-h-[300px] p-5 pb-28 text-base rounded-2xl border border-border bg-card text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
@@ -465,6 +484,7 @@ export default function ChatFlow() {
           </Button>
         </div>
       </div>
+      )}
     </div>
   )
 }

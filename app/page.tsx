@@ -12,13 +12,10 @@ export default function Home() {
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-2xl text-center space-y-6">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight leading-[1.1] text-balance">
-            Travel pros: stop writing
-            <br className="hidden sm:block" />
-            {' '}proposals in Word.
+            A trip quote your client will actually open.
           </h1>
           <p className="text-base md:text-lg text-foreground/70 leading-relaxed text-balance max-w-xl mx-auto">
-            One link your client opens — itinerary, prices, your terms, your brand.
-            No signup to try.
+            Describe the trip. Get a webpage. Send the link. In a minute.
           </p>
           <ChatFlow />
 
