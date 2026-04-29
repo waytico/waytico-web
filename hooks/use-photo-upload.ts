@@ -23,9 +23,11 @@ type Options = {
   projectId: string | undefined
   media: MediaRecord[]
   setMedia: React.Dispatch<React.SetStateAction<MediaRecord[]>>
+  /** Demo mode — show a friendly nudge instead of actually uploading. */
+  isShowcase?: boolean
 }
 
-export function usePhotoUpload({ projectId, media, setMedia }: Options) {
+export function usePhotoUpload({ projectId, media, setMedia, isShowcase }: Options) {
   const { getToken } = useAuth()
   const [uploadingByDay, setUploadingByDay] = useState<Record<string, number>>({})
 
@@ -39,6 +41,13 @@ export function usePhotoUpload({ projectId, media, setMedia }: Options) {
 
   const handleUpload = useCallback(
     async (files: File[], dayId: string | null) => {
+      if (isShowcase) {
+        toast(
+          'Photo upload is disabled in the demo. Sign up to add your own photos.',
+          { duration: 4500 },
+        )
+        return
+      }
       if (!projectId) return
       const key = dayId || 'tour'
       const token = await getToken()
@@ -60,11 +69,16 @@ export function usePhotoUpload({ projectId, media, setMedia }: Options) {
         }),
       )
     },
-    [projectId, getToken, setMedia, bumpUploading],
+    [projectId, getToken, setMedia, bumpUploading, isShowcase],
   )
 
   const handleDelete = useCallback(
     async (mediaId: string) => {
+      if (isShowcase) {
+        // Local-only delete in demo — never reaches the backend.
+        setMedia((cur) => cur.filter((m) => m.id !== mediaId))
+        return
+      }
       const snapshot = media
       setMedia((cur) => cur.filter((m) => m.id !== mediaId))
       try {
@@ -76,13 +90,20 @@ export function usePhotoUpload({ projectId, media, setMedia }: Options) {
         toast.error(e?.message || 'Could not delete photo')
       }
     },
-    [media, getToken, setMedia],
+    [media, getToken, setMedia, isShowcase],
   )
 
   // Hero upload: always placement='hero', single photo. If a hero already exists,
   // it's replaced — old record deleted after the new one lands.
   const handleHeroUpload = useCallback(
     async (files: File[]) => {
+      if (isShowcase) {
+        toast(
+          'Photo upload is disabled in the demo. Sign up to add your own photos.',
+          { duration: 4500 },
+        )
+        return
+      }
       if (!projectId || files.length === 0) return
       const file = files[0]
       if (files.length > 1) {
@@ -115,7 +136,7 @@ export function usePhotoUpload({ projectId, media, setMedia }: Options) {
         bumpUploading('hero', -1)
       }
     },
-    [projectId, media, getToken, setMedia, bumpUploading],
+    [projectId, media, getToken, setMedia, bumpUploading, isShowcase],
   )
 
   return {

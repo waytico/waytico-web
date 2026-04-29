@@ -53,6 +53,10 @@ interface TripCommandBarProps {
    *  data-theme attribute so the bar inverts cleanly on any theme
    *  (dark bar on light pages, light bar on dark). */
   theme?: string | null
+  /** Demo mode — disable the actual /edit-chat call (which would burn
+   *  real OpenAI tokens against the showcase trip and never persist
+   *  anyway). Surface a friendly tap pointing the visitor at sign-up. */
+  isShowcase?: boolean
 }
 
 function getFileIcon(type: string): string {
@@ -69,6 +73,7 @@ export function TripCommandBar({
   onTripUpdated,
   status,
   theme,
+  isShowcase,
 }: TripCommandBarProps) {
   // File upload is only useful once the trip is active — that's when
   // bookings, tickets and other documents start flowing in. On a quote
@@ -132,6 +137,19 @@ export function TripCommandBar({
   const send = useCallback(async () => {
     const text = input.trim()
     if ((!text && !selectedFile) || isSending) return
+
+    // Showcase mode — never reach the backend (would cost real OpenAI
+    // tokens against a trip nobody can save anyway). Surface a friendly
+    // nudge toward sign-up instead.
+    if (isShowcase) {
+      toast(
+        'AI editing is disabled in the demo. Sign up to use it on your own trips.',
+        { duration: 4500 },
+      )
+      setInput('')
+      setSelectedFile(null)
+      return
+    }
 
     const currentFile = selectedFile
     const currentText = text || 'Process this document'
@@ -199,7 +217,7 @@ export function TripCommandBar({
       // Keep focus for fast follow-up commands
       setTimeout(() => textareaRef.current?.focus(), 0)
     }
-  }, [input, selectedFile, isSending, sessionId, projectId, getToken, onTripUpdated])
+  }, [input, selectedFile, isSending, sessionId, projectId, getToken, onTripUpdated, isShowcase])
 
   return (
     <div
