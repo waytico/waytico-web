@@ -175,6 +175,100 @@ export default function TripPageClient({ slug, initialData }: Props) {
     await _handleDeleteProject(title)
   }, [_handleDeleteProject, data?.project?.title])
 
+  /**
+   * Apply structured AI actions returned by the public showcase chat
+   * endpoint. We translate each action into the same local-state edit
+   * a click-to-edit interaction would produce (saveProjectPatch /
+   * saveDayPatch / itinerary-array splice). No API calls — F5 still
+   * resets, just like every other showcase mutation.
+   *
+   * Action shapes mirror the server prompt:
+   *   set_field       — flat project field
+   *   set_pricing     — pp / total / mode / group_size  (reconciled by
+   *                     saveProjectPatch's showcase branch)
+   *   add_day         — splice a new day at `position`, renumber days
+   *   update_day      — patch a day matched by dayNumber
+   *   delete_day      — splice a day matched by dayNumber, renumber
+   */
+  const applyShowcaseActions = useCallback(
+    (actions: any[]) => {
+      if (!Array.isArray(actions) || actions.length === 0) return
+      for (const a of actions) {
+        if (!a || typeof a.type !== 'string') continue
+        if (a.type === 'set_field' && typeof a.field === 'string') {
+          // Translate the flat field name to the camelCase patch the
+          // showcase saveProjectPatch expects.
+          const fieldMap: Record<string, string> = {
+            title: 'title',
+            description: 'description',
+            region: 'region',
+            country: 'country',
+            included: 'included',
+            not_included: 'notIncluded',
+            terms: 'terms',
+            currency: 'currency',
+          }
+          const camelKey = fieldMap[a.field]
+          if (camelKey) saveProjectPatch({ [camelKey]: a.value })
+          continue
+        }
+        if (a.type === 'set_pricing') {
+          const patch: Record<string, any> = {}
+          if (typeof a.pricePerPerson === 'number') patch.pricePerPerson = a.pricePerPerson
+          if (typeof a.priceTotal === 'number') patch.priceTotal = a.priceTotal
+          if (typeof a.pricingMode === 'string') patch.pricingMode = a.pricingMode
+          if (typeof a.groupSize === 'number') patch.groupSize = a.groupSize
+          if (Object.keys(patch).length > 0) saveProjectPatch(patch)
+          continue
+        }
+        if (a.type === 'update_day' && typeof a.dayNumber === 'number') {
+          // Find the stable day id so saveDayPatch can match it.
+          const cur = (data?.project?.itinerary as any[]) || []
+          const day = cur.find((d) => d?.dayNumber === a.dayNumber)
+          if (!day?.id) continue
+          const patch: Record<string, any> = {}
+          if (typeof a.title === 'string') patch.title = a.title
+          if (typeof a.description === 'string') patch.description = a.description
+          if (Object.keys(patch).length > 0) saveDayPatch(day.id, patch)
+          continue
+        }
+        if (a.type === 'add_day') {
+          // Splice a brand-new day at `position` (clamped). Renumber all
+          // days; the showcase saveProjectPatch sees `itinerary` as a
+          // wholesale field replacement and stores it as-is.
+          const cur = (data?.project?.itinerary as any[]) || []
+          const pos = Math.max(0, Math.min(cur.length, Number(a.position ?? cur.length)))
+          const newDay = {
+            id:
+              typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                ? (crypto as any).randomUUID()
+                : 'showcase-day-' + Math.random().toString(36).slice(2, 10),
+            dayNumber: pos + 1,
+            date: null,
+            title: typeof a.title === 'string' ? a.title : 'New day',
+            description: typeof a.description === 'string' ? a.description : '',
+            segments: [],
+          }
+          const next = [...cur]
+          next.splice(pos, 0, newDay)
+          // Renumber from 1.
+          const renumbered = next.map((d, i) => ({ ...d, dayNumber: i + 1 }))
+          saveProjectPatch({ itinerary: renumbered, durationDays: renumbered.length })
+          continue
+        }
+        if (a.type === 'delete_day' && typeof a.dayNumber === 'number') {
+          const cur = (data?.project?.itinerary as any[]) || []
+          const next = cur.filter((d) => d?.dayNumber !== a.dayNumber)
+          if (next.length === cur.length) continue
+          const renumbered = next.map((d, i) => ({ ...d, dayNumber: i + 1 }))
+          saveProjectPatch({ itinerary: renumbered, durationDays: renumbered.length })
+          continue
+        }
+      }
+    },
+    [data?.project?.itinerary, saveProjectPatch, saveDayPatch],
+  )
+
   useEffect(() => {
     if (isOwner) return
     if (initialData?.media) setMedia(initialData.media as MediaRecord[])
@@ -809,8 +903,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
       data-owner-view={showOwnerUI ? 'true' : 'false'}
     >
       {/* Owner chrome — outside ThemeRoot so it uses shadcn semantic tokens
-          (per TZ-6 §11 — owner UI must work even on a dark Expedition theme). */}
-      {showOwnerUI && <Header />}
+          (per TZ-6 §11 — owner UI must work even on a dark Expedition theme).
+          In showcase mode the orange banner replaces the global Header — its
+          two CTAs (Start your own quote / Sign up) are the only navigation
+          a demo visitor needs. */}
+      {showOwnerUI && !isShowcase && <Header />}
       {isShowcase && <ShowcaseBanner />}
       {showOwnerUI && p.id && (
         <TripActionBar
@@ -1235,6 +1332,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             status={p.status}
             theme={resolvedTheme}
             isShowcase
+            onShowcaseActions={applyShowcaseActions}
             tripContext={
               `Trip: ${p.title}.\n` +
               `Region: ${p.region || 'Île-de-France'}, ${p.country || 'France'}.\n` +

@@ -27,7 +27,9 @@ import {
   Sparkles,
 } from 'lucide-react'
 
-const SS_KEY_DISMISSED = 'waytico:showcase-pills-dismissed'
+// Bumped to v3 every time we ship a new round of pills so existing
+// dismissed-flag values from a previous tour don't suppress the new tour.
+const SS_KEY_DISMISSED = 'waytico:showcase-pills-dismissed:v3'
 
 /** Banner height in px — used by trip-page-client to position the
  *  sticky action bar directly underneath the banner. Keep in sync with
@@ -35,6 +37,13 @@ const SS_KEY_DISMISSED = 'waytico:showcase-pills-dismissed'
 export const SHOWCASE_BANNER_HEIGHT = 52
 
 export function ShowcaseBanner() {
+  const restartTour = () => {
+    try {
+      sessionStorage.removeItem(SS_KEY_DISMISSED)
+    } catch {}
+    // Force the URL param so ShowcasePills re-mounts and resets state.
+    window.location.hash = 'tour-' + Date.now()
+  }
   return (
     <div className="sticky top-0 z-40 bg-accent text-accent-foreground">
       <div
@@ -46,6 +55,13 @@ export function ShowcaseBanner() {
           You&apos;re in a live demo.
         </p>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            type="button"
+            onClick={restartTour}
+            className="text-xs sm:text-sm px-3 py-1.5 rounded-full bg-accent-foreground/10 hover:bg-accent-foreground/20 transition-colors whitespace-nowrap"
+          >
+            Show me around
+          </button>
           <Link
             href="/"
             className="text-xs sm:text-sm px-3 py-1.5 rounded-full bg-accent-foreground/10 hover:bg-accent-foreground/20 transition-colors whitespace-nowrap"
@@ -108,6 +124,7 @@ const HINTS: Hint[] = [
 export function ShowcasePills() {
   const [activeIndex, setActiveIndex] = useState(0)
   const [visible, setVisible] = useState(false)
+  const [restartKey, setRestartKey] = useState(0)
 
   // Defer mount so the user has a beat to look at the page first.
   useEffect(() => {
@@ -118,6 +135,20 @@ export function ShowcasePills() {
     if (dismissed) return
     const t = setTimeout(() => setVisible(true), 1500)
     return () => clearTimeout(t)
+  }, [restartKey])
+
+  // Banner's "Show me around" button updates the URL hash to force a
+  // re-run of the tour. We listen for that and reset.
+  useEffect(() => {
+    const onHash = () => {
+      if (window.location.hash.startsWith('#tour-')) {
+        setActiveIndex(0)
+        setVisible(false)
+        setRestartKey((k) => k + 1)
+      }
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
   if (!visible) return null

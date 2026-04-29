@@ -65,6 +65,11 @@ interface TripCommandBarProps {
    * can reference specific days. Only read when `isShowcase` is true.
    */
   tripContext?: string
+  /**
+   * Showcase only — receives the structured actions the AI returned.
+   * trip-page-client implements the actual local-state mutation.
+   */
+  onShowcaseActions?: (actions: any[]) => void
 }
 
 function getFileIcon(type: string): string {
@@ -83,6 +88,7 @@ export function TripCommandBar({
   theme,
   isShowcase,
   tripContext,
+  onShowcaseActions,
 }: TripCommandBarProps) {
   // File upload is only useful once the trip is active — that's when
   // bookings, tickets and other documents start flowing in. On a quote
@@ -156,9 +162,9 @@ export function TripCommandBar({
     try {
       // ── Showcase / demo branch ────────────────────────────────
       // Public endpoint, no auth, no DB writes. Reply is a natural-
-      // language sentence; we surface it as a toast so the operator
-      // sees the AI bar work end-to-end without us inventing fake
-      // tool-call mutations.
+      // language sentence + an `actions` array describing the structured
+      // change. We hand the actions to the parent via onShowcaseActions
+      // so it can apply them to local React state — no PATCH ever.
       if (isShowcase) {
         const res = await fetch(`${API_URL}/api/public/showcase/chat`, {
           method: 'POST',
@@ -175,6 +181,10 @@ export function TripCommandBar({
         }
         const body = await res.json()
         setInput('')
+        const actions = Array.isArray(body.actions) ? body.actions : []
+        if (actions.length > 0 && onShowcaseActions) {
+          onShowcaseActions(actions)
+        }
         toast.success(body.reply || 'Done.', { duration: 6000 })
         return
       }
@@ -239,7 +249,7 @@ export function TripCommandBar({
       // Keep focus for fast follow-up commands
       setTimeout(() => textareaRef.current?.focus(), 0)
     }
-  }, [input, selectedFile, isSending, sessionId, projectId, getToken, onTripUpdated, isShowcase, tripContext])
+  }, [input, selectedFile, isSending, sessionId, projectId, getToken, onTripUpdated, isShowcase, tripContext, onShowcaseActions])
 
   return (
     <div
