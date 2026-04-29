@@ -16,7 +16,18 @@ export function ScrollToTop({ bottomOffset = 24 }: Props) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    const onScroll = () => setVisible(window.scrollY > 300)
+    const onScroll = () => {
+      const y = window.scrollY
+      setVisible(y > 300)
+      // Clean up the URL hash (e.g. '#terms' left over from a section
+      // anchor click) once the viewer has actually scrolled back to
+      // the top. Uses replaceState so the back button still goes to
+      // the previous page rather than to '#terms'.
+      if (y === 0 && window.location.hash) {
+        const cleanUrl = window.location.pathname + window.location.search
+        window.history.replaceState(null, '', cleanUrl)
+      }
+    }
     window.addEventListener('scroll', onScroll, { passive: true })
     onScroll()
     return () => window.removeEventListener('scroll', onScroll)
