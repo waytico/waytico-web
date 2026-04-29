@@ -56,6 +56,35 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
             merged[snake] = v
             merged[k] = v
           }
+          // Pricing reconciliation. The backend's reconcilePricing keeps
+          // price_per_person ↔ price_total ↔ group_size in sync via the
+          // current pricing_mode; we do the same here so the demo behaves
+          // the same way for the user.
+          //   - per_traveler: total = pp × group
+          //   - per_group:    pp = total / group
+          //   - other:        total drives the headline; pp follows if group set
+          const touched = Object.keys(patch)
+          const pricingTouched = touched.some((k) =>
+            ['pricePerPerson', 'priceTotal', 'groupSize', 'pricingMode'].includes(k),
+          )
+          if (pricingTouched) {
+            const mode = (merged.pricing_mode as string) || 'per_group'
+            const group = Number(merged.group_size) || 0
+            const pp = merged.price_per_person == null ? null : Number(merged.price_per_person)
+            const total = merged.price_total == null ? null : Number(merged.price_total)
+            if (mode === 'per_traveler') {
+              if (pp != null && group > 0) {
+                merged.price_total = Math.round(pp * group)
+              }
+            } else {
+              // per_group / other — total is canonical; derive pp when possible.
+              if (total != null && group > 0) {
+                merged.price_per_person = Math.round(total / group)
+              } else if (pp != null && group > 0 && total == null) {
+                merged.price_total = Math.round(pp * group)
+              }
+            }
+          }
           return { ...prev, project: merged }
         })
         return true

@@ -4,13 +4,13 @@
  * Showcase / interactive-demo overlays.
  *
  * Two exports:
- *   - <ShowcaseBanner />: sticky top strip explaining the trip is a demo,
- *     with a Sign-up CTA. Persistent — does not auto-dismiss.
+ *   - <ShowcaseBanner />: sticky top strip explaining the trip is a demo.
+ *     Two CTAs: "Start your own quote" (anonymous, no signup) + "Sign up"
+ *     for the full feature set.
  *   - <ShowcasePills />: a small set of floating, pulsing hint pills that
- *     point at concrete features (edit any field, drag photos, switch
- *     design, change pricing). One active hint at a time; dismissable;
- *     remembered per session via sessionStorage so they don't replay on
- *     every navigation.
+ *     point at concrete features (edit, switch design, AI bar, share).
+ *     One active hint at a time; dismissable; remembered per session via
+ *     sessionStorage so they don't replay on every navigation.
  *
  * Both are rendered only when the trip slug matches the seed-showcase
  * trip — see trip-page-client.tsx for the gate.
@@ -18,32 +18,47 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { X, MousePointerClick, Image as ImageIcon, Palette, MessageSquare, Sparkles } from 'lucide-react'
+import {
+  X,
+  MousePointerClick,
+  Palette,
+  MessageSquare,
+  Share2,
+  Sparkles,
+} from 'lucide-react'
 
 const SS_KEY_DISMISSED = 'waytico:showcase-pills-dismissed'
+
+/** Banner height in px — used by trip-page-client to position the
+ *  sticky action bar directly underneath the banner. Keep in sync with
+ *  the `minHeight` style below. */
+export const SHOWCASE_BANNER_HEIGHT = 52
 
 export function ShowcaseBanner() {
   return (
     <div className="sticky top-0 z-40 bg-accent text-accent-foreground">
-      <div className="max-w-7xl mx-auto px-4 flex items-center gap-3" style={{ minHeight: 52 }}>
+      <div
+        className="max-w-7xl mx-auto px-4 flex items-center gap-4 flex-wrap sm:flex-nowrap"
+        style={{ minHeight: SHOWCASE_BANNER_HEIGHT }}
+      >
         <Sparkles className="w-4 h-4 flex-shrink-0" />
-        <p className="text-sm flex-1 min-w-0 leading-snug">
-          <span className="font-semibold">You&apos;re in a live demo.</span>{' '}
-          <span className="hidden sm:inline">
-            Click any text to edit. Drop photos onto days. Switch the design.
-            Nothing saves —{' '}
-          </span>
-          <span className="sm:hidden">
-            Click to edit, drop photos, switch designs.{' '}
-          </span>
+        <p className="text-sm flex-1 min-w-0 leading-snug font-semibold">
+          You&apos;re in a live demo.
+        </p>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Link
+            href="/"
+            className="text-xs sm:text-sm px-3 py-1.5 rounded-full bg-accent-foreground/10 hover:bg-accent-foreground/20 transition-colors whitespace-nowrap"
+          >
+            Start your own quote
+          </Link>
           <Link
             href="/sign-up"
-            className="font-semibold underline underline-offset-2 hover:opacity-80"
+            className="text-xs sm:text-sm px-3 py-1.5 rounded-full bg-accent-foreground text-accent font-semibold hover:opacity-90 transition-opacity whitespace-nowrap"
           >
-            sign up free
-          </Link>{' '}
-          to try it on your own trip.
-        </p>
+            Sign up free
+          </Link>
+        </div>
       </div>
     </div>
   )
@@ -61,31 +76,31 @@ type Hint = {
 
 const HINTS: Hint[] = [
   {
-    id: 'edit-title',
+    id: 'edit-anywhere',
     icon: <MousePointerClick className="w-4 h-4" />,
     text: 'Click any text — title, dates, prices, terms — to edit it inline.',
     top: 220,
     right: 24,
   },
   {
-    id: 'photos',
-    icon: <ImageIcon className="w-4 h-4" />,
-    text: 'Drop photos onto the hero or any day. Try dragging an image here.',
-    top: 360,
-    right: 24,
-  },
-  {
     id: 'theme',
     icon: <Palette className="w-4 h-4" />,
     text: 'Try “Pick a design” at the top — three looks for the same trip.',
-    top: 100,
+    top: 130,
     right: 24,
   },
   {
     id: 'ai',
     icon: <MessageSquare className="w-4 h-4" />,
-    text: 'On the real product, an AI bar at the bottom rewrites days, prices, and terms in plain language.',
-    top: 500,
+    text: 'Use the bar at the bottom to ask the AI to add days, swap hotels, change prices, rewrite terms — all in plain language.',
+    top: 480,
+    right: 24,
+  },
+  {
+    id: 'share',
+    icon: <Share2 className="w-4 h-4" />,
+    text: 'Send the page to a client straight from “Share” — Email, WhatsApp, Telegram, or just copy the link.',
+    top: 130,
     right: 24,
   },
 ]

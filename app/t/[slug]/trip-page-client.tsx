@@ -19,7 +19,7 @@ import { TripCommandBar } from '@/components/trip/trip-command-bar'
 import { TripActionBar } from '@/components/trip/trip-action-bar'
 import { ArchiveDialog } from '@/components/trip/archive-dialog'
 import { EditableField } from '@/components/editable/editable-field'
-import { ShowcasePills, ShowcaseBanner } from '@/components/trip/showcase-pills'
+import { ShowcasePills, ShowcaseBanner, SHOWCASE_BANNER_HEIGHT } from '@/components/trip/showcase-pills'
 
 import { ThemeRoot } from '@/components/trip/theme-root'
 import { TripNav } from '@/components/trip/nav'
@@ -825,6 +825,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           onRequestArchive={() => setArchiveOpen(true)}
           onRequestDelete={handleDeleteProject}
           isShowcase={isShowcase}
+          topOffset={isShowcase ? SHOWCASE_BANNER_HEIGHT : 0}
           onLocalThemeChange={(next) => {
             setData((prev) =>
               prev?.project ? { ...prev, project: { ...prev.project, design_theme: next } } : prev,

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, ArrowDown } from 'lucide-react'
 import ChatFlow from '@/components/chat-flow'
 import Footer from '@/components/footer'
 import Header from '@/components/header'
@@ -20,15 +20,31 @@ export default function Home() {
             No signup to try.
           </p>
           <ChatFlow />
-          <div className="pt-1 flex items-center justify-center gap-3 flex-wrap">
-            <span className="text-sm text-foreground/50">Or just look:</span>
-            <Link
-              href="/t/paris-weekend-getaway"
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-accent/30 text-sm text-accent hover:bg-accent/5 hover:border-accent/50 transition-colors group"
-            >
-              3 days in Paris
-              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-            </Link>
+
+          {/* Example block — shows operator a concrete example of what to type
+              and what comes out the other side. The blockquote mirrors the
+              textarea above; the pill links to the live demo trip generated
+              from a similar prompt. */}
+          <div className="pt-2 max-w-2xl mx-auto text-left">
+            <p className="text-xs uppercase tracking-wider text-foreground/40 mb-2">
+              Example
+            </p>
+            <blockquote className="text-sm text-foreground/70 italic border-l-2 border-accent/30 pl-3 leading-relaxed">
+              &ldquo;3 days in Paris for a couple, late June. Hôtel des Deux Pavillons in
+              the Marais. Day 1 Marais and Seine, day 2 Louvre and Saint-Germain
+              with a Sainte-Chapelle concert, day 3 Montmartre and a farewell
+              brunch. €1,800 total, private transfers included.&rdquo;
+            </blockquote>
+            <div className="flex flex-col items-center gap-2 mt-4">
+              <ArrowDown className="w-4 h-4 text-foreground/40" />
+              <Link
+                href="/t/paris-weekend-getaway"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-accent text-accent-foreground text-sm font-semibold hover:opacity-90 transition-opacity group"
+              >
+                See the page it makes
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </div>
           </div>
         </div>
       </main>

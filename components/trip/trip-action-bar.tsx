@@ -26,6 +26,12 @@ type Props = {
   /** Showcase / demo plumbing — passed straight to ThemeSwitcher. */
   isShowcase?: boolean
   onLocalThemeChange?: (next: 'editorial' | 'expedition' | 'compact') => void
+  /**
+   * Top offset (px) for the sticky position. Used in showcase mode to
+   * push the action bar below the demo banner so both stay visible.
+   * Default 0.
+   */
+  topOffset?: number
 }
 
 /**
@@ -52,6 +58,7 @@ export function TripActionBar({
   onRequestDelete,
   isShowcase,
   onLocalThemeChange,
+  topOffset = 0,
 }: Props) {
   const router = useRouter()
   const { getToken } = useAuth()
@@ -148,7 +155,10 @@ export function TripActionBar({
 
   return (
     <>
-      <div className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/95 backdrop-blur-sm">
+      <div
+        className="sticky z-30 w-full border-b border-border/60 bg-background/95 backdrop-blur-sm"
+        style={{ top: topOffset }}
+      >
         <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between gap-3">
           {/* LEFT: status dropdown — pill shows current status, click reveals
               the actions list. Replaces what used to be three controls
