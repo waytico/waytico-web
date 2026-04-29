@@ -27,15 +27,39 @@ type Options = {
   setData: (updater: (prev: ProjectPayload) => ProjectPayload) => void
   /** Setter for local tasks array (owner view) */
   setTasks: (updater: (cur: any[]) => any[]) => void
+  /**
+   * Showcase / demo mode. When true, every mutation skips the network call
+   * and only updates local React state. F5 resets everything (intentional —
+   * this is a shared demo trip and changes should never persist back to the
+   * system showcase user). The home-page CTA + the trip page detect the
+   * showcase by slug and pass this flag in.
+   */
+  isShowcase?: boolean
 }
 
-export function useTripMutations({ projectId, setData, setTasks }: Options) {
+export function useTripMutations({ projectId, setData, setTasks, isShowcase }: Options) {
   const { getToken } = useAuth()
   const router = useRouter()
 
   const saveProjectPatch = useCallback(
     async (patch: Record<string, any>): Promise<boolean> => {
       if (!projectId) return false
+      // Showcase mode — pretend the PATCH succeeded, only mutate local state.
+      // We translate camelCase patch keys to snake_case so the local project
+      // shape matches what the backend would have returned.
+      if (isShowcase) {
+        setData((prev) => {
+          if (!prev?.project) return prev
+          const merged = { ...prev.project }
+          for (const [k, v] of Object.entries(patch)) {
+            const snake = k.replace(/[A-Z]/g, (c) => '_' + c.toLowerCase())
+            merged[snake] = v
+            merged[k] = v
+          }
+          return { ...prev, project: merged }
+        })
+        return true
+      }
       try {
         const token = await getToken()
         if (!token) {
@@ -62,11 +86,26 @@ export function useTripMutations({ projectId, setData, setTasks }: Options) {
         return false
       }
     },
-    [projectId, getToken, setData],
+    [projectId, getToken, setData, isShowcase],
   )
 
   const saveTaskPatch = useCallback(
     async (taskId: string, patch: Record<string, any>): Promise<boolean> => {
+      if (isShowcase) {
+        setTasks((cur) =>
+          cur.map((t) => {
+            if (t.id !== taskId) return t
+            const merged = { ...t }
+            for (const [k, v] of Object.entries(patch)) {
+              const snake = k.replace(/[A-Z]/g, (c) => '_' + c.toLowerCase())
+              merged[snake] = v
+              merged[k] = v
+            }
+            return merged
+          }),
+        )
+        return true
+      }
       try {
         const token = await getToken()
         if (!token) {
@@ -94,12 +133,30 @@ export function useTripMutations({ projectId, setData, setTasks }: Options) {
         return false
       }
     },
-    [getToken, setTasks],
+    [getToken, setTasks, isShowcase],
   )
 
   const saveDayPatch = useCallback(
     async (dayId: string, patch: Record<string, any>): Promise<boolean> => {
       if (!projectId) return false
+      if (isShowcase) {
+        setData((prev) => {
+          if (!prev?.project) return prev
+          const it = Array.isArray(prev.project.itinerary) ? prev.project.itinerary : []
+          const newIt = it.map((d: any) => {
+            if (d.id !== dayId) return d
+            const merged = { ...d }
+            for (const [k, v] of Object.entries(patch)) {
+              const snake = k.replace(/[A-Z]/g, (c) => '_' + c.toLowerCase())
+              merged[snake] = v
+              merged[k] = v
+            }
+            return merged
+          })
+          return { ...prev, project: { ...prev.project, itinerary: newIt } }
+        })
+        return true
+      }
       try {
         const token = await getToken()
         if (!token) {
@@ -129,7 +186,7 @@ export function useTripMutations({ projectId, setData, setTasks }: Options) {
         return false
       }
     },
-    [projectId, getToken, setData],
+    [projectId, getToken, setData, isShowcase],
   )
 
   const saveAccommodationCreate = useCallback(
@@ -139,6 +196,24 @@ export function useTripMutations({ projectId, setData, setTasks }: Options) {
       imageUrl?: string | null
     }): Promise<any> => {
       if (!projectId) return null
+      if (isShowcase) {
+        const fake = {
+          id: 'showcase-' + Math.random().toString(36).slice(2, 10),
+          project_id: projectId,
+          name: input.name,
+          description: input.description ?? null,
+          image_url: input.imageUrl ?? null,
+          sort_order: 999,
+        }
+        setData((prev) => {
+          if (!prev) return prev
+          const cur = Array.isArray((prev as any).accommodations)
+            ? (prev as any).accommodations
+            : []
+          return { ...prev, accommodations: [...cur, fake] } as any
+        })
+        return fake
+      }
       try {
         const token = await getToken()
         if (!token) {
@@ -169,11 +244,33 @@ export function useTripMutations({ projectId, setData, setTasks }: Options) {
         return null
       }
     },
-    [projectId, getToken, setData],
+    [projectId, getToken, setData, isShowcase],
   )
 
   const saveAccommodationPatch = useCallback(
     async (id: string, patch: Record<string, any>): Promise<boolean> => {
+      if (isShowcase) {
+        setData((prev) => {
+          if (!prev) return prev
+          const cur = Array.isArray((prev as any).accommodations)
+            ? (prev as any).accommodations
+            : []
+          return {
+            ...prev,
+            accommodations: cur.map((a: any) => {
+              if (a.id !== id) return a
+              const merged = { ...a }
+              for (const [k, v] of Object.entries(patch)) {
+                const snake = k.replace(/[A-Z]/g, (c) => '_' + c.toLowerCase())
+                merged[snake] = v
+                merged[k] = v
+              }
+              return merged
+            }),
+          } as any
+        })
+        return true
+      }
       try {
         const token = await getToken()
         if (!token) {
@@ -207,11 +304,21 @@ export function useTripMutations({ projectId, setData, setTasks }: Options) {
         return false
       }
     },
-    [getToken, setData],
+    [getToken, setData, isShowcase],
   )
 
   const saveAccommodationDelete = useCallback(
     async (id: string): Promise<boolean> => {
+      if (isShowcase) {
+        setData((prev) => {
+          if (!prev) return prev
+          const cur = Array.isArray((prev as any).accommodations)
+            ? (prev as any).accommodations
+            : []
+          return { ...prev, accommodations: cur.filter((a: any) => a.id !== id) } as any
+        })
+        return true
+      }
       try {
         const token = await getToken()
         if (!token) {
@@ -240,12 +347,19 @@ export function useTripMutations({ projectId, setData, setTasks }: Options) {
         return false
       }
     },
-    [getToken, setData],
+    [getToken, setData, isShowcase],
   )
 
   const saveWhatToBring = useCallback(
     async (next: Array<{ category: string; items: string[] }>): Promise<boolean> => {
       if (!projectId) return false
+      if (isShowcase) {
+        setData((prev) => {
+          if (!prev?.project) return prev
+          return { ...prev, project: { ...prev.project, what_to_bring: next } }
+        })
+        return true
+      }
       try {
         const token = await getToken()
         if (!token) {
@@ -273,13 +387,17 @@ export function useTripMutations({ projectId, setData, setTasks }: Options) {
         return false
       }
     },
-    [projectId, getToken, setData],
+    [projectId, getToken, setData, isShowcase],
   )
 
   const handleDeleteProject = useCallback(
     async (title: string) => {
       if (!projectId) return
       if (typeof window === 'undefined') return
+      if (isShowcase) {
+        toast.info("This is a demo trip — you can't delete it.")
+        return
+      }
       const ok = window.confirm(
         `Delete "${title}"? This cannot be undone. All photos, tasks, and documents will be removed.`,
       )
@@ -305,7 +423,7 @@ export function useTripMutations({ projectId, setData, setTasks }: Options) {
         toast.error('Network error')
       }
     },
-    [projectId, getToken, router],
+    [projectId, getToken, router, isShowcase],
   )
 
   return {
@@ -319,3 +437,4 @@ export function useTripMutations({ projectId, setData, setTasks }: Options) {
     handleDeleteProject,
   }
 }
+

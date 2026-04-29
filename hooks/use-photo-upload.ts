@@ -23,9 +23,16 @@ type Options = {
   projectId: string | undefined
   media: MediaRecord[]
   setMedia: React.Dispatch<React.SetStateAction<MediaRecord[]>>
+  /**
+   * Showcase / demo — never POST to S3. Instead, we mint a `blob:` URL from
+   * the local File so the operator sees their photo appear immediately. F5
+   * disposes the blob (intentional — the showcase is a shared demo and
+   * uploads must never persist to the system showcase user).
+   */
+  isShowcase?: boolean
 }
 
-export function usePhotoUpload({ projectId, media, setMedia }: Options) {
+export function usePhotoUpload({ projectId, media, setMedia, isShowcase }: Options) {
   const { getToken } = useAuth()
   const [uploadingByDay, setUploadingByDay] = useState<Record<string, number>>({})
 
@@ -37,9 +44,36 @@ export function usePhotoUpload({ projectId, media, setMedia }: Options) {
     })
   }, [])
 
+  const fakePhotoRecord = useCallback(
+    (file: File, dayId: string | null, placement: 'hero' | null = null): MediaRecord => {
+      const id = 'showcase-photo-' + Math.random().toString(36).slice(2, 10)
+      return {
+        id,
+        project_id: projectId || '',
+        user_id: '',
+        type: 'photo',
+        url: URL.createObjectURL(file),
+        day_id: dayId,
+        placement,
+        sort_order: 0,
+        visible_to_client: true,
+        file_name: file.name,
+        file_size: file.size,
+        mime_type: file.type,
+      } as any
+    },
+    [projectId],
+  )
+
   const handleUpload = useCallback(
     async (files: File[], dayId: string | null) => {
       if (!projectId) return
+      if (isShowcase) {
+        for (const f of files) {
+          setMedia((prev) => [...prev, fakePhotoRecord(f, dayId)])
+        }
+        return
+      }
       const key = dayId || 'tour'
       const token = await getToken()
       if (!token) {
@@ -60,13 +94,14 @@ export function usePhotoUpload({ projectId, media, setMedia }: Options) {
         }),
       )
     },
-    [projectId, getToken, setMedia, bumpUploading],
+    [projectId, getToken, setMedia, bumpUploading, isShowcase, fakePhotoRecord],
   )
 
   const handleDelete = useCallback(
     async (mediaId: string) => {
       const snapshot = media
       setMedia((cur) => cur.filter((m) => m.id !== mediaId))
+      if (isShowcase) return
       try {
         const token = await getToken()
         if (!token) throw new Error('No token')
@@ -76,7 +111,7 @@ export function usePhotoUpload({ projectId, media, setMedia }: Options) {
         toast.error(e?.message || 'Could not delete photo')
       }
     },
-    [media, getToken, setMedia],
+    [media, getToken, setMedia, isShowcase],
   )
 
   // Hero upload: always placement='hero', single photo. If a hero already exists,
@@ -87,6 +122,12 @@ export function usePhotoUpload({ projectId, media, setMedia }: Options) {
       const file = files[0]
       if (files.length > 1) {
         toast.message('Hero uses the first photo — drop more in the gallery below')
+      }
+      if (isShowcase) {
+        const prevHero = media.find((m) => m.placement === 'hero')
+        const rec = fakePhotoRecord(file, null, 'hero')
+        setMedia((prev) => [rec, ...prev.filter((m) => m.id !== prevHero?.id)])
+        return
       }
       const token = await getToken()
       if (!token) {
@@ -115,7 +156,7 @@ export function usePhotoUpload({ projectId, media, setMedia }: Options) {
         bumpUploading('hero', -1)
       }
     },
-    [projectId, media, getToken, setMedia, bumpUploading],
+    [projectId, media, getToken, setMedia, bumpUploading, isShowcase, fakePhotoRecord],
   )
 
   return {
@@ -125,3 +166,4 @@ export function usePhotoUpload({ projectId, media, setMedia }: Options) {
     handleHeroUpload,
   }
 }
+

@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { Trash2, Eye, EyeOff, FileText, Upload, X } from 'lucide-react'
+import { Trash2, Eye, EyeOff, FileText, Upload, X, Sparkles } from 'lucide-react'
 
 import ActivationToast from '@/components/activation-toast'
 import PhotosBlock from '@/components/photos-block'
@@ -19,6 +20,7 @@ import { TripCommandBar } from '@/components/trip/trip-command-bar'
 import { TripActionBar } from '@/components/trip/trip-action-bar'
 import { ArchiveDialog } from '@/components/trip/archive-dialog'
 import { EditableField } from '@/components/editable/editable-field'
+import { ShowcasePills, ShowcaseBanner } from '@/components/trip/showcase-pills'
 
 import { ThemeRoot } from '@/components/trip/theme-root'
 import { TripNav } from '@/components/trip/nav'
@@ -118,6 +120,18 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const [previewAsClient, setPreviewAsClient] = useState(false)
   const showOwnerUI = isOwner && !previewAsClient
   const [archiveOpen, setArchiveOpen] = useState(false)
+  // Showcase / demo mode — detected by the seed-showcase slug. When this is
+  // the live trip, we force owner UI on (every visitor sees editable fields,
+  // drag, AI bar, theme switcher) and intercept all mutations into local
+  // state via `isShowcase` plumbed into useTripMutations.
+  const isShowcase = data?.project?.slug === 'paris-weekend-getaway'
+
+  // Force-enable owner UI for the showcase. /full will return 403 for
+  // unauthenticated visitors (and 403 for any non-system user too), so
+  // useTripData won't flip isOwner=true on its own — we do it here.
+  useEffect(() => {
+    if (isShowcase) setIsOwner(true)
+  }, [isShowcase])
   const [media, setMedia] = useState<MediaRecord[]>(
     (initialData?.media as MediaRecord[]) || [],
   )
@@ -154,6 +168,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
     projectId: data?.project?.id,
     setData: setData as any,
     setTasks: setTasks as any,
+    isShowcase,
   })
 
   const handleDeleteProject = useCallback(async () => {
@@ -185,6 +200,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
     projectId: data?.project?.id,
     media,
     setMedia,
+    isShowcase,
   })
 
   // ─── Visibility toggles (owner only) ──────────────────────────
@@ -192,6 +208,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
     async (taskId: string, nextVisible: boolean) => {
       const prev = tasks
       setTasks((cur) => cur.map((t) => (t.id === taskId ? { ...t, visible_to_client: nextVisible } : t)))
+      if (isShowcase) {
+        toast.success(nextVisible ? 'Visible to client' : 'Hidden from client')
+        return
+      }
       try {
         const token = await getToken()
         const res = await apiFetch(`/api/tasks/${taskId}`, {
@@ -206,13 +226,17 @@ export default function TripPageClient({ slug, initialData }: Props) {
         toast.error(err?.message || 'Could not update task')
       }
     },
-    [tasks, getToken],
+    [tasks, getToken, isShowcase],
   )
 
   const toggleMediaVisibility = useCallback(
     async (mediaId: string, nextVisible: boolean) => {
       const prev = media
       setMedia((cur) => cur.map((m) => (m.id === mediaId ? ({ ...m, visible_to_client: nextVisible } as MediaRecord) : m)))
+      if (isShowcase) {
+        toast.success(nextVisible ? 'Visible to client' : 'Hidden from client')
+        return
+      }
       try {
         const token = await getToken()
         const res = await apiFetch(`/api/media/${mediaId}`, {
@@ -227,13 +251,17 @@ export default function TripPageClient({ slug, initialData }: Props) {
         toast.error(err?.message || 'Could not update document')
       }
     },
-    [media, getToken],
+    [media, getToken, isShowcase],
   )
 
   const deleteDocument = useCallback(
     async (mediaId: string) => {
       const prev = media
       setMedia((cur) => cur.filter((m) => m.id !== mediaId))
+      if (isShowcase) {
+        toast.success('Document removed')
+        return
+      }
       try {
         const token = await getToken()
         const res = await apiFetch(`/api/media/${mediaId}`, { method: 'DELETE', token })
@@ -244,7 +272,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         toast.error(err?.message || 'Could not delete document')
       }
     },
-    [media, getToken],
+    [media, getToken, isShowcase],
   )
 
   // ─── Document upload (owner only) ─────────────────────────────
@@ -261,6 +289,40 @@ export default function TripPageClient({ slug, initialData }: Props) {
     async (files: File[]) => {
       const projectId = data?.project?.id
       if (!projectId || files.length === 0) return
+      // Showcase / demo — never POST to backend; fake document records into
+      // local state so the operator sees the file appear in the documents
+      // section. blob: URLs disposed on F5 — that's intentional.
+      if (isShowcase) {
+        for (const file of files) {
+          if (!DOC_MIMES.includes(file.type)) {
+            toast.error(`Unsupported: ${file.name}. Use PDF, DOCX, XLSX, JPEG or PNG.`)
+            continue
+          }
+          if (file.size > DOC_MAX_SIZE) {
+            toast.error(`Too large: ${file.name} (max 10MB).`)
+            continue
+          }
+          const fakeId = 'showcase-doc-' + Math.random().toString(36).slice(2, 10)
+          const blobUrl = URL.createObjectURL(file)
+          setMedia((cur) => [
+            ...cur,
+            {
+              id: fakeId,
+              project_id: projectId,
+              user_id: '',
+              type: 'document',
+              url: blobUrl,
+              file_name: file.name,
+              file_size: file.size,
+              mime_type: file.type,
+              visible_to_client: true,
+              sort_order: cur.length,
+            } as any,
+          ])
+        }
+        toast.success('Document uploaded')
+        return
+      }
       const token = await getToken()
       if (!token) {
         toast.error('Please sign in again')
@@ -311,7 +373,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
       } catch {}
       await refreshOwnerData()
     },
-    [data?.project?.id, getToken, slug, refreshOwnerData],
+    [data?.project?.id, getToken, slug, refreshOwnerData, isShowcase],
   )
 
   const isReady = data && data.project?.status !== 'generating'
@@ -750,6 +812,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
       {/* Owner chrome — outside ThemeRoot so it uses shadcn semantic tokens
           (per TZ-6 §11 — owner UI must work even on a dark Expedition theme). */}
       {showOwnerUI && <Header />}
+      {isShowcase && <ShowcaseBanner />}
       {showOwnerUI && p.id && (
         <TripActionBar
           projectId={p.id}
@@ -768,8 +831,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
       {/* Operator service block — top placement under the action bar.
           Persists identity through the per-agent clients table; trip-
           only fields (booking ref, notes, special requests) go through
-          saveProjectPatch directly. */}
-      {showOwnerUI && p.id && (
+          saveProjectPatch directly. Hidden in showcase mode — there's
+          no real client behind a demo trip and the block would be a
+          distraction. */}
+      {showOwnerUI && p.id && !isShowcase && (
         <ClientInfo
           projectId={p.id}
           client={(data as any).client ?? null}
@@ -781,7 +846,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         />
       )}
 
-      {showOwnerUI && p.id && (
+      {showOwnerUI && p.id && !isShowcase && (
         <ArchiveDialog
           open={archiveOpen}
           projectId={p.id}
@@ -1135,7 +1200,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         }}
       />
 
-      {showOwnerUI && (
+      {showOwnerUI && !isShowcase && (
         <>
           <TripCommandBar projectId={p.id} getToken={getToken} onTripUpdated={handleTripUpdated} status={p.status} theme={resolvedTheme} />
           {/* Owner-only breathing room between the last section and the
@@ -1145,6 +1210,31 @@ export default function TripPageClient({ slug, initialData }: Props) {
               the last section to read the bottom edge of any block.
               ~160-176px — tall enough that the floating pill (≈64px high
               including padding) sits with margin above and below. */}
+          <div className="h-40 md:h-44" aria-hidden="true" />
+        </>
+      )}
+
+      {/* Showcase mode — interactive demo overlay.
+          Floating pulsing pills (rendered fixed) point at editable hero
+          title, day cards, theme switcher, photo drop zones. The AI bar
+          is replaced with a stub that shows "sign up to try AI editing". */}
+      {isShowcase && (
+        <>
+          <ShowcasePills />
+          <div className="fixed bottom-0 left-0 right-0 z-30 pb-3 px-3 pointer-events-none">
+            <div className="max-w-3xl mx-auto rounded-full bg-background/90 backdrop-blur border border-accent/30 shadow-lg pointer-events-auto">
+              <div className="flex items-center gap-2 px-4 py-2.5">
+                <Sparkles className="w-4 h-4 text-accent flex-shrink-0" />
+                <p className="text-sm text-foreground/80 flex-1 leading-snug">
+                  AI editing is part of the real product —{' '}
+                  <Link href="/sign-up" className="font-semibold text-accent hover:underline">
+                    sign up free
+                  </Link>{' '}
+                  to try it on your own trip.
+                </p>
+              </div>
+            </div>
+          </div>
           <div className="h-40 md:h-44" aria-hidden="true" />
         </>
       )}
@@ -1525,5 +1615,6 @@ function WhatToBringSection({
     </section>
   )
 }
+
 
 

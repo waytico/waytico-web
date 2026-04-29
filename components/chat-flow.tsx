@@ -33,15 +33,7 @@ const ALLOWED_MIMES = [
 ]
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
-const PLACEHOLDER_EXAMPLE = `Tuscany wine tour, Sep 14–20. Couple, relaxed pace.
-
-Sep 14 — Arrive FLR, transfer to Greve in Chianti, Villa Bordoni.
-Sep 15 — Castello di Ama tasting with Marco.
-…
-Sep 19 — Montalcino, Biondi-Santi cellar visit.
-Sep 20 — Transfer to FLR, flight out.
-
-Guide Marco Rossi. €3,200 pp, flights not included.`
+const PLACEHOLDER_EXAMPLE = `Describe a trip you want to send to a client. Dates, places, hotels, prices — anything you'd normally type into Word. Drag a file in if you already have a draft.`
 
 function fileIcon(mime: string) {
   if (mime.startsWith('image/')) return <ImageIcon className="w-4 h-4" />
@@ -460,4 +452,5 @@ export default function ChatFlow() {
     </div>
   )
 }
+
 
