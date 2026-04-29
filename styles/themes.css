@@ -263,6 +263,11 @@
 [data-owner-view="true"] .tp-nav {
   top: 48px;
 }
+/* Showcase / demo: the orange banner (52px) sits sticky above the action
+   bar (48px), so the in-theme nav has to sit below both. */
+[data-showcase="true"] .tp-nav {
+  top: 100px;
+}
 .tp-nav-inner {
   max-width: 1120px; margin: 0 auto; padding: 14px 32px;
   display: flex; align-items: center; justify-content: center;
@@ -1158,3 +1163,4 @@
 .tp-itin--grid .day:hover .tp-itin-handle { opacity: 1; }
 
 .day.is-dragging { box-shadow: 0 14px 40px rgba(20, 14, 10, 0.18); }
+
