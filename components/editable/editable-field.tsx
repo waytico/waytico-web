@@ -301,13 +301,36 @@ export function EditableField(props: Props) {
   if (props.as === 'multiline') {
     return (
       <textarea
-        ref={(el) => { inputRef.current = el }}
-        rows={props.rows ?? 4}
+        ref={(el) => {
+          inputRef.current = el
+          // Auto-grow on mount: set initial height to match content
+          // (covers browsers without field-sizing support).
+          if (el) {
+            el.style.height = 'auto'
+            el.style.height = `${el.scrollHeight}px`
+          }
+        }}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
+        onInput={(e) => {
+          // JS fallback for browsers without `field-sizing: content`.
+          // Modern browsers using field-sizing ignore these writes since
+          // the computed height tracks content automatically.
+          const el = e.currentTarget
+          el.style.height = 'auto'
+          el.style.height = `${el.scrollHeight}px`
+        }}
         onBlur={save}
         onKeyDown={handleKeyDown}
-        className={`${inputBase} ${props.className ?? ''} resize-y`}
+        className={`${inputBase} ${props.className ?? ''}`}
+        style={{
+          // `field-sizing: content` makes the textarea auto-size to its
+          // content natively (Chromium 123+, Safari 17+, Firefox 134+).
+          // Older engines fall back to the onInput handler above.
+          fieldSizing: 'content',
+          overflow: 'hidden',
+          resize: 'none',
+        } as React.CSSProperties}
       />
     )
   }
