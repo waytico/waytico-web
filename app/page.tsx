@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowDown } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import ChatFlow from '@/components/chat-flow'
 import Footer from '@/components/footer'
 import Header from '@/components/header'
@@ -21,33 +21,33 @@ export default function Home() {
           </p>
           <ChatFlow />
 
-          {/* Example block — concrete prompt → live trip page. Layout
-              mirrors the chat-flow above: prompt body left-aligned in a
-              card, action pill right-aligned at the bottom. The pill
-              copies the visual treatment of the "Create quote →" button
-              inside ChatFlow so visitors read both as the same kind of
-              CTA. */}
-          <div className="pt-2 max-w-2xl mx-auto text-left">
-            <p className="text-xs uppercase tracking-wider text-foreground/40 mb-3">
-              Example
-            </p>
-            <div className="rounded-2xl border border-border bg-card p-5 text-sm text-foreground/75 leading-relaxed font-mono whitespace-pre-line">
-{`3 days in Paris for a couple, late June. Hôtel des Deux Pavillons in the Marais.
-Day 1 Marais and Seine,
-Day 2 Louvre and Saint-Germain with a Sainte-Chapelle concert,
-Day 3 Montmartre and a farewell brunch.
-€1,800 total, private transfers included.`}
+          {/* ── Example block ─────────────────────────────────────
+              Visually distinct from the textarea card above so visitors
+              don't read this as a second input field. No card surface,
+              no rounded panel — just a soft accent rule on the left and
+              an "Example" label on top. The prompt copy is rendered as
+              real prose (italic serif), not monospace, to read as
+              quoted-text rather than fillable code. */}
+          <div className="pt-6 max-w-2xl mx-auto text-left">
+            <div className="flex items-baseline justify-between mb-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-foreground/40">
+                Example — what you type → the page it makes
+              </p>
             </div>
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                <ArrowDown className="w-4 h-4" />
-                <span>Becomes the page →</span>
-              </span>
+            <div className="border-l-2 border-accent/60 pl-5 italic font-serif text-foreground/80 text-base leading-relaxed">
+              <p>3 days in Paris for a couple, late June. Hôtel des Deux Pavillons in the Marais.</p>
+              <p>Day 1 Marais and Seine,</p>
+              <p>Day 2 Louvre and Saint-Germain with a Sainte-Chapelle concert,</p>
+              <p>Day 3 Montmartre and a farewell brunch.</p>
+              <p>€1,800 total, private transfers included.</p>
+            </div>
+            <div className="mt-5 flex items-center justify-end gap-3">
               <Link
                 href="/t/paris-weekend-getaway"
                 className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-full px-6 py-2 font-semibold inline-flex items-center gap-2 transition-colors"
               >
-                See the page it makes →
+                See the page it makes
+                <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </div>

@@ -34,7 +34,11 @@ const ALLOWED_MIMES = [
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 const PLACEHOLDER_EXAMPLE = `Describe a trip you want to send to a client.
-Dates, places, hotels, prices — anything you'd normally type into Word.`
+Dates, places, hotels, prices — anything you'd normally type into Word.
+
+
+
+Drag a file in if you already have a draft.`
 
 function fileIcon(mime: string) {
   if (mime.startsWith('image/')) return <ImageIcon className="w-4 h-4" />
@@ -433,8 +437,8 @@ export default function ChatFlow() {
             <span className="text-sm text-muted-foreground">
               {messages.length === 0 ? (
                 <>
-                  <span className="hidden sm:inline">Have a draft? Drop a file here.</span>
-                  <span className="sm:hidden">Drop a file</span>
+                  <span className="hidden sm:inline">Itinerary on file? Attach it</span>
+                  <span className="sm:hidden">Attach itinerary</span>
                 </>
               ) : (
                 <span className="hidden sm:inline">Ctrl+Enter to send</span>
