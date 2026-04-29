@@ -1108,3 +1108,53 @@
   display: inline-flex; align-items: center;
 }
 .tp-cmdbar-file-pill button:hover { color: var(--bar-ink); }
+
+/* ================ Itinerary drag handle (owner-only) ================
+   Sits on the top-left of each .day in any theme. Only visible on hover
+   over the day card so the public/preview view stays clean (the same
+   article element is rendered with the handle in owner mode but the
+   handle is hidden visually until pointer hover). On touch, the handle
+   stays semi-visible — there's no hover, and dnd-kit's TouchSensor
+   needs a real target to grab. */
+.tp-itin-handle {
+  position: absolute;
+  top: 8px;
+  left: -28px;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink-mute);
+  cursor: grab;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, background 120ms ease;
+  touch-action: none;       /* required for TouchSensor */
+  z-index: 5;
+}
+.tp-itin-handle:active { cursor: grabbing; }
+.tp-itin-handle:hover { color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, transparent); }
+.day:hover .tp-itin-handle { opacity: 1; }
+
+/* Touch devices: keep the handle visible (no hover state). */
+@media (hover: none) {
+  .tp-itin-handle { opacity: 0.6; left: -4px; }
+}
+
+/* Photo-cards lay the article full-bleed → handle goes inside the card,
+   not in the gutter. Compact grid: same. Only timeline keeps the gutter
+   handle since each day has a left-side numeral with breathing room. */
+.tp-itin--photo-cards .tp-itin-handle,
+.tp-itin--grid .tp-itin-handle {
+  left: 8px;
+  top: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  opacity: 0;
+}
+.tp-itin--photo-cards .day:hover .tp-itin-handle,
+.tp-itin--grid .day:hover .tp-itin-handle { opacity: 1; }
+
+.day.is-dragging { box-shadow: 0 14px 40px rgba(20, 14, 10, 0.18); }

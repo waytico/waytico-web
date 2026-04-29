@@ -1036,6 +1036,17 @@ export default function TripPageClient({ slug, initialData }: Props) {
           renderDayTitle={renderDayTitle}
           renderDayDescription={renderDayDescription}
           renderDayExtras={renderDayExtras}
+          editable={ed}
+          onReorder={
+            ed
+              ? async (next) => {
+                  // Send the reordered itinerary up via the standard
+                  // project-patch path. Stripping per-day `date` lets
+                  // backend reconcileDates() reset them from dates_start.
+                  return saveProjectPatch({ itinerary: next })
+                }
+              : undefined
+          }
         />
 
         <TripAccommodations
