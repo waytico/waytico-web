@@ -114,31 +114,40 @@ export default function TermsPage() {
             6. Pricing and payment
           </h2>
           <p className="text-foreground/80 leading-relaxed">
-            Creating and editing trip quotes is free. Activating a trip page — turning a quote into
-            a live client dashboard — requires a one-time payment per page, processed through
-            Stripe.
+            <strong className="font-semibold text-foreground">Today, Waytico is free to use.</strong>{' '}
+            Creating and editing trip quotes is free, with no card on file required.
           </p>
           <p className="text-foreground/80 leading-relaxed">
-            Prices are shown at the point of activation. By activating, you agree to pay the
-            displayed amount. Once a page is activated, it stays activated — we don&apos;t charge
-            you again for the same page.
+            <strong className="font-semibold text-foreground">In the future,</strong> we plan to
+            introduce two ways to pay: a one-time charge per trip when you turn a confirmed
+            proposal into a live operational page, and an optional monthly subscription for
+            advanced quote-building features. See the{' '}
+            <Link href="/pricing" className="text-primary hover:underline underline-offset-2">
+              pricing page
+            </Link>
+            {' '}for what we&apos;ve committed to. We&apos;ll announce final prices on this page
+            and email active users at least 30 days before any charges begin.
+          </p>
+          <p className="text-foreground/80 leading-relaxed">
+            <strong className="font-semibold text-foreground">Once paid plans launch,</strong>{' '}
+            charges (where applicable) will be processed through Stripe. Prices will be shown at
+            the point of purchase. By proceeding to pay, you&apos;ll agree to the displayed amount.
           </p>
           <p className="text-foreground/80 leading-relaxed">
             <strong className="font-semibold text-foreground">Refunds.</strong> If something goes
-            wrong with an activation, email{' '}
+            wrong with a paid feature once it&apos;s available, email{' '}
             <a
               href="mailto:hello@waytico.com"
               className="text-primary hover:underline underline-offset-2"
             >
               hello@waytico.com
             </a>{' '}
-            within 7 days. If the page hasn&apos;t been shared with a paying client, we&apos;ll
-            refund it. Beyond that, refunds are at our discretion.
+            within 7 days and we&apos;ll work it out in good faith.
           </p>
           <p className="text-foreground/80 leading-relaxed">
             <strong className="font-semibold text-foreground">Price changes.</strong> If we change
-            activation pricing, new pricing applies only to new activations. Anything you&apos;ve
-            already activated stays activated at no extra cost.
+            pricing after it launches, new pricing applies only to new charges. Anything you&apos;ve
+            already paid for stays at what you paid.
           </p>
 
           <h2 className="text-2xl md:text-3xl font-serif font-semibold mt-12 mb-3">

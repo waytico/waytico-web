@@ -37,12 +37,13 @@ export default function HowItWorksPage() {
           </h2>
           <p className="text-foreground/80 leading-relaxed">
             You paste your day-by-day plan into the chat. Dates, places, what&apos;s included, the
-            price — whatever you&apos;ve already decided.
+            price — whatever you&apos;ve already decided. You can also drop in a PDF, Word doc, or
+            spreadsheet and Waytico will read the details out of it for you.
           </p>
           <p className="text-foreground/80 leading-relaxed">
-            A few seconds later, you get a clean web page with your itinerary, a map, the terms,
-            everything. One link. You send it to the client by WhatsApp, email, Telegram, or just
-            copy the URL.
+            A few seconds later, you get a clean web page with your itinerary, the prices, the
+            terms — everything. One link. You send it to the client by WhatsApp, email, Telegram,
+            or just copy the URL.
           </p>
           <p className="text-foreground/80 leading-relaxed">
             <strong className="font-semibold text-foreground">Waytico doesn&apos;t invent the trip.</strong>{' '}
@@ -59,24 +60,23 @@ export default function HowItWorksPage() {
             departure.&rdquo; The page updates. Same link, always current.
           </p>
           <p className="text-foreground/80 leading-relaxed">
-            You can also drop PDFs or booking confirmations into the chat and Waytico will read
-            them and pull the details in.
+            Or just click any field on the page and edit it directly. Drag a day card to
+            reorder it. Drop in your own photos. The whole proposal is yours to shape.
           </p>
 
           <h2 className="text-2xl md:text-3xl font-serif font-semibold mt-12 mb-3">
             When the client says yes
           </h2>
           <p className="text-foreground/80 leading-relaxed">
-            You tap <strong className="font-semibold text-foreground">Activate</strong>. That&apos;s
-            the only time you pay — once, per trip. No subscription.
+            Today, you keep using the same link to keep the proposal current up to the day they
+            travel. Quotes don&apos;t expire — once you save one to your account, it&apos;s yours
+            until you archive it.
           </p>
           <p className="text-foreground/80 leading-relaxed">
-            The same page your client already has now becomes their trip dashboard: a packing list,
-            pre-trip tasks with deadlines, space for the vouchers and documents you want them to
-            have. They didn&apos;t need to download anything or log in. They just refresh.
-          </p>
-          <p className="text-foreground/80 leading-relaxed">
-            You keep using the page to run the trip until they come home.
+            The next step we&apos;re working on: turning a confirmed proposal into a full
+            operational page. Same link your client already has, but with a packing checklist,
+            pre-trip tasks with deadlines, document attachments, automatic reminders. We&apos;ll
+            announce when it&apos;s ready.
           </p>
 
           <h2 className="text-2xl md:text-3xl font-serif font-semibold mt-12 mb-3">
@@ -84,8 +84,14 @@ export default function HowItWorksPage() {
           </h2>
           <p className="text-foreground/80 leading-relaxed">
             One link instead of a Word doc, a PDF, a shared folder, and three WhatsApp threads.
-            Free to create and edit as many proposals as you want — you only pay for the ones that
-            turn into real bookings.
+            Free to create, edit, and share as many proposals as you want — see the{' '}
+            <a
+              href="/pricing"
+              className="text-primary hover:underline underline-offset-2"
+            >
+              pricing page
+            </a>
+            {' '}for what we&apos;ve committed to about future paid plans.
           </p>
 
           <div className="pt-8 space-y-4">

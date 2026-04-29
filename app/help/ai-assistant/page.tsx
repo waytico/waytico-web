@@ -122,9 +122,11 @@ export default function AiAssistantGuidePage() {
               ]}
             />
             <p>
-              Photos for these cards: drop one onto the card directly,
-              or just ask the assistant to make the card and add a
-              photo afterwards. Both work.
+              Photos for these cards: drop one onto the card directly.
+              You can ask the assistant to make the card first and add
+              the photo yourself afterwards — just remember the
+              assistant itself doesn&apos;t accept photos in chat, you
+              place them on the card.
             </p>
             <Aside>
               <strong>One subtle thing:</strong> a hotel card on this

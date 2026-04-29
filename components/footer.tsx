@@ -3,13 +3,12 @@ import Link from 'next/link'
 const productLinks = [
   { href: '/how-it-works', label: 'How it works' },
   { href: '/help/ai-assistant', label: 'AI assistant' },
-  { href: '/#pricing', label: 'Pricing' },
-  { href: '/sign-in', label: 'Sign in' },
+  { href: '/pricing', label: 'Pricing' },
 ]
 
-const companyLinks = [
+const resourcesLinks = [
+  { href: '/help', label: 'Help center' },
   { href: '/about', label: 'About' },
-  { href: '/help', label: 'Help' },
 ]
 
 const legalLinks = [
@@ -25,7 +24,7 @@ export default function Footer() {
       <div className="max-w-4xl mx-auto px-4 py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
           <FooterColumn title="Product" links={productLinks} />
-          <FooterColumn title="Company" links={companyLinks} />
+          <FooterColumn title="Resources" links={resourcesLinks} />
           <FooterColumn title="Legal" links={legalLinks} />
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground">Contact</h3>

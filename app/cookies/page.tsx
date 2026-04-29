@@ -90,8 +90,8 @@ export default function CookiesPage() {
 
           <h3 className="text-xl font-serif font-semibold mt-8 mb-2">Functional</h3>
           <p className="text-foreground/80 leading-relaxed">
-            Help Waytico remember things you&apos;ve chosen. None yet — when we add things like
-            theme preferences, they&apos;ll appear here.
+            Help Waytico remember things you&apos;ve chosen. None at the moment — your account
+            preferences are stored on our servers, tied to your account, not in browser cookies.
           </p>
 
           <h3 className="text-xl font-serif font-semibold mt-8 mb-2">Analytics</h3>
