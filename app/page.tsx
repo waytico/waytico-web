@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, ArrowDown } from 'lucide-react'
+import { ArrowDown } from 'lucide-react'
 import ChatFlow from '@/components/chat-flow'
 import Footer from '@/components/footer'
 import Header from '@/components/header'
@@ -21,28 +21,33 @@ export default function Home() {
           </p>
           <ChatFlow />
 
-          {/* Example block — shows operator a concrete example of what to type
-              and what comes out the other side. The blockquote mirrors the
-              textarea above; the pill links to the live demo trip generated
-              from a similar prompt. */}
+          {/* Example block — concrete prompt → live trip page. Layout
+              mirrors the chat-flow above: prompt body left-aligned in a
+              card, action pill right-aligned at the bottom. The pill
+              copies the visual treatment of the "Create quote →" button
+              inside ChatFlow so visitors read both as the same kind of
+              CTA. */}
           <div className="pt-2 max-w-2xl mx-auto text-left">
-            <p className="text-xs uppercase tracking-wider text-foreground/40 mb-2">
+            <p className="text-xs uppercase tracking-wider text-foreground/40 mb-3">
               Example
             </p>
-            <blockquote className="text-sm text-foreground/70 italic border-l-2 border-accent/30 pl-3 leading-relaxed">
-              &ldquo;3 days in Paris for a couple, late June. Hôtel des Deux Pavillons in
-              the Marais. Day 1 Marais and Seine, day 2 Louvre and Saint-Germain
-              with a Sainte-Chapelle concert, day 3 Montmartre and a farewell
-              brunch. €1,800 total, private transfers included.&rdquo;
-            </blockquote>
-            <div className="flex flex-col items-center gap-2 mt-4">
-              <ArrowDown className="w-4 h-4 text-foreground/40" />
+            <div className="rounded-2xl border border-border bg-card p-5 text-sm text-foreground/75 leading-relaxed font-mono whitespace-pre-line">
+{`3 days in Paris for a couple, late June. Hôtel des Deux Pavillons in the Marais.
+Day 1 Marais and Seine,
+Day 2 Louvre and Saint-Germain with a Sainte-Chapelle concert,
+Day 3 Montmartre and a farewell brunch.
+€1,800 total, private transfers included.`}
+            </div>
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <ArrowDown className="w-4 h-4" />
+                <span>Becomes the page →</span>
+              </span>
               <Link
                 href="/t/paris-weekend-getaway"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-accent text-accent-foreground text-sm font-semibold hover:opacity-90 transition-opacity group"
+                className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-full px-6 py-2 font-semibold inline-flex items-center gap-2 transition-colors"
               >
-                See the page it makes
-                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                See the page it makes →
               </Link>
             </div>
           </div>
