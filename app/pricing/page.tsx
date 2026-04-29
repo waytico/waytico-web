@@ -58,10 +58,52 @@ export default function PricingPage() {
             Pro subscription
           </h3>
           <p className="text-foreground/80 leading-relaxed">
-            For operators who want extra muscle while building proposals — we&apos;ll
-            offer a monthly plan with advanced editing, custom branding,
-            and other power features. Optional, in addition to per-trip pricing,
-            and only worth paying for if you&apos;re running enough volume to feel it.
+            For operators who run real volume and want extra muscle while
+            building proposals — a monthly plan with the things you&apos;d expect
+            from a paid product:
+          </p>
+          <ul className="list-disc pl-6 space-y-2 text-foreground/80 leading-relaxed">
+            <li>
+              <strong className="font-semibold text-foreground">Your own domain.</strong>{' '}
+              Trip pages served from{' '}
+              <code className="font-mono text-sm bg-secondary px-1 rounded">trips.your-business.com</code>{' '}
+              instead of a Waytico URL.
+            </li>
+            <li>
+              <strong className="font-semibold text-foreground">Saved trip templates.</strong>{' '}
+              Run the same tour over and over? Save it as a template — photos and
+              all — and start every new client&apos;s proposal pre-filled instead
+              of from scratch.
+            </li>
+            <li>
+              <strong className="font-semibold text-foreground">Visual editor for trip pages.</strong>{' '}
+              Beyond the three built-in themes, customise colours, fonts, layout,
+              and accents to match your brand.
+            </li>
+            <li>
+              <strong className="font-semibold text-foreground">Your photo bank.</strong>{' '}
+              Upload your library once. Waytico parses, sizes, and tags every
+              photo, then automatically fills in hero shots and per-day imagery on
+              every new trip you generate — no more chasing the right photo for
+              each proposal.
+            </li>
+            <li>
+              <strong className="font-semibold text-foreground">AI photo distribution.</strong>{' '}
+              Drop a folder of photos for a single trip and let the assistant
+              decide which goes on the hero, which goes on which day, based on
+              what they show and what each day is about.
+            </li>
+            <li>
+              <strong className="font-semibold text-foreground">Brand defaults that just appear.</strong>{' '}
+              Your default Terms and standard included/excluded items pull
+              automatically from your profile onto every new proposal — no
+              copy-paste, no forgotten clauses.
+            </li>
+          </ul>
+          <p className="text-foreground/80 leading-relaxed">
+            Optional — in addition to per-trip pricing, not instead of it. Worth
+            paying for if you&apos;re running enough trips to feel the
+            time savings.
           </p>
 
           <h2 className="text-2xl md:text-3xl font-serif font-semibold mt-12 mb-3">

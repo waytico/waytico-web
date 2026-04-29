@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import Header from '@/components/header'
 import Footer from '@/components/footer'
 
 export const metadata: Metadata = {
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 export default function CookiesPage() {
   return (
     <div className="min-h-screen flex flex-col">
+      <Header />
       <main className="flex-1">
         <article className="max-w-3xl mx-auto px-4 py-12 md:py-16 space-y-6">
           <header className="space-y-3 pb-4">
