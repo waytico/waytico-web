@@ -18,11 +18,10 @@ type Props = {
  * useEffect flips its flag) and walks the operator through five
  * non-obvious actions they can take on this quote.
  *
- * No CTA buttons by design — the operator is already on the right
- * page. Closes via the × button or a click outside the card. Visually
- * matches AnonUpsellModal (same surface, same border, same accent
- * bullets) so the post-claim path feels like a continuation of the
- * pre-register flow.
+ * Closes via the × button, a click outside the card, or the
+ * Let's go CTA in the footer. Visually matches AnonUpsellModal
+ * (same surface, same border, same accent bullets) so the post-
+ * claim path feels like a continuation of the pre-register flow.
  */
 export default function PostClaimUpsellModal({ show, onClose }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null)
@@ -95,6 +94,22 @@ export default function PostClaimUpsellModal({ show, onClose }: Props) {
             </li>
           ))}
         </ul>
+
+        {/* Closing CTA. The list above can read as homework — without a
+            footer button, the only way out is the × in the corner, which
+            doesn't suggest "you're done, go play". The Let's go pill
+            mirrors the orange Create-quote / See-the-page CTAs the
+            operator has already clicked twice on the way here, keeping
+            the visual through-line. */}
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-full px-6 py-2 font-semibold text-sm inline-flex items-center gap-1 transition-colors"
+          >
+            Let&apos;s go →
+          </button>
+        </div>
       </div>
     </div>
   )
