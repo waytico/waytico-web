@@ -36,7 +36,7 @@ export const HERO_STYLE: Record<ThemeId, 'split' | 'overlay' | 'card'> = {
   editorial: 'split',
   expedition: 'overlay',
   compact: 'card',
-  magazine: 'split', // baseline; уточним по handoff bundle если Claude Design предложит другое
+  magazine: 'overlay', // full-bleed photo + Cormorant headline overlay (Black Tomato / Mr & Mrs Smith vibe)
 }
 
 /** Itinerary structural variant per theme (see TZ-6 §6.4). */
@@ -44,7 +44,7 @@ export const ITINERARY_STYLE: Record<ThemeId, 'timeline' | 'photo-cards' | 'grid
   editorial: 'timeline',
   expedition: 'photo-cards',
   compact: 'grid',
-  magazine: 'timeline', // baseline; уточним
+  magazine: 'timeline', // editorial day = hairline + accent-eyebrow + Cormorant title + 16:9 photo + prose
 }
 
 /**

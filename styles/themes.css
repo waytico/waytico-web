@@ -172,9 +172,9 @@
   --bg-alt:     #EBE3D4;
   --paper:      #FFFCF6;
   --ink:        #1A1817;
-  --ink-soft:   rgba(26, 24, 23, 0.72);
-  --ink-mute:   rgba(26, 24, 23, 0.52);
-  --rule:       #D9CFB8;
+  --ink-soft:   rgba(26, 24, 23, 0.86);
+  --ink-mute:   rgba(26, 24, 23, 0.62);
+  --rule:       rgba(26, 24, 23, 0.18);
   --accent:     #B85A3E;
   --accent-ink: #FFFCF6;
   --chip-bg:    rgba(184, 90, 62, 0.10);
@@ -185,16 +185,16 @@
   --font-mono:    var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
 
   --display-weight: 500;
-  --display-tracking: -0.02em;
-  --eyebrow-tracking: 0.16em;
+  --display-tracking: -0.005em;
+  --eyebrow-tracking: 0.14em;
   --eyebrow-case: uppercase;
 
   --r-card: 0;        /* square corners везде, никаких rounded на photos */
   --r-chip: 999px;
-  --gap-section: 96px;
-  --gap-block: 32px;
+  --gap-section: 64px;
+  --gap-block: 28px;
 
-  --shadow-card: 0 1px 0 rgba(26, 24, 23, 0.06);
+  --shadow-card: none;
 
   /* Floating command bar — tinted с акцентом темы */
   --bar-bg:         color-mix(in oklab, var(--accent) 10%, var(--bg));
@@ -205,7 +205,7 @@
   --bar-accent-ink: var(--accent-ink);
   --bar-shadow:     0 6px 24px rgba(26, 24, 23, 0.10);
 
-  --hero-style:      "split";
+  --hero-style:      "overlay";
   --itinerary-style: "timeline";
 }
 
