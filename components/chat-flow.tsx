@@ -451,24 +451,24 @@ export default function ChatFlow() {
         {messages.length === 0 && !input && !selectedFile && !isSignedIn && (
           <div
             aria-hidden="true"
-            className="absolute left-5 right-5 pointer-events-none italic text-base text-muted-foreground leading-[1.5]"
+            className="absolute left-5 right-5 pointer-events-none italic text-base text-muted-foreground leading-[1.5] text-left"
             style={{
-              // Top offset = textarea padding (20) + first prompt line + breathing room.
-              // The first prompt line "Describe your trip. For example:" sits in the
-              // textarea placeholder above this overlay; we start the example body
-              // immediately under it.
+              // Top offset = textarea padding (20px) + first prompt line
+              // height (~24px) + small breathing room. The first prompt
+              // line "Describe your trip. For example:" lives in the
+              // textarea's placeholder attribute above this overlay.
               top: '52px',
-              // Mask the lower portion: lines 3+ fade out via a vertical gradient.
-              // Each visual line ~ 24px (text-base 16px × 1.5 line-height).
-              // Show line 1, 2, 3 fully (3 × 24 = 72px), start fading at line 4.
+              // Mask: keep the first two example lines (3 days … / Day 1)
+              // fully visible, fade out everything from Day 2 onward.
+              // Each visual line ≈ 24px (text-base 16px × 1.5 line-height).
               maskImage:
-                'linear-gradient(to bottom, black 0, black 72px, transparent 130px)',
+                'linear-gradient(to bottom, black 0, black 48px, transparent 96px)',
               WebkitMaskImage:
-                'linear-gradient(to bottom, black 0, black 72px, transparent 130px)',
+                'linear-gradient(to bottom, black 0, black 48px, transparent 96px)',
             }}
           >
             {PLACEHOLDER_EXAMPLE_BODY.map((line, i) => (
-              <p key={i} className="m-0">{line}</p>
+              <p key={i} className="m-0 text-left">{line}</p>
             ))}
           </div>
         )}
