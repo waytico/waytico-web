@@ -1057,10 +1057,15 @@
   color: var(--bar-ink);
   min-height: 72px;
   max-height: 240px;
+  /* Anything the operator types is rendered italic across the product —
+     a consistent visual cue that this text is their personal in-progress
+     input. The placeholder rule below restores upright type for the hint. */
+  font-style: italic;
 }
 .tp-cmdbar-input::placeholder {
   color: var(--bar-ink-mute);
   white-space: pre-line;
+  font-style: normal;
 }
 .tp-cmdbar-input:disabled { opacity: 0.6; }
 

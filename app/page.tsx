@@ -30,27 +30,47 @@ export default function Home() {
               is a quoted prompt + a CTA pointing to the live demo
               trip. */}
           <SignedOut>
-            <div className="pt-6 max-w-2xl mx-auto text-left">
+            <div className="pt-10 max-w-2xl mx-auto text-left">
               <p className="text-xs uppercase tracking-[0.18em] text-foreground/40 mb-3 text-center">
-                Example — what you type → the page it makes
+                Example
               </p>
-              <div className="rounded-2xl border border-foreground/10 shadow-[0_2px_24px_-8px_rgba(0,0,0,0.08)] overflow-hidden bg-background">
-                {/* Faux browser chrome — three dots + URL bar. Tells
-                    the visitor at a glance "this is the rendered page,
-                    not a form to fill in". */}
-                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-foreground/8 bg-foreground/[0.02]">
+              {/* Dark card surface so the example reads as a *product
+                  screenshot* rather than another input field. The
+                  textarea above is light; the contrast with this dark
+                  block is what removes the "two windows" confusion. */}
+              <div
+                className="rounded-2xl overflow-hidden shadow-[0_8px_32px_-12px_rgba(0,0,0,0.35)]"
+                style={{ background: '#2C2420', color: '#F5EFE8' }}
+              >
+                {/* Faux browser chrome — traffic-light dots + URL bar.
+                    On the dark surface, dots use a desaturated warm
+                    tone so they read as "browser controls" without
+                    yelling for attention. */}
+                <div
+                  className="flex items-center gap-2 px-4 py-2.5"
+                  style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+                >
                   <div className="flex gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-foreground/15" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-foreground/15" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-foreground/15" />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
                   </div>
-                  <div className="flex-1 ml-3 px-3 py-1 rounded-md bg-foreground/[0.04] text-xs text-foreground/40 font-mono truncate">
+                  <div
+                    className="flex-1 ml-3 px-3 py-1 rounded-md text-xs font-mono truncate"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(245,239,232,0.55)' }}
+                  >
                     waytico.com/t/paris-weekend-getaway
                   </div>
                 </div>
-                {/* Body — the quoted prompt that generated the page. */}
+                {/* Body — quoted prompt + CTA. */}
                 <div className="p-6 sm:p-7">
-                  <div className="border-l-2 border-accent/60 pl-5 italic font-serif text-foreground/80 text-base leading-relaxed">
+                  <div
+                    className="pl-5 italic font-serif text-base leading-relaxed"
+                    style={{
+                      borderLeft: '2px solid rgba(207,107,57,0.7)',
+                      color: 'rgba(245,239,232,0.86)',
+                    }}
+                  >
                     <p>3 days in Paris for a couple, late June. Hôtel des Deux Pavillons in the Marais.</p>
                     <p>Day 1 Marais and Seine,</p>
                     <p>Day 2 Louvre and Saint-Germain with a Sainte-Chapelle concert,</p>

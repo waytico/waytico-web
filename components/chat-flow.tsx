@@ -33,22 +33,28 @@ const ALLOWED_MIMES = [
 ]
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
-// Two starting placeholders — the chat-flow shows one based on auth state.
-//   - SIGNEDOUT: full multi-line example so the visitor sees the *shape*
-//     of input we expect (length, level of detail). The textarea fades
-//     out everything past the second line via an overlay gradient — the
-//     full text is still in the placeholder attribute (it's there for
-//     anyone tabbing in / focusing the field), but the visual emphasis
-//     stays on the first two lines.
+// Two starting placeholders — chat-flow shows one based on auth state.
+//   - SIGNEDOUT: real placeholder is just the prompt "Describe your trip.
+//     For example:" — non-italic. The actual example body (3 days in
+//     Paris, day 1, day 2…) is rendered separately as an absolutely-
+//     positioned italic overlay so it visually mirrors what the operator
+//     would type in (everything operator-typed is italic across the app)
+//     and we can apply a gradient fade past the second tour line. The
+//     overlay is hidden as soon as the user types or focuses-and-types.
 //   - SIGNEDIN: short prompt — operators already know the product, no
 //     example needed.
-const PLACEHOLDER_SIGNEDOUT = `Describe your trip. For example:
-3 days in Paris for a couple, late June. Hôtel des Deux Pavillons in the Marais.
-Day 1 Marais and Seine,
-Day 2 Louvre and Saint-Germain with a Sainte-Chapelle concert,
-Day 3 Montmartre and a farewell brunch.
-€1,800 total, private transfers included.`
+const PLACEHOLDER_SIGNEDOUT = `Describe your trip. For example:`
 const PLACEHOLDER_SIGNEDIN = `Describe a trip you want to send to a client.`
+
+// Example body shown only as a visual overlay (signed-out, untouched
+// state). Italic — same treatment as the operator's actual input.
+const PLACEHOLDER_EXAMPLE_BODY = [
+  '3 days in Paris for a couple, late June. Hôtel des Deux Pavillons in the Marais.',
+  'Day 1 Marais and Seine,',
+  'Day 2 Louvre and Saint-Germain with a Sainte-Chapelle concert,',
+  'Day 3 Montmartre and a farewell brunch.',
+  '€1,800 total, private transfers included.',
+]
 
 function fileIcon(mime: string) {
   if (mime.startsWith('image/')) return <ImageIcon className="w-4 h-4" />
@@ -411,7 +417,7 @@ export default function ChatFlow() {
             ? (isSignedIn ? PLACEHOLDER_SIGNEDIN : PLACEHOLDER_SIGNEDOUT)
             : 'Add details or type "confirm" to generate…'
           }
-          className="min-h-[420px] md:min-h-[300px] p-5 pb-28 text-base rounded-2xl border border-border bg-card text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
+          className="min-h-[420px] md:min-h-[300px] p-5 pb-28 text-base rounded-2xl border border-border bg-card text-foreground placeholder:text-muted-foreground placeholder:not-italic italic resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
           rows={3}
           disabled={phase === 'sending'}
         />
@@ -434,24 +440,37 @@ export default function ChatFlow() {
           </div>
         )}
 
-        {/* Visual fade for the signed-out placeholder. The textarea
-            placeholder attribute holds the full multi-line example, but
-            we don't want the lower lines competing visually with the H1
-            / sub / preview block — only the first two lines should pop.
-            This overlay sits on top of the textarea (pointer-events:
-            none so clicks still go through), starting transparent for
-            the first ~64px (two lines at 32px each), then fading to the
-            card background. Hidden when the user types, attaches a
-            file, is signed in, or is in chat mode. */}
+        {/* Example overlay — visible only on the home for signed-out
+            visitors before they start typing. Sits above the textarea
+            (pointer-events: none so clicks still focus the textarea
+            below) and renders the actual tour example italic, mimicking
+            what an operator would type. The first two tour lines stay
+            fully visible; everything from the 4th visible line down
+            (Day 2 in the example) fades to the card background so the
+            block doesn't dominate the page. */}
         {messages.length === 0 && !input && !selectedFile && !isSignedIn && (
           <div
             aria-hidden="true"
-            className="absolute left-5 right-5 top-5 bottom-28 pointer-events-none rounded-md"
+            className="absolute left-5 right-5 pointer-events-none italic text-base text-muted-foreground leading-[1.5]"
             style={{
-              background:
-                'linear-gradient(to bottom, transparent 0px, transparent 64px, #FFFFFE 220px)',
+              // Top offset = textarea padding (20) + first prompt line + breathing room.
+              // The first prompt line "Describe your trip. For example:" sits in the
+              // textarea placeholder above this overlay; we start the example body
+              // immediately under it.
+              top: '52px',
+              // Mask the lower portion: lines 3+ fade out via a vertical gradient.
+              // Each visual line ~ 24px (text-base 16px × 1.5 line-height).
+              // Show line 1, 2, 3 fully (3 × 24 = 72px), start fading at line 4.
+              maskImage:
+                'linear-gradient(to bottom, black 0, black 72px, transparent 130px)',
+              WebkitMaskImage:
+                'linear-gradient(to bottom, black 0, black 72px, transparent 130px)',
             }}
-          />
+          >
+            {PLACEHOLDER_EXAMPLE_BODY.map((line, i) => (
+              <p key={i} className="m-0">{line}</p>
+            ))}
+          </div>
         )}
 
         {/* Bottom controls — gradient backdrop prevents textarea content from

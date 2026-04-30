@@ -283,9 +283,13 @@ export function EditableField(props: Props) {
     )
   }
 
-  // Editing mode
+  // Editing mode.
+  // `italic` is intentional — across the product, anything the operator is
+  // currently typing into is rendered italic. The visual cue makes it
+  // unmistakable that this text is a personal draft they own (vs. a placeholder,
+  // a system message, or already-saved committed text).
   const inputBase =
-    'bg-transparent border-none outline-none focus:ring-2 focus:ring-accent/40 rounded-sm w-full'
+    'bg-transparent border-none outline-none focus:ring-2 focus:ring-accent/40 rounded-sm w-full italic'
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
