@@ -203,8 +203,6 @@ export function Hero({ data }: ThemePropsV2) {
           </div>
         )}
       </div>
-
-      <div className="mag-hero__scroll-cue">↓ SCROLL</div>
     </section>
   )
 }

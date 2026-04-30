@@ -364,7 +364,7 @@
   font-style: italic;
   font-weight: 500;
   margin-top: 4px;
-  font-size: inherit;
+  font-size: 0.5em;
 }
 
 [data-theme="magazine"] .mag-hero__region {
@@ -381,20 +381,6 @@
   text-transform: uppercase;
   color: var(--mag-on-photo-fg);
   opacity: 0.85;
-}
-
-[data-theme="magazine"] .mag-hero__scroll-cue {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--mag-on-photo-fg);
-  opacity: 0.6;
-  z-index: 2;
 }
 
 /* ─── Overview ───────────────────────────────────────────────────── */

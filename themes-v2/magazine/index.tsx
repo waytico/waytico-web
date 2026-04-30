@@ -31,8 +31,8 @@ export default function MagazineTripPage(props: ThemePropsV2) {
       <Overview {...props} />
       <Itinerary {...props} />
       <Accommodations {...props} />
-      <Included {...props} />
       <Price {...props} />
+      <Included {...props} />
       <Terms {...props} />
       <Contacts {...props} />
     </div>
