@@ -30,9 +30,17 @@ type Options = {
    * uploads must never persist to the system showcase user).
    */
   isShowcase?: boolean
+  /**
+   * Anonymous trip creator (created the quote without signing up). They
+   * see the full owner UI — including drag-and-drop zones and "Add
+   * photo" buttons — but every actual upload attempt is short-circuited
+   * with the same "Sign in to edit" toast every other anon edit gets.
+   * Consistent UX: any edit attempt → same nudge → same path to sign up.
+   */
+  isAnon?: boolean
 }
 
-export function usePhotoUpload({ projectId, media, setMedia, isShowcase }: Options) {
+export function usePhotoUpload({ projectId, media, setMedia, isShowcase, isAnon }: Options) {
   const { getToken } = useAuth()
   const [uploadingByDay, setUploadingByDay] = useState<Record<string, number>>({})
 
@@ -68,6 +76,10 @@ export function usePhotoUpload({ projectId, media, setMedia, isShowcase }: Optio
   const handleUpload = useCallback(
     async (files: File[], dayId: string | null) => {
       if (!projectId) return
+      if (isAnon) {
+        toast.error('Sign in to edit')
+        return
+      }
       if (isShowcase) {
         for (const f of files) {
           setMedia((prev) => [...prev, fakePhotoRecord(f, dayId)])
@@ -77,7 +89,7 @@ export function usePhotoUpload({ projectId, media, setMedia, isShowcase }: Optio
       const key = dayId || 'tour'
       const token = await getToken()
       if (!token) {
-        toast.error('Please sign in again')
+        toast.error('Sign in to edit')
         return
       }
       bumpUploading(key, files.length)
@@ -94,11 +106,15 @@ export function usePhotoUpload({ projectId, media, setMedia, isShowcase }: Optio
         }),
       )
     },
-    [projectId, getToken, setMedia, bumpUploading, isShowcase, fakePhotoRecord],
+    [projectId, getToken, setMedia, bumpUploading, isShowcase, isAnon, fakePhotoRecord],
   )
 
   const handleDelete = useCallback(
     async (mediaId: string) => {
+      if (isAnon) {
+        toast.error('Sign in to edit')
+        return
+      }
       const snapshot = media
       setMedia((cur) => cur.filter((m) => m.id !== mediaId))
       if (isShowcase) return
@@ -111,7 +127,7 @@ export function usePhotoUpload({ projectId, media, setMedia, isShowcase }: Optio
         toast.error(e?.message || 'Could not delete photo')
       }
     },
-    [media, getToken, setMedia, isShowcase],
+    [media, getToken, setMedia, isShowcase, isAnon],
   )
 
   // Hero upload: always placement='hero', single photo. If a hero already exists,
@@ -119,6 +135,10 @@ export function usePhotoUpload({ projectId, media, setMedia, isShowcase }: Optio
   const handleHeroUpload = useCallback(
     async (files: File[]) => {
       if (!projectId || files.length === 0) return
+      if (isAnon) {
+        toast.error('Sign in to edit')
+        return
+      }
       const file = files[0]
       if (files.length > 1) {
         toast.message('Hero uses the first photo — drop more in the gallery below')
@@ -131,7 +151,7 @@ export function usePhotoUpload({ projectId, media, setMedia, isShowcase }: Optio
       }
       const token = await getToken()
       if (!token) {
-        toast.error('Please sign in again')
+        toast.error('Sign in to edit')
         return
       }
       const prevHero = media.find((m) => m.placement === 'hero')
@@ -156,7 +176,7 @@ export function usePhotoUpload({ projectId, media, setMedia, isShowcase }: Optio
         bumpUploading('hero', -1)
       }
     },
-    [projectId, media, getToken, setMedia, bumpUploading, isShowcase, fakePhotoRecord],
+    [projectId, media, getToken, setMedia, bumpUploading, isShowcase, isAnon, fakePhotoRecord],
   )
 
   return {

@@ -17,7 +17,6 @@ export function HeroOwnerOverlay({
   onPickFile,
   dragOver,
   emptyState,
-  isAnon = false,
 }: {
   hasBg: boolean
   uploadingHero: number
@@ -26,19 +25,11 @@ export function HeroOwnerOverlay({
   onPickFile: () => void
   dragOver: boolean
   emptyState: boolean
-  /**
-   * When true, the empty hero shows a passive sign-up nudge instead of the
-   * upload button. Anon visitors who just generated a quote can't actually
-   * upload photos until they register, but we still want them to see *where*
-   * the photo would live — same affordance as the per-day photo grids and
-   * accommodation cards.
-   */
-  isAnon?: boolean
 }) {
   return (
     <>
       <div className="pointer-events-none absolute inset-0 z-0">
-        {dragOver && !isAnon && (
+        {dragOver && (
           <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/40">
             <div className="rounded-full bg-white/95 px-5 py-2 text-sm font-medium text-foreground shadow-lg">
               Drop photo to set as hero
@@ -47,7 +38,7 @@ export function HeroOwnerOverlay({
         )}
       </div>
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2 pointer-events-auto">
-        {hasBg && heroPhotoId && !isAnon && (
+        {hasBg && heroPhotoId && (
           <button
             type="button"
             onClick={(e) => {
@@ -61,7 +52,7 @@ export function HeroOwnerOverlay({
           </button>
         )}
       </div>
-      {emptyState && !isAnon && (
+      {emptyState && (
         <div className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 pointer-events-auto">
           <button
             type="button"
@@ -74,15 +65,7 @@ export function HeroOwnerOverlay({
           </button>
         </div>
       )}
-      {emptyState && isAnon && (
-        <div className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 pointer-events-none">
-          <div className="inline-flex items-center gap-2 rounded-full border border-dashed border-border bg-background/70 px-5 py-2.5 text-sm font-medium text-muted-foreground backdrop-blur">
-            <ImagePlus className="h-4 w-4 opacity-70" />
-            Sign up to add a photo here
-          </div>
-        </div>
-      )}
-      {hasBg && uploadingHero > 0 && !isAnon && (
+      {hasBg && uploadingHero > 0 && (
         <div className="absolute bottom-4 left-4 z-10 pointer-events-auto">
           <span className="rounded-full bg-black/60 px-3 py-1 text-xs text-white">Uploading…</span>
         </div>

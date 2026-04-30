@@ -302,6 +302,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
     media,
     setMedia,
     isShowcase,
+    isAnon: isAnonCreator,
   })
 
   // ─── Visibility toggles (owner only) ──────────────────────────
@@ -1097,7 +1098,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           inside Hero.tsx / Itinerary.tsx as `if (heroStyle === ...)` branches. */}
       <ThemeRoot theme={p.design_theme}>
         <HeroDropZone
-          enabled={showOwnerUI && !isAnonCreator}
+          enabled={showOwnerUI}
           onDrop={(files) => handleHeroUpload(files)}
           onDragOver={() => setHeroDragOver(true)}
           onDragLeave={() => setHeroDragOver(false)}
@@ -1163,7 +1164,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   onPickFile={() => heroInputRef.current?.click()}
                   dragOver={heroDragOver}
                   emptyState={!hasHeroBg}
-                  isAnon={isAnonCreator}
                 />
               ) : undefined
             }
