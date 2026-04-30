@@ -15,6 +15,12 @@ type Props = {
   onCreate?: Mutations['saveAccommodationCreate']
   onUpdate?: Mutations['saveAccommodationPatch']
   onDelete?: Mutations['saveAccommodationDelete']
+  /**
+   * If set, the photo upload (click + drag-drop) is short-circuited
+   * with this callback instead of running an actual S3 upload. Used
+   * for the anon-creator state — see PhotosBlock for the pattern.
+   */
+  interceptUpload?: () => void
 }
 
 /**
@@ -30,6 +36,7 @@ export function TripAccommodations({
   onCreate,
   onUpdate,
   onDelete,
+  interceptUpload,
 }: Props) {
   const hasAny = accommodations.length > 0
   if (!editable && !hasAny) return null
@@ -50,6 +57,7 @@ export function TripAccommodations({
                 editable={editable}
                 onUpdate={onUpdate}
                 onDelete={onDelete}
+                interceptUpload={interceptUpload}
               />
             ))}
           </div>
@@ -68,11 +76,13 @@ function AccommodationCard({
   editable,
   onUpdate,
   onDelete,
+  interceptUpload,
 }: {
   item: Accommodation
   editable: boolean
   onUpdate?: Mutations['saveAccommodationPatch']
   onDelete?: Mutations['saveAccommodationDelete']
+  interceptUpload?: () => void
 }) {
   const [editingName, setEditingName] = useState(false)
   const [editingDesc, setEditingDesc] = useState(false)
@@ -84,6 +94,7 @@ function AccommodationCard({
       <AccommodationPhoto
         item={item}
         editable={editable}
+        interceptUpload={interceptUpload}
         onChange={async (cdnUrl) => {
           if (onUpdate) await onUpdate(item.id, { imageUrl: cdnUrl })
         }}
@@ -197,10 +208,13 @@ function AccommodationPhoto({
   item,
   editable,
   onChange,
+  interceptUpload,
 }: {
   item: Accommodation
   editable: boolean
   onChange: (cdnUrl: string) => Promise<void>
+  /** Anon-mode short-circuit. See PhotosBlock for the shape. */
+  interceptUpload?: () => void
 }) {
   const { getToken } = useAuth()
   const [busy, setBusy] = useState(false)
@@ -233,7 +247,7 @@ function AccommodationPhoto({
     try {
       const token = await getToken()
       if (!token) {
-        toast.error('Sign in to upload')
+        toast.error('Sign in to edit')
         return
       }
       const { cdnUrl } = await uploadAccommodationPhoto(item.id, file, token)
@@ -246,12 +260,20 @@ function AccommodationPhoto({
   }
 
   const onClick = () => {
+    if (interceptUpload) {
+      interceptUpload()
+      return
+    }
     if (!busy) inputRef.current?.click()
   }
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setDragOver(false)
+    if (interceptUpload) {
+      interceptUpload()
+      return
+    }
     const file = e.dataTransfer.files?.[0]
     if (file) handleFile(file)
   }

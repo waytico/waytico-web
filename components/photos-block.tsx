@@ -17,6 +17,17 @@ type Props = {
   onDelete: (mediaId: string) => void
   onOpen: (media: MediaRecord) => void
   emptyHint?: string
+  /**
+   * If provided, called instead of the normal upload path on every click
+   * of the Add button or drop into the zone — *before* the file picker
+   * opens or any drop is processed. Used for the anon-creator state:
+   * we want the operator to see the "Sign in to edit" feedback the
+   * moment they try, not after they pick a file.
+   *
+   * Returning anything is ignored — the intercept fully takes over the
+   * action.
+   */
+  interceptUpload?: () => void
 }
 
 export default function PhotosBlock({
@@ -28,9 +39,18 @@ export default function PhotosBlock({
   onDelete,
   onOpen,
   emptyHint,
+  interceptUpload,
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+
+  const triggerPicker = () => {
+    if (interceptUpload) {
+      interceptUpload()
+      return
+    }
+    inputRef.current?.click()
+  }
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -45,14 +65,18 @@ export default function PhotosBlock({
 
   // Нативный file-drop с диска. preventDefault в dragover обязателен
   // во всех случаях — иначе браузер отменит drop. Файлы проверяем в onDrop.
+  // Если задан interceptUpload — drag-and-drop тоже короткозамыкается:
+  // overlay не подсвечивается, drop отдаёт upstream-нудж вместо upload-а.
   const dropHandlers = owner
     ? {
         onDragEnter: (e: React.DragEvent) => {
           e.preventDefault()
+          if (interceptUpload) return
           if (e.dataTransfer?.types?.includes('Files')) setIsDragOver(true)
         },
         onDragOver: (e: React.DragEvent) => {
           e.preventDefault()
+          if (interceptUpload) return
           if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
         },
         onDragLeave: (e: React.DragEvent) => {
@@ -61,6 +85,10 @@ export default function PhotosBlock({
         onDrop: (e: React.DragEvent) => {
           e.preventDefault()
           setIsDragOver(false)
+          if (interceptUpload) {
+            interceptUpload()
+            return
+          }
           const files = e.dataTransfer?.files
           if (files && files.length > 0) handleFiles(files)
         },
@@ -114,7 +142,7 @@ export default function PhotosBlock({
           {owner && (
             <button
               type="button"
-              onClick={() => inputRef.current?.click()}
+              onClick={triggerPicker}
               className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-border text-muted-foreground transition-colors hover:border-accent hover:text-accent"
               aria-label="Upload photos"
             >
@@ -127,7 +155,7 @@ export default function PhotosBlock({
         owner && (
           <button
             type="button"
-            onClick={() => inputRef.current?.click()}
+            onClick={triggerPicker}
             className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border py-8 text-muted-foreground transition-colors hover:border-accent hover:text-accent"
           >
             <ImagePlus className="h-6 w-6" />

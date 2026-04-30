@@ -899,6 +899,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
           onUpload={handleUpload}
           onDelete={handleDelete}
           onOpen={setLightbox}
+          interceptUpload={
+            isAnonCreator ? () => toast.error('Sign in to edit') : undefined
+          }
         />
       </div>
     )
@@ -1102,6 +1105,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           onDrop={(files) => handleHeroUpload(files)}
           onDragOver={() => setHeroDragOver(true)}
           onDragLeave={() => setHeroDragOver(false)}
+          interceptDrop={isAnonCreator ? () => toast.error('Sign in to edit') : undefined}
         >
           <TripHero
             theme={resolvedTheme}
@@ -1161,7 +1165,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   uploadingHero={uploadingByDay['hero'] || 0}
                   heroPhotoId={heroPhoto?.id || null}
                   onDelete={() => heroPhoto && handleDelete(heroPhoto.id)}
-                  onPickFile={() => heroInputRef.current?.click()}
+                  onPickFile={() =>
+                    isAnonCreator
+                      ? toast.error('Sign in to edit')
+                      : heroInputRef.current?.click()
+                  }
                   dragOver={heroDragOver}
                   emptyState={!hasHeroBg}
                 />
@@ -1237,6 +1245,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
           onCreate={ed ? saveAccommodationCreate : undefined}
           onUpdate={ed ? saveAccommodationPatch : undefined}
           onDelete={ed ? saveAccommodationDelete : undefined}
+          interceptUpload={
+            isAnonCreator ? () => toast.error('Sign in to edit') : undefined
+          }
         />
 
         <TripPrice

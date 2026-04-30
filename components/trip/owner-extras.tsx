@@ -85,12 +85,21 @@ export function HeroDropZone({
   onDrop,
   onDragOver,
   onDragLeave,
+  interceptDrop,
   children,
 }: {
   enabled: boolean
   onDrop: (files: File[]) => void
   onDragOver: () => void
   onDragLeave: () => void
+  /**
+   * If provided, the zone still preventsDefault on drag-over (so the
+   * browser doesn't try to navigate to a dropped file) but no drag
+   * highlight is shown and any drop calls interceptDrop instead of
+   * onDrop. Used for the anon-creator state — we want drag/drop to
+   * surface "Sign in to edit" rather than trying to upload.
+   */
+  interceptDrop?: () => void
   children: ReactNode
 }) {
   const innerRef = useRef<HTMLDivElement>(null)
@@ -101,10 +110,12 @@ export function HeroDropZone({
       className="relative"
       onDragEnter={(e) => {
         e.preventDefault()
+        if (interceptDrop) return
         if (e.dataTransfer?.types?.includes('Files')) onDragOver()
       }}
       onDragOver={(e) => {
         e.preventDefault()
+        if (interceptDrop) return
         if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
       }}
       onDragLeave={(e) => {
@@ -113,6 +124,10 @@ export function HeroDropZone({
       onDrop={(e) => {
         e.preventDefault()
         onDragLeave()
+        if (interceptDrop) {
+          interceptDrop()
+          return
+        }
         const files = e.dataTransfer?.files
         if (files && files.length > 0) {
           const list = Array.from(files).filter(
