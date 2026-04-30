@@ -1,7 +1,7 @@
 /* ============================================================
    Waytico — three theme token layers.
    ONE component tree, three sets of CSS variables.
-   :root[data-theme="editorial|expedition|compact"]
+   :root[data-theme="editorial|expedition|compact|magazine"]
    Tokens live alongside global shadcn vars (background/foreground/etc.)
    ============================================================ */
 
@@ -164,6 +164,49 @@
 
   --hero-style:      "card";
   --itinerary-style: "grid";
+}
+
+/* =============== THEME 4 — MAGAZINE (editorial premium, Black Tomato / Mr & Mrs Smith) =============== */
+:root[data-theme="magazine"], [data-theme="magazine"] {
+  --bg:         #F5F0E6;
+  --bg-alt:     #EBE3D4;
+  --paper:      #FFFCF6;
+  --ink:        #1A1817;
+  --ink-soft:   rgba(26, 24, 23, 0.72);
+  --ink-mute:   rgba(26, 24, 23, 0.52);
+  --rule:       #D9CFB8;
+  --accent:     #B85A3E;
+  --accent-ink: #FFFCF6;
+  --chip-bg:    rgba(184, 90, 62, 0.10);
+  --chip-ink:   #B85A3E;
+
+  --font-display: var(--font-serif), "Cormorant Garamond", "EB Garamond", Georgia, serif;
+  --font-body:    var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-mono:    var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+
+  --display-weight: 500;
+  --display-tracking: -0.02em;
+  --eyebrow-tracking: 0.16em;
+  --eyebrow-case: uppercase;
+
+  --r-card: 0;        /* square corners везде, никаких rounded на photos */
+  --r-chip: 999px;
+  --gap-section: 96px;
+  --gap-block: 32px;
+
+  --shadow-card: 0 1px 0 rgba(26, 24, 23, 0.06);
+
+  /* Floating command bar — tinted с акцентом темы */
+  --bar-bg:         color-mix(in oklab, var(--accent) 10%, var(--bg));
+  --bar-ink:        var(--ink);
+  --bar-ink-mute:   color-mix(in oklab, var(--ink) 50%, transparent);
+  --bar-border:     color-mix(in oklab, var(--accent) 30%, transparent);
+  --bar-accent:     var(--accent);
+  --bar-accent-ink: var(--accent-ink);
+  --bar-shadow:     0 6px 24px rgba(26, 24, 23, 0.10);
+
+  --hero-style:      "split";
+  --itinerary-style: "timeline";
 }
 
 /* ===================== shared component CSS (theme-agnostic) ===================== */
@@ -1168,4 +1211,5 @@
 .tp-itin--grid .day:hover .tp-itin-handle { opacity: 1; }
 
 .day.is-dragging { box-shadow: 0 14px 40px rgba(20, 14, 10, 0.18); }
+
 

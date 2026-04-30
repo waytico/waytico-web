@@ -1,7 +1,7 @@
 /**
  * Trip-page theme registry.
  *
- * Three visual themes apply to the public trip page only (`/t/[slug]`).
+ * Four visual themes apply to the public trip page only (`/t/[slug]`).
  * They are tokens-driven via `:root[data-theme="..."]` blocks in
  * `styles/themes.css`, plus 1–2 structural branches inside Hero.tsx /
  * Itinerary.tsx (kept as `if (theme === '...')` inside a single component
@@ -11,7 +11,7 @@
  * OUTSIDE `<ThemeRoot>` and continues to use shadcn semantic tokens.
  */
 
-export const THEMES = ['editorial', 'expedition', 'compact'] as const
+export const THEMES = ['editorial', 'expedition', 'compact', 'magazine'] as const
 export type ThemeId = (typeof THEMES)[number]
 export const DEFAULT_THEME: ThemeId = 'editorial'
 
@@ -36,6 +36,7 @@ export const HERO_STYLE: Record<ThemeId, 'split' | 'overlay' | 'card'> = {
   editorial: 'split',
   expedition: 'overlay',
   compact: 'card',
+  magazine: 'split', // baseline; уточним по handoff bundle если Claude Design предложит другое
 }
 
 /** Itinerary structural variant per theme (see TZ-6 §6.4). */
@@ -43,6 +44,7 @@ export const ITINERARY_STYLE: Record<ThemeId, 'timeline' | 'photo-cards' | 'grid
   editorial: 'timeline',
   expedition: 'photo-cards',
   compact: 'grid',
+  magazine: 'timeline', // baseline; уточним
 }
 
 /**
@@ -54,9 +56,11 @@ export const ITINERARY_STYLE: Record<ThemeId, 'timeline' | 'photo-cards' | 'grid
  *   editorial  → "Classic"
  *   expedition → "Cinematic"
  *   compact    → "Clean"
+ *   magazine   → "Magazine"
  */
 export const THEME_LABELS: Record<ThemeId, string> = {
   editorial: 'Classic',
   expedition: 'Cinematic',
   compact: 'Clean',
+  magazine: 'Magazine',
 }
