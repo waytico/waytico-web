@@ -1,15 +1,13 @@
 /*
  * Trip page v2 — global stylesheet for the parallel /v2/t/[slug] route.
  *
- * Stage 1: empty placeholder. The skeleton theme renders with inline
- * styles only, so no CSS tokens or Tailwind directives are needed here
- * yet. Tailwind is already loaded via app/globals.css through the root
- * layout and remains available across both /t and /v2/t routes.
+ * Each v2 theme contributes a tokens.css file scoped to its
+ * :root[data-theme="<name>"] selector. We aggregate them here. Tokens
+ * never leak into the legacy /t/[slug] route because that route is
+ * served by app/layout.tsx (which doesn't import this file).
  *
- * Stage 2+ adds @import directives for v2 theme tokens, e.g.:
- *   @import '../themes-v2/magazine/tokens.css';
- *   @import '../themes-v2/sanctuary/tokens.css';
- *
- * Each theme scopes its tokens under :root[data-theme="<name>"] so they
- * cannot leak into the legacy /t/[slug] route.
+ * Tailwind directives are NOT duplicated — they're loaded once at the
+ * root via app/globals.css and remain available across both /t and /v2/t.
  */
+
+@import '../themes-v2/magazine/tokens.css';
