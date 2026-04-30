@@ -73,7 +73,14 @@ export default function TripPageClient({ slug, initialData }: Props) {
    *  handshake, never again on this mount. F5 won't replay it. */
   const [showPostClaimUpsell, setShowPostClaimUpsell] = useState(false)
 
-  // Mark anon-creator for non-dismissible banner + 8s upsell modal.
+  // Mark anon-creator for non-dismissible banner + scroll-triggered upsell modal.
+  // Also flip isOwner=true so the page renders with all owner placeholders
+  // (empty hero photo zone, empty per-day photo grids, "Add task" buttons,
+  // accommodation cards add tile, etc.) — without that, an anon who just
+  // created a quote sees the bare public view and has no idea where the
+  // missing pieces live. Edits made before sign-up still hit the public
+  // PATCH endpoints since the project has no user_id yet, so they save fine
+  // and get claimed once the visitor signs up.
   useEffect(() => {
     try {
       if (!data?.project) return
@@ -83,6 +90,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
       if (anonOwns === '1') {
         setIsAnonCreator(true)
         setProjectIdForClaim(pid)
+        setIsOwner(true)
       }
     } catch {}
   }, [data])
@@ -907,10 +915,12 @@ export default function TripPageClient({ slug, initialData }: Props) {
           (per TZ-6 §11 — owner UI must work even on a dark Expedition theme).
           In showcase mode the orange banner replaces the global Header — its
           two CTAs (Start your own quote / Sign up) are the only navigation
-          a demo visitor needs. */}
-      {showOwnerUI && !isShowcase && <Header />}
+          a demo visitor needs. Anon-creator state has its own sticky banner
+          with sign-up + share CTAs, so the global Header is hidden there too
+          to avoid two sticky bars stacking. */}
+      {showOwnerUI && !isShowcase && !isAnonCreator && <Header />}
       {isShowcase && <ShowcaseBanner />}
-      {showOwnerUI && p.id && (
+      {showOwnerUI && p.id && !isAnonCreator && (
         <TripActionBar
           projectId={p.id}
           status={p.status}
@@ -938,7 +948,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           saveProjectPatch directly. Hidden in showcase mode — there's
           no real client behind a demo trip and the block would be a
           distraction. */}
-      {showOwnerUI && p.id && !isShowcase && (
+      {showOwnerUI && p.id && !isShowcase && !isAnonCreator && (
         <ClientInfo
           projectId={p.id}
           client={(data as any).client ?? null}
@@ -950,7 +960,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         />
       )}
 
-      {showOwnerUI && p.id && !isShowcase && (
+      {showOwnerUI && p.id && !isShowcase && !isAnonCreator && (
         <ArchiveDialog
           open={archiveOpen}
           projectId={p.id}
@@ -1059,8 +1069,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
         </>
       )}
 
-      {/* Anon upsell modal — appears 8s after page load for unauthenticated agents.
-          Two paths: share immediately (opens banner ShareMenu), or sign up free. */}
+      {/* Anon upsell modal — appears after the visitor has scrolled past
+          ~50% of the page, soft sell once they've actually engaged with
+          the quote. One shot per page lifetime. Two paths inside: share
+          immediately (opens banner ShareMenu), or sign up free. */}
       {isAnonCreator && data?.project?.status === 'quoted' && projectIdForClaim && (
         <AnonUpsellModal
           tripTitle={data.project.title || 'Your trip'}
@@ -1085,7 +1097,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           inside Hero.tsx / Itinerary.tsx as `if (heroStyle === ...)` branches. */}
       <ThemeRoot theme={p.design_theme}>
         <HeroDropZone
-          enabled={showOwnerUI}
+          enabled={showOwnerUI && !isAnonCreator}
           onDrop={(files) => handleHeroUpload(files)}
           onDragOver={() => setHeroDragOver(true)}
           onDragLeave={() => setHeroDragOver(false)}
@@ -1151,6 +1163,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   onPickFile={() => heroInputRef.current?.click()}
                   dragOver={heroDragOver}
                   emptyState={!hasHeroBg}
+                  isAnon={isAnonCreator}
                 />
               ) : undefined
             }
@@ -1304,7 +1317,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         }}
       />
 
-      {showOwnerUI && !isShowcase && (
+      {showOwnerUI && !isShowcase && !isAnonCreator && (
         <>
           <TripCommandBar projectId={p.id} getToken={getToken} onTripUpdated={handleTripUpdated} status={p.status} theme={resolvedTheme} />
           {/* Owner-only breathing room between the last section and the

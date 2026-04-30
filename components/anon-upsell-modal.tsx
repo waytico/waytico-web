@@ -7,30 +7,67 @@ type Props = {
   tripTitle: string
   tripUrl: string
   signUpUrl: string
-  /** Delay in ms before the modal appears. Default: 3000 */
-  delay?: number
+  /**
+   * Fraction of the page (0..1) the visitor must scroll past before
+   * the modal triggers. Default: 0.5 — once they've seen half the page
+   * we know they're engaged enough that a soft pitch lands instead of
+   * interrupts. The older time-based trigger felt arbitrary; scroll-
+   * based maps to actual reading.
+   */
+  scrollFraction?: number
   onShareClick: () => void
 }
 
 /**
- * AnonUpsellModal — appears after trip generation for unauthenticated agents.
- * Shows two paths: share immediately, or register free for full features.
- * When dismissed, leaves a floating "Share as is" button in the bottom-right.
+ * AnonUpsellModal — appears after trip generation for unauthenticated
+ * agents, the first time they scroll past `scrollFraction` of the page.
+ * Once shown (or once the user dismisses it), it does not show again
+ * for the rest of this page session — even on F5 they get a fresh shot
+ * (we intentionally don't persist).
+ *
+ * Two paths inside: share immediately, or register free for full features.
  */
 export default function AnonUpsellModal({
   tripTitle,
   tripUrl,
   signUpUrl,
-  delay = 8000,
+  scrollFraction = 0.5,
   onShareClick,
 }: Props) {
   const [visible, setVisible] = useState(false)
+  // Latch — once we've shown the modal once we never show it again in
+  // this page lifetime, regardless of whether the user dismissed it,
+  // shared, or scrolled back up and down.
+  const shownRef = useRef(false)
   const overlayRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), delay)
-    return () => clearTimeout(t)
-  }, [delay])
+    const onScroll = () => {
+      if (shownRef.current) return
+      const doc = document.documentElement
+      const max = (doc.scrollHeight - doc.clientHeight) || 1
+      const pct = window.scrollY / max
+      if (pct >= scrollFraction) {
+        shownRef.current = true
+        setVisible(true)
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    // Pages where content fits in one viewport (max <= 0) won't fire
+    // scroll — fall back to a long timer so the modal is still
+    // discoverable. 30s is intentionally past the 8s of the prior
+    // build: short pages aren't the common path.
+    const fallback = setTimeout(() => {
+      if (!shownRef.current) {
+        shownRef.current = true
+        setVisible(true)
+      }
+    }, 30000)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      clearTimeout(fallback)
+    }
+  }, [scrollFraction])
 
   const dismissWithFloat = () => setVisible(false)
 
