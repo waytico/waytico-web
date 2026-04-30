@@ -4,7 +4,7 @@
  * Placeholder for stage 1 of the v2 fork migration. Renders a minimal data
  * dump on a neutral background so the host (`TripHostV2`), chrome copies,
  * and owner-mode detection can be verified end-to-end before any real
- * theme (Magazine, Sanctuary, Frontier...) lands.
+ * theme (Magazine, Serene, Frontier...) lands.
  *
  * Real themes live next to this folder under `themes-v2/<name>/` and are
  * registered in `lib/theme-registry-v2.tsx`.
