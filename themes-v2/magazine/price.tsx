@@ -1,43 +1,44 @@
 /**
  * Magazine — Price (Investment) section.
  *
- * Source: magazine-trip.jsx lines 339–381. Huge Cormorant headline price,
- * "PER PERSON · DOUBLE OCCUPANCY" sub-eyebrow, indicative-pricing
- * disclaimer, and an inline accent "Get in touch" link.
+ * Owner-mode (stage 3):
+ *   - Headline price edits as a number (which field — total or per-
+ *     person — is decided by pricing_mode).
+ *   - Currency picker: invisible <select> overlaid on the headline glyph,
+ *     same trick the legacy hero uses in components/trip/hero.tsx.
  *
- * Adaptations:
- *   - Headline price assembled from pricing_mode:
- *       per_group    → price_total + " for the group"
- *       per_traveler → price_per_person + " per traveler"
- *       other        → price_total + custom pricing_label
- *     If price is null we fall back to the first non-null of total /
- *     per-person.
- *   - Sub-eyebrow line built from the same mode.
- *   - "Get in touch" inline link → mailto: of the operator's resolved
- *     email, or anchor to the Contacts section if no email is resolvable.
- *   - Sign-off line at the bottom uses the operator brand name.
- *
- * Empty state: if no price at all, section is hidden.
- *
- * Sticky inquire bar from §I is intentionally NOT rendered here — it
- * conflicts with TripCommandBar/ContactAgentMenu and is a separate
- * product decision.
+ * Pricing-mode picker, "other" custom suffix and group-size editing
+ * land with the rest of the price block in stage 4 — keeping stage 3
+ * focused on the chcecklist items (price editable, currency switches).
  */
+'use client'
+
 import type { ThemePropsV2 } from '@/types/theme-v2'
-import { fmtPrice } from '@/lib/trip-format'
+import { fmtPrice, currencyGlyph } from '@/lib/trip-format'
 import { resolveContacts } from '@/lib/contact-resolution'
+import { useThemeCtxV2 } from '@/lib/theme-context-v2'
+import { EditableField } from '@/components/shared-v2/editable-field'
 import { ACCENT, body, CREAM, display, eyebrow, Hairline, MUTED } from './styles'
 
+const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF']
+
 export function Price({ data }: ThemePropsV2) {
+  const ctx = useThemeCtxV2()
+  const editable = !!ctx?.editable
   const p = data.project
 
   const mode = p.pricing_mode ?? 'per_group'
-  const headlineAmount = mode === 'per_traveler'
+  const isPerTraveler = mode === 'per_traveler'
+  const headlineAmount = isPerTraveler
     ? (p.price_per_person ?? p.price_total)
     : (p.price_total ?? p.price_per_person)
+  const headlineField = isPerTraveler ? 'pricePerPerson' : 'priceTotal'
 
   const formatted = fmtPrice(headlineAmount, p.currency)
-  if (!formatted) return null
+
+  // Hide entirely in public if no price; in owner mode keep the section
+  // so the operator has somewhere to type the first number.
+  if (!editable && !formatted) return null
 
   let suffix: string
   switch (mode) {
@@ -53,11 +54,6 @@ export function Price({ data }: ThemePropsV2) {
       break
   }
 
-  // Resolve operator email for the inline link. If absent → anchor to
-  // the in-page Contacts section instead of opening a broken mailto.
-  // resolveContacts is typed against the legacy trip-types module; the
-  // shape is identical here so we cast through unknown to avoid
-  // re-exporting the lib's types.
   const channels = resolveContacts(
     data.owner as never,
     (p.operator_contact ?? null) as never,
@@ -66,6 +62,7 @@ export function Price({ data }: ThemePropsV2) {
   const inquireHref = email ? `mailto:${email}` : '#contacts'
 
   const brandSignoff = data.owner?.brand_name?.trim()
+  const glyph = currencyGlyph(p.currency)
 
   return (
     <section style={{ background: CREAM, padding: '24px 24px 80px' }}>
@@ -74,17 +71,61 @@ export function Price({ data }: ThemePropsV2) {
       <div style={{ ...eyebrow, fontSize: 10, color: MUTED, marginBottom: 8 }}>
         FROM
       </div>
-      <div style={{ ...display, fontSize: 56, lineHeight: 1, margin: 0, marginBottom: 4 }}>
-        {formatted}
+
+      {/* Headline price — owner edits the amount, currency picker on glyph */}
+      <div style={{ ...display, fontSize: 56, lineHeight: 1, margin: 0, marginBottom: 4, position: 'relative' }}>
+        {editable ? (
+          <span style={{ display: 'inline-flex', alignItems: 'baseline' }}>
+            {/* Currency glyph + invisible <select> overlay */}
+            <span style={{ position: 'relative', display: 'inline-flex' }}>
+              <span aria-hidden>{glyph}</span>
+              <select
+                value={p.currency || 'USD'}
+                onChange={(e) =>
+                  void ctx!.mutations.saveProjectPatch({ currency: e.target.value })
+                }
+                aria-label="Currency"
+                style={{
+                  position: 'absolute', inset: 0,
+                  opacity: 0,
+                  cursor: 'pointer',
+                  appearance: 'none',
+                  border: 'none', background: 'transparent',
+                }}
+              >
+                {SUPPORTED_CURRENCIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </span>
+            <EditableField
+              as="number"
+              value={headlineAmount}
+              editable
+              placeholder="0"
+              onSave={(v) =>
+                ctx!.mutations.saveProjectPatch({ [headlineField]: v })
+              }
+              renderDisplay={(v) => (
+                <span style={{ ...display, fontSize: 'inherit' }}>{v}</span>
+              )}
+            />
+          </span>
+        ) : (
+          formatted
+        )}
       </div>
+
       <div style={{ ...eyebrow, fontSize: 10, color: MUTED, marginBottom: 24 }}>
         {suffix}
       </div>
+
       <p style={{ ...body, fontSize: 12.5, color: MUTED, lineHeight: 1.6, margin: 0, marginBottom: 18, maxWidth: 320 }}>
         Pricing is indicative and subject to availability at the time of booking.
         Single supplements, peak-season surcharges and seasonal variations may apply.
         A final quote is provided on confirmation of dates and party size.
       </p>
+
       <div style={{ ...body, fontSize: 14 }}>
         Prefer to discuss in person?{' '}
         <a

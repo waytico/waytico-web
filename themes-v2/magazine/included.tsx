@@ -1,24 +1,15 @@
 /**
  * Magazine — Included / Not Included section.
  *
- * Source: magazine-trip.jsx lines 285–337. Two side-by-side columns,
- * each with eyebrow heading, hairline above, and item rows separated by
- * hairlines. Items render as 13px Inter on 12px vertical padding.
- *
- * Adaptations:
- *   - Items split out of the two text blobs (data.project.included,
- *     not_included) on newlines.
- *   - Per MAGAZINE-SPEC §J.3 we drop the source's italic-em "What is and
- *     *isn't included.*" headline; the section label is just the
- *     standard UI.sectionLabels.included.
- *
- * Empty state: if both lists are empty, section is hidden. If one of
- * them is empty, only the populated column renders (the row collapses
- * to a single column).
+ * Owner-mode (stage 3): each column edits as a single multiline blob
+ * (one item per line), saved via saveProjectPatch. The renderer splits
+ * lines on the fly so display matches the source layout exactly.
  */
-import type { ThemePropsV2 } from '@/types/theme-v2'
 import type { CSSProperties, ReactNode } from 'react'
+import type { ThemePropsV2 } from '@/types/theme-v2'
 import { UI } from '@/lib/ui-strings'
+import { useThemeCtxV2 } from '@/lib/theme-context-v2'
+import { EditableField } from '@/components/shared-v2/editable-field'
 import { body, CREAM, eyebrow, Hairline } from './styles'
 
 function splitItems(text: string | null | undefined): string[] {
@@ -29,37 +20,95 @@ function splitItems(text: string | null | undefined): string[] {
     .filter(Boolean)
 }
 
-function Column({ heading, items, style }: { heading: string; items: string[]; style?: CSSProperties }) {
+function ItemList({ items }: { items: string[] }) {
+  return (
+    <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+      {items.map((t, i) => (
+        <li key={i}>
+          <div style={{ ...body, fontSize: 13, padding: '12px 0', lineHeight: 1.45 }}>{t}</div>
+          <Hairline />
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function Column({
+  heading,
+  items,
+  editable,
+  onSave,
+  rawValue,
+  placeholder,
+  style,
+}: {
+  heading: string
+  items: string[]
+  editable: boolean
+  onSave: (v: string) => Promise<boolean>
+  rawValue: string | null
+  placeholder: string
+  style?: CSSProperties
+}) {
   return (
     <div style={{ flex: 1, minWidth: 0, ...style }}>
       <div style={{ ...eyebrow, fontSize: 10, marginBottom: 14 }}>{heading}</div>
       <Hairline />
-      <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-        {items.map((t, i) => (
-          <li key={i}>
-            <div style={{ ...body, fontSize: 13, padding: '12px 0', lineHeight: 1.45 }}>
-              {t}
-            </div>
-            <Hairline />
-          </li>
-        ))}
-      </ul>
+      {editable ? (
+        <EditableField
+          as="multiline"
+          value={rawValue}
+          editable
+          rows={6}
+          placeholder={placeholder}
+          onSave={onSave}
+          renderDisplay={(v) => <ItemList items={splitItems(v)} />}
+        />
+      ) : (
+        <ItemList items={items} />
+      )}
     </div>
   )
 }
 
 export function Included({ data }: ThemePropsV2) {
+  const ctx = useThemeCtxV2()
+  const editable = !!ctx?.editable
   const inc = splitItems(data.project.included)
   const not = splitItems(data.project.not_included)
-  if (inc.length === 0 && not.length === 0) return null
+
+  if (!editable && inc.length === 0 && not.length === 0) return null
 
   const cols: ReactNode[] = []
-  if (inc.length > 0) {
-    cols.push(<Column key="inc" heading={UI.included.toUpperCase()} items={inc} />)
+
+  if (editable || inc.length > 0) {
+    cols.push(
+      <Column
+        key="inc"
+        heading={UI.included.toUpperCase()}
+        items={inc}
+        editable={editable}
+        rawValue={data.project.included}
+        placeholder="One item per line"
+        onSave={(v) => ctx!.mutations.saveProjectPatch({ included: v })}
+      />
+    )
   }
-  if (not.length > 0) {
-    cols.push(<Column key="not" heading={UI.notIncluded.toUpperCase()} items={not} />)
+  if (editable || not.length > 0) {
+    cols.push(
+      <Column
+        key="not"
+        heading={UI.notIncluded.toUpperCase()}
+        items={not}
+        editable={editable}
+        rawValue={data.project.not_included}
+        placeholder="One item per line"
+        onSave={(v) => ctx!.mutations.saveProjectPatch({ not_included: v })}
+      />
+    )
   }
+
+  if (cols.length === 0) return null
 
   return (
     <section style={{ background: CREAM, padding: '48px 24px 56px' }}>
