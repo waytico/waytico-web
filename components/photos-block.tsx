@@ -21,7 +21,7 @@ type Props = {
    * If provided, called instead of the normal upload path on every click
    * of the Add button or drop into the zone — *before* the file picker
    * opens or any drop is processed. Used for the anon-creator state:
-   * we want the operator to see the "Sign in to edit" feedback the
+   * we want the operator to see the "Sign up to edit" feedback the
    * moment they try, not after they pick a file.
    *
    * Returning anything is ignored — the intercept fully takes over the

@@ -92,7 +92,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
       try {
         const token = await getToken()
         if (!token) {
-          toast.error('Sign in to edit')
+          toast.error('Sign up to edit')
           return false
         }
         const res = await apiFetch(`/api/projects/${projectId}`, {
@@ -138,7 +138,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
       try {
         const token = await getToken()
         if (!token) {
-          toast.error('Sign in to edit')
+          toast.error('Sign up to edit')
           return false
         }
         const res = await apiFetch(`/api/tasks/${taskId}`, {
@@ -189,7 +189,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
       try {
         const token = await getToken()
         if (!token) {
-          toast.error('Sign in to edit')
+          toast.error('Sign up to edit')
           return false
         }
         const res = await apiFetch(`/api/projects/${projectId}/days/${dayId}`, {
@@ -246,7 +246,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
       try {
         const token = await getToken()
         if (!token) {
-          toast.error('Sign in to edit')
+          toast.error('Sign up to edit')
           return null
         }
         const res = await apiFetch(`/api/projects/${projectId}/accommodations`, {
@@ -303,7 +303,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
       try {
         const token = await getToken()
         if (!token) {
-          toast.error('Sign in to edit')
+          toast.error('Sign up to edit')
           return false
         }
         const res = await apiFetch(`/api/accommodations/${id}`, {
@@ -351,7 +351,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
       try {
         const token = await getToken()
         if (!token) {
-          toast.error('Sign in to edit')
+          toast.error('Sign up to edit')
           return false
         }
         const res = await apiFetch(`/api/accommodations/${id}`, {
@@ -392,7 +392,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
       try {
         const token = await getToken()
         if (!token) {
-          toast.error('Sign in to edit')
+          toast.error('Sign up to edit')
           return false
         }
         const res = await apiFetch(`/api/projects/${projectId}/what-to-bring`, {

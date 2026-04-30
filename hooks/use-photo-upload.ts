@@ -34,7 +34,7 @@ type Options = {
    * Anonymous trip creator (created the quote without signing up). They
    * see the full owner UI — including drag-and-drop zones and "Add
    * photo" buttons — but every actual upload attempt is short-circuited
-   * with the same "Sign in to edit" toast every other anon edit gets.
+   * with the same "Sign up to edit" toast every other anon edit gets.
    * Consistent UX: any edit attempt → same nudge → same path to sign up.
    */
   isAnon?: boolean
@@ -77,7 +77,7 @@ export function usePhotoUpload({ projectId, media, setMedia, isShowcase, isAnon 
     async (files: File[], dayId: string | null) => {
       if (!projectId) return
       if (isAnon) {
-        toast.error('Sign in to edit')
+        toast.error('Sign up to edit')
         return
       }
       if (isShowcase) {
@@ -89,7 +89,7 @@ export function usePhotoUpload({ projectId, media, setMedia, isShowcase, isAnon 
       const key = dayId || 'tour'
       const token = await getToken()
       if (!token) {
-        toast.error('Sign in to edit')
+        toast.error('Sign up to edit')
         return
       }
       bumpUploading(key, files.length)
@@ -112,7 +112,7 @@ export function usePhotoUpload({ projectId, media, setMedia, isShowcase, isAnon 
   const handleDelete = useCallback(
     async (mediaId: string) => {
       if (isAnon) {
-        toast.error('Sign in to edit')
+        toast.error('Sign up to edit')
         return
       }
       const snapshot = media
@@ -136,7 +136,7 @@ export function usePhotoUpload({ projectId, media, setMedia, isShowcase, isAnon 
     async (files: File[]) => {
       if (!projectId || files.length === 0) return
       if (isAnon) {
-        toast.error('Sign in to edit')
+        toast.error('Sign up to edit')
         return
       }
       const file = files[0]
@@ -151,7 +151,7 @@ export function usePhotoUpload({ projectId, media, setMedia, isShowcase, isAnon 
       }
       const token = await getToken()
       if (!token) {
-        toast.error('Sign in to edit')
+        toast.error('Sign up to edit')
         return
       }
       const prevHero = media.find((m) => m.placement === 'hero')

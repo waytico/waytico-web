@@ -247,7 +247,7 @@ function AccommodationPhoto({
     try {
       const token = await getToken()
       if (!token) {
-        toast.error('Sign in to edit')
+        toast.error('Sign up to edit')
         return
       }
       const { cdnUrl } = await uploadAccommodationPhoto(item.id, file, token)

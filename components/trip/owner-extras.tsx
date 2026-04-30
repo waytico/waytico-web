@@ -97,7 +97,7 @@ export function HeroDropZone({
    * browser doesn't try to navigate to a dropped file) but no drag
    * highlight is shown and any drop calls interceptDrop instead of
    * onDrop. Used for the anon-creator state — we want drag/drop to
-   * surface "Sign in to edit" rather than trying to upload.
+   * surface "Sign up to edit" rather than trying to upload.
    */
   interceptDrop?: () => void
   children: ReactNode
