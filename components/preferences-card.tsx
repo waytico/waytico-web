@@ -184,7 +184,7 @@ function DefaultThemeRow({
             aria-label="Default trip design"
             className="absolute right-0 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-30"
           >
-            {THEMES.map((id) => {
+            {THEMES.filter((id) => id !== 'magazine').map((id) => {
               const active = id === optimistic
               return (
                 <button
