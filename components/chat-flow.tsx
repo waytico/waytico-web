@@ -71,7 +71,19 @@ function truncateName(name: string, max = 32) {
   return base.slice(0, max - ext.length - 1) + '…' + ext
 }
 
-export default function ChatFlow() {
+type ChatFlowProps = {
+  /**
+   * Optional content rendered below the textarea **only while the
+   * conversation hasn't started yet** (no messages, idle phase). Used by
+   * the home page to attach the signed-out "Example" preview block —
+   * once the visitor clicks Create quote, the example is no longer
+   * useful and should disappear so the chat / generation experience
+   * isn't competing with marketing copy below it.
+   */
+  children?: React.ReactNode
+}
+
+export default function ChatFlow({ children }: ChatFlowProps) {
   const router = useRouter()
   const { getToken, isLoaded, isSignedIn } = useAuth()
   const [input, setInput] = useState('')
@@ -516,6 +528,12 @@ export default function ChatFlow() {
         </div>
       </div>
       )}
+
+      {/* Optional below-textarea content (e.g. signed-out example block).
+          Hidden the moment the visitor sends their first message — once
+          they're on the chat / generating path, the example is just
+          noise. */}
+      {messages.length === 0 && phase === 'idle' && children}
     </div>
   )
 }
