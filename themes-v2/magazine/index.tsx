@@ -26,14 +26,7 @@ import { Contacts } from './contacts'
 
 export default function MagazineTripPage(props: ThemePropsV2) {
   return (
-    <div
-      data-theme="magazine"
-      style={{
-        background: '#F5F0E6',
-        position: 'relative',
-        minHeight: '100%',
-      }}
-    >
+    <div data-theme="magazine" className="mag-root">
       <Hero {...props} />
       <Overview {...props} />
       <Itinerary {...props} />

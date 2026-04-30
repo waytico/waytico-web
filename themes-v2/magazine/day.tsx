@@ -1,10 +1,9 @@
 /**
  * Magazine — single Day component.
  *
- * Source: magazine-trip.jsx lines 190–223. Hairline + accent eyebrow
- * (DAY 01) + h2 title + full-bleed 16:9 photo + paragraphs.
+ * Source: magazine-trip.jsx lines 190–223, MAGAZINE-SPEC §E.
  *
- * Owner-mode (stage 3):
+ * Mobile + desktop sizing per §R.2 lives in layout.css. Owner-mode:
  *   - Title + description edit through EditableField (saveDayPatch).
  *   - Photo upload: picker pill below the eyebrow when no photo, top-
  *     right delete pill on the photo when one exists. Drag-drop on the
@@ -21,7 +20,7 @@ import type { Day, MediaLite } from '@/types/theme-v2'
 import { fmtDate } from '@/lib/trip-format'
 import { useThemeCtxV2 } from '@/lib/theme-context-v2'
 import { EditableField } from '@/components/shared-v2/editable-field'
-import { CREAM, body, display, eyebrow, Hairline, ACCENT, MUTED } from './styles'
+import { Hairline } from './styles'
 
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_SIZE = 15 * 1024 * 1024
@@ -71,7 +70,7 @@ export function MagazineDay({ day, media, isLast, dragHandle }: Props) {
 
   return (
     <section
-      style={{ background: CREAM, padding: isLast ? '0 0 64px' : '0 0 48px', position: 'relative' }}
+      className={'mag-day' + (isLast ? ' mag-day--last' : '')}
       onDragOver={(e) => {
         if (!editable) return
         e.preventDefault()
@@ -97,31 +96,19 @@ export function MagazineDay({ day, media, isLast, dragHandle }: Props) {
       <Hairline />
 
       {dragOver && (
-        <div style={{
-          position: 'absolute', inset: 0, zIndex: 5,
-          background: 'rgba(0,0,0,0.18)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          pointerEvents: 'none',
-        }}>
-          <div style={{
-            background: '#FFFCF6', padding: '8px 16px', borderRadius: 999,
-            ...eyebrow, fontSize: 11,
-          }}>
-            DROP TO ADD TO DAY {num}
-          </div>
+        <div className="mag-day__drop-overlay">
+          <div className="mag-day__drop-pill">DROP TO ADD TO DAY {num}</div>
         </div>
       )}
 
-      <div style={{ padding: '40px 24px 24px', position: 'relative' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+      <div className="mag-shell mag-day__head">
+        <div className="mag-day__eyebrow-row">
           {dragHandle && (
-            <span aria-label="Reorder" style={{ color: MUTED, cursor: 'grab', display: 'inline-flex' }}>
+            <span aria-label="Reorder" className="mag-day__handle">
               {dragHandle}
             </span>
           )}
-          <div style={{ ...eyebrow, color: ACCENT }}>
-            {eyebrowText}
-          </div>
+          <div className="mag-eyebrow mag-eyebrow--accent">{eyebrowText}</div>
         </div>
 
         {editable ? (
@@ -131,31 +118,16 @@ export function MagazineDay({ day, media, isLast, dragHandle }: Props) {
             editable
             placeholder="Day title"
             onSave={(v) => ctx!.mutations.saveDayPatch(day.id, { title: v })}
-            renderDisplay={(v) => (
-              <h2 style={{ ...display, fontSize: 24, lineHeight: 1.2, margin: 0, maxWidth: 300 }}>
-                {v}
-              </h2>
-            )}
+            renderDisplay={(v) => <h2 className="mag-day__title">{v}</h2>}
           />
         ) : (
-          day.title && (
-            <h2 style={{ ...display, fontSize: 24, lineHeight: 1.2, margin: 0, maxWidth: 300 }}>
-              {day.title}
-            </h2>
-          )
+          day.title && <h2 className="mag-day__title">{day.title}</h2>
         )}
       </div>
 
       {photo?.url ? (
-        <div style={{ position: 'relative' }}>
-          <img
-            src={photo.url}
-            alt={day.title ?? `Day ${num}`}
-            style={{
-              width: '100%', aspectRatio: '16 / 9', objectFit: 'cover',
-              display: 'block', borderRadius: 0,
-            }}
-          />
+        <div className="mag-shell--wide mag-day__photo-wrap">
+          <img className="mag-day__photo" src={photo.url} alt={day.title ?? `Day ${num}`} />
           {editable && (
             <button
               type="button"
@@ -167,14 +139,7 @@ export function MagazineDay({ day, media, isLast, dragHandle }: Props) {
                 void ctx!.photo.handleDelete(photo.id)
               }}
               aria-label="Remove photo"
-              style={{
-                position: 'absolute', top: 12, right: 12,
-                background: 'rgba(0,0,0,0.55)', color: CREAM,
-                border: '1px solid rgba(245,240,230,0.4)',
-                padding: '6px',
-                cursor: 'pointer',
-                display: 'inline-flex', alignItems: 'center',
-              }}
+              className="mag-btn-overlay-icon mag-btn-overlay-icon--small mag-day__photo-delete"
             >
               <Trash2 size={14} />
             </button>
@@ -182,20 +147,8 @@ export function MagazineDay({ day, media, isLast, dragHandle }: Props) {
         </div>
       ) : (
         editable && (
-          <div style={{ padding: '0 24px 24px' }}>
-            <button
-              type="button"
-              onClick={onPickClick}
-              style={{
-                ...eyebrow, fontSize: 10, color: ACCENT,
-                background: 'transparent',
-                border: `1px dashed ${ACCENT}`,
-                padding: '14px 20px',
-                cursor: 'pointer',
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                width: '100%', justifyContent: 'center',
-              }}
-            >
+          <div className="mag-shell mag-day__placeholder-wrap">
+            <button type="button" onClick={onPickClick} className="mag-btn-add">
               <ImagePlus size={14} />
               ADD PHOTO TO DAY {num}
             </button>
@@ -208,7 +161,7 @@ export function MagazineDay({ day, media, isLast, dragHandle }: Props) {
           ref={fileInputRef}
           type="file"
           accept={ALLOWED_MIMES.join(',')}
-          style={{ display: 'none' }}
+          hidden
           onChange={(e) => {
             const list = validateFiles(e.target.files ?? [])
             if (list.length) void ctx!.photo.handleUpload(list, day.id)
@@ -219,7 +172,7 @@ export function MagazineDay({ day, media, isLast, dragHandle }: Props) {
 
       {/* Description */}
       {editable ? (
-        <div style={{ padding: '28px 24px 0' }}>
+        <div className="mag-shell mag-day__prose">
           <EditableField
             as="multiline"
             value={day.description}
@@ -232,16 +185,7 @@ export function MagazineDay({ day, media, isLast, dragHandle }: Props) {
               return (
                 <>
                   {paras.map((p, i) => (
-                    <p
-                      key={i}
-                      style={{
-                        ...body,
-                        margin: 0,
-                        marginBottom: i === paras.length - 1 ? 0 : 16,
-                      }}
-                    >
-                      {p}
-                    </p>
+                    <p key={i} className="mag-day__paragraph">{p}</p>
                   ))}
                 </>
               )
@@ -250,18 +194,9 @@ export function MagazineDay({ day, media, isLast, dragHandle }: Props) {
         </div>
       ) : (
         paragraphs.length > 0 && (
-          <div style={{ padding: '28px 24px 0' }}>
+          <div className="mag-shell mag-day__prose">
             {paragraphs.map((p, i) => (
-              <p
-                key={i}
-                style={{
-                  ...body,
-                  margin: 0,
-                  marginBottom: i === paragraphs.length - 1 ? 0 : 16,
-                }}
-              >
-                {p}
-              </p>
+              <p key={i} className="mag-day__paragraph">{p}</p>
             ))}
           </div>
         )

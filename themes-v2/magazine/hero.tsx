@@ -1,20 +1,19 @@
 /**
  * Magazine — Hero section.
  *
- * Source: magazine-trip.jsx lines 60–163. Full-bleed photo, height 100vh
- * with min 640. Two narrow strips at the top (brand / trip-id, then
- * issued/valid dates), one headline group bottom-left.
+ * Source: magazine-trip.jsx lines 60–163, MAGAZINE-SPEC §C.
+ * Mobile defaults + desktop overrides per §R.2 live in layout.css.
  *
- * Owner-mode additions (stage 3):
+ * Owner-mode (stage 3):
  *   - Title + tagline rendered through EditableField (click to inline-
  *     edit, blur/Enter saves through ctx.mutations.saveProjectPatch).
  *   - Cover photo: top-right "Replace" pill + drag-drop on the section
  *     itself. Anon mode: ctx.interceptPhotoAction short-circuits to a
- *     toast before any S3 attempt. We don't reuse the legacy
- *     HeroDropZone/HeroOwnerOverlay — they expect a stateful caller
- *     (drag flag, uploading counters) that's overkill inside a self-
- *     contained Magazine section. The inline overlay below is ~30 lines
- *     and visually matches the cinematic hero.
+ *     toast before any S3 attempt.
+ *
+ * Per MAGAZINE-SPEC §R.3, every size / position / z-index lives in a
+ * CSS class. Inline styles only carry data-driven values (the photo
+ * URL via <img src>, EditableField's render-display variants).
  */
 'use client'
 
@@ -24,14 +23,12 @@ import type { ThemePropsV2 } from '@/types/theme-v2'
 import { fmtDate } from '@/lib/trip-format'
 import { useThemeCtxV2 } from '@/lib/theme-context-v2'
 import { EditableField } from '@/components/shared-v2/editable-field'
-import { CREAM, BLACK, eyebrow, display, TWEAKS } from './styles'
 
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_SIZE = 15 * 1024 * 1024
 
 export function Hero({ data }: ThemePropsV2) {
   const p = data.project
-  const top = TWEAKS.safeAreaTop
   const ctx = useThemeCtxV2()
   const editable = !!ctx?.editable
 
@@ -68,14 +65,7 @@ export function Hero({ data }: ThemePropsV2) {
 
   return (
     <section
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: '100vh',
-        minHeight: 640,
-        overflow: 'hidden',
-        background: BLACK,
-      }}
+      className="mag-hero"
       onDragOver={(e) => {
         if (!editable) return
         e.preventDefault()
@@ -99,100 +89,40 @@ export function Hero({ data }: ThemePropsV2) {
       }}
     >
       {p.cover_image_url ? (
-        <img
-          src={p.cover_image_url}
-          alt={p.title ?? ''}
-          style={{
-            width: '100%', height: '100%', objectFit: 'cover',
-            filter: 'brightness(0.86) contrast(1.02)',
-          }}
-        />
+        <img className="mag-hero__photo" src={p.cover_image_url} alt={p.title ?? ''} />
       ) : null}
 
-      {/* Gradient veil */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'linear-gradient(180deg, rgba(26,24,23,0.55) 0%, rgba(26,24,23,0) 22%, rgba(26,24,23,0) 55%, rgba(26,24,23,0.78) 100%)',
-        pointerEvents: 'none',
-      }} />
+      <div className="mag-hero__veil" />
+      <div className="mag-hero__scrim" />
 
-      {/* Header scrim */}
-      {TWEAKS.headerScrim && (
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0,
-          height: top + 60,
-          background: 'linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0))',
-          pointerEvents: 'none',
-        }} />
-      )}
-
-      {/* Drop highlight */}
       {dragOver && (
-        <div style={{
-          position: 'absolute', inset: 0, zIndex: 5,
-          background: 'rgba(0,0,0,0.45)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          pointerEvents: 'none',
-        }}>
-          <div style={{
-            background: '#FFFCF6', color: BLACK,
-            padding: '10px 20px', borderRadius: 999,
-            ...eyebrow, fontSize: 11,
-          }}>
-            DROP TO REPLACE HERO
-          </div>
+        <div className="mag-hero__drop-overlay">
+          <div className="mag-hero__drop-pill">DROP TO REPLACE HERO</div>
         </div>
       )}
 
-      {/* Top meta strip */}
-      <div style={{
-        position: 'absolute', top, left: 0, right: 0,
-        padding: '20px 38px 0',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        color: CREAM, zIndex: 2,
-      }}>
-        <div style={{ ...eyebrow, color: CREAM, fontSize: 10, opacity: 0.9 }}>
+      {/* Top meta strip — brand left, trip ref right */}
+      <div className="mag-hero__strip">
+        <div className="mag-hero__strip-cell">
           {brandName ? brandName.toUpperCase() : '\u00A0'}
         </div>
-        <div style={{ ...eyebrow, color: CREAM, fontSize: 10, opacity: 0.9 }}>
-          {tripRef}
-        </div>
+        <div className="mag-hero__strip-cell">{tripRef}</div>
       </div>
 
       {dateStrip && (
-        <div style={{
-          position: 'absolute', top: top + 50, left: 38, right: 38,
-          display: 'flex', alignItems: 'center', gap: 10,
-          paddingTop: 12, borderTop: '1px solid rgba(245,240,230,0.32)',
-          zIndex: 2,
-        }}>
-          <div style={{
-            ...eyebrow, color: CREAM, fontSize: 9, opacity: 0.85,
-            letterSpacing: '0.16em', whiteSpace: 'nowrap',
-          }}>
-            {dateStrip}
-          </div>
+        <div className="mag-hero__date-strip">
+          <div className="mag-hero__date-strip-text">{dateStrip}</div>
         </div>
       )}
 
       {/* Owner photo controls — top-right corner */}
       {editable && (
-        <div style={{
-          position: 'absolute', top: top + 90, right: 16,
-          display: 'flex', gap: 8, zIndex: 4,
-        }}>
+        <div className="mag-hero__owner-controls">
           <button
             type="button"
             onClick={onPickClick}
             aria-label="Replace hero photo"
-            style={{
-              ...eyebrow, fontSize: 10, color: CREAM,
-              background: 'rgba(0,0,0,0.55)',
-              border: '1px solid rgba(245,240,230,0.4)',
-              padding: '8px 12px',
-              cursor: 'pointer',
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-            }}
+            className="mag-btn-overlay"
           >
             <ImagePlus size={14} />
             REPLACE
@@ -208,14 +138,7 @@ export function Hero({ data }: ThemePropsV2) {
                 void ctx!.photo.handleDelete(heroMedia.id)
               }}
               aria-label="Remove hero photo"
-              style={{
-                background: 'rgba(0,0,0,0.55)',
-                border: '1px solid rgba(245,240,230,0.4)',
-                padding: '8px',
-                cursor: 'pointer',
-                color: CREAM,
-                display: 'inline-flex', alignItems: 'center',
-              }}
+              className="mag-btn-overlay-icon"
             >
               <Trash2 size={14} />
             </button>
@@ -224,7 +147,7 @@ export function Hero({ data }: ThemePropsV2) {
             ref={fileInputRef}
             type="file"
             accept={ALLOWED_MIMES.join(',')}
-            style={{ display: 'none' }}
+            hidden
             onChange={(e) => {
               const list = validateFiles(e.target.files ?? [])
               if (list.length) void ctx!.photo.handleHeroUpload(list)
@@ -234,18 +157,13 @@ export function Hero({ data }: ThemePropsV2) {
         </div>
       )}
 
-      {/* Headline */}
-      <div style={{
-        position: 'absolute', left: 22, right: 22, bottom: 56,
-        color: CREAM, zIndex: 2,
-      }}>
+      {/* Headline group */}
+      <div className="mag-hero__content">
         {eyebrowTop && (
-          <div style={{ ...eyebrow, color: CREAM, fontSize: 10, opacity: 0.92, marginBottom: 14 }}>
-            {eyebrowTop}
-          </div>
+          <div className="mag-hero__eyebrow-top">{eyebrowTop}</div>
         )}
 
-        <div style={{ ...display, color: CREAM, fontSize: TWEAKS.heroHeadlineSize, lineHeight: 1.05, maxWidth: 320 }}>
+        <div className="mag-hero__headline">
           {editable ? (
             <EditableField
               as="text"
@@ -253,16 +171,16 @@ export function Hero({ data }: ThemePropsV2) {
               editable
               placeholder="Trip title"
               onSave={(v) => ctx!.mutations.saveProjectPatch({ title: v })}
-              renderDisplay={(v) => <span style={{ color: CREAM }}>{v}</span>}
+              renderDisplay={(v) => <span>{v}</span>}
             />
           ) : (
-            <h1 style={{ margin: 0, color: 'inherit', font: 'inherit' }}>
+            <h1 className="mag-hero__headline">
               {p.title || '\u00A0'}
             </h1>
           )}
 
           {(p.tagline || editable) && (
-            <em style={{ display: 'block', fontStyle: 'italic', fontWeight: 500, marginTop: 4, fontSize: 'inherit' }}>
+            <em className="mag-hero__tagline">
               {editable ? (
                 <EditableField
                   as="text"
@@ -270,7 +188,7 @@ export function Hero({ data }: ThemePropsV2) {
                   editable
                   placeholder="Add a tagline"
                   onSave={(v) => ctx!.mutations.saveProjectPatch({ tagline: v })}
-                  renderDisplay={(v) => <span style={{ color: CREAM, fontStyle: 'italic' }}>{v}</span>}
+                  renderDisplay={(v) => <span>{v}</span>}
                 />
               ) : (
                 p.tagline
@@ -280,21 +198,13 @@ export function Hero({ data }: ThemePropsV2) {
         </div>
 
         {region && (
-          <div style={{ marginTop: 22, display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <div style={{ ...eyebrow, color: CREAM, fontSize: 10, opacity: 0.85 }}>
-              {region.toUpperCase()}
-            </div>
+          <div className="mag-hero__region">
+            <div className="mag-hero__region-text">{region.toUpperCase()}</div>
           </div>
         )}
       </div>
 
-      {/* Scroll cue */}
-      <div style={{
-        position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-        ...eyebrow, color: CREAM, fontSize: 9, opacity: 0.6, zIndex: 2,
-      }}>
-        ↓ SCROLL
-      </div>
+      <div className="mag-hero__scroll-cue">↓ SCROLL</div>
     </section>
   )
 }

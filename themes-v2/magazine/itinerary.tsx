@@ -119,7 +119,7 @@ function SortableDay({ day, media, isLast }: { day: Day; media: ThemePropsV2['da
   // the entire section, so the operator can still click into editable
   // text fields without grabbing.
   const handle = (
-    <span {...attributes} {...listeners} style={{ display: 'inline-flex' }}>
+    <span {...attributes} {...listeners} className="mag-inline-flex">
       <DayDragHandle />
     </span>
   )

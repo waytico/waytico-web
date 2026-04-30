@@ -1,16 +1,19 @@
 /**
  * Magazine — Included / Not Included section.
  *
- * Owner-mode (stage 3): each column edits as a single multiline blob
- * (one item per line), saved via saveProjectPatch. The renderer splits
- * lines on the fly so display matches the source layout exactly.
+ * Source: MAGAZINE-SPEC §G. Mobile + desktop layout per §R.2 lives in
+ * layout.css — mobile = stacked, desktop = 2-column side-by-side.
+ *
+ * Owner-mode: each column edits as a single multiline blob (one item
+ * per line), saved via saveProjectPatch. The renderer splits lines on
+ * the fly so display matches the source layout exactly.
  */
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { ThemePropsV2 } from '@/types/theme-v2'
 import { UI } from '@/lib/ui-strings'
 import { useThemeCtxV2 } from '@/lib/theme-context-v2'
 import { EditableField } from '@/components/shared-v2/editable-field'
-import { body, CREAM, eyebrow, Hairline } from './styles'
+import { Hairline } from './styles'
 
 function splitItems(text: string | null | undefined): string[] {
   if (!text) return []
@@ -22,10 +25,10 @@ function splitItems(text: string | null | undefined): string[] {
 
 function ItemList({ items }: { items: string[] }) {
   return (
-    <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+    <ul className="mag-incl__list">
       {items.map((t, i) => (
         <li key={i}>
-          <div style={{ ...body, fontSize: 13, padding: '12px 0', lineHeight: 1.45 }}>{t}</div>
+          <div className="mag-incl__item-text">{t}</div>
           <Hairline />
         </li>
       ))}
@@ -40,7 +43,6 @@ function Column({
   onSave,
   rawValue,
   placeholder,
-  style,
 }: {
   heading: string
   items: string[]
@@ -48,11 +50,10 @@ function Column({
   onSave: (v: string) => Promise<boolean>
   rawValue: string | null
   placeholder: string
-  style?: CSSProperties
 }) {
   return (
-    <div style={{ flex: 1, minWidth: 0, ...style }}>
-      <div style={{ ...eyebrow, fontSize: 10, marginBottom: 14 }}>{heading}</div>
+    <div className="mag-incl__col">
+      <div className="mag-incl__col-heading">{heading}</div>
       <Hairline />
       {editable ? (
         <EditableField
@@ -111,13 +112,13 @@ export function Included({ data }: ThemePropsV2) {
   if (cols.length === 0) return null
 
   return (
-    <section style={{ background: CREAM, padding: '48px 24px 56px' }}>
-      <Hairline style={{ marginBottom: 40 }} />
-      <div style={{ ...eyebrow, marginBottom: 32 }}>
-        {UI.sectionLabels.included.toUpperCase()}
-      </div>
-      <div style={{ display: 'flex', gap: 22, alignItems: 'flex-start' }}>
-        {cols}
+    <section className="mag-section mag-section--py">
+      <div className="mag-shell">
+        <Hairline className="mag-incl__hairline-top" />
+        <div className="mag-eyebrow mag-incl__heading">
+          {UI.sectionLabels.included.toUpperCase()}
+        </div>
+        <div className="mag-incl__grid">{cols}</div>
       </div>
     </section>
   )

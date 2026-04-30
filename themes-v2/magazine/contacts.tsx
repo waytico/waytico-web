@@ -10,6 +10,8 @@
  * YT / TT) sit in a horizontal strip beneath them.
  *
  * Empty state: if no resolvable channels → section hidden.
+ *
+ * Mobile + desktop sizing per §R.2 lives in layout.css.
  */
 import type { ThemePropsV2 } from '@/types/theme-v2'
 import {
@@ -27,7 +29,7 @@ import {
   TikTokIcon,
 } from '@/lib/contact-icons'
 import { UI } from '@/lib/ui-strings'
-import { ACCENT, body, CREAM, display, eyebrow, Hairline, MUTED } from './styles'
+import { Hairline } from './styles'
 
 const SOCIAL_ICONS: Partial<Record<ChannelKey, (props: { size?: number }) => JSX.Element>> = {
   whatsapp: WhatsAppIcon,
@@ -45,87 +47,80 @@ export function Contacts({ data }: ThemePropsV2) {
   )
   if (channels.length === 0) return null
 
-  const textRows = channels.filter((c) => c.key === 'email' || c.key === 'phone' || c.key === 'website')
+  const textRows = channels.filter(
+    (c) => c.key === 'email' || c.key === 'phone' || c.key === 'website'
+  )
   const socials = channels.filter((c) => SOCIAL_ICONS[c.key])
 
   const brandName = data.owner?.brand_name?.trim()
   const brandTagline = data.owner?.brand_tagline?.trim()
 
   return (
-    <section id="contacts" style={{ background: CREAM, padding: '0 24px 80px' }}>
-      <Hairline style={{ marginBottom: 40 }} />
-      <div style={{ ...eyebrow, marginBottom: 18 }}>
-        {UI.sectionLabels.contacts.toUpperCase()}
-      </div>
-      <h2 style={{ ...display, fontSize: 24, lineHeight: 1.2, margin: 0, marginBottom: 24 }}>
-        {UI.contactsHeading}
-      </h2>
+    <section id="contacts" className="mag-contacts">
+      <div className="mag-shell">
+        <Hairline className="mag-terms__hairline" />
+        <div className="mag-eyebrow">{UI.sectionLabels.contacts.toUpperCase()}</div>
+        <h2 className="mag-contacts__heading">{UI.contactsHeading}</h2>
 
-      {brandName && (
-        <div style={{ ...body, fontSize: 15, marginBottom: brandTagline ? 4 : 18, fontWeight: 500 }}>
-          {brandName}
-        </div>
-      )}
-      {brandTagline && (
-        <div style={{ ...body, fontSize: 13, color: MUTED, marginBottom: 18 }}>
-          {brandTagline}
-        </div>
-      )}
+        {brandName && (
+          <div
+            className={
+              'mag-contacts__brand-name' +
+              (brandTagline ? ' mag-contacts__brand-name--with-tagline' : '')
+            }
+          >
+            {brandName}
+          </div>
+        )}
+        {brandTagline && (
+          <div className="mag-contacts__brand-tagline">{brandTagline}</div>
+        )}
 
-      {textRows.length > 0 && (
-        <ul style={{ margin: 0, padding: 0, listStyle: 'none', marginBottom: socials.length ? 18 : 0 }}>
-          {textRows.map((c) => (
-            <li key={c.key}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '10px 0' }}>
-                <span style={{ ...eyebrow, fontSize: 10, color: MUTED, minWidth: 64 }}>
-                  {CHANNEL_LABEL[c.key].toUpperCase()}
-                </span>
+        {textRows.length > 0 && (
+          <ul
+            className={
+              'mag-contacts__list' +
+              (socials.length ? ' mag-contacts__list--with-socials' : '')
+            }
+          >
+            {textRows.map((c) => (
+              <li key={c.key}>
+                <div className="mag-contacts__row">
+                  <span className="mag-contacts__label">
+                    {CHANNEL_LABEL[c.key].toUpperCase()}
+                  </span>
+                  <a
+                    href={channelHref(c.key, c.value)}
+                    className="mag-contacts__row-link"
+                  >
+                    {c.value}
+                  </a>
+                </div>
+                <Hairline />
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {socials.length > 0 && (
+          <div className="mag-contacts__socials">
+            {socials.map((c) => {
+              const Icon = SOCIAL_ICONS[c.key]
+              if (!Icon) return null
+              return (
                 <a
+                  key={c.key}
                   href={channelHref(c.key, c.value)}
-                  style={{
-                    ...body,
-                    fontSize: 14,
-                    color: ACCENT,
-                    textDecoration: 'underline',
-                    textUnderlineOffset: 3,
-                    textDecorationThickness: 1,
-                    wordBreak: 'break-all',
-                  }}
+                  aria-label={CHANNEL_LABEL[c.key]}
+                  className="mag-contacts__social-link"
                 >
-                  {c.value}
+                  <Icon size={18} />
                 </a>
-              </div>
-              <Hairline />
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {socials.length > 0 && (
-        <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', marginTop: 18 }}>
-          {socials.map((c) => {
-            const Icon = SOCIAL_ICONS[c.key]
-            if (!Icon) return null
-            return (
-              <a
-                key={c.key}
-                href={channelHref(c.key, c.value)}
-                aria-label={CHANNEL_LABEL[c.key]}
-                style={{
-                  color: ACCENT,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 36, height: 36,
-                  border: '1px solid rgba(184,90,62,0.3)',
-                }}
-              >
-                <Icon size={18} />
-              </a>
-            )
-          })}
-        </div>
-      )}
+              )
+            })}
+          </div>
+        )}
+      </div>
     </section>
   )
 }
