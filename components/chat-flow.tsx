@@ -34,13 +34,20 @@ const ALLOWED_MIMES = [
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 // Two starting placeholders — the chat-flow shows one based on auth state.
-//   - SIGNEDOUT: the live demo example below is doing the heavy lifting,
-//     so the textarea just points to it. One short line.
-//   - SIGNEDIN: the example block isn't shown to logged-in operators
-//     (they already know the product), so the textarea has to nudge them
-//     about what to type. Still one line — the H1+Sub above already
-//     carry most of the weight.
-const PLACEHOLDER_SIGNEDOUT = `See the example below ↓`
+//   - SIGNEDOUT: full multi-line example so the visitor sees the *shape*
+//     of input we expect (length, level of detail). The textarea fades
+//     out everything past the second line via an overlay gradient — the
+//     full text is still in the placeholder attribute (it's there for
+//     anyone tabbing in / focusing the field), but the visual emphasis
+//     stays on the first two lines.
+//   - SIGNEDIN: short prompt — operators already know the product, no
+//     example needed.
+const PLACEHOLDER_SIGNEDOUT = `Describe your trip. For example:
+3 days in Paris for a couple, late June. Hôtel des Deux Pavillons in the Marais.
+Day 1 Marais and Seine,
+Day 2 Louvre and Saint-Germain with a Sainte-Chapelle concert,
+Day 3 Montmartre and a farewell brunch.
+€1,800 total, private transfers included.`
 const PLACEHOLDER_SIGNEDIN = `Describe a trip you want to send to a client.`
 
 function fileIcon(mime: string) {
@@ -427,19 +434,24 @@ export default function ChatFlow() {
           </div>
         )}
 
-        {/* "Drag a file" hint — sits absolutely above the bottom controls
-            so it lines up next to the + button instead of floating at the
-            top of the textarea (where it'd just look like more
-            placeholder copy). Hidden as soon as the user starts typing or
-            attaches a file, since we don't want this hint cluttering an
-            in-progress prompt. Hidden in chat mode (messages.length>0)
-            for the same reason. */}
-        {messages.length === 0 && !input && !selectedFile && (
-          <div className="absolute bottom-[68px] left-5 pointer-events-none">
-            <p className="text-sm text-muted-foreground">
-              Drag a file in if you already have a draft.
-            </p>
-          </div>
+        {/* Visual fade for the signed-out placeholder. The textarea
+            placeholder attribute holds the full multi-line example, but
+            we don't want the lower lines competing visually with the H1
+            / sub / preview block — only the first two lines should pop.
+            This overlay sits on top of the textarea (pointer-events:
+            none so clicks still go through), starting transparent for
+            the first ~64px (two lines at 32px each), then fading to the
+            card background. Hidden when the user types, attaches a
+            file, is signed in, or is in chat mode. */}
+        {messages.length === 0 && !input && !selectedFile && !isSignedIn && (
+          <div
+            aria-hidden="true"
+            className="absolute left-5 right-5 top-5 bottom-28 pointer-events-none rounded-md"
+            style={{
+              background:
+                'linear-gradient(to bottom, transparent 0px, transparent 64px, #FFFFFE 220px)',
+            }}
+          />
         )}
 
         {/* Bottom controls — gradient backdrop prevents textarea content from
