@@ -1244,3 +1244,94 @@
   opacity: 0.7;
   font-size: 0.85em;
 }
+
+/* ─── Price — mode dropdown + secondary line + custom label ─── */
+
+[data-theme="magazine"] .mag-price__empty {
+  color: var(--ink-mute);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.5em;
+  letter-spacing: 0.02em;
+}
+
+[data-theme="magazine"] .mag-price__mode {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+[data-theme="magazine"] .mag-price__mode-select {
+  font-family: var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  padding: 4px 22px 4px 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-mute) 50%),
+    linear-gradient(135deg, var(--ink-mute) 50%, transparent 50%);
+  background-position: calc(100% - 12px) 50%, calc(100% - 8px) 50%;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+}
+
+[data-theme="magazine"] .mag-price__mode-select:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+[data-theme="magazine"] .mag-price__mode-label {
+  font-family: var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.10em;
+  color: var(--ink-soft);
+}
+
+[data-theme="magazine"] .mag-price__mode-label-text {
+  cursor: text;
+  border-bottom: 1px dashed var(--rule);
+  padding-bottom: 1px;
+}
+
+[data-theme="magazine"] .mag-price__mode-label-placeholder {
+  color: var(--ink-mute);
+  font-style: italic;
+}
+
+[data-theme="magazine"] .mag-price__mode-label-input {
+  font-family: var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.10em;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--accent);
+  padding: 2px 0;
+  min-width: 220px;
+}
+
+[data-theme="magazine"] .mag-price__mode-label-input:focus {
+  outline: none;
+}
+
+[data-theme="magazine"] .mag-price__secondary {
+  margin-top: 14px;
+  font-family: var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+[data-theme="magazine"] .mag-price__secondary-amount {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
