@@ -1542,3 +1542,41 @@
   color: var(--ink);
   border-bottom-color: var(--ink);
 }
+
+/* ─── Accommodations — busy overlay + add inline input ─── */
+
+[data-theme="magazine"] .mag-stay-card__busy {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #FFFCF6;
+  color: var(--ink);
+  font-family: var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+[data-theme="magazine"] .mag-stay-card__busy-spin {
+  animation: mag-spin 0.9s linear infinite;
+}
+
+@keyframes mag-spin {
+  to { transform: rotate(360deg); }
+}
+
+[data-theme="magazine"] .mag-stays__add-input {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--accent);
+  padding: 6px 0;
+  min-width: 280px;
+}
+
+[data-theme="magazine"] .mag-stays__add-input:focus {
+  outline: none;
+}
