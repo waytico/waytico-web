@@ -22,7 +22,11 @@ import { UI } from '@/lib/ui-strings'
 import { useThemeCtxV2 } from '@/lib/theme-context-v2'
 import { Hairline } from './styles'
 
-const ICON: Record<ChannelKey, React.ComponentType<{ size?: number }>> = {
+// Lucide and our brand-mark icons share the same { size, className } prop
+// API; the union of their concrete types defeats a strict ComponentType
+// signature, so we accept any-props here and trust the call sites.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ICON: Record<ChannelKey, (props: any) => JSX.Element> = {
   email: Mail,
   phone: Phone,
   whatsapp: WhatsAppIcon,
@@ -320,12 +324,4 @@ function ChannelRow({
       <button
         type="button"
         onClick={() => void onToggleHidden()}
-        className="mag-contacts__row-edit-eye"
-        title={hidden ? 'Show on this trip' : 'Hide from this trip'}
-        aria-label={hidden ? 'Show on this trip' : 'Hide from this trip'}
-      >
-        {hidden ? <EyeOff size={14} /> : <Eye size={14} />}
-      </button>
-    </li>
-  )
-}
+        className="mag
