@@ -257,9 +257,20 @@ export function TripHero(props: HeroProps) {
     </>
   )
 
-  if (heroStyle === 'overlay') {
+  if (
+    heroStyle === 'overlay' ||
+    heroStyle === 'magazine' ||
+    heroStyle === 'centered' ||
+    heroStyle === 'frontier'
+  ) {
+    // All four full-bleed-photo variants share the same DOM and the same
+    // .tp-hero--overlay base class (so HeroDropZone / HeroOwnerOverlay /
+    // HeroTopStrip continue to layer correctly). The per-theme modifier
+    // class lets themes.css tweak text alignment, vignette density, and
+    // type tracking — see styles/themes.css "tp-hero--magazine/-centered/-frontier".
+    const modifier = heroStyle === 'overlay' ? '' : ` tp-hero--${heroStyle}`
     return (
-      <header className="tp-hero--overlay" style={{ position: 'relative' }}>
+      <header className={`tp-hero--overlay${modifier}`} style={{ position: 'relative' }}>
         <div
           className="tp-hero-bg"
           style={heroPhoto ? { backgroundImage: `url(${heroPhoto})` } : undefined}

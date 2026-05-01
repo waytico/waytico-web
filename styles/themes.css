@@ -455,6 +455,106 @@
 .trip-page[data-mobile="true"] .tp-hero--overlay { min-height: 80vh; }
 .trip-page[data-mobile="true"] .tp-hero--overlay .tp-hero-title { font-size: 52px; }
 
+/* MAGAZINE (T4) — overlay base + softer gradient + display weight (no
+   uppercase title; italic accents come from the page's titleSlot). */
+.tp-hero--magazine .tp-hero-bg::after {
+  background: linear-gradient(
+    180deg,
+    rgba(26, 24, 23, 0.30) 0%,
+    rgba(26, 24, 23, 0.05) 32%,
+    rgba(26, 24, 23, 0.05) 55%,
+    rgba(26, 24, 23, 0.78) 100%
+  );
+}
+.tp-hero--magazine .tp-hero-title {
+  font-size: clamp(44px, 6vw, 88px);
+  text-transform: none;
+  letter-spacing: -0.005em;
+  color: var(--bg);
+}
+.tp-hero--magazine .tp-hero-meta { color: var(--bg); gap: 22px; }
+.tp-hero--magazine .tp-hero-stats {
+  border-top-color: color-mix(in oklab, var(--bg) 22%, transparent);
+}
+.tp-hero--magazine .tp-hero-stat .v { font-size: 44px; }
+.tp-hero--magazine .tp-hero-stat .l { color: color-mix(in oklab, var(--bg) 65%, transparent); }
+.trip-page[data-mobile="true"] .tp-hero--magazine .tp-hero-title { font-size: 40px; }
+
+/* CENTERED (T5 — Serene) — full-bleed photo, headline centered both
+   horizontally and (visually) in the lower third. Aman/Singita-style
+   ultra-quiet, faint bottom gradient only. */
+.tp-hero--centered { min-height: 90vh; padding-bottom: 96px; }
+.tp-hero--centered .tp-hero-bg::after {
+  background: linear-gradient(
+    to top,
+    rgba(20, 15, 10, 0.32) 0%,
+    rgba(20, 15, 10, 0.06) 35%,
+    transparent 60%
+  );
+}
+.tp-hero--centered .tp-container > .tp-hero-meta {
+  text-align: center;
+  align-items: center;
+  display: flex; flex-direction: column; gap: 28px;
+}
+.tp-hero--centered .tp-hero-title {
+  font-size: clamp(44px, 7vw, 96px);
+  text-transform: none;
+  letter-spacing: -0.015em;
+  font-weight: 400;
+  color: var(--paper);
+  text-shadow: 0 1px 24px rgba(0, 0, 0, 0.18);
+  max-width: 24ch;
+}
+.tp-hero--centered .tp-hero-meta > p {
+  /* tagline */
+  text-align: center;
+  color: color-mix(in oklab, var(--paper) 80%, transparent);
+  max-width: 60ch;
+}
+.tp-hero--centered .tp-hero-stats {
+  justify-content: center;
+  border-top-color: color-mix(in oklab, var(--paper) 22%, transparent);
+}
+.tp-hero--centered .tp-hero-stat { align-items: center; text-align: center; }
+.tp-hero--centered .tp-hero-stat .v {
+  font-size: 40px;
+  color: var(--paper);
+  font-style: normal;
+}
+.tp-hero--centered .tp-hero-stat .l {
+  color: color-mix(in oklab, var(--paper) 70%, transparent);
+}
+.trip-page[data-mobile="true"] .tp-hero--centered { min-height: 84vh; padding-bottom: 64px; }
+.trip-page[data-mobile="true"] .tp-hero--centered .tp-hero-title { font-size: 40px; }
+
+/* FRONTIER (T6) — overlay base + heavy vignette (top + bottom) +
+   tighter tracking. Cinematic safari look. */
+.tp-hero--frontier .tp-hero-bg::after {
+  background: linear-gradient(
+    to top,
+    rgba(27, 22, 18, 0.78) 0%,
+    rgba(27, 22, 18, 0.35) 35%,
+    rgba(27, 22, 18, 0.05) 60%,
+    rgba(27, 22, 18, 0.40) 100%
+  );
+}
+.tp-hero--frontier .tp-hero-title {
+  font-size: clamp(56px, 8.5vw, 120px);
+  text-transform: none;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  text-shadow: 0 1px 60px rgba(0, 0, 0, 0.45);
+  font-weight: var(--display-weight);
+}
+.tp-hero--frontier .tp-hero-meta { gap: 28px; }
+.tp-hero--frontier .tp-hero-stats {
+  border-top-color: rgba(245, 240, 230, 0.18);
+}
+.tp-hero--frontier .tp-hero-stat .v { font-size: 52px; color: var(--ink); }
+.tp-hero--frontier .tp-hero-stat .l { color: rgba(245, 240, 230, 0.62); }
+.trip-page[data-mobile="true"] .tp-hero--frontier .tp-hero-title { font-size: 44px; }
+
 /* CARD (T3) — typographic hero with a structured info card on the right */
 .tp-hero--card {
   display: grid; grid-template-columns: 1fr 360px; gap: 48px;
