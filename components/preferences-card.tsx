@@ -23,7 +23,7 @@ import { THEMES, THEME_LABELS, type ThemeId } from '@/lib/themes'
 
 type UserProfile = {
   id: string
-  default_theme: 'editorial' | 'expedition' | 'compact' | null
+  default_theme: ThemeId | null
 }
 
 export default function PreferencesCard() {
@@ -76,7 +76,7 @@ export default function PreferencesCard() {
   }
 
   async function saveDefaultTheme(
-    value: 'editorial' | 'expedition' | 'compact' | null,
+    value: ThemeId | null,
   ): Promise<boolean> {
     return patchUser({ defaultTheme: value })
   }
@@ -104,8 +104,8 @@ function DefaultThemeRow({
   value,
   onSave,
 }: {
-  value: 'editorial' | 'expedition' | 'compact' | null
-  onSave: (next: 'editorial' | 'expedition' | 'compact' | null) => Promise<boolean>
+  value: ThemeId | null
+  onSave: (next: ThemeId | null) => Promise<boolean>
 }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
