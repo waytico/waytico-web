@@ -693,6 +693,154 @@
 .tp-itin--grid .seg-line .type { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-mute); }
 .tp-itin--grid .lodging { font-size: 11px; letter-spacing: var(--eyebrow-tracking); text-transform: uppercase; color: var(--ink-mute); }
 
+/* MAGAZINE (T4) — built on the timeline base. Eyebrow-style day number
+   in accent (terracotta), display title in Cormorant, photo embedded
+   below the title at 16:9. Hairlines between days, no large left numeral. */
+.tp-itin--magazine.tp-itin--timeline { gap: 0; }
+.tp-itin--magazine.tp-itin--timeline .day {
+  /* Single-column layout — eyebrow + title + photo + prose stacked. */
+  grid-template-columns: 1fr;
+  gap: 18px;
+  border-top: 1px solid var(--rule);
+  padding-top: 56px;
+  padding-bottom: 56px;
+}
+.tp-itin--magazine.tp-itin--timeline .day-num {
+  /* Render the day number as a Roman-numeral-style mono eyebrow,
+     small + tracked, in terracotta accent. */
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--accent);
+  line-height: 1;
+}
+.tp-itin--magazine.tp-itin--timeline .day-title {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  font-size: 28px;
+  line-height: 1.2;
+  margin-bottom: 4px;
+  max-width: 28ch;
+}
+.tp-itin--magazine.tp-itin--timeline .day-desc {
+  font-size: 16px;
+  line-height: 1.65;
+  max-width: 64ch;
+  color: var(--ink);
+  margin-top: 8px;
+}
+.tp-itin--magazine.tp-itin--timeline .day-photo,
+.tp-itin--magazine.tp-itin--timeline .tp-photos-block,
+.tp-itin--magazine.tp-itin--timeline .tp-photos-block img {
+  border-radius: 0;
+}
+
+/* CENTERED (T5 — Serene) — built on the timeline base. Centered eyebrow
+   + italic display title + 4:3 photo + narrow centered prose. Aman-style
+   quiet rhythm. */
+.tp-itin--centered.tp-itin--timeline { gap: 96px; }
+.tp-itin--centered.tp-itin--timeline .day {
+  grid-template-columns: 1fr;
+  gap: 0;
+  border-top: 0;
+  padding-top: 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.tp-itin--centered.tp-itin--timeline .day-num {
+  /* Compact, mono, centered. */
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  line-height: 1;
+  margin-bottom: 18px;
+}
+.tp-itin--centered.tp-itin--timeline .day-date {
+  text-align: center;
+  color: var(--ink-mute);
+  margin-bottom: 28px;
+}
+.tp-itin--centered.tp-itin--timeline .day-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-style: italic;            /* signature of the theme */
+  font-size: clamp(24px, 3vw, 32px);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin-bottom: 36px;
+  max-width: 28ch;
+}
+.tp-itin--centered.tp-itin--timeline .day-desc {
+  font-size: 17px;
+  line-height: 1.7;
+  max-width: 60ch;
+  color: var(--ink);
+  text-align: left;
+  margin: 36px auto 0;
+}
+.tp-itin--centered.tp-itin--timeline .day-photo,
+.tp-itin--centered.tp-itin--timeline .tp-photos-block img {
+  border-radius: 0;
+}
+
+/* FRONTIER (T6) — built on the photo-cards base. Heavier vignette,
+   tighter type, ochre-on-photo. Title pre-tall + uppercase like the
+   handoff design. */
+.tp-itin--frontier.tp-itin--photo-cards .day {
+  min-height: 540px;
+  padding: 56px;
+}
+.tp-itin--frontier.tp-itin--photo-cards .day::before {
+  background: linear-gradient(
+    180deg,
+    rgba(27, 22, 18, 0.10) 0%,
+    rgba(27, 22, 18, 0.30) 35%,
+    rgba(27, 22, 18, 0.85) 80%,
+    rgba(27, 22, 18, 0.95) 100%
+  );
+}
+.tp-itin--frontier.tp-itin--photo-cards .day-num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--accent);
+  line-height: 1;
+  align-self: flex-start;
+}
+.tp-itin--frontier.tp-itin--photo-cards .day-head {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.tp-itin--frontier.tp-itin--photo-cards .day-title {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  font-size: 44px;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  text-transform: none;
+  max-width: 18ch;
+}
+.tp-itin--frontier.tp-itin--photo-cards .day-desc {
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1.65;
+  max-width: 64ch;
+}
+.trip-page[data-mobile="true"] .tp-itin--frontier.tp-itin--photo-cards .day { min-height: 420px; padding: 28px; }
+.trip-page[data-mobile="true"] .tp-itin--frontier.tp-itin--photo-cards .day-title { font-size: 28px; }
+
 /* ===================== INCLUDED ===================== */
 .tp-incl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
 .trip-page[data-mobile="true"] .tp-incl-grid { grid-template-columns: 1fr; }
