@@ -1,9 +1,15 @@
-import { NextResponse, type NextRequest } from 'next/server'
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
+// All routes are public at the middleware level.
+// Authentication is enforced:
+//  - on the client (useAuth guard in /dashboard, router.replace to /sign-in)
+//  - on the backend (requireAuth middleware on /api/projects)
+// This avoids Clerk dev-mode "protect-rewrite" handshake loops (HTTP 508 on Render)
+// when running with test keys (pk_test_*, sk_test_*).
 const isPublicRoute = createRouteMatcher([
   '/',
   '/t/(.*)',
+  '/v2/t/(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/dashboard(.*)',
@@ -18,19 +24,7 @@ const isPublicRoute = createRouteMatcher([
   '/cookies',
 ])
 
-// Stage 5.5 routing change: the old /v2/t/<slug> route was retired together
-// with components/trip/* and styles/themes.css. Anyone landing on that URL
-// (a stale share-link, a bookmark from the parallel-fork era) gets a clean
-// 308 to /t/<slug> with the same slug + querystring preserved.
-const V2_TRIP = /^\/v2\/t\/([^/]+)(\/.*)?$/
-
-export default clerkMiddleware((auth, request: NextRequest) => {
-  const m = request.nextUrl.pathname.match(V2_TRIP)
-  if (m) {
-    const url = request.nextUrl.clone()
-    url.pathname = `/t/${m[1]}${m[2] ?? ''}`
-    return NextResponse.redirect(url, 308)
-  }
+export default clerkMiddleware((auth, request) => {
   if (!isPublicRoute(request)) {
     auth().protect()
   }

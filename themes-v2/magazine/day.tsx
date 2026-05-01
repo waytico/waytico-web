@@ -1,14 +1,25 @@
+/**
+ * Magazine — single Day component.
+ *
+ * Source: magazine-trip.jsx lines 190–223, MAGAZINE-SPEC §E.
+ *
+ * Mobile + desktop sizing per §R.2 lives in layout.css. Owner-mode:
+ *   - Title + description edit through EditableField (saveDayPatch).
+ *   - Photo upload: picker pill below the eyebrow when no photo, top-
+ *     right delete pill on the photo when one exists. Drag-drop on the
+ *     section itself uploads to this day's day_id.
+ *   - drag handle for itinerary reorder is supplied by the parent
+ *     Itinerary component (it owns @dnd-kit context and passes
+ *     {dragHandleProps} via the `dragHandle` slot).
+ */
 'use client'
 
 import { useRef, useState, type ReactNode } from 'react'
 import { ImagePlus, Trash2, GripVertical } from 'lucide-react'
-import { toast } from 'sonner'
 import type { Day, MediaLite } from '@/types/theme-v2'
-import { fmtDayDate, addDaysISO } from '@/lib/trip-format'
+import { fmtDate } from '@/lib/trip-format'
 import { useThemeCtxV2 } from '@/lib/theme-context-v2'
 import { EditableField } from '@/components/shared-v2/editable-field'
-import PhotosBlock from '@/components/shared-v2/photos-block'
-import type { MediaRecord } from '@/lib/upload-photo'
 import { Hairline } from './styles'
 
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp']
@@ -17,41 +28,13 @@ const MAX_SIZE = 15 * 1024 * 1024
 type Props = {
   day: Day
   media: MediaLite[]
-  /** Trip language (BCP-47) for fmtDayDate locale-aware weekday + month. */
-  language: string
-  /** Trip start date — used to compute fallback day.date from dayNumber
-   *  for legacy days that don't carry their own date column. */
-  datesStart: string | null
   isLast: boolean
+  /** When provided (owner mode + dnd active), wraps a drag handle next
+   *  to the eyebrow. The Itinerary parent owns the @dnd-kit context. */
   dragHandle?: ReactNode
 }
 
-/**
- * Resolve a day's display date.
- *   1. If day.date is a valid YYYY-MM-DD-prefixed string → use it
- *   2. Else if datesStart + dayNumber are present → addDaysISO(datesStart, dayNumber-1)
- *   3. Else → null (no date row)
- *
- * Mirrors legacy itinerary.tsx 67-75 — critical for trips created before
- * the per-day `date` column existed.
- */
-function resolveDayDate(day: Day, datesStart: string | null): string | null {
-  if (day.date) return String(day.date).slice(0, 10)
-  if (!datesStart) return null
-  const start = String(datesStart).slice(0, 10)
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return null
-  if (typeof day.dayNumber !== 'number' || day.dayNumber < 1) return null
-  return addDaysISO(start, day.dayNumber - 1)
-}
-
-export function MagazineDay({
-  day,
-  media,
-  language,
-  datesStart,
-  isLast,
-  dragHandle,
-}: Props) {
+export function MagazineDay({ day, media, isLast, dragHandle }: Props) {
   const ctx = useThemeCtxV2()
   const editable = !!ctx?.editable
 
@@ -59,8 +42,7 @@ export function MagazineDay({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const num = String(day.dayNumber).padStart(2, '0')
-  const resolvedDate = resolveDayDate(day, datesStart)
-  const dayDate = fmtDayDate(resolvedDate, language)
+  const dayDate = fmtDate(day.date ?? null)
   const eyebrowText = dayDate ? `DAY ${num} · ${dayDate.toUpperCase()}` : `DAY ${num}`
 
   const dayPhotos = media
@@ -68,26 +50,15 @@ export function MagazineDay({
     .filter((m) => (m.type ?? 'photo') === 'photo')
     .filter((m) => m.visible_to_client !== false)
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-  const heroPhoto = dayPhotos[0]
-  const restPhotos = dayPhotos.slice(1) as MediaRecord[]
+  const photo = dayPhotos[0]
 
   const paragraphs = (day.description || '')
     .split(/\n\s*\n+/)
     .map((p) => p.trim())
     .filter(Boolean)
 
-  const validateFiles = (files: FileList | File[]): File[] => {
-    const list = Array.from(files)
-    const valid = list.filter(
-      (f) => ALLOWED_MIMES.includes(f.type) && f.size <= MAX_SIZE,
-    )
-    if (valid.length !== list.length) {
-      toast.error(
-        `${list.length - valid.length} file(s) skipped — use JPEG/PNG/WebP, max 15MB`,
-      )
-    }
-    return valid
-  }
+  const validateFiles = (files: FileList | File[]): File[] =>
+    Array.from(files).filter((f) => ALLOWED_MIMES.includes(f.type) && f.size <= MAX_SIZE)
 
   const onPickClick = () => {
     if (ctx?.interceptPhotoAction) {
@@ -154,29 +125,18 @@ export function MagazineDay({
         )}
       </div>
 
-      {/* Hero day photo — first photo in the sorted set. Click opens
-          the shared PhotoLightbox via ctx.lightbox.open(). Owner gets
-          the corner delete pill so the wide hero stays a one-tap
-          remove. The remaining photos render in a PhotosBlock grid
-          below the description (alternative path from 2.3.2). */}
-      {heroPhoto?.url ? (
+      {photo?.url ? (
         <div className="mag-shell--wide mag-day__photo-wrap">
-          <img
-            className="mag-day__photo mag-day__photo--clickable"
-            src={heroPhoto.url}
-            alt={day.title ?? `Day ${num}`}
-            onClick={() => ctx?.lightbox.open(heroPhoto)}
-          />
+          <img className="mag-day__photo" src={photo.url} alt={day.title ?? `Day ${num}`} />
           {editable && (
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation()
+              onClick={() => {
                 if (ctx?.interceptPhotoAction) {
                   ctx.interceptPhotoAction()
                   return
                 }
-                void ctx!.photo.handleDelete(heroPhoto.id)
+                void ctx!.photo.handleDelete(photo.id)
               }}
               aria-label="Remove photo"
               className="mag-btn-overlay-icon mag-btn-overlay-icon--small mag-day__photo-delete"
@@ -201,7 +161,6 @@ export function MagazineDay({
           ref={fileInputRef}
           type="file"
           accept={ALLOWED_MIMES.join(',')}
-          multiple
           hidden
           onChange={(e) => {
             const list = validateFiles(e.target.files ?? [])
@@ -241,27 +200,6 @@ export function MagazineDay({
             ))}
           </div>
         )
-      )}
-
-      {/* Multi-photo grid — second photo onward. In owner mode also
-          carries the 'Add' button so additional uploads accumulate
-          here without disturbing the wide hero. PhotosBlock self-
-          hides in public mode when restPhotos is empty. */}
-      {(restPhotos.length > 0 || (editable && heroPhoto)) && (
-        <div className="mag-shell mag-day__photos-extra">
-          <PhotosBlock
-            dayId={day.id}
-            media={restPhotos}
-            owner={editable}
-            uploading={ctx?.photo.uploadingByDay[day.id] ?? 0}
-            onUpload={(files, dayId) =>
-              void ctx!.photo.handleUpload(files, dayId)
-            }
-            onDelete={(id) => void ctx!.photo.handleDelete(id)}
-            onOpen={(m) => ctx?.lightbox.open(m as MediaLite)}
-            interceptUpload={ctx?.interceptPhotoAction}
-          />
-        </div>
       )}
     </section>
   )

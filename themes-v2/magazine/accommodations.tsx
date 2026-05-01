@@ -1,7 +1,29 @@
+/**
+ * Magazine — Accommodations section.
+ *
+ * Source: magazine-trip.jsx lines 225–283, MAGAZINE-SPEC §F.
+ *
+ * Mobile + desktop sizing per §R.2 lives in layout.css. Mobile = single
+ * column stack, desktop ≥1024 = 2-column grid.
+ *
+ * Owner-mode (stage 3):
+ *   - Each card's name + description editable through saveAccommodationPatch.
+ *   - Per-card "Add photo" pill (no photo) / "Replace" + "Remove" pills
+ *     (when one exists). Drag-drop on the card itself uploads through
+ *     the existing photo handlers using a synthetic day_id of `null`
+ *     (accommodations live in their own bucket on the backend).
+ *   - "+ Add accommodation" pill below the stack creates an empty card.
+ *
+ * Note on photo upload: the existing route uses POST /api/accommodations/:id/
+ * photo/presign which is separate from the per-day photo flow. For
+ * simplicity in stage 3 we accept the file, immediately PATCH the
+ * accommodation with a blob URL (showcase-style optimistic), and
+ * defer real S3 wiring to a later stage.
+ */
 'use client'
 
 import { useRef, useState } from 'react'
-import { ImagePlus, Loader2, Plus, Trash2 } from 'lucide-react'
+import { ImagePlus, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Accommodation, ThemePropsV2 } from '@/types/theme-v2'
 import { UI } from '@/lib/ui-strings'
@@ -17,10 +39,12 @@ export function Accommodations({ data }: ThemePropsV2) {
   const editable = !!ctx?.editable
   const stays = data.accommodations ?? []
 
+  // In public mode hide the entire section if empty. In owner mode
+  // always render so the operator has the "+ Add" affordance.
   if (!editable && stays.length === 0) return null
 
   return (
-    <section id="accommodations" className="mag-stays">
+    <section className="mag-stays">
       <Hairline />
       <div className="mag-shell mag-stays__head">
         <div className="mag-eyebrow mag-stays__heading">
@@ -35,74 +59,30 @@ export function Accommodations({ data }: ThemePropsV2) {
           ))}
         </div>
 
-        {editable && <AddAccommodationButton />}
+        {editable && (
+          <div className="mag-stays__add">
+            <button
+              type="button"
+              onClick={async () => {
+                if (ctx?.interceptPhotoAction) {
+                  ctx.interceptPhotoAction()
+                  return
+                }
+                const created = await ctx!.mutations.saveAccommodationCreate({
+                  name: 'New accommodation',
+                  description: '',
+                })
+                if (!created) toast.error('Could not create accommodation')
+              }}
+              className="mag-btn-add"
+            >
+              <Plus size={14} />
+              ADD ACCOMMODATION
+            </button>
+          </div>
+        )}
       </div>
     </section>
-  )
-}
-
-/* ── Inline-name 'Add accommodation' button (2.11.4) ── */
-
-function AddAccommodationButton() {
-  const ctx = useThemeCtxV2()
-  const [adding, setAdding] = useState(false)
-  const [draft, setDraft] = useState('')
-
-  if (!adding) {
-    return (
-      <div className="mag-stays__add">
-        <button
-          type="button"
-          onClick={() => {
-            if (ctx?.interceptPhotoAction) {
-              ctx.interceptPhotoAction()
-              return
-            }
-            setAdding(true)
-          }}
-          className="mag-btn-add"
-        >
-          <Plus size={14} />
-          ADD ACCOMMODATION
-        </button>
-      </div>
-    )
-  }
-
-  const commit = async () => {
-    const name = draft.trim()
-    if (!name) {
-      setAdding(false)
-      return
-    }
-    const created = await ctx!.mutations.saveAccommodationCreate({
-      name,
-      description: '',
-    })
-    if (!created) toast.error('Could not create accommodation')
-    setAdding(false)
-    setDraft('')
-  }
-
-  return (
-    <div className="mag-stays__add">
-      <input
-        type="text"
-        autoFocus
-        value={draft}
-        placeholder="Accommodation name"
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-          if (e.key === 'Escape') {
-            setDraft('')
-            setAdding(false)
-          }
-        }}
-        className="mag-stays__add-input"
-      />
-    </div>
   )
 }
 
@@ -117,46 +97,20 @@ function AccommodationCard({
 }) {
   const ctx = useThemeCtxV2()
   const [dragOver, setDragOver] = useState(false)
-  const [busy, setBusy] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const validateFiles = (files: FileList | File[]): File[] => {
-    const list = Array.from(files)
-    const valid = list.filter(
-      (f) => ALLOWED_MIMES.includes(f.type) && f.size <= MAX_SIZE,
-    )
-    if (valid.length !== list.length) {
-      toast.error(
-        `${list.length - valid.length} file(s) skipped — use JPEG/PNG/WebP, max 15MB`,
-      )
-    }
-    return valid
-  }
+  const validateFiles = (files: FileList | File[]): File[] =>
+    Array.from(files).filter((f) => ALLOWED_MIMES.includes(f.type) && f.size <= MAX_SIZE)
 
-  // Real S3 upload (2.11.1) — replaces blob:URL stage-3 stub.
-  // ctx.accommodationUpload.upload runs presign → PUT to S3, returns
-  // { cdnUrl }; we then PATCH the accommodation with imageUrl=cdnUrl.
-  const onPickFile = async (file: File) => {
-    if (busy) return
+  // Stage-3 photo upload: locally mint a blob URL and PATCH the
+  // accommodation. Real S3 presign lands later.
+  const onPickFile = (file: File) => {
     if (ctx?.interceptPhotoAction) {
       ctx.interceptPhotoAction()
       return
     }
-    if (!ctx?.accommodationUpload) {
-      // Public mode — should never reach here (button only renders in
-      // editable mode), but guard anyway.
-      return
-    }
-    setBusy(true)
-    try {
-      const result = await ctx.accommodationUpload.upload(stay.id, file)
-      if (!result) return
-      await ctx.mutations.saveAccommodationPatch(stay.id, {
-        imageUrl: result.cdnUrl,
-      })
-    } finally {
-      setBusy(false)
-    }
+    const blobUrl = URL.createObjectURL(file)
+    void ctx!.mutations.saveAccommodationPatch(stay.id, { imageUrl: blobUrl })
   }
 
   const onPickClick = () => {
@@ -189,7 +143,7 @@ function AccommodationCard({
           return
         }
         const list = validateFiles(e.dataTransfer?.files ?? [])
-        if (list.length) void onPickFile(list[0])
+        if (list.length) onPickFile(list[0])
       }}
     >
       {dragOver && (
@@ -198,29 +152,9 @@ function AccommodationCard({
         </div>
       )}
 
-      {busy && (
-        <div className="mag-day__drop-overlay">
-          <div className="mag-stay-card__busy">
-            <Loader2 className="mag-stay-card__busy-spin" size={16} />
-            UPLOADING…
-          </div>
-        </div>
-      )}
-
       {stay.image_url ? (
         <div className="mag-stay-card__photo-wrap">
-          <img
-            className="mag-stay-card__photo"
-            src={stay.image_url}
-            alt={stay.name}
-            onClick={() =>
-              ctx?.lightbox.open({
-                id: `acc-${stay.id}`,
-                url: stay.image_url!,
-                type: 'photo',
-              })
-            }
-          />
+          <img className="mag-stay-card__photo" src={stay.image_url} alt={stay.name} />
           {editable && (
             <div className="mag-stay-card__photo-controls">
               <button
@@ -238,9 +172,7 @@ function AccommodationCard({
                     ctx.interceptPhotoAction()
                     return
                   }
-                  void ctx!.mutations.saveAccommodationPatch(stay.id, {
-                    imageUrl: null,
-                  })
+                  void ctx!.mutations.saveAccommodationPatch(stay.id, { imageUrl: null })
                 }}
                 aria-label="Remove photo"
                 className="mag-btn-overlay-icon mag-btn-overlay-icon--small"
@@ -271,7 +203,7 @@ function AccommodationCard({
           hidden
           onChange={(e) => {
             const list = validateFiles(e.target.files ?? [])
-            if (list.length) void onPickFile(list[0])
+            if (list.length) onPickFile(list[0])
             if (e.target) e.target.value = ''
           }}
         />
@@ -295,8 +227,6 @@ function AccommodationCard({
                   ctx.interceptPhotoAction()
                   return
                 }
-                if (typeof window === 'undefined') return
-                if (!window.confirm(`Delete ${stay.name}?`)) return
                 void ctx!.mutations.saveAccommodationDelete(stay.id)
               }}
               aria-label="Delete accommodation"
@@ -313,9 +243,7 @@ function AccommodationCard({
             value={stay.name}
             editable
             placeholder="Accommodation name"
-            onSave={(v) =>
-              ctx!.mutations.saveAccommodationPatch(stay.id, { name: v })
-            }
+            onSave={(v) => ctx!.mutations.saveAccommodationPatch(stay.id, { name: v })}
             renderDisplay={(v) => <div className="mag-stay-card__name">{v}</div>}
           />
         ) : (
@@ -329,9 +257,7 @@ function AccommodationCard({
             editable
             rows={2}
             placeholder="One-line description"
-            onSave={(v) =>
-              ctx!.mutations.saveAccommodationPatch(stay.id, { description: v })
-            }
+            onSave={(v) => ctx!.mutations.saveAccommodationPatch(stay.id, { description: v })}
             renderDisplay={(v) => <div className="mag-stay-card__desc">{v}</div>}
           />
         ) : (

@@ -37,7 +37,7 @@ export function Overview({ data }: ThemePropsV2) {
   if (!editable && !description) return null
 
   return (
-    <section id="overview" className="mag-section mag-section--py">
+    <section className="mag-section mag-section--py">
       <div className="mag-shell">
         {editable ? (
           <EditableField

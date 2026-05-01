@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { apiFetch } from '@/lib/api'
 import ActionMenu, { type ActionItem } from './action-menu'
-import { ArchiveDialog } from './chrome-v2/archive-dialog'
+import { ArchiveDialog } from './trip/archive-dialog'
 import { getStatusMeta, buildTripMenu } from '@/lib/trip-status'
 
 export type ProjectStatus = 'draft' | 'quoted' | 'active' | 'completed' | 'archived'
