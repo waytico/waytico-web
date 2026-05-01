@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { ImagePlus, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import type { ThemePropsV2 } from '@/types/theme-v2'
 import { fmtDate } from '@/lib/trip-format'
 import { useThemeCtxV2 } from '@/lib/theme-context-v2'
@@ -51,13 +52,13 @@ export function Hero({ data }: ThemePropsV2) {
 
   const validateFiles = (files: FileList | File[]): File[] => {
     const list = Array.from(files)
-    const valid = list.filter((f) => ALLOWED_MIMES.includes(f.type) && f.size <= MAX_SIZE)
+    const valid = list.filter(
+      (f) => ALLOWED_MIMES.includes(f.type) && f.size <= MAX_SIZE,
+    )
     if (valid.length !== list.length) {
-      // Toast on skip (2.13.1) — sonner is imported via the top-level chrome.
-      // We don't import it here to keep the section pure; the validation
-      // still drops invalid files and the operator sees nothing happen,
-      // which matches existing v2 behaviour. The toast lands when the
-      // file picker re-runs the same handler in the parent.
+      toast.error(
+        `${list.length - valid.length} file(s) skipped — use JPEG/PNG/WebP, max 15MB`,
+      )
     }
     return valid
   }
@@ -420,3 +421,4 @@ function HeroStats({
     </div>
   )
 }
+                                                                                                                                                                                                        
