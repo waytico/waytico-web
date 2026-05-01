@@ -600,7 +600,7 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
     [],
   )
 
-  const accommodationUpload: AccommodationPhotoUploaderV2 | undefined = useMemo(
+  const accommodationUpload = useMemo<AccommodationPhotoUploaderV2 | undefined>(
     () => {
       if (!showOwnerUI) return undefined
       return {
@@ -629,7 +629,7 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
     [showOwnerUI, isAnonCreator, isShowcase, getToken],
   )
 
-  const active: ActiveSectionsV2 | undefined = useMemo(() => {
+  const active = useMemo<ActiveSectionsV2 | undefined>(() => {
     if (!showOwnerUI) return undefined
     return {
       saveTaskPatch,
