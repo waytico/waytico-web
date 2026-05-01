@@ -1,8 +1,13 @@
-/* Trip-page theme tokens — :root[data-theme="..."] cascade
-   activates only inside <ThemeRoot> on the trip page.
-   Keep this @import ABOVE the @tailwind directives so PostCSS
-   inlines the variable definitions before utilities run. */
-@import '../styles/themes.css';
+/* Magazine theme tokens + layout — was previously imported via the
+   v2 segment layout (app/v2/layout.tsx) so it only loaded on /v2/t/*.
+   Now /t/[slug] is the only trip-page route, so the imports live at
+   the global layer alongside Tailwind.
+
+   Legacy theme tokens (styles/themes.css) were dropped in Stage 5.5
+   Step C together with components/trip/* — a single Magazine theme
+   ships now. */
+@import '../themes-v2/magazine/tokens.css';
+@import '../themes-v2/magazine/layout.css';
 
 @tailwind base;
 @tailwind components;
