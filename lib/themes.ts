@@ -1,29 +1,24 @@
 /**
  * Trip-page theme registry.
  *
- * Four visual themes apply to the public trip page only (`/t/[slug]`).
- * They are tokens-driven via `:root[data-theme="..."]` blocks in
- * `styles/themes.css`, plus 1–2 structural branches inside Hero.tsx /
- * Itinerary.tsx (kept as `if (theme === '...')` inside a single component
- * file — see TZ-6 §2.1).
- *
- * Owner chrome (header, action bar, command bar, eye-toggles) lives
- * OUTSIDE `<ThemeRoot>` and continues to use shadcn semantic tokens.
+ * After Stage 5.5 the only shipping theme is Magazine — the editorial /
+ * expedition / compact branches lived on the legacy `components/trip/*`
+ * tree which was removed in Step C. Existing trips with any other
+ * `design_theme` value (or NULL) resolve to Magazine via `resolveTheme`.
  */
 
-export const THEMES = ['editorial', 'expedition', 'compact', 'magazine'] as const
+export const THEMES = ['magazine'] as const
 export type ThemeId = (typeof THEMES)[number]
-export const DEFAULT_THEME: ThemeId = 'editorial'
+export const DEFAULT_THEME: ThemeId = 'magazine'
 
 export function isThemeId(value: unknown): value is ThemeId {
   return typeof value === 'string' && (THEMES as readonly string[]).includes(value)
 }
 
 /**
- * Coerce arbitrary input (DB string, URL param, etc.) into a valid ThemeId.
- * Anything unknown — including `null`, stale TZ-5 values, casing variants —
- * resolves to DEFAULT_THEME ('editorial'). Existing trips with NULL
- * design_theme thus render unchanged.
+ * Coerce arbitrary input into a valid ThemeId. Anything unknown — null,
+ * legacy enum values (editorial / expedition / compact), casing variants
+ * — resolves to Magazine. Existing trips render unchanged.
  */
 export function resolveTheme(value: string | null | undefined): ThemeId {
   if (!value) return DEFAULT_THEME
@@ -31,36 +26,7 @@ export function resolveTheme(value: string | null | undefined): ThemeId {
   return isThemeId(lower) ? lower : DEFAULT_THEME
 }
 
-/** Hero structural variant per theme (see TZ-6 §6.2). */
-export const HERO_STYLE: Record<ThemeId, 'split' | 'overlay' | 'card'> = {
-  editorial: 'split',
-  expedition: 'overlay',
-  compact: 'card',
-  magazine: 'split', // baseline; уточним по handoff bundle если Claude Design предложит другое
-}
-
-/** Itinerary structural variant per theme (see TZ-6 §6.4). */
-export const ITINERARY_STYLE: Record<ThemeId, 'timeline' | 'photo-cards' | 'grid'> = {
-  editorial: 'timeline',
-  expedition: 'photo-cards',
-  compact: 'grid',
-  magazine: 'timeline', // baseline; уточним
-}
-
-/**
- * Display-friendly labels for the theme switcher (TZ-6 §5.3).
- *
- * NOTE: these are UI-only — internal ThemeId values, the DB `design_theme`
- * column, the CSS `data-theme` selectors, and `HERO_STYLE` / `ITINERARY_STYLE`
- * maps all keep using the enum names below. Mapping:
- *   editorial  → "Classic"
- *   expedition → "Cinematic"
- *   compact    → "Clean"
- *   magazine   → "Magazine"
- */
+/** Display-friendly label for the theme switcher. */
 export const THEME_LABELS: Record<ThemeId, string> = {
-  editorial: 'Classic',
-  expedition: 'Cinematic',
-  compact: 'Clean',
   magazine: 'Magazine',
 }

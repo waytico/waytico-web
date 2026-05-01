@@ -253,7 +253,7 @@ export function TripCommandBar({
 
   return (
     <div
-      data-theme={theme || 'editorial'}
+      data-theme={theme || 'magazine'}
       className={`pointer-events-none fixed inset-x-0 z-30 px-4 transition-opacity duration-200 ease-out pb-[calc(env(safe-area-inset-bottom)+16px)] ${
         footerVisible ? 'opacity-0' : 'opacity-100'
       }`}

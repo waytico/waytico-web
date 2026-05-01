@@ -1,4 +1,4 @@
-import type { OperatorContact, OwnerBrand } from '@/components/trip/trip-types'
+import type { OperatorContact, OwnerBrand } from '@/types/theme-v2'
 
 /**
  * Channels supported across operator-contact UIs (Contacts section block,

@@ -1840,3 +1840,98 @@
 [data-theme="magazine"] .mag-wtb__items li:last-child {
   border-bottom: 0;
 }
+
+/* ─── Trip command bar (ported from styles/themes.css) ───────────
+   Used by chrome-v2/trip-command-bar.tsx. Reads --bar-* tokens
+   defined in tokens.css under [data-theme="magazine"]. The chrome
+   wraps the bar with its own data-theme attribute, so as long as
+   it falls under magazine (the only theme post-5.5) the tokens
+   resolve. */
+
+[data-theme="magazine"] .tp-cmdbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--bar-bg);
+  color: var(--bar-ink);
+  border: 1px solid var(--bar-border);
+  box-shadow: var(--bar-shadow);
+  backdrop-filter: blur(8px);
+  transition: border-color 120ms ease;
+}
+[data-theme="magazine"] .tp-cmdbar:focus-within {
+  border-color: var(--bar-accent);
+}
+[data-theme="magazine"] .tp-cmdbar-input {
+  flex: 1;
+  resize: none;
+  background: transparent;
+  border: 0;
+  outline: none;
+  padding: 8px 4px;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--bar-ink);
+  min-height: 72px;
+  max-height: 240px;
+  font-style: italic;
+}
+[data-theme="magazine"] .tp-cmdbar-input::placeholder {
+  color: var(--bar-ink-mute);
+  white-space: pre-line;
+  font-style: normal;
+}
+[data-theme="magazine"] .tp-cmdbar-input:disabled { opacity: 0.6; }
+
+[data-theme="magazine"] .tp-cmdbar-attach {
+  flex-shrink: 0;
+  width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bar-ink-mute);
+  border: 1px solid var(--bar-border);
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+[data-theme="magazine"] .tp-cmdbar-attach:hover {
+  color: var(--bar-accent);
+  border-color: var(--bar-accent);
+}
+[data-theme="magazine"] .tp-cmdbar-attach:disabled { opacity: 0.5; cursor: not-allowed; }
+
+[data-theme="magazine"] .tp-cmdbar-send {
+  flex-shrink: 0;
+  width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  background: var(--bar-accent);
+  color: var(--bar-accent-ink);
+  border: 0;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+[data-theme="magazine"] .tp-cmdbar-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+[data-theme="magazine"] .tp-cmdbar-file-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--bar-accent) 14%, transparent);
+  border: 1px solid color-mix(in oklab, var(--bar-accent) 30%, transparent);
+  color: var(--bar-ink);
+  font-size: 12px;
+}
+[data-theme="magazine"] .tp-cmdbar-file-pill button {
+  background: transparent;
+  border: 0;
+  color: var(--bar-ink-mute);
+  cursor: pointer;
+  display: inline-flex; align-items: center;
+}
+[data-theme="magazine"] .tp-cmdbar-file-pill button:hover { color: var(--bar-ink); }
