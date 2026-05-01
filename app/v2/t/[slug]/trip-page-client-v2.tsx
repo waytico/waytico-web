@@ -172,111 +172,6 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
     ? () => toast.error('Sign up to edit')
     : undefined
 
-  // ─── Showcase AI command-bar plumbing ───────────────────────────────────
-  // POST /api/public/showcase/chat returns a structured action vocabulary
-  // (set_field, set_pricing, update_day, add_day, delete_day). We translate
-  // each action into a local-state mutation through saveProjectPatch /
-  // saveDayPatch — both already short-circuit on isShowcase=true and
-  // mutate React state instead of hitting the API. F5 resets — by design,
-  // because the showcase trip is shared and changes must never persist.
-  const applyShowcaseActions = useCallback(
-    (actions: unknown[]) => {
-      if (!Array.isArray(actions) || actions.length === 0) return
-      for (const raw of actions) {
-        const a = raw as Record<string, unknown>
-        if (!a || typeof a.type !== 'string') continue
-
-        if (a.type === 'set_field' && typeof a.field === 'string') {
-          const fieldMap: Record<string, string> = {
-            title: 'title',
-            description: 'description',
-            region: 'region',
-            country: 'country',
-            included: 'included',
-            not_included: 'notIncluded',
-            terms: 'terms',
-            currency: 'currency',
-          }
-          const camelKey = fieldMap[a.field]
-          if (camelKey) void saveProjectPatch({ [camelKey]: a.value })
-          continue
-        }
-
-        if (a.type === 'set_pricing') {
-          const patch: Record<string, unknown> = {}
-          if (typeof a.pricePerPerson === 'number') patch.pricePerPerson = a.pricePerPerson
-          if (typeof a.priceTotal === 'number') patch.priceTotal = a.priceTotal
-          if (typeof a.pricingMode === 'string') patch.pricingMode = a.pricingMode
-          if (typeof a.groupSize === 'number') patch.groupSize = a.groupSize
-          if (Object.keys(patch).length > 0) void saveProjectPatch(patch)
-          continue
-        }
-
-        if (a.type === 'update_day' && typeof a.dayNumber === 'number') {
-          const cur = (data?.project?.itinerary as Array<Record<string, unknown>>) || []
-          const day = cur.find((d) => d?.dayNumber === a.dayNumber)
-          const dayId = day?.id as string | undefined
-          if (!dayId) continue
-          const patch: Record<string, unknown> = {}
-          if (typeof a.title === 'string') patch.title = a.title
-          if (typeof a.description === 'string') patch.description = a.description
-          if (Object.keys(patch).length > 0) void saveDayPatch(dayId, patch)
-          continue
-        }
-
-        if (a.type === 'add_day') {
-          const cur = (data?.project?.itinerary as Array<Record<string, unknown>>) || []
-          const pos = Math.max(0, Math.min(cur.length, Number(a.position ?? cur.length)))
-          const newDay = {
-            id:
-              typeof crypto !== 'undefined' && 'randomUUID' in crypto
-                ? (crypto as Crypto).randomUUID()
-                : 'showcase-day-' + Math.random().toString(36).slice(2, 10),
-            dayNumber: pos + 1,
-            date: null,
-            title: typeof a.title === 'string' ? a.title : 'New day',
-            description: typeof a.description === 'string' ? a.description : '',
-            segments: [],
-          }
-          const next = [...cur]
-          next.splice(pos, 0, newDay)
-          const renumbered = next.map((d, i) => ({ ...d, dayNumber: i + 1 }))
-          void saveProjectPatch({ itinerary: renumbered, durationDays: renumbered.length })
-          continue
-        }
-
-        if (a.type === 'delete_day' && typeof a.dayNumber === 'number') {
-          const cur = (data?.project?.itinerary as Array<Record<string, unknown>>) || []
-          const next = cur.filter((d) => d?.dayNumber !== a.dayNumber)
-          if (next.length === cur.length) continue
-          const renumbered = next.map((d, i) => ({ ...d, dayNumber: i + 1 }))
-          void saveProjectPatch({ itinerary: renumbered, durationDays: renumbered.length })
-          continue
-        }
-      }
-    },
-    [data?.project?.itinerary, saveProjectPatch, saveDayPatch],
-  )
-
-  // tripContext — short summary the showcase chat endpoint uses to ground
-  // the AI's responses in this specific trip. Plain string, not JSON, so
-  // an LLM consumer can read it without parsing.
-  const tripContext = useMemo(() => {
-    if (!isShowcase) return undefined
-    const itinerary = (data?.project?.itinerary as Array<Record<string, unknown>>) || []
-    const daysSummary = itinerary
-      .map((d) => `Day ${d.dayNumber || ''} — ${d.title || ''}`)
-      .join('; ')
-    const p = data?.project
-    return [
-      `Trip: ${p?.title || ''}.`,
-      `Region: ${p?.region || ''}, ${p?.country || ''}.`,
-      `Days: ${daysSummary}.`,
-      `Total: ${p?.price_total || ''} ${p?.currency || ''}.`,
-    ].join('\n')
-  }, [isShowcase, data?.project])
-
-
   // ─── Build the theme context ────────────────────────────────────────────
   const themeCtx: ThemeContextV2 | null = useMemo(() => {
     if (!showOwnerUI) return null
@@ -470,8 +365,6 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
           theme={p.design_theme}
           onTripUpdated={() => setOwnerRefreshKey((k) => k + 1)}
           isShowcase={isShowcase}
-          tripContext={tripContext}
-          onShowcaseActions={isShowcase ? applyShowcaseActions : undefined}
         />
       )}
 
