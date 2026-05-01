@@ -1099,3 +1099,148 @@
   position: relative;
   min-height: 100%;
 }
+
+/* ─── Hero — TopStrip (status pill / dates / contact-agent menu) ─── */
+
+[data-theme="magazine"] .mag-hero__topstrip {
+  position: absolute;
+  top: 110px;
+  left: var(--mag-page-px-strip);
+  right: var(--mag-page-px-strip);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mag-on-photo-rule);
+  z-index: 3;
+  flex-wrap: wrap;
+}
+
+[data-theme="magazine"] .mag-hero__topstrip-cell--left {
+  flex: 0 0 auto;
+}
+
+[data-theme="magazine"] .mag-hero__topstrip-cell--center {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: flex-start;
+}
+
+[data-theme="magazine"] .mag-hero__topstrip-cell--right {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+[data-theme="magazine"] .mag-hero__topstrip-dates {
+  font-family: var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mag-on-photo-fg);
+  font-weight: 400;
+  opacity: 0.85;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .mag-hero__topstrip-dates {
+    font-size: 11px;
+  }
+}
+
+[data-theme="magazine"] .mag-hero__topstrip-dates-dash {
+  margin: 0 0.6em;
+  opacity: 0.5;
+}
+
+/* ─── Hero — Stats row (Dates / Duration / Group / Price) ──────── */
+
+[data-theme="magazine"] .mag-hero__stats {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+  row-gap: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--mag-on-photo-rule);
+  max-width: 600px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .mag-hero__stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: 40px;
+    max-width: none;
+    padding-top: 22px;
+  }
+}
+
+[data-theme="magazine"] .mag-hero__stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+[data-theme="magazine"] .mag-hero__stat-eyebrow {
+  font-family: var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mag-on-photo-fg);
+  opacity: 0.7;
+  font-weight: 400;
+}
+
+[data-theme="magazine"] .mag-hero__stat-value {
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.2;
+  color: var(--mag-on-photo-fg);
+  font-weight: 500;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .mag-hero__stat-value {
+    font-size: 20px;
+  }
+}
+
+[data-theme="magazine"] .mag-hero__stat-empty {
+  color: var(--mag-on-photo-fg);
+  opacity: 0.55;
+  font-style: italic;
+  font-weight: 400;
+}
+
+[data-theme="magazine"] .mag-hero__stat-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 0.15s ease;
+}
+
+[data-theme="magazine"] .mag-hero__stat-link:hover {
+  border-bottom-color: var(--mag-on-photo-rule);
+}
+
+[data-theme="magazine"] .mag-hero__stat-date-row,
+[data-theme="magazine"] .mag-hero__stat-group-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+[data-theme="magazine"] .mag-hero__stat-dash {
+  opacity: 0.6;
+}
+
+[data-theme="magazine"] .mag-hero__stat-suffix {
+  opacity: 0.7;
+  font-size: 0.85em;
+}

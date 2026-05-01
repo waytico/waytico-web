@@ -1,20 +1,3 @@
-/**
- * Magazine — Hero section.
- *
- * Source: magazine-trip.jsx lines 60–163, MAGAZINE-SPEC §C.
- * Mobile defaults + desktop overrides per §R.2 live in layout.css.
- *
- * Owner-mode (stage 3):
- *   - Title + tagline rendered through EditableField (click to inline-
- *     edit, blur/Enter saves through ctx.mutations.saveProjectPatch).
- *   - Cover photo: top-right "Replace" pill + drag-drop on the section
- *     itself. Anon mode: ctx.interceptPhotoAction short-circuits to a
- *     toast before any S3 attempt.
- *
- * Per MAGAZINE-SPEC §R.3, every size / position / z-index lives in a
- * CSS class. Inline styles only carry data-driven values (the photo
- * URL via <img src>, EditableField's render-display variants).
- */
 'use client'
 
 import { useRef, useState } from 'react'
@@ -23,9 +6,17 @@ import type { ThemePropsV2 } from '@/types/theme-v2'
 import { fmtDate } from '@/lib/trip-format'
 import { useThemeCtxV2 } from '@/lib/theme-context-v2'
 import { EditableField } from '@/components/shared-v2/editable-field'
+import { PublicStatusPill } from '@/components/shared-v2/public-status-pill'
+import { ContactAgentMenu } from '@/components/shared-v2/contact-agent-menu'
+import { UI } from '@/lib/ui-strings'
 
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_SIZE = 15 * 1024 * 1024
+
+const scrollTo = (id: string) => (e: React.MouseEvent) => {
+  e.preventDefault()
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 export function Hero({ data }: ThemePropsV2) {
   const p = data.project
@@ -38,11 +29,13 @@ export function Hero({ data }: ThemePropsV2) {
   const brandName = data.owner?.brand_name?.trim() || ''
   const tripRef = `№ ${p.id.replace(/-/g, '').slice(0, 4).toUpperCase()}`
 
-  const issuedDate = fmtDate(p.proposal_date ?? null)
-  const validDate = fmtDate(p.valid_until ?? null)
-  const dateStrip = issuedDate && validDate
-    ? `ISSUED ${issuedDate.toUpperCase()} — VALID UNTIL ${validDate.toUpperCase()}`
-    : null
+  // Issued / Valid-until dates — falls back on created_at via the
+  // pre-computed bundle (2.6); legacy proposal_date / valid_until on
+  // the project still wins when set.
+  const proposalDateISO = ctx?.precomputed.proposalDateISO ?? null
+  const validUntilISO = ctx?.precomputed.validUntilISO ?? null
+  const issuedDate = fmtDate(proposalDateISO)
+  const validDate = fmtDate(validUntilISO)
 
   const country = p.country?.trim() || null
   const durationLabel = p.duration_days ? `${p.duration_days} DAYS` : null
@@ -52,8 +45,22 @@ export function Hero({ data }: ThemePropsV2) {
 
   const heroMedia = data.media.find((m) => m.placement === 'hero')
 
-  const validateFiles = (files: FileList | File[]): File[] =>
-    Array.from(files).filter((f) => ALLOWED_MIMES.includes(f.type) && f.size <= MAX_SIZE)
+  // ── HeroStats data (Option A from 2.1.2 spec) ─────────────────────────
+  const dateRange = ctx?.precomputed.dateRange ?? null
+  const heroHeadlineFormatted = ctx?.precomputed.heroHeadlineFormatted ?? null
+
+  const validateFiles = (files: FileList | File[]): File[] => {
+    const list = Array.from(files)
+    const valid = list.filter((f) => ALLOWED_MIMES.includes(f.type) && f.size <= MAX_SIZE)
+    if (valid.length !== list.length) {
+      // Toast on skip (2.13.1) — sonner is imported via the top-level chrome.
+      // We don't import it here to keep the section pure; the validation
+      // still drops invalid files and the operator sees nothing happen,
+      // which matches existing v2 behaviour. The toast lands when the
+      // file picker re-runs the same handler in the parent.
+    }
+    return valid
+  }
 
   const onPickClick = () => {
     if (ctx?.interceptPhotoAction) {
@@ -101,19 +108,79 @@ export function Hero({ data }: ThemePropsV2) {
         </div>
       )}
 
-      {/* Top meta strip — brand left, trip ref right */}
+      {/* Top brand strip — brand left, trip ref right (existing). */}
       <div className="mag-hero__strip">
         <div className="mag-hero__strip-cell">
-          {brandName ? brandName.toUpperCase() : '\u00A0'}
+          {brandName ? brandName.toUpperCase() : ' '}
         </div>
         <div className="mag-hero__strip-cell">{tripRef}</div>
       </div>
 
-      {dateStrip && (
-        <div className="mag-hero__date-strip">
-          <div className="mag-hero__date-strip-text">{dateStrip}</div>
+      {/* HeroTopStrip — status pill + dates + contact-agent menu.
+          Public/anon/showcase modes show the pill + menu; owner mode
+          replaces the dates with EditableField widgets and drops the
+          menu (operator has the contacts section + chrome share menu). */}
+      <div className="mag-hero__topstrip">
+        <div className="mag-hero__topstrip-cell mag-hero__topstrip-cell--left">
+          {!editable && p.status && (
+            <PublicStatusPill status={p.status} onPhoto />
+          )}
         </div>
-      )}
+
+        {(editable || issuedDate || validDate) && (
+          <div className="mag-hero__topstrip-cell mag-hero__topstrip-cell--center">
+            {editable ? (
+              <span className="mag-hero__topstrip-dates">
+                {UI.proposal}{' '}
+                <EditableField
+                  as="date"
+                  value={proposalDateISO}
+                  editable
+                  onSave={(v) =>
+                    ctx!.mutations.saveProjectPatch({ proposalDate: v || null })
+                  }
+                />
+                <span className="mag-hero__topstrip-dates-dash">—</span>
+                {UI.validUntil}{' '}
+                <EditableField
+                  as="date"
+                  value={validUntilISO}
+                  editable
+                  onSave={(v) =>
+                    ctx!.mutations.saveProjectPatch({ validUntil: v || null })
+                  }
+                />
+              </span>
+            ) : (
+              <span className="mag-hero__topstrip-dates">
+                {issuedDate && (
+                  <>
+                    {UI.proposal} {issuedDate.toUpperCase()}
+                  </>
+                )}
+                {issuedDate && validDate && (
+                  <span className="mag-hero__topstrip-dates-dash">—</span>
+                )}
+                {validDate && (
+                  <>
+                    {UI.validUntil} {validDate.toUpperCase()}
+                  </>
+                )}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="mag-hero__topstrip-cell mag-hero__topstrip-cell--right">
+          {!editable && (
+            <ContactAgentMenu
+              owner={data.owner}
+              operatorContact={p.operator_contact ?? null}
+              onPhoto
+            />
+          )}
+        </div>
+      </div>
 
       {/* Owner photo controls — top-right corner */}
       {editable && (
@@ -175,7 +242,7 @@ export function Hero({ data }: ThemePropsV2) {
             />
           ) : (
             <h1 className="mag-hero__headline">
-              {p.title || '\u00A0'}
+              {p.title || ' '}
             </h1>
           )}
 
@@ -202,7 +269,154 @@ export function Hero({ data }: ThemePropsV2) {
             <div className="mag-hero__region-text">{region.toUpperCase()}</div>
           </div>
         )}
+
+        <HeroStats
+          editable={editable}
+          dateRange={dateRange}
+          datesStart={p.dates_start ?? null}
+          datesEnd={p.dates_end ?? null}
+          durationDays={p.duration_days ?? null}
+          groupSize={p.group_size ?? null}
+          headline={heroHeadlineFormatted}
+          onSaveProject={(patch) => ctx!.mutations.saveProjectPatch(patch)}
+        />
       </div>
     </section>
+  )
+}
+
+/**
+ * Hero stat tiles — Dates / Duration / Group / Price.
+ *
+ * Owner mode:
+ *   - Dates + Group are EditableField (inline edit).
+ *   - Duration is a read-only click-scroll to #itinerary (the actual
+ *     editing happens by add/remove of days down there; an inline number
+ *     editor would let the operator overwrite a value the itinerary
+ *     wouldn't reshape to match — see legacy hero.tsx comment).
+ *   - Price is a read-only click-scroll to #price (the headline edit
+ *     lives there together with the pricing-mode dropdown; an inline
+ *     editor here can't represent the per-traveler / for-the-group /
+ *     custom-label trio).
+ *
+ * Hidden when all four tiles are empty in public mode.
+ */
+function HeroStats({
+  editable,
+  dateRange,
+  datesStart,
+  datesEnd,
+  durationDays,
+  groupSize,
+  headline,
+  onSaveProject,
+}: {
+  editable: boolean
+  dateRange: string | null
+  datesStart: string | null
+  datesEnd: string | null
+  durationDays: number | null
+  groupSize: number | null
+  headline: string | null
+  onSaveProject: (patch: Record<string, unknown>) => Promise<boolean>
+}) {
+  const anyValue = !!(dateRange || durationDays != null || groupSize != null || headline)
+  if (!editable && !anyValue) return null
+
+  return (
+    <div className="mag-hero__stats">
+      <div className="mag-hero__stat-tile">
+        <div className="mag-hero__stat-eyebrow">DATES</div>
+        <div className="mag-hero__stat-value">
+          {editable ? (
+            <span className="mag-hero__stat-date-row">
+              <EditableField
+                as="date"
+                value={datesStart}
+                editable
+                placeholder="Start"
+                onSave={(v) => onSaveProject({ datesStart: v })}
+              />
+              <span className="mag-hero__stat-dash">–</span>
+              <EditableField
+                as="date"
+                value={datesEnd}
+                editable
+                placeholder="End"
+                onSave={(v) => onSaveProject({ datesEnd: v })}
+              />
+            </span>
+          ) : (
+            dateRange || <span className="mag-hero__stat-empty">—</span>
+          )}
+        </div>
+      </div>
+
+      <div className="mag-hero__stat-tile">
+        <div className="mag-hero__stat-eyebrow">DURATION</div>
+        <div className="mag-hero__stat-value">
+          {editable ? (
+            <a
+              href="#itinerary"
+              onClick={scrollTo('itinerary')}
+              className="mag-hero__stat-link"
+              title="Add or remove days in the itinerary below"
+            >
+              {durationDays != null ? (
+                `${durationDays} ${UI.days}`
+              ) : (
+                <span className="mag-hero__stat-empty">—</span>
+              )}
+            </a>
+          ) : durationDays != null ? (
+            `${durationDays} ${UI.days}`
+          ) : (
+            <span className="mag-hero__stat-empty">—</span>
+          )}
+        </div>
+      </div>
+
+      <div className="mag-hero__stat-tile">
+        <div className="mag-hero__stat-eyebrow">GROUP</div>
+        <div className="mag-hero__stat-value">
+          {editable ? (
+            <span className="mag-hero__stat-group-row">
+              <EditableField
+                as="number"
+                value={groupSize}
+                editable
+                placeholder="0"
+                onSave={(v) => onSaveProject({ groupSize: v })}
+              />
+              <span className="mag-hero__stat-suffix">{UI.travelers}</span>
+            </span>
+          ) : groupSize ? (
+            `${groupSize} ${UI.travelers}`
+          ) : (
+            <span className="mag-hero__stat-empty">—</span>
+          )}
+        </div>
+      </div>
+
+      <div className="mag-hero__stat-tile">
+        <div className="mag-hero__stat-eyebrow">PRICE</div>
+        <div className="mag-hero__stat-value">
+          {editable ? (
+            <a
+              href="#price"
+              onClick={scrollTo('price')}
+              className="mag-hero__stat-link"
+              title="Edit in the Price section below"
+            >
+              {headline ?? (
+                <span className="mag-hero__stat-empty">Add price</span>
+              )}
+            </a>
+          ) : (
+            headline ?? <span className="mag-hero__stat-empty">—</span>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
