@@ -1,34 +1,10 @@
-/**
- * Trip page v2 — client component (stage 3).
- *
- * Stage 3 scope:
- *   - SSR-fetched payload + polling/owner-detect through useTripData
- *   - Mode resolution (public / owner / anon / showcase)
- *   - Owner-mode mutations through useTripMutations (project / day /
- *     accommodation CRUD), photo upload through usePhotoUpload
- *   - Anon-creator flow: sessionStorage flag, claim handshake on
- *     ?claim={projectId}, post-claim upsell modal one-shot
- *   - Showcase: short-circuit mutations, ShowcaseBanner / ShowcasePills
- *   - Full chrome (Header / TripActionBar / ClientInfo / TripCommandBar /
- *     TripFooter / ScrollToTop / Archive / Activate / AnonUpsell /
- *     PostClaim / ActivationToast)
- *   - ThemeContextV2 populated and passed to TripHostV2 so each Magazine
- *     section can read mutations + photo handlers without prop-drilling
- *
- * What's NOT in stage 3 (deferred to stage 4 / 5):
- *   - Document upload + auto-apply to itinerary
- *   - Eye-toggles for tasks / media (visible_to_client) — mutations
- *     wiring is here in spirit but the UI lives inside the Magazine
- *     theme on stage 4
- *   - showcase AI command-bar action plumbing
- *   - previewAsClient toggle (low value vs cost; reach for it later)
- */
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
+import { Eye, X } from 'lucide-react'
 
 import Header from '@/components/chrome-v2/header'
 import { TripActionBar } from '@/components/chrome-v2/trip-action-bar'
@@ -46,18 +22,69 @@ import PostClaimUpsellModal from '@/components/chrome-v2/post-claim-upsell-modal
 import ActivationToast from '@/components/chrome-v2/activation-toast'
 import { ScrollToTop } from '@/components/chrome-v2/scroll-to-top'
 import ShareMenu from '@/components/shared-v2/share-menu'
+import PhotoLightbox from '@/components/shared-v2/photo-lightbox'
 
 import { TripHostV2 } from '@/components/trip-host-v2'
-import type { ThemeContextV2 } from '@/lib/theme-context-v2'
+import type {
+  ThemeContextV2,
+  PrecomputedV2,
+  SectionVisibilityV2,
+  AccommodationPhotoUploaderV2,
+  ActiveSectionsV2,
+} from '@/lib/theme-context-v2'
 
 import { useTripData } from '@/hooks/use-trip-data'
 import { useTripMutations } from '@/hooks/use-trip-mutations'
 import { usePhotoUpload, type MediaRecord } from '@/hooks/use-photo-upload'
 import { apiFetch } from '@/lib/api'
-import type { TripDataV2, TripMode } from '@/types/theme-v2'
+import {
+  coercePrice,
+  fmtPrice,
+  fmtDateRange,
+  addDaysISO,
+} from '@/lib/trip-format'
+import { uploadAccommodationPhoto } from '@/lib/upload-photo'
+import { UI } from '@/lib/ui-strings'
+import type { ThemeId } from '@/lib/themes'
+import type { PricingMode, TripDataV2, TripMode } from '@/types/theme-v2'
 
 const SHOWCASE_SLUG = 'paris-weekend-getaway'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://waytico.com'
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
+
+const DOC_MIMES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'image/jpeg',
+  'image/png',
+]
+const DOC_MAX_SIZE = 10 * 1024 * 1024
+
+const EMPTY_PRECOMPUTED: PrecomputedV2 = {
+  pricingMode: 'per_group',
+  pricePerPersonNum: null,
+  priceTotalNum: null,
+  pricePerPersonFormatted: null,
+  priceTotalFormatted: null,
+  heroHeadlineNum: null,
+  heroHeadlineFormatted: null,
+  heroPriceLabel: null,
+  proposalDateISO: null,
+  validUntilISO: null,
+  dateRange: null,
+}
+
+const EMPTY_VISIBILITY: SectionVisibilityV2 = {
+  overview: false,
+  itinerary: false,
+  accommodations: false,
+  price: false,
+  included: false,
+  terms: false,
+  contacts: false,
+}
 
 type Props = {
   slug: string
@@ -69,24 +96,26 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
   const searchParams = useSearchParams()
   const { isSignedIn, getToken, isLoaded } = useAuth()
 
-  // ─── State ──────────────────────────────────────────────────────────────
   const [data, setData] = useState<TripDataV2 | null>(initialData)
   const [tasks, setTasks] = useState<unknown[]>(initialData?.tasks ?? [])
   const [media, setMedia] = useState<MediaRecord[]>(
-    (initialData?.media ?? []) as MediaRecord[]
+    (initialData?.media ?? []) as MediaRecord[],
   )
   const [isOwner, setIsOwner] = useState(false)
-  const [previewAsClient] = useState(false)
+  const [previewAsClient, setPreviewAsClient] = useState(false)
   const showOwnerUI = isOwner && !previewAsClient
   const [isAnonCreator, setIsAnonCreator] = useState(false)
   const [projectIdForClaim, setProjectIdForClaim] = useState<string | null>(null)
   const [ownerRefreshKey, setOwnerRefreshKey] = useState(0)
   const [archiveOpen, setArchiveOpen] = useState(false)
   const [showPostClaimUpsell, setShowPostClaimUpsell] = useState(false)
+  const [anonShareOpen, setAnonShareOpen] = useState(false)
+  const [sharedOnce, setSharedOnce] = useState(false)
+  const [lightbox, setLightbox] = useState<MediaRecord | null>(null)
+  const [uploadingDoc, setUploadingDoc] = useState(false)
 
   const isShowcase = data?.project?.slug === SHOWCASE_SLUG
 
-  // ─── Anon-creator detection (sessionStorage flag) ───────────────────────
   useEffect(() => {
     if (typeof window === 'undefined') return
     const pid = data?.project?.id
@@ -99,7 +128,6 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
     }
   }, [data?.project?.id])
 
-  // ─── Claim flow (?claim={projectId} after sign-up) ──────────────────────
   useEffect(() => {
     const claimId = searchParams.get('claim')
     if (!claimId || !isLoaded || !isSignedIn) return
@@ -112,10 +140,12 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
           token,
         })
         if (res.ok) {
+          toast.success('Saved to your account')
           if (typeof window !== 'undefined') {
             sessionStorage.removeItem(`waytico:anon-owns-${claimId}`)
           }
           setIsAnonCreator(false)
+          setSharedOnce(false)
           setOwnerRefreshKey((k) => k + 1)
           setShowPostClaimUpsell(true)
         }
@@ -126,13 +156,11 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
     })()
   }, [searchParams, isSignedIn, isLoaded, getToken, slug, router])
 
-  // ─── Showcase forces isOwner=true (mutations short-circuit internally) ──
   useEffect(() => {
     if (isShowcase) setIsOwner(true)
   }, [isShowcase])
 
-  // ─── useTripData: polling + owner-detect via /api/projects/:id/full ─────
-  useTripData({
+  const { polling, refreshOwnerData, handleTripUpdated } = useTripData({
     slug,
     initialData: data as never,
     setData: setData as never,
@@ -144,13 +172,14 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
     ownerRefreshKey,
   })
 
-  // ─── Mutations + photo upload ───────────────────────────────────────────
   const {
     saveProjectPatch,
+    saveTaskPatch,
     saveDayPatch,
     saveAccommodationCreate,
     saveAccommodationPatch,
     saveAccommodationDelete,
+    saveWhatToBring,
     handleDeleteProject,
   } = useTripMutations({
     projectId: data?.project?.id,
@@ -172,13 +201,212 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
     ? () => toast.error('Sign up to edit')
     : undefined
 
-  // ─── Showcase AI command-bar plumbing ───────────────────────────────────
-  // POST /api/public/showcase/chat returns a structured action vocabulary
-  // (set_field, set_pricing, update_day, add_day, delete_day). We translate
-  // each action into a local-state mutation through saveProjectPatch /
-  // saveDayPatch — both already short-circuit on isShowcase=true and
-  // mutate React state instead of hitting the API. F5 resets — by design,
-  // because the showcase trip is shared and changes must never persist.
+  useEffect(() => {
+    if (isOwner) return
+    if (initialData?.media) setMedia(initialData.media as MediaRecord[])
+    if (initialData?.tasks) setTasks(initialData.tasks as unknown[])
+  }, [initialData, isOwner])
+
+  useEffect(() => {
+    if (!initialData?.project) return
+    setData((prev) => {
+      if (!prev?.project) return initialData
+      return { ...prev, project: initialData.project }
+    })
+  }, [initialData])
+
+  useEffect(() => {
+    const handler = () => setOwnerRefreshKey((k) => k + 1)
+    window.addEventListener('waytico:trip-refresh', handler)
+    return () => window.removeEventListener('waytico:trip-refresh', handler)
+  }, [])
+
+  const toggleTaskVisibility = useCallback(
+    async (taskId: string, nextVisible: boolean) => {
+      const prev = tasks
+      setTasks((cur) =>
+        (cur as Array<Record<string, unknown>>).map((t) =>
+          t.id === taskId ? { ...t, visible_to_client: nextVisible } : t,
+        ),
+      )
+      if (isShowcase) {
+        toast.success(nextVisible ? 'Visible to client' : 'Hidden from client')
+        return
+      }
+      try {
+        const token = await getToken()
+        const res = await apiFetch(`/api/tasks/${taskId}`, {
+          method: 'PATCH',
+          token,
+          body: JSON.stringify({ visibleToClient: nextVisible }),
+        })
+        if (!res.ok) throw new Error(`PATCH task failed (${res.status})`)
+        toast.success(nextVisible ? 'Visible to client' : 'Hidden from client')
+      } catch (err: unknown) {
+        setTasks(prev)
+        toast.error((err as Error)?.message || 'Could not update task')
+      }
+    },
+    [tasks, getToken, isShowcase],
+  )
+
+  const toggleMediaVisibility = useCallback(
+    async (mediaId: string, nextVisible: boolean) => {
+      const prev = media
+      setMedia((cur) =>
+        cur.map((m) =>
+          m.id === mediaId
+            ? ({ ...m, visible_to_client: nextVisible } as MediaRecord)
+            : m,
+        ),
+      )
+      if (isShowcase) {
+        toast.success(nextVisible ? 'Visible to client' : 'Hidden from client')
+        return
+      }
+      try {
+        const token = await getToken()
+        const res = await apiFetch(`/api/media/${mediaId}`, {
+          method: 'PATCH',
+          token,
+          body: JSON.stringify({ visibleToClient: nextVisible }),
+        })
+        if (!res.ok) throw new Error(`PATCH media failed (${res.status})`)
+        toast.success(nextVisible ? 'Visible to client' : 'Hidden from client')
+      } catch (err: unknown) {
+        setMedia(prev)
+        toast.error((err as Error)?.message || 'Could not update document')
+      }
+    },
+    [media, getToken, isShowcase],
+  )
+
+  const deleteDocument = useCallback(
+    async (mediaId: string) => {
+      const prev = media
+      setMedia((cur) => cur.filter((m) => m.id !== mediaId))
+      if (isShowcase) {
+        toast.success('Document removed')
+        return
+      }
+      try {
+        const token = await getToken()
+        const res = await apiFetch(`/api/media/${mediaId}`, {
+          method: 'DELETE',
+          token,
+        })
+        if (!res.ok && res.status !== 204)
+          throw new Error(`Delete failed (${res.status})`)
+        toast.success('Document removed')
+      } catch (err: unknown) {
+        setMedia(prev)
+        toast.error((err as Error)?.message || 'Could not delete document')
+      }
+    },
+    [media, getToken, isShowcase],
+  )
+
+  const handleDocumentUpload = useCallback(
+    async (files: File[]) => {
+      const projectId = data?.project?.id
+      if (!projectId || files.length === 0) return
+      if (isShowcase) {
+        for (const file of files) {
+          if (!DOC_MIMES.includes(file.type)) {
+            toast.error(
+              `Unsupported: ${file.name}. Use PDF, DOCX, XLSX, JPEG or PNG.`,
+            )
+            continue
+          }
+          if (file.size > DOC_MAX_SIZE) {
+            toast.error(`Too large: ${file.name} (max 10MB).`)
+            continue
+          }
+          const fakeId =
+            'showcase-doc-' + Math.random().toString(36).slice(2, 10)
+          const blobUrl = URL.createObjectURL(file)
+          setMedia((cur) => [
+            ...cur,
+            {
+              id: fakeId,
+              project_id: projectId,
+              user_id: '',
+              type: 'document',
+              url: blobUrl,
+              file_name: file.name,
+              file_size: file.size,
+              mime_type: file.type,
+              visible_to_client: true,
+              sort_order: cur.length,
+            } as unknown as MediaRecord,
+          ])
+        }
+        toast.success('Document uploaded')
+        return
+      }
+      const token = await getToken()
+      if (!token) {
+        toast.error('Please sign in again')
+        return
+      }
+      for (const file of files) {
+        if (!DOC_MIMES.includes(file.type)) {
+          toast.error(
+            `Unsupported: ${file.name}. Use PDF, DOCX, XLSX, JPEG or PNG.`,
+          )
+          continue
+        }
+        if (file.size > DOC_MAX_SIZE) {
+          toast.error(`Too large: ${file.name} (max 10MB).`)
+          continue
+        }
+        setUploadingDoc(true)
+        try {
+          const fd = new FormData()
+          fd.append('file', file)
+          const res = await fetch(
+            `${API_URL}/api/projects/${projectId}/documents`,
+            {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+              body: fd,
+            },
+          )
+          if (!res.ok) {
+            const errBody = await res.json().catch(() => ({}))
+            throw new Error(errBody.error || `Upload failed (${res.status})`)
+          }
+          const body = await res.json()
+          const appliedCount = Array.isArray(body?.applied?.changes)
+            ? body.applied.changes.filter(
+                (c: { action?: string }) =>
+                  c.action === 'created' || c.action === 'task_created',
+              ).length
+            : 0
+          toast.success(
+            appliedCount > 0
+              ? `Uploaded — ${appliedCount} item${appliedCount === 1 ? '' : 's'} added to itinerary`
+              : 'Document uploaded',
+          )
+        } catch (err: unknown) {
+          toast.error((err as Error)?.message || `Upload failed: ${file.name}`)
+        } finally {
+          setUploadingDoc(false)
+        }
+      }
+      try {
+        const pubRes = await fetch(`${API_URL}/api/public/projects/${slug}`, {
+          cache: 'no-store',
+        })
+        if (pubRes.ok) setData(await pubRes.json())
+      } catch {
+        /* ignore */
+      }
+      await refreshOwnerData()
+    },
+    [data?.project?.id, getToken, slug, refreshOwnerData, isShowcase],
+  )
+
   const applyShowcaseActions = useCallback(
     (actions: unknown[]) => {
       if (!Array.isArray(actions) || actions.length === 0) return
@@ -204,29 +432,37 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
 
         if (a.type === 'set_pricing') {
           const patch: Record<string, unknown> = {}
-          if (typeof a.pricePerPerson === 'number') patch.pricePerPerson = a.pricePerPerson
+          if (typeof a.pricePerPerson === 'number')
+            patch.pricePerPerson = a.pricePerPerson
           if (typeof a.priceTotal === 'number') patch.priceTotal = a.priceTotal
-          if (typeof a.pricingMode === 'string') patch.pricingMode = a.pricingMode
+          if (typeof a.pricingMode === 'string')
+            patch.pricingMode = a.pricingMode
           if (typeof a.groupSize === 'number') patch.groupSize = a.groupSize
           if (Object.keys(patch).length > 0) void saveProjectPatch(patch)
           continue
         }
 
         if (a.type === 'update_day' && typeof a.dayNumber === 'number') {
-          const cur = (data?.project?.itinerary as Array<Record<string, unknown>>) || []
+          const cur =
+            (data?.project?.itinerary as Array<Record<string, unknown>>) || []
           const day = cur.find((d) => d?.dayNumber === a.dayNumber)
           const dayId = day?.id as string | undefined
           if (!dayId) continue
           const patch: Record<string, unknown> = {}
           if (typeof a.title === 'string') patch.title = a.title
-          if (typeof a.description === 'string') patch.description = a.description
+          if (typeof a.description === 'string')
+            patch.description = a.description
           if (Object.keys(patch).length > 0) void saveDayPatch(dayId, patch)
           continue
         }
 
         if (a.type === 'add_day') {
-          const cur = (data?.project?.itinerary as Array<Record<string, unknown>>) || []
-          const pos = Math.max(0, Math.min(cur.length, Number(a.position ?? cur.length)))
+          const cur =
+            (data?.project?.itinerary as Array<Record<string, unknown>>) || []
+          const pos = Math.max(
+            0,
+            Math.min(cur.length, Number(a.position ?? cur.length)),
+          )
           const newDay = {
             id:
               typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -235,22 +471,30 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
             dayNumber: pos + 1,
             date: null,
             title: typeof a.title === 'string' ? a.title : 'New day',
-            description: typeof a.description === 'string' ? a.description : '',
+            description:
+              typeof a.description === 'string' ? a.description : '',
             segments: [],
           }
           const next = [...cur]
           next.splice(pos, 0, newDay)
           const renumbered = next.map((d, i) => ({ ...d, dayNumber: i + 1 }))
-          void saveProjectPatch({ itinerary: renumbered, durationDays: renumbered.length })
+          void saveProjectPatch({
+            itinerary: renumbered,
+            durationDays: renumbered.length,
+          })
           continue
         }
 
         if (a.type === 'delete_day' && typeof a.dayNumber === 'number') {
-          const cur = (data?.project?.itinerary as Array<Record<string, unknown>>) || []
+          const cur =
+            (data?.project?.itinerary as Array<Record<string, unknown>>) || []
           const next = cur.filter((d) => d?.dayNumber !== a.dayNumber)
           if (next.length === cur.length) continue
           const renumbered = next.map((d, i) => ({ ...d, dayNumber: i + 1 }))
-          void saveProjectPatch({ itinerary: renumbered, durationDays: renumbered.length })
+          void saveProjectPatch({
+            itinerary: renumbered,
+            durationDays: renumbered.length,
+          })
           continue
         }
       }
@@ -258,30 +502,158 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
     [data?.project?.itinerary, saveProjectPatch, saveDayPatch],
   )
 
-  // tripContext — short summary the showcase chat endpoint uses to ground
-  // the AI's responses in this specific trip. Plain string, not JSON, so
-  // an LLM consumer can read it without parsing.
-  const tripContext = useMemo(() => {
-    if (!isShowcase) return undefined
-    const itinerary = (data?.project?.itinerary as Array<Record<string, unknown>>) || []
-    const daysSummary = itinerary
-      .map((d) => `Day ${d.dayNumber || ''} — ${d.title || ''}`)
-      .join('; ')
+  const precomputed = useMemo<PrecomputedV2>(() => {
     const p = data?.project
-    return [
-      `Trip: ${p?.title || ''}.`,
-      `Region: ${p?.region || ''}, ${p?.country || ''}.`,
-      `Days: ${daysSummary}.`,
-      `Total: ${p?.price_total || ''} ${p?.currency || ''}.`,
-    ].join('\n')
-  }, [isShowcase, data?.project])
-
-
-  // ─── Build the theme context ────────────────────────────────────────────
-  const themeCtx: ThemeContextV2 | null = useMemo(() => {
-    if (!showOwnerUI) return null
+    if (!p) return EMPTY_PRECOMPUTED
+    const pp = coercePrice(p.price_per_person)
+    const total = coercePrice(p.price_total)
+    const mode: PricingMode = ((p.pricing_mode as PricingMode | null) ||
+      'per_group') as PricingMode
+    const headlineNum = mode === 'per_traveler' ? pp : total
+    const headlineFormatted = fmtPrice(headlineNum, p.currency)
+    const priceLabel =
+      mode === 'per_traveler'
+        ? UI.perTraveler
+        : mode === 'other'
+          ? p.pricing_label || UI.forTheGroup
+          : UI.forTheGroup
+    const proposalHead = p.proposal_date
+      ? String(p.proposal_date).slice(0, 10)
+      : null
+    const createdAt = (p as unknown as { created_at?: string | null }).created_at
+    const createdHead = createdAt ? String(createdAt).slice(0, 10) : null
+    const proposalDateISO = proposalHead || createdHead || null
+    const validHead = p.valid_until ? String(p.valid_until).slice(0, 10) : null
+    const validUntilISO =
+      validHead || (createdHead ? addDaysISO(createdHead, 14) : null)
     return {
-      editable: true,
+      pricingMode: mode,
+      pricePerPersonNum: pp,
+      priceTotalNum: total,
+      pricePerPersonFormatted: fmtPrice(pp, p.currency),
+      priceTotalFormatted: fmtPrice(total, p.currency),
+      heroHeadlineNum: headlineNum,
+      heroHeadlineFormatted: headlineFormatted,
+      heroPriceLabel: priceLabel,
+      proposalDateISO,
+      validUntilISO,
+      dateRange: fmtDateRange(p.dates_start, p.dates_end),
+    }
+  }, [data?.project])
+
+  const visibility = useMemo<SectionVisibilityV2>(() => {
+    const p = data?.project
+    if (!p) return EMPTY_VISIBILITY
+    const ed = showOwnerUI
+    const itinerary = Array.isArray(p.itinerary) ? p.itinerary : []
+    const accommodations = Array.isArray(data?.accommodations)
+      ? data.accommodations
+      : []
+    const owner = data?.owner
+    const operatorContact = p.operator_contact ?? null
+    return {
+      overview: ed || !!(p.description && p.description.trim()),
+      itinerary: ed || itinerary.length > 0,
+      accommodations: ed || accommodations.length > 0,
+      price:
+        ed ||
+        precomputed.pricePerPersonNum != null ||
+        precomputed.priceTotalNum != null,
+      included:
+        ed ||
+        !!(p.included && p.included.trim()) ||
+        !!(p.not_included && p.not_included.trim()),
+      terms:
+        ed ||
+        !!((p.terms || '').trim() || (owner?.brand_terms || '').trim()),
+      contacts:
+        ed ||
+        !!(
+          owner &&
+          (owner.brand_email ||
+            owner.brand_phone ||
+            owner.brand_whatsapp ||
+            owner.brand_telegram ||
+            owner.brand_website)
+        ) ||
+        !!(
+          operatorContact &&
+          (operatorContact.email ||
+            operatorContact.phone ||
+            operatorContact.whatsapp ||
+            operatorContact.telegram ||
+            operatorContact.website)
+        ),
+    }
+  }, [
+    data,
+    showOwnerUI,
+    precomputed.pricePerPersonNum,
+    precomputed.priceTotalNum,
+  ])
+
+  const lightboxAPI = useMemo(
+    () => ({
+      open: (m: unknown) => setLightbox(m as MediaRecord),
+      close: () => setLightbox(null),
+    }),
+    [],
+  )
+
+  const accommodationUpload = useMemo<AccommodationPhotoUploaderV2 | undefined>(
+    () => {
+      if (!showOwnerUI) return undefined
+      return {
+        upload: async (accommodationId, file) => {
+          if (isAnonCreator) {
+            toast.error('Sign up to edit')
+            return null
+          }
+          if (isShowcase) {
+            return { cdnUrl: URL.createObjectURL(file) }
+          }
+          try {
+            const token = await getToken()
+            if (!token) {
+              toast.error('Sign in again')
+              return null
+            }
+            return await uploadAccommodationPhoto(accommodationId, file, token)
+          } catch (err: unknown) {
+            toast.error((err as Error)?.message || 'Upload failed')
+            return null
+          }
+        },
+      }
+    },
+    [showOwnerUI, isAnonCreator, isShowcase, getToken],
+  )
+
+  const active = useMemo<ActiveSectionsV2 | undefined>(() => {
+    if (!showOwnerUI) return undefined
+    return {
+      saveTaskPatch,
+      saveWhatToBring,
+      toggleTaskVisibility,
+      toggleMediaVisibility,
+      deleteDocument,
+      handleDocumentUpload,
+      uploadingDoc,
+    }
+  }, [
+    showOwnerUI,
+    saveTaskPatch,
+    saveWhatToBring,
+    toggleTaskVisibility,
+    toggleMediaVisibility,
+    deleteDocument,
+    handleDocumentUpload,
+    uploadingDoc,
+  ])
+
+  const themeCtx: ThemeContextV2 = useMemo(
+    () => ({
+      editable: showOwnerUI,
       mutations: {
         saveProjectPatch,
         saveDayPatch,
@@ -296,44 +668,86 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
         uploadingByDay,
         setMedia: setMedia as never,
       },
+      precomputed,
+      visibility,
+      lightbox: lightboxAPI,
+      accommodationUpload,
+      active,
       interceptPhotoAction,
-    }
+    }),
+    [
+      showOwnerUI,
+      saveProjectPatch,
+      saveDayPatch,
+      saveAccommodationCreate,
+      saveAccommodationPatch,
+      saveAccommodationDelete,
+      handleUpload,
+      handleDelete,
+      handleHeroUpload,
+      uploadingByDay,
+      precomputed,
+      visibility,
+      lightboxAPI,
+      accommodationUpload,
+      active,
+      interceptPhotoAction,
+    ],
+  )
+
+  const tripContext = useMemo(() => {
+    if (!isShowcase) return undefined
+    const itinerary =
+      (data?.project?.itinerary as Array<Record<string, unknown>>) || []
+    const daysSummary = itinerary
+      .map((d) => `Day ${d.dayNumber || ''} — ${d.title || ''}`)
+      .join('; ')
+    const p = data?.project
+    return [
+      `Trip: ${p?.title || ''}.`,
+      `Region: ${p?.region || ''}, ${p?.country || ''}.`,
+      `Days: ${daysSummary}.`,
+      `Total: ${precomputed.heroHeadlineFormatted || ''} ${precomputed.heroPriceLabel || ''}.`,
+    ].join('\n')
   }, [
-    showOwnerUI,
-    saveProjectPatch,
-    saveDayPatch,
-    saveAccommodationCreate,
-    saveAccommodationPatch,
-    saveAccommodationDelete,
-    handleUpload,
-    handleDelete,
-    handleHeroUpload,
-    uploadingByDay,
-    interceptPhotoAction,
+    isShowcase,
+    data?.project,
+    precomputed.heroHeadlineFormatted,
+    precomputed.heroPriceLabel,
   ])
 
-  // ─── Activation/preview triggers come back via ?activated=1 / ?cancelled=1
-  const activated = searchParams.get('activated') === '1'
-  const cancelled = searchParams.get('cancelled') === '1'
+  const dataWithMedia: TripDataV2 | null = useMemo(() => {
+    if (!data) return null
+    return { ...data, media: media as never }
+  }, [data, media])
 
-  // ─── Render ─────────────────────────────────────────────────────────────
+  void searchParams.get('activated')
+  void searchParams.get('cancelled')
+
   if (!data) {
     return (
-      <main
-        style={{
-          padding: '64px 24px',
-          fontFamily: 'ui-monospace, monospace',
-          textAlign: 'center',
-          color: '#6B5F58',
-        }}
-      >
-        Trip not found.
-      </main>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-6 text-center">
+        {polling ? (
+          <>
+            <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+            <p className="text-lg text-foreground/70">Building your trip page…</p>
+            <p className="text-sm text-muted-foreground">
+              This usually takes 30–60 seconds
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-lg text-foreground/70">Trip page not found</p>
+            <a href="/" className="text-accent hover:underline">
+              ← Back to home
+            </a>
+          </>
+        )}
+      </div>
     )
   }
 
   const p = data.project
-  const dataWithMedia: TripDataV2 = useMemoSyncMedia(data, media as never)
 
   const mode: TripMode = isShowcase
     ? 'showcase'
@@ -346,43 +760,104 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
   const shareUrl = `${APP_URL}/v2/t/${slug}`
 
   return (
-    <>
-      {/* Header — only for owners (not anon, not showcase) */}
+    <div
+      data-owner-view={showOwnerUI ? 'true' : 'false'}
+      data-showcase={isShowcase ? 'true' : 'false'}
+    >
       {showOwnerUI && !isShowcase && !isAnonCreator && <Header />}
 
-      {/* Showcase banner — replaces Header in showcase mode */}
       {isShowcase && <ShowcaseBanner />}
 
-      {/* Anon banner — sticky orange CTA strip */}
-      {isAnonCreator && projectIdForClaim && (
-        <div
-          style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 50,
-            background: '#C4622D',
-            color: '#FFF',
-            padding: '12px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            fontSize: 14,
-          }}
-        >
-          <span style={{ flex: 1 }}>
-            <strong style={{ fontWeight: 600 }}>Sign up free</strong> to keep
-            this quote and edit it later — or share it as is.
-          </span>
-          <ShareMenu
-            url={shareUrl}
-            title={p.title || 'Trip'}
-            publicStatus={p.status}
-          />
+      {isAnonCreator && p.status === 'quoted' && projectIdForClaim && (
+        <>
+          <div className="sticky top-0 z-40 bg-highlight border-b border-border">
+            <div
+              className="max-w-7xl mx-auto px-4 flex items-center gap-3"
+              style={{ height: 52 }}
+            >
+              <div className="text-sm text-foreground/80 flex-1 min-w-0 leading-none">
+                <button
+                  onClick={() => {
+                    const redirectUrl = `/v2/t/${slug}?claim=${projectIdForClaim}`
+                    router.push(
+                      `/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`,
+                    )
+                  }}
+                  className="font-semibold text-accent hover:text-accent/80 underline underline-offset-2"
+                >
+                  Sign up for free
+                </button>
+                <span> to edit, add photos, change design, and save to your account.</span>
+              </div>
+              <div className="relative flex-shrink-0 flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setAnonShareOpen((v) => !v)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 transition-colors whitespace-nowrap"
+                >
+                  Share as is →
+                </button>
+                <ShareMenu
+                  title={p.title || 'Your trip'}
+                  url={shareUrl}
+                  publicStatus={p.status}
+                  forceOpen={anonShareOpen}
+                  onOpenChange={setAnonShareOpen}
+                  hideTrigger
+                  onShareAction={() => setSharedOnce(true)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {sharedOnce && (
+            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[calc(100vw-2rem)] sm:w-[400px]">
+              <div className="bg-background border border-border rounded-xl shadow-2xl p-4 pr-9 relative">
+                <button
+                  type="button"
+                  onClick={() => setSharedOnce(false)}
+                  aria-label="Dismiss"
+                  className="absolute top-2 right-2 p-1 text-foreground/50 hover:text-foreground hover:bg-secondary rounded-full transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <p className="text-sm text-foreground/80 mb-2 leading-snug">
+                  Your client received an unregistered link — it will stop working in 3 days.
+                </p>
+                <button
+                  onClick={() => {
+                    const redirectUrl = `/v2/t/${slug}?claim=${projectIdForClaim}`
+                    router.push(
+                      `/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`,
+                    )
+                  }}
+                  className="text-sm font-semibold text-accent hover:text-accent/80 underline underline-offset-2"
+                >
+                  Sign up free to save it →
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {previewAsClient && (
+        <div className="sticky top-0 z-40 bg-accent text-accent-foreground">
+          <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
+            <p className="text-sm flex-1 min-w-0 flex items-center gap-2">
+              <Eye className="w-4 h-4 flex-shrink-0" />
+              <span>You&apos;re previewing as your client sees this page.</span>
+            </p>
+            <button
+              onClick={() => setPreviewAsClient(false)}
+              className="text-sm font-semibold px-3 py-1 rounded-full bg-accent-foreground/15 hover:bg-accent-foreground/25 transition-colors animate-pulse flex-shrink-0"
+            >
+              Exit preview
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Action bar — owner only (not anon, not showcase) */}
       {showOwnerUI && !isShowcase && !isAnonCreator && p.id && (
         <TripActionBar
           projectId={p.id}
@@ -391,9 +866,7 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
           shareUrl={shareUrl}
           canShare={true}
           designTheme={p.design_theme}
-          onPreviewAsClient={() => {
-            /* deferred */
-          }}
+          onPreviewAsClient={() => setPreviewAsClient(true)}
           onStatusChanged={() => setOwnerRefreshKey((k) => k + 1)}
           onRequestArchive={() => setArchiveOpen(true)}
           onRequestDelete={() => {
@@ -401,10 +874,16 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
           }}
           isShowcase={isShowcase}
           topOffset={isShowcase ? SHOWCASE_BANNER_HEIGHT : 0}
+          onLocalThemeChange={(next: ThemeId) => {
+            setData((prev) =>
+              prev?.project
+                ? { ...prev, project: { ...prev.project, design_theme: next } }
+                : prev,
+            )
+          }}
         />
       )}
 
-      {/* Operator service block (CRM) — owner only */}
       {showOwnerUI && !isShowcase && !isAnonCreator && p.id && (
         <ClientInfo
           projectId={p.id}
@@ -417,7 +896,6 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
         />
       )}
 
-      {/* Modals */}
       {showOwnerUI && !isShowcase && !isAnonCreator && p.id && (
         <ArchiveDialog
           projectId={p.id}
@@ -442,53 +920,50 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
         <AnonUpsellModal
           tripTitle={p.title || 'Trip'}
           tripUrl={shareUrl}
-          signUpUrl={`/sign-up?claim=${projectIdForClaim}&redirect_url=${encodeURIComponent(`/v2/t/${slug}?claim=${projectIdForClaim}`)}`}
-          onShareClick={() => {
-            /* could open share menu, deferred */
-          }}
+          signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(`/v2/t/${slug}?claim=${projectIdForClaim}`)}`}
+          onShareClick={() => setAnonShareOpen(true)}
         />
       )}
 
-      {/* PostClaim upsell — fires once after successful claim */}
       <PostClaimUpsellModal
         show={showPostClaimUpsell}
         onClose={() => setShowPostClaimUpsell(false)}
       />
 
-      {/* Showcase pills (interactive demo hints) */}
       {isShowcase && <ShowcasePills />}
 
-      {/* THEME — Magazine renders all sections inside */}
-      <TripHostV2 data={dataWithMedia} mode={mode} ctx={themeCtx} />
+      <TripHostV2 data={dataWithMedia!} mode={mode} ctx={themeCtx} />
 
-      {/* Bottom chrome */}
+      <PhotoLightbox
+        media={lightbox}
+        owner={showOwnerUI}
+        projectId={p.id || null}
+        onClose={() => setLightbox(null)}
+        onReplaced={(updated) => {
+          setMedia((cur) => cur.map((m) => (m.id === updated.id ? updated : m)))
+          setLightbox(updated)
+        }}
+      />
+
       {showOwnerUI && !isAnonCreator && p.id && (
-        <TripCommandBar
-          projectId={p.id}
-          getToken={getToken}
-          status={p.status}
-          theme={p.design_theme}
-          onTripUpdated={() => setOwnerRefreshKey((k) => k + 1)}
-          isShowcase={isShowcase}
-          tripContext={tripContext}
-          onShowcaseActions={isShowcase ? applyShowcaseActions : undefined}
-        />
+        <>
+          <TripCommandBar
+            projectId={p.id}
+            getToken={getToken}
+            status={p.status}
+            theme={p.design_theme}
+            onTripUpdated={handleTripUpdated}
+            isShowcase={isShowcase}
+            tripContext={tripContext}
+            onShowcaseActions={isShowcase ? applyShowcaseActions : undefined}
+          />
+          <div className="h-40 md:h-44" aria-hidden="true" />
+        </>
       )}
 
       <TripFooter editable={showOwnerUI && !isAnonCreator} />
 
-      {/* Public viewers / anon get their own ScrollToTop; owners get one
-          inside Footer through TripFooter (mode='owner'). */}
       {(!showOwnerUI || isAnonCreator) && <ScrollToTop bottomOffset={24} />}
-    </>
+    </div>
   )
-}
-
-/**
- * Keep the rendered theme's `data.media` in sync with the local media
- * state (which photo upload mutates). Avoids stale photos on the
- * Magazine sections while leaving the SSR payload immutable.
- */
-function useMemoSyncMedia(data: TripDataV2, media: never): TripDataV2 {
-  return useMemo(() => ({ ...data, media: media as never }), [data, media])
 }
