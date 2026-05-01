@@ -10,6 +10,7 @@ import { ActivateStubModal } from '@/components/activate-stub-modal'
 import { apiFetch } from '@/lib/api'
 import { getStatusMeta, buildTripMenu } from '@/lib/trip-status'
 import { ThemeSwitcher } from '@/components/trip/theme-switcher'
+import type { ThemeId } from '@/lib/themes'
 
 type Props = {
   projectId: string
@@ -25,7 +26,7 @@ type Props = {
   onRequestDelete: () => void
   /** Showcase / demo plumbing — passed straight to ThemeSwitcher. */
   isShowcase?: boolean
-  onLocalThemeChange?: (next: 'editorial' | 'expedition' | 'compact') => void
+  onLocalThemeChange?: (next: ThemeId) => void
   /**
    * Top offset (px) for the sticky position. Used in showcase mode to
    * push the action bar below the demo banner so both stay visible.
