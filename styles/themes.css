@@ -494,6 +494,91 @@
 /* compact card-side stats */
 .tp-hero-card-side .tp-hero-stat .v { font-family: var(--font-display); font-size: 22px; font-weight: 600; }
 
+/* MAGAZINE (T4) — full-bleed photo with the headline pinned to the
+   bottom-left. Editorial-luxury: cream-on-photo type, soft cinematic
+   gradient, mono region eyebrow, optional italic tagline below the
+   serif title, stats on a hairline below. Square corners; no shadows. */
+.tp-hero--magazine {
+  position: relative;
+  min-height: 100vh;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 56px 0 64px;
+  background: var(--ink);
+  overflow: hidden;
+}
+.tp-hero--magazine .tp-hero-bg {
+  position: absolute; inset: 0;
+  background: center/cover no-repeat;
+  filter: brightness(0.86) contrast(1.02);
+  z-index: 0;
+}
+.tp-hero--magazine .tp-hero-bg::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(26, 24, 23, 0.55) 0%,
+    rgba(26, 24, 23, 0.00) 22%,
+    rgba(26, 24, 23, 0.00) 55%,
+    rgba(26, 24, 23, 0.78) 100%
+  );
+}
+.tp-hero--magazine .tp-hero-meta {
+  position: relative; z-index: 1;
+  color: var(--bg);
+  display: flex; flex-direction: column; gap: 18px;
+  max-width: 920px;
+}
+.tp-hero--magazine .tp-hero-region-eyebrow {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--bg) 92%, transparent);
+}
+.tp-hero--magazine .tp-hero-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(40px, 6.4vw, 88px);
+  line-height: 1.05;
+  letter-spacing: -0.005em;
+  color: var(--bg);
+  margin: 0;
+  max-width: 22ch;
+}
+.tp-hero--magazine .tp-hero-title em {
+  font-style: italic;
+  font-weight: 500;
+}
+.tp-hero--magazine .tp-hero-tagline {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1.5;
+  color: color-mix(in oklab, var(--bg) 86%, transparent);
+  margin: 4px 0 0;
+  max-width: 56ch;
+}
+.tp-hero--magazine .tp-hero-stats {
+  margin-top: 26px;
+  padding-top: 22px;
+  gap: 36px;
+  border-top: 1px solid color-mix(in oklab, var(--bg) 32%, transparent);
+}
+.tp-hero--magazine .tp-hero-stat .v {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 32px;
+  color: var(--bg);
+  line-height: 1;
+}
+.tp-hero--magazine .tp-hero-stat .l {
+  color: color-mix(in oklab, var(--bg) 65%, transparent);
+}
+.trip-page[data-mobile="true"] .tp-hero--magazine { min-height: 88vh; padding: 40px 0 48px; }
+.trip-page[data-mobile="true"] .tp-hero--magazine .tp-hero-title { font-size: 40px; }
+
 /* ===================== OVERVIEW ===================== */
 .tp-overview-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 64px; }
 .trip-page[data-mobile="true"] .tp-overview-grid { grid-template-columns: 1fr; gap: 24px; }
@@ -592,6 +677,64 @@
 .tp-itin--grid .seg-line .time { font-family: var(--font-mono); color: var(--ink-mute); font-size: 12px; }
 .tp-itin--grid .seg-line .type { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-mute); }
 .tp-itin--grid .lodging { font-size: 11px; letter-spacing: var(--eyebrow-tracking); text-transform: uppercase; color: var(--ink-mute); }
+
+/* MAGAZINE (T4) — vertical stack of days separated by hairlines.
+   Mono accent eyebrow ("DAY 01 — LISBON") in terracotta, Cormorant
+   title with optional italic accent on second-line phrases, full-bleed
+   16:9 photo, Inter 14/1.62 prose. No left numeral column. */
+.tp-itin--magazine {
+  display: flex;
+  flex-direction: column;
+}
+.tp-itin--magazine .day {
+  border-top: 1px solid var(--rule);
+  padding: 40px 0 48px;
+  display: block;
+}
+.tp-itin--magazine .day:first-child { border-top: 0; padding-top: 0; }
+.tp-itin--magazine .day-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 18px;
+}
+.tp-itin--magazine .day-num .day-date {
+  color: color-mix(in oklab, var(--accent) 70%, var(--ink-mute));
+}
+.tp-itin--magazine .day-title {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  font-size: clamp(22px, 2.4vw, 28px);
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  margin: 0 0 28px;
+  max-width: 28ch;
+}
+.tp-itin--magazine .day-title em {
+  font-style: italic;
+  font-weight: var(--display-weight);
+}
+.tp-itin--magazine .day-photo {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: center/cover no-repeat var(--bg-alt);
+  display: block;
+  border-radius: 0;
+}
+.tp-itin--magazine .day-desc {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.62;
+  color: var(--ink);
+  margin: 28px 0 0;
+  max-width: 64ch;
+}
+.tp-itin--magazine .day-desc p + p { margin-top: 16px; }
 
 /* ===================== INCLUDED ===================== */
 .tp-incl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
