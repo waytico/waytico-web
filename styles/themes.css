@@ -166,6 +166,143 @@
   --itinerary-style: "grid";
 }
 
+/* =============== THEME 4 — MAGAZINE (editorial-luxury / Mr & Mrs Smith) =============== */
+:root[data-theme="magazine"], [data-theme="magazine"] {
+  /* Source: Claude Design "magazine-v2" handoff bundle. Cream + warm
+     black + terracotta. Cormorant headings with italic accents on
+     second-line phrases; DM Mono eyebrows; Inter body. Square corners
+     on photos, hairline rules, Roman-numeral section markers. */
+  --bg:         #F5F0E6;
+  --bg-alt:     #EFE8DC;
+  --paper:      #E9E1D2;
+  --ink:        #1A1817;
+  --ink-soft:   rgba(26, 24, 23, 0.78);
+  --ink-mute:   rgba(26, 24, 23, 0.58);
+  --rule:       rgba(26, 24, 23, 0.18);
+  --accent:     #B85A3E;
+  --accent-ink: #F5F0E6;
+  --chip-bg:    rgba(184, 90, 62, 0.10);
+  --chip-ink:   #B85A3E;
+
+  --font-display: var(--font-serif), "Cormorant Garamond", Georgia, serif;
+  --font-body:    var(--font-inter), "Inter", -apple-system, system-ui, sans-serif;
+  --font-mono:    var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+
+  --display-weight: 500;
+  --display-tracking: -0.005em;
+  --eyebrow-tracking: 0.18em;
+  --eyebrow-case: uppercase;
+
+  --r-card: 0px;
+  --r-chip: 0px;
+  --gap-section: 96px;
+  --gap-block: 24px;
+
+  --shadow-card: none;
+
+  --bar-bg:         color-mix(in oklab, var(--accent) 9%, var(--bg));
+  --bar-ink:        var(--ink);
+  --bar-ink-mute:   color-mix(in oklab, var(--ink) 50%, transparent);
+  --bar-border:     color-mix(in oklab, var(--accent) 32%, transparent);
+  --bar-accent:     var(--accent);
+  --bar-accent-ink: var(--accent-ink);
+  --bar-shadow:     0 6px 24px rgba(26, 24, 23, 0.10);
+
+  --hero-style:      "magazine";
+  --itinerary-style: "magazine";
+}
+
+/* =============== THEME 5 — SERENE (Aman / Singita ultra-quiet) =============== */
+:root[data-theme="serene"], [data-theme="serene"] {
+  /* Source: Claude Design "serene" handoff bundle. Warm cream + sand
+     + Playfair Display + Inter Light 300 + JetBrains Mono. Generous
+     section gaps (80/128px), centered prose, italic-only on day
+     titles, no filled CTAs anywhere. */
+  --bg:         #F8F4ED;
+  --bg-alt:     #EFE8DB;
+  --paper:      #FDFAF3;
+  --ink:        #2C2926;
+  --ink-soft:   #5C5751;
+  --ink-mute:   #9C9489;
+  --rule:       #D5CCBA;
+  --accent:     #9C8B6F;
+  --accent-ink: #FDFAF3;
+  --chip-bg:    rgba(156, 139, 111, 0.12);
+  --chip-ink:   #6E6147;
+
+  --font-display: var(--font-playfair), "Playfair Display", Georgia, serif;
+  --font-body:    var(--font-inter), "Inter", -apple-system, system-ui, sans-serif;
+  --font-mono:    var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace;
+
+  --display-weight: 400;
+  --display-tracking: -0.015em;
+  --eyebrow-tracking: 0.20em;
+  --eyebrow-case: uppercase;
+
+  --r-card: 0px;
+  --r-chip: 999px;
+  --gap-section: 128px;
+  --gap-block: 36px;
+
+  --shadow-card: none;
+
+  --bar-bg:         color-mix(in oklab, var(--accent) 8%, var(--paper));
+  --bar-ink:        var(--ink);
+  --bar-ink-mute:   color-mix(in oklab, var(--ink) 45%, transparent);
+  --bar-border:     color-mix(in oklab, var(--accent) 26%, transparent);
+  --bar-accent:     var(--accent);
+  --bar-accent-ink: var(--accent-ink);
+  --bar-shadow:     0 4px 18px rgba(44, 41, 38, 0.06);
+
+  --hero-style:      "centered";
+  --itinerary-style: "centered";
+}
+
+/* =============== THEME 6 — FRONTIER (cinematic safari / NatGeo) =============== */
+:root[data-theme="frontier"], [data-theme="frontier"] {
+  /* Source: Claude Design "frontier" handoff bundle. Dark warm bg +
+     ochre accent + Cormorant + Inter + DM Mono. Vignette hero,
+     21:9/16:9 photos with location pill, single filled ochre CTA. */
+  --bg:         #1B1612;
+  --bg-alt:     #261F1A;
+  --paper:      #322822;
+  --ink:        #F5F0E6;
+  --ink-soft:   #BFB5A6;
+  --ink-mute:   #7A7368;
+  --rule:       #3D332C;
+  --accent:     #C8924B;
+  --accent-ink: #1B1612;
+  --chip-bg:    rgba(200, 146, 75, 0.16);
+  --chip-ink:   #E0B071;
+
+  --font-display: var(--font-serif), "Cormorant Garamond", Georgia, serif;
+  --font-body:    var(--font-inter), "Inter", -apple-system, system-ui, sans-serif;
+  --font-mono:    var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+
+  --display-weight: 600;
+  --display-tracking: -0.03em;
+  --eyebrow-tracking: 0.18em;
+  --eyebrow-case: uppercase;
+
+  --r-card: 0px;
+  --r-chip: 0px;
+  --gap-section: 120px;
+  --gap-block: 28px;
+
+  --shadow-card: none;
+
+  --bar-bg:         color-mix(in oklab, var(--accent) 12%, var(--bg-alt));
+  --bar-ink:        var(--ink);
+  --bar-ink-mute:   color-mix(in oklab, var(--ink) 55%, transparent);
+  --bar-border:     color-mix(in oklab, var(--accent) 32%, transparent);
+  --bar-accent:     var(--accent);
+  --bar-accent-ink: var(--accent-ink);
+  --bar-shadow:     0 12px 40px rgba(0, 0, 0, 0.45);
+
+  --hero-style:      "frontier";
+  --itinerary-style: "frontier";
+}
+
 /* ===================== shared component CSS (theme-agnostic) ===================== */
 
 .trip-page {
