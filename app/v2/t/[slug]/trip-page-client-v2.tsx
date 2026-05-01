@@ -963,4 +963,16 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
             theme={p.design_theme}
             onTripUpdated={handleTripUpdated}
             isShowcase={isShowcase}
-        
+            tripContext={tripContext}
+            onShowcaseActions={isShowcase ? applyShowcaseActions : undefined}
+          />
+          <div className="h-40 md:h-44" aria-hidden="true" />
+        </>
+      )}
+
+      <TripFooter editable={showOwnerUI && !isAnonCreator} />
+
+      {(!showOwnerUI || isAnonCreator) && <ScrollToTop bottomOffset={24} />}
+    </div>
+  )
+}
