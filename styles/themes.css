@@ -166,6 +166,51 @@
   --itinerary-style: "grid";
 }
 
+/* =============== THEME 4 — MAGAZINE (TZ-MAGAZINE §2.1) =============== */
+:root[data-theme="magazine"], [data-theme="magazine"] {
+  /* Editorial-grade palette: warm cream paper with deep ink and a single
+     terracotta accent. Square corners, hairline rules everywhere — the
+     opposite of the soft-rounded editorial look. */
+  --bg:         #F5F0E6;
+  --bg-alt:     #1A1817;
+  --paper:      #FFFFFF;
+  --ink:        #1A1817;
+  --ink-soft:   rgba(26, 24, 23, 0.62);
+  --ink-mute:   rgba(26, 24, 23, 0.45);
+  --rule:       rgba(26, 24, 23, 0.18);
+  --accent:     #B85A3E;
+  --accent-ink: #F5F0E6;
+  --chip-bg:    rgba(184, 90, 62, 0.10);
+  --chip-ink:   #B85A3E;
+
+  --font-display: var(--font-serif), "Cormorant Garamond", Georgia, serif;
+  --font-body:    var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-mono:    var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+
+  --display-weight: 500;
+  --display-tracking: -0.005em;
+  --eyebrow-tracking: 0.18em;
+  --eyebrow-case: uppercase;
+
+  --r-card: 0;
+  --r-chip: 0;
+  --gap-section: 120px;
+  --gap-block: 32px;
+
+  --shadow-card: none;
+
+  --bar-bg:         color-mix(in oklab, var(--accent) 10%, var(--bg));
+  --bar-ink:        var(--ink);
+  --bar-ink-mute:   color-mix(in oklab, var(--ink) 50%, transparent);
+  --bar-border:     color-mix(in oklab, var(--accent) 30%, transparent);
+  --bar-accent:     var(--accent);
+  --bar-accent-ink: var(--accent-ink);
+  --bar-shadow:     0 6px 24px rgba(26, 24, 23, 0.10);
+
+  --hero-style:      "magazine";
+  --itinerary-style: "magazine";
+}
+
 /* ===================== shared component CSS (theme-agnostic) ===================== */
 
 .trip-page {
