@@ -1335,3 +1335,19 @@
   color: var(--ink-soft);
   font-weight: 500;
 }
+
+/* ─── Itinerary — clickable hero photo + extra photos grid ─── */
+
+[data-theme="magazine"] .mag-day__photo--clickable {
+  cursor: zoom-in;
+}
+
+[data-theme="magazine"] .mag-day__photos-extra {
+  margin-top: 28px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .mag-day__photos-extra {
+    margin-top: 36px;
+  }
+}

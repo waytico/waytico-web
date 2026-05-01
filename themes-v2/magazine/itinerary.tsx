@@ -1,15 +1,3 @@
-/**
- * Magazine — Itinerary section.
- *
- * Stage 3: in owner mode, days reorder via @dnd-kit (the same library
- * the legacy ветка uses). Day numbers are renumerated on drop, dates
- * are stripped (the backend's reconcileDates() recomputes them from
- * dates_start), and the new array is persisted via saveProjectPatch
- * with `itinerary` as a flat list of {id, dayNumber} objects.
- *
- * In public mode there's no @dnd-kit — just a stack of MagazineDay
- * sections, no listeners, no overhead.
- */
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -55,12 +43,18 @@ export function Itinerary({ data }: ThemePropsV2) {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
-  const onDragEnd = (event: DragEndEvent) => {
+  // Reorder rollback parity with legacy itinerary.tsx 345-348:
+  // optimistic local mutation → fire saveProjectPatch → if PATCH returns
+  // false, revert to the snapshot we captured before the mutation. This
+  // matters when the network drops mid-reorder; without rollback the
+  // visible day order disagrees with what the backend saved.
+  const onDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
     const oldIdx = localDays.findIndex((d) => d.id === active.id)
     const newIdx = localDays.findIndex((d) => d.id === over.id)
     if (oldIdx < 0 || newIdx < 0) return
+    const snapshot = localDays
     const reordered = arrayMove(localDays, oldIdx, newIdx).map((d, i) => ({
       ...d,
       dayNumber: i + 1,
@@ -68,44 +62,66 @@ export function Itinerary({ data }: ThemePropsV2) {
       date: null,
     }))
     setLocalDays(reordered)
-    void ctx!.mutations.saveProjectPatch({ itinerary: reordered })
+    const ok = await ctx!.mutations.saveProjectPatch({ itinerary: reordered })
+    if (ok === false) setLocalDays(snapshot)
   }
 
   if (localDays.length === 0) return null
 
+  const language = data.project.language ?? 'en'
+  const datesStart = data.project.dates_start ?? null
+
   if (!editable) {
     // Public mode: bypass dnd-kit entirely.
     return (
-      <>
+      <section id="itinerary">
         {localDays.map((day, i) => (
           <MagazineDay
             key={day.id}
             day={day}
             media={data.media}
+            language={language}
+            datesStart={datesStart}
             isLast={i === localDays.length - 1}
           />
         ))}
-      </>
+      </section>
     )
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-      <SortableContext items={localDays.map((d) => d.id)} strategy={verticalListSortingStrategy}>
-        {localDays.map((day, i) => (
-          <SortableDay
-            key={day.id}
-            day={day}
-            media={data.media}
-            isLast={i === localDays.length - 1}
-          />
-        ))}
-      </SortableContext>
-    </DndContext>
+    <section id="itinerary">
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <SortableContext items={localDays.map((d) => d.id)} strategy={verticalListSortingStrategy}>
+          {localDays.map((day, i) => (
+            <SortableDay
+              key={day.id}
+              day={day}
+              media={data.media}
+              language={language}
+              datesStart={datesStart}
+              isLast={i === localDays.length - 1}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
+    </section>
   )
 }
 
-function SortableDay({ day, media, isLast }: { day: Day; media: ThemePropsV2['data']['media']; isLast: boolean }) {
+function SortableDay({
+  day,
+  media,
+  language,
+  datesStart,
+  isLast,
+}: {
+  day: Day
+  media: ThemePropsV2['data']['media']
+  language: string
+  datesStart: string | null
+  isLast: boolean
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: day.id })
 
@@ -115,9 +131,6 @@ function SortableDay({ day, media, isLast }: { day: Day; media: ThemePropsV2['da
     opacity: isDragging ? 0.6 : 1,
   }
 
-  // Pass the drag handle as a slot — listeners attach to the handle, not
-  // the entire section, so the operator can still click into editable
-  // text fields without grabbing.
   const handle = (
     <span {...attributes} {...listeners} className="mag-inline-flex">
       <DayDragHandle />
@@ -126,7 +139,14 @@ function SortableDay({ day, media, isLast }: { day: Day; media: ThemePropsV2['da
 
   return (
     <div ref={setNodeRef} style={style}>
-      <MagazineDay day={day} media={media} isLast={isLast} dragHandle={handle} />
+      <MagazineDay
+        day={day}
+        media={media}
+        language={language}
+        datesStart={datesStart}
+        isLast={isLast}
+        dragHandle={handle}
+      />
     </div>
   )
 }
