@@ -324,4 +324,12 @@ function ChannelRow({
       <button
         type="button"
         onClick={() => void onToggleHidden()}
-        className="mag
+        className="mag-contacts__row-edit-eye"
+        title={hidden ? 'Show on this trip' : 'Hide from this trip'}
+        aria-label={hidden ? 'Show on this trip' : 'Hide from this trip'}
+      >
+        {hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+      </button>
+    </li>
+  )
+}

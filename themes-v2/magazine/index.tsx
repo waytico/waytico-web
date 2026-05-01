@@ -1,17 +1,3 @@
-/**
- * Magazine theme — composition root.
- *
- * Renders the section sequence from MAGAZINE-SPEC §A:
- *   Hero → Overview → Itinerary → Accommodations → Included → Price →
- *   Terms → Contacts.
- *
- * Each section handles its own empty state internally (returns null
- * when its data is missing). The wrapper sets data-theme="magazine"
- * so tokens.css scopes apply, and uses CREAM as the page background.
- *
- * Stage 2 — public mode only. Owner overlays / EditableField / drag-drop
- * land in stage 3.
- */
 import './tokens.css'
 import type { ThemePropsV2 } from '@/types/theme-v2'
 
@@ -33,4 +19,19 @@ export default function MagazineTripPage(props: ThemePropsV2) {
     <div data-theme="magazine" className="mag-root">
       <Hero {...props} />
       <TripNav />
-      <Overview {...pro
+      <Overview {...props} />
+      <Itinerary {...props} />
+      <Accommodations {...props} />
+      <Price {...props} />
+      <Included {...props} />
+      <Terms {...props} />
+      <Contacts {...props} />
+      {isActive && (
+        <>
+          <ActiveSections {...props} />
+          <WhatToBring {...props} />
+        </>
+      )}
+    </div>
+  )
+}
