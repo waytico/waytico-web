@@ -112,7 +112,7 @@ export function Included({ data }: ThemePropsV2) {
   if (cols.length === 0) return null
 
   return (
-    <section className="mag-section mag-section--py">
+    <section id="included" className="mag-section mag-section--py">
       <div className="mag-shell">
         <Hairline className="mag-incl__hairline-top" />
         <div className="mag-eyebrow mag-incl__heading">

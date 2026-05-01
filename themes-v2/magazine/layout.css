@@ -1485,3 +1485,60 @@
   color: var(--accent);
   text-decoration: underline;
 }
+
+/* ─── TripNav (sticky anchor strip under hero) ─── */
+
+[data-theme="magazine"] .mag-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg);
+  border-bottom: 1px solid var(--rule);
+}
+
+[data-theme="magazine"] .mag-nav__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  padding-block: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .mag-nav__inner {
+    gap: 28px;
+    padding-block: 18px;
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
+[data-theme="magazine"] .mag-nav__inner::-webkit-scrollbar {
+  display: none;
+}
+
+[data-theme="magazine"] .mag-nav__link {
+  font-family: var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  text-decoration: none;
+  white-space: nowrap;
+  padding-block: 4px;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .mag-nav__link {
+    font-size: 11px;
+  }
+}
+
+[data-theme="magazine"] .mag-nav__link:hover {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}

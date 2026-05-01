@@ -16,6 +16,7 @@ import './tokens.css'
 import type { ThemePropsV2 } from '@/types/theme-v2'
 
 import { Hero } from './hero'
+import { TripNav } from './nav'
 import { Overview } from './overview'
 import { Itinerary } from './itinerary'
 import { Accommodations } from './accommodations'
@@ -28,13 +29,10 @@ export default function MagazineTripPage(props: ThemePropsV2) {
   return (
     <div data-theme="magazine" className="mag-root">
       <Hero {...props} />
+      <TripNav />
       <Overview {...props} />
       <Itinerary {...props} />
       <Accommodations {...props} />
       <Price {...props} />
       <Included {...props} />
-      <Terms {...props} />
-      <Contacts {...props} />
-    </div>
-  )
-}
+      <Terms {...props} 

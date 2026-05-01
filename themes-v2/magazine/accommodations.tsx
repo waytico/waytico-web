@@ -44,7 +44,7 @@ export function Accommodations({ data }: ThemePropsV2) {
   if (!editable && stays.length === 0) return null
 
   return (
-    <section className="mag-stays">
+    <section id="accommodations" className="mag-stays">
       <Hairline />
       <div className="mag-shell mag-stays__head">
         <div className="mag-eyebrow mag-stays__heading">
