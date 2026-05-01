@@ -194,16 +194,6 @@ function PlainItinerary(props: {
       </section>
     )
   }
-  if (layout === 'magazine') {
-    return (
-      <section className="tp-section" id="itinerary">
-        <div className="tp-container">
-          {head}
-          <div className="tp-itin--magazine">{itinerary.map(renderDay)}</div>
-        </div>
-      </section>
-    )
-  }
   return (
     <section className="tp-section" id="itinerary">
       <div className="tp-container">
@@ -262,20 +252,6 @@ function PlainDayShell({
         <div className="day-head">
           <span className="day-num">DAY {pad2(day.dayNumber)}</span>
           {dayDateLabel && <span className="day-date">{dayDateLabel}</span>}
-        </div>
-        <h3 className="day-title">{renderDayTitle(day)}</h3>
-        {photo && <div className="day-photo" style={{ backgroundImage: `url(${photo})` }} />}
-        <DayDescription>{renderDayDescription(day)}</DayDescription>
-        {renderDayExtras?.(day)}
-      </article>
-    )
-  }
-  if (layout === 'magazine') {
-    return (
-      <article className="day">
-        <div className="day-num">
-          DAY {pad2(day.dayNumber)}
-          {dayDateLabel && <span className="day-date"> — {dayDateLabel}</span>}
         </div>
         <h3 className="day-title">{renderDayTitle(day)}</h3>
         {photo && <div className="day-photo" style={{ backgroundImage: `url(${photo})` }} />}
@@ -406,13 +382,6 @@ function DndSortable(props: {
             <div className="tp-itin--grid">{inner}</div>
           </div>
         </section>
-      ) : layout === 'magazine' ? (
-        <section className="tp-section" id="itinerary">
-          <div className="tp-container">
-            {head}
-            <div className="tp-itin--magazine">{inner}</div>
-          </div>
-        </section>
       ) : (
         <section className="tp-section" id="itinerary">
           <div className="tp-container">
@@ -506,26 +475,6 @@ function SortableDay({
         <div className="day-head">
           <span className="day-num">DAY {pad2(day.dayNumber)}</span>
           {dayDateLabel && <span className="day-date">{dayDateLabel}</span>}
-        </div>
-        <h3 className="day-title">{renderDayTitle(day)}</h3>
-        {photo && <div className="day-photo" style={{ backgroundImage: `url(${photo})` }} />}
-        <DayDescription>{renderDayDescription(day)}</DayDescription>
-        {renderDayExtras?.(day)}
-      </article>
-    )
-  }
-
-  if (layout === 'magazine') {
-    return (
-      <article
-        ref={setNodeRef}
-        style={style}
-        className={'day' + (isDragging ? ' is-dragging' : '')}
-      >
-        {handle}
-        <div className="day-num">
-          DAY {pad2(day.dayNumber)}
-          {dayDateLabel && <span className="day-date"> — {dayDateLabel}</span>}
         </div>
         <h3 className="day-title">{renderDayTitle(day)}</h3>
         {photo && <div className="day-photo" style={{ backgroundImage: `url(${photo})` }} />}

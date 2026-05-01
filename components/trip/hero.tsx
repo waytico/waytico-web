@@ -257,48 +257,6 @@ export function TripHero(props: HeroProps) {
     </>
   )
 
-  if (heroStyle === 'magazine') {
-    // Magazine theme — full-bleed photo, headline at the bottom-left.
-    // Region eyebrow above the title, optional italic tagline below it,
-    // hero stats on a hairline rule beneath. HeroTopStrip carries the
-    // status pill + Issued/Valid dates + ContactAgentMenu with onPhoto
-    // contrast since the strip sits over the photo.
-    return (
-      <header className="tp-hero--magazine" style={{ position: 'relative' }}>
-        <div
-          className="tp-hero-bg"
-          style={heroPhoto ? { backgroundImage: `url(${heroPhoto})` } : undefined}
-        />
-        <HeroTopStrip
-          status={status}
-          proposalDate={proposalDate}
-          validUntil={validUntil}
-          proposalSlot={props.proposalSlot}
-          validUntilSlot={props.validUntilSlot}
-          contactAgentSlot={props.contactAgentSlot}
-          onPhoto={!!heroPhoto}
-        />
-        <div className="tp-container" style={{ position: 'relative', zIndex: 1 }}>
-          <div className="tp-hero-meta">
-            {(props.regionEyebrowSlot || props.activityChipSlot) && (
-              <div className="tp-hero-region-eyebrow">
-                {props.activityChipSlot}
-                {props.regionEyebrowSlot}
-              </div>
-            )}
-            <h1 className="tp-display tp-hero-title">{props.titleSlot}</h1>
-            {props.taglineSlot && (
-              <p className="tp-hero-tagline">{props.taglineSlot}</p>
-            )}
-            <HeroStats {...props} />
-            <OperatorStrip contact={operatorContact} />
-          </div>
-        </div>
-        {ownerOverlay}
-      </header>
-    )
-  }
-
   if (heroStyle === 'overlay') {
     return (
       <header className="tp-hero--overlay" style={{ position: 'relative' }}>

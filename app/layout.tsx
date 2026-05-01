@@ -7,7 +7,6 @@ import {
   Inter,
   Inter_Tight,
   JetBrains_Mono,
-  Playfair_Display,
 } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 import { Toaster } from 'sonner'
@@ -47,7 +46,7 @@ const archivoBlack = Archivo_Black({
 
 const inter = Inter({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-inter',
   display: 'swap',
   preload: false,
@@ -70,16 +69,6 @@ const interTight = Inter_Tight({
   preload: false,
 })
 
-// Serene theme display typography (used only inside [data-theme="serene"])
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  style: ['normal', 'italic'],
-  variable: '--font-playfair',
-  display: 'swap',
-  preload: false,
-})
-
 export const metadata: Metadata = {
   title: 'Waytico — AI Trip Proposal Pages',
   description: 'Create beautiful trip proposal pages in seconds.',
@@ -94,7 +83,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     inter.variable,
     interTight.variable,
     jetbrainsMono.variable,
-    playfair.variable,
   ].join(' ')
 
   return (
