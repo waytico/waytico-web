@@ -92,9 +92,9 @@ type ItineraryBase = 'timeline' | 'photo-cards' | 'grid'
 
 function resolveLayout(
   layout: string,
-): { base: ItineraryBase; modifier: '' | 'magazine' | 'centered' | 'frontier' } {
+): { base: ItineraryBase; modifier: '' | 'magazine' | 'serene' | 'frontier' } {
   if (layout === 'magazine') return { base: 'timeline', modifier: 'magazine' }
-  if (layout === 'centered') return { base: 'timeline', modifier: 'centered' }
+  if (layout === 'serene') return { base: 'timeline', modifier: 'serene' }
   if (layout === 'frontier') return { base: 'photo-cards', modifier: 'frontier' }
   if (layout === 'photo-cards' || layout === 'grid') return { base: layout, modifier: '' }
   return { base: 'timeline', modifier: '' }

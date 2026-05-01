@@ -254,8 +254,8 @@
   --bar-accent-ink: var(--accent-ink);
   --bar-shadow:     0 4px 18px rgba(44, 41, 38, 0.06);
 
-  --hero-style:      "centered";
-  --itinerary-style: "centered";
+  --hero-style:      "serene";
+  --itinerary-style: "serene";
 }
 
 /* =============== THEME 6 — FRONTIER (cinematic safari / NatGeo) =============== */
@@ -480,11 +480,11 @@
 .tp-hero--magazine .tp-hero-stat .l { color: color-mix(in oklab, var(--bg) 65%, transparent); }
 .trip-page[data-mobile="true"] .tp-hero--magazine .tp-hero-title { font-size: 40px; }
 
-/* CENTERED (T5 — Serene) — full-bleed photo, headline centered both
+/* SERENE (T5) — full-bleed photo, headline centered both
    horizontally and (visually) in the lower third. Aman/Singita-style
    ultra-quiet, faint bottom gradient only. */
-.tp-hero--centered { min-height: 90vh; padding-bottom: 96px; }
-.tp-hero--centered .tp-hero-bg::after {
+.tp-hero--serene { min-height: 90vh; padding-bottom: 96px; }
+.tp-hero--serene .tp-hero-bg::after {
   background: linear-gradient(
     to top,
     rgba(20, 15, 10, 0.32) 0%,
@@ -492,12 +492,12 @@
     transparent 60%
   );
 }
-.tp-hero--centered .tp-container > .tp-hero-meta {
+.tp-hero--serene .tp-container > .tp-hero-meta {
   text-align: center;
   align-items: center;
   display: flex; flex-direction: column; gap: 28px;
 }
-.tp-hero--centered .tp-hero-title {
+.tp-hero--serene .tp-hero-title {
   font-size: clamp(44px, 7vw, 96px);
   text-transform: none;
   letter-spacing: -0.015em;
@@ -506,27 +506,27 @@
   text-shadow: 0 1px 24px rgba(0, 0, 0, 0.18);
   max-width: 24ch;
 }
-.tp-hero--centered .tp-hero-meta > p {
+.tp-hero--serene .tp-hero-meta > p {
   /* tagline */
   text-align: center;
   color: color-mix(in oklab, var(--paper) 80%, transparent);
   max-width: 60ch;
 }
-.tp-hero--centered .tp-hero-stats {
+.tp-hero--serene .tp-hero-stats {
   justify-content: center;
   border-top-color: color-mix(in oklab, var(--paper) 22%, transparent);
 }
-.tp-hero--centered .tp-hero-stat { align-items: center; text-align: center; }
-.tp-hero--centered .tp-hero-stat .v {
+.tp-hero--serene .tp-hero-stat { align-items: center; text-align: center; }
+.tp-hero--serene .tp-hero-stat .v {
   font-size: 40px;
   color: var(--paper);
   font-style: normal;
 }
-.tp-hero--centered .tp-hero-stat .l {
+.tp-hero--serene .tp-hero-stat .l {
   color: color-mix(in oklab, var(--paper) 70%, transparent);
 }
-.trip-page[data-mobile="true"] .tp-hero--centered { min-height: 84vh; padding-bottom: 64px; }
-.trip-page[data-mobile="true"] .tp-hero--centered .tp-hero-title { font-size: 40px; }
+.trip-page[data-mobile="true"] .tp-hero--serene { min-height: 84vh; padding-bottom: 64px; }
+.trip-page[data-mobile="true"] .tp-hero--serene .tp-hero-title { font-size: 40px; }
 
 /* FRONTIER (T6) — overlay base + heavy vignette (top + bottom) +
    tighter tracking. Cinematic safari look. */
@@ -737,11 +737,11 @@
   border-radius: 0;
 }
 
-/* CENTERED (T5 — Serene) — built on the timeline base. Centered eyebrow
+/* SERENE (T5) — built on the timeline base. Centered eyebrow
    + italic display title + 4:3 photo + narrow centered prose. Aman-style
    quiet rhythm. */
-.tp-itin--centered.tp-itin--timeline { gap: 96px; }
-.tp-itin--centered.tp-itin--timeline .day {
+.tp-itin--serene.tp-itin--timeline { gap: 96px; }
+.tp-itin--serene.tp-itin--timeline .day {
   grid-template-columns: 1fr;
   gap: 0;
   border-top: 0;
@@ -751,7 +751,7 @@
   flex-direction: column;
   align-items: center;
 }
-.tp-itin--centered.tp-itin--timeline .day-num {
+.tp-itin--serene.tp-itin--timeline .day-num {
   /* Compact, mono, centered. */
   font-family: var(--font-mono);
   font-size: 11px;
@@ -762,12 +762,12 @@
   line-height: 1;
   margin-bottom: 18px;
 }
-.tp-itin--centered.tp-itin--timeline .day-date {
+.tp-itin--serene.tp-itin--timeline .day-date {
   text-align: center;
   color: var(--ink-mute);
   margin-bottom: 28px;
 }
-.tp-itin--centered.tp-itin--timeline .day-title {
+.tp-itin--serene.tp-itin--timeline .day-title {
   font-family: var(--font-display);
   font-weight: 400;
   font-style: italic;            /* signature of the theme */
@@ -778,7 +778,7 @@
   margin-bottom: 36px;
   max-width: 28ch;
 }
-.tp-itin--centered.tp-itin--timeline .day-desc {
+.tp-itin--serene.tp-itin--timeline .day-desc {
   font-size: 17px;
   line-height: 1.7;
   max-width: 60ch;
@@ -786,8 +786,8 @@
   text-align: left;
   margin: 36px auto 0;
 }
-.tp-itin--centered.tp-itin--timeline .day-photo,
-.tp-itin--centered.tp-itin--timeline .tp-photos-block img {
+.tp-itin--serene.tp-itin--timeline .day-photo,
+.tp-itin--serene.tp-itin--timeline .tp-photos-block img {
   border-radius: 0;
 }
 

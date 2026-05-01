@@ -260,7 +260,7 @@ export function TripHero(props: HeroProps) {
   if (
     heroStyle === 'overlay' ||
     heroStyle === 'magazine' ||
-    heroStyle === 'centered' ||
+    heroStyle === 'serene' ||
     heroStyle === 'frontier'
   ) {
     // All four full-bleed-photo variants share the same DOM and the same

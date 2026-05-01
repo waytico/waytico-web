@@ -63,7 +63,7 @@ export type HeroStyle =
   | 'overlay'
   | 'card'
   | 'magazine'
-  | 'centered'
+  | 'serene'
   | 'frontier'
 
 export const HERO_STYLE: Record<ThemeId, HeroStyle> = {
@@ -71,7 +71,7 @@ export const HERO_STYLE: Record<ThemeId, HeroStyle> = {
   expedition: 'overlay',
   compact: 'card',
   magazine: 'magazine',
-  serene: 'centered',
+  serene: 'serene',
   frontier: 'frontier',
 }
 
@@ -93,7 +93,7 @@ export type ItineraryStyle =
   | 'photo-cards'
   | 'grid'
   | 'magazine'
-  | 'centered'
+  | 'serene'
   | 'frontier'
 
 export const ITINERARY_STYLE: Record<ThemeId, ItineraryStyle> = {
@@ -101,7 +101,7 @@ export const ITINERARY_STYLE: Record<ThemeId, ItineraryStyle> = {
   expedition: 'photo-cards',
   compact: 'grid',
   magazine: 'magazine',
-  serene: 'centered',
+  serene: 'serene',
   frontier: 'frontier',
 }
 
