@@ -716,10 +716,19 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
     precomputed.heroPriceLabel,
   ])
 
+  // Magazine ActiveSections reads data.tasks; the local `tasks` state
+  // is the source of truth (saveTaskPatch + toggleTaskVisibility update
+  // it directly, useTripData refills it from /full). Spread it into the
+  // dataWithMedia hand-off so the section sees fresh tasks instead of
+  // SSR-stale ones.
   const dataWithMedia: TripDataV2 | null = useMemo(() => {
     if (!data) return null
-    return { ...data, media: media as never }
-  }, [data, media])
+    return {
+      ...data,
+      media: media as never,
+      tasks: tasks as never,
+    }
+  }, [data, media, tasks])
 
   void searchParams.get('activated')
   void searchParams.get('cancelled')
@@ -954,16 +963,4 @@ export default function TripPageClientV2({ slug, initialData }: Props) {
             theme={p.design_theme}
             onTripUpdated={handleTripUpdated}
             isShowcase={isShowcase}
-            tripContext={tripContext}
-            onShowcaseActions={isShowcase ? applyShowcaseActions : undefined}
-          />
-          <div className="h-40 md:h-44" aria-hidden="true" />
-        </>
-      )}
-
-      <TripFooter editable={showOwnerUI && !isAnonCreator} />
-
-      {(!showOwnerUI || isAnonCreator) && <ScrollToTop bottomOffset={24} />}
-    </div>
-  )
-}
+        
