@@ -74,36 +74,6 @@ function resolveDayDate(day: Day, datesStart?: string | null): string | null {
   return null
 }
 
-/* ── Layout resolution ─────────────────────────────────────────────
- *
- * Three new themes (magazine / serene / frontier) share DOM with
- * the existing three (editorial / expedition / compact) and add
- * their own visual flavour via a sibling .tp-itin--{modifier} class
- * defined in styles/themes.css. The base is what the JSX branches
- * on (it determines the DOM shape); the modifier is only ever
- * styling. Owner-mode @dnd-kit overlays continue to work because
- * the DOM is unchanged for any given base.
- *
- *   magazine → timeline base    (editorial day-num + title + photo + prose)
- *   centered → timeline base    (same DOM, centered + italic via modifier)
- *   frontier → photo-cards base (full-bleed photo card)
- */
-type ItineraryBase = 'timeline' | 'photo-cards' | 'grid'
-
-function resolveLayout(
-  layout: string,
-): { base: ItineraryBase; modifier: '' | 'magazine' | 'serene' | 'frontier' } {
-  if (layout === 'magazine') return { base: 'timeline', modifier: 'magazine' }
-  if (layout === 'serene') return { base: 'timeline', modifier: 'serene' }
-  if (layout === 'frontier') return { base: 'photo-cards', modifier: 'frontier' }
-  if (layout === 'photo-cards' || layout === 'grid') return { base: layout, modifier: '' }
-  return { base: 'timeline', modifier: '' }
-}
-
-function itinClass(base: ItineraryBase, modifier: string): string {
-  return modifier ? `tp-itin--${base} tp-itin--${modifier}` : `tp-itin--${base}`
-}
-
 /**
  * Itinerary — single component, three structural variants per TZ-6 §6.4:
  *   editorial  → timeline    (large day numeral on left, content on right)
@@ -192,14 +162,11 @@ function PlainItinerary(props: {
     renderDayExtras,
   } = props
 
-  const { base, modifier } = resolveLayout(layout)
-  const containerClass = itinClass(base, modifier)
-
   const renderDay = (day: Day) => (
     <PlainDayShell
       key={day.id || `day-${day.dayNumber}`}
       day={day}
-      layout={base}
+      layout={layout}
       datesStart={datesStart}
       language={language}
       media={media}
@@ -209,20 +176,20 @@ function PlainItinerary(props: {
     />
   )
 
-  if (base === 'photo-cards') {
+  if (layout === 'photo-cards') {
     return (
       <section className="tp-section" id="itinerary" style={{ paddingBottom: 0 }}>
         <div className="tp-container">{head}</div>
-        <div className={containerClass}>{itinerary.map(renderDay)}</div>
+        <div className="tp-itin--photo-cards">{itinerary.map(renderDay)}</div>
       </section>
     )
   }
-  if (base === 'grid') {
+  if (layout === 'grid') {
     return (
       <section className="tp-section" id="itinerary">
         <div className="tp-container">
           {head}
-          <div className={containerClass}>{itinerary.map(renderDay)}</div>
+          <div className="tp-itin--grid">{itinerary.map(renderDay)}</div>
         </div>
       </section>
     )
@@ -231,7 +198,7 @@ function PlainItinerary(props: {
     <section className="tp-section" id="itinerary">
       <div className="tp-container">
         {head}
-        <div className={containerClass}>{itinerary.map(renderDay)}</div>
+        <div className="tp-itin--timeline">{itinerary.map(renderDay)}</div>
       </div>
     </section>
   )
@@ -381,9 +348,6 @@ function DndSortable(props: {
     }
   }
 
-  const { base, modifier } = resolveLayout(layout)
-  const containerClass = itinClass(base, modifier)
-
   const dayIds = items.map((d) => d.id || `day-${d.dayNumber}`)
 
   const inner = (
@@ -392,7 +356,7 @@ function DndSortable(props: {
         <SortableDay
           key={day.id || `day-${day.dayNumber}`}
           day={day}
-          layout={base}
+          layout={layout}
           datesStart={datesStart}
           language={language}
           media={media}
@@ -406,23 +370,23 @@ function DndSortable(props: {
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      {base === 'photo-cards' ? (
+      {layout === 'photo-cards' ? (
         <section className="tp-section" id="itinerary" style={{ paddingBottom: 0 }}>
           <div className="tp-container">{head}</div>
-          <div className={containerClass}>{inner}</div>
+          <div className="tp-itin--photo-cards">{inner}</div>
         </section>
-      ) : base === 'grid' ? (
+      ) : layout === 'grid' ? (
         <section className="tp-section" id="itinerary">
           <div className="tp-container">
             {head}
-            <div className={containerClass}>{inner}</div>
+            <div className="tp-itin--grid">{inner}</div>
           </div>
         </section>
       ) : (
         <section className="tp-section" id="itinerary">
           <div className="tp-container">
             {head}
-            <div className={containerClass}>{inner}</div>
+            <div className="tp-itin--timeline">{inner}</div>
           </div>
         </section>
       )}
