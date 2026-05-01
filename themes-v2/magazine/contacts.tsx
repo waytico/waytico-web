@@ -24,9 +24,9 @@ import { Hairline } from './styles'
 
 // Lucide and our brand-mark icons share the same { size, className } prop
 // API; the union of their concrete types defeats a strict ComponentType
-// signature, so we accept any-props here and trust the call sites.
+// signature, so we use `any` here and trust the call sites.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ICON: Record<ChannelKey, (props: any) => JSX.Element> = {
+const ICON: Record<ChannelKey, any> = {
   email: Mail,
   phone: Phone,
   whatsapp: WhatsAppIcon,
