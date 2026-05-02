@@ -60,6 +60,10 @@ type HeroProps = {
   /** Operator contact strip rendered at the bottom of the meta block.
    *  Hidden if every channel is empty. Theme-tokenised, no chrome styling. */
   operatorContact?: HeroOperatorContact
+  /** Country name used by the Magazine variant for the bottom eyebrow
+   *  ('PORTUGAL — 7 DAYS'). Plain string — non-Magazine variants ignore
+   *  it and continue to read country via `regionEyebrowSlot`. */
+  country?: string | null
   /** Whether overlay theme is in light/dark mode — affects validity badge color */
   isDarkBg?: boolean
   /** Top-strip slot — rendered on the right side of the hero top bar
@@ -335,6 +339,10 @@ export function TripHero(props: HeroProps) {
     )
   }
 
+  if (heroStyle === 'magazine') {
+    return <HeroMagazine {...props} />
+  }
+
   // split — editorial (default)
   return (
     <header style={{ position: 'relative' }}>
@@ -419,5 +427,114 @@ function CardSideStat({
       <span className="l">{label}</span>
       <span className="v">{value}</span>
     </div>
+  )
+}
+
+
+/**
+ * Magazine variant — full-bleed adaptive hero with a top metadata strip
+ * (Issued / Valid until — Country) and a bottom display group
+ * (Country — Days eyebrow, large display title, italic tagline).
+ *
+ * Adaptive contract:
+ *   desktop ≥1024px — height = calc(100dvh - 86px) (top-nav is fixed
+ *                     above), title clamp(48-112px), top strip 86px from
+ *                     viewport top, bottom group 64px from viewport bottom
+ *   mobile <1024px  — height = 100dvh, title scales down via clamp lower
+ *                     bound, top strip 60px from top (notch-safe), bottom
+ *                     group 56px from bottom
+ *
+ * Magazine intentionally omits the editorial-style stat tiles, the
+ * OperatorStrip, the public status pill, and the in-hero ContactAgentMenu
+ * — those move to (a) Overview stat tiles row, (b) TopNav INQUIRE pill.
+ *
+ * The HeroDropZone wrapper and the HeroOwnerOverlay live one level up in
+ * trip-page-client, so anon-creator interceptDrop, owner replace/delete
+ * affordances, and the hidden file input keep working without any extra
+ * wiring here. ownerOverlay is rendered as a child so its absolute-
+ * positioned controls layer over the hero photo.
+ */
+function HeroMagazine(props: HeroProps) {
+  const {
+    heroPhoto,
+    titleSlot,
+    taglineSlot,
+    regionEyebrowSlot,
+    proposalDate,
+    validUntil,
+    proposalSlot,
+    validUntilSlot,
+    durationDays,
+    country,
+    ownerOverlay,
+  } = props
+
+  const hasProposal = !!(proposalDate || proposalSlot)
+  const hasValidUntil = !!(validUntil || validUntilSlot)
+  const hasDates = hasProposal || hasValidUntil
+  const hasCountryEyebrow = !!regionEyebrowSlot
+
+  // Bottom eyebrow: "{COUNTRY} — {N} DAYS". Each part hides individually
+  // when missing; if neither is present the line is omitted.
+  const bottomCountry = country ? country.toUpperCase() : null
+  const bottomDuration =
+    durationDays != null ? `${durationDays} ${UI.days.toUpperCase()}` : null
+  const bottomEyebrowParts = [bottomCountry, bottomDuration].filter(
+    (p): p is string => !!p,
+  )
+
+  return (
+    <header className="tp-mag-hero" style={{ position: 'relative' }}>
+      {heroPhoto && (
+        <img
+          src={heroPhoto}
+          alt=""
+          className="tp-mag-hero__photo"
+          aria-hidden="true"
+        />
+      )}
+      <div className="tp-mag-hero__veil" aria-hidden="true" />
+
+      {(hasDates || hasCountryEyebrow) && (
+        <div className="tp-mag-hero__top">
+          {hasDates ? (
+            <div className="tp-mag-hero__top-dates">
+              {hasProposal && (
+                <>
+                  {UI.proposal}{' '}
+                  {proposalSlot ?? (proposalDate ? fmtDate(proposalDate) : null)}
+                </>
+              )}
+              {hasProposal && hasValidUntil && (
+                <span className="tp-mag-hero__top-sep">—</span>
+              )}
+              {hasValidUntil && (
+                <>
+                  {UI.validUntil}{' '}
+                  {validUntilSlot ?? (validUntil ? fmtDate(validUntil) : null)}
+                </>
+              )}
+            </div>
+          ) : (
+            <div />
+          )}
+          {hasCountryEyebrow && (
+            <div className="tp-mag-hero__top-country">{regionEyebrowSlot}</div>
+          )}
+        </div>
+      )}
+
+      <div className="tp-mag-hero__bottom">
+        {bottomEyebrowParts.length > 0 && (
+          <p className="tp-mag-hero__bottom-eyebrow">
+            {bottomEyebrowParts.join(' — ')}
+          </p>
+        )}
+        <h1 className="tp-mag-hero__title">{titleSlot}</h1>
+        {taglineSlot && <p className="tp-mag-hero__tagline">{taglineSlot}</p>}
+      </div>
+
+      {ownerOverlay}
+    </header>
   )
 }

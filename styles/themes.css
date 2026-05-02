@@ -1366,3 +1366,175 @@
 [data-theme="magazine"] .tp-mag-topnav__inquire button[aria-haspopup="menu"] > svg {
   display: none;
 }
+
+/* ── Hero (full-bleed adaptive) ───────────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-hero {
+  position: relative;
+  width: 100%;
+  height: 100vh;          /* fallback for older browsers */
+  height: 100dvh;          /* modern viewport accounts for mobile UI chrome */
+  overflow: hidden;
+  background: var(--ink);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-hero {
+    /* Reserve room for the fixed TopNav (≈86px including padding + rule). */
+    height: calc(100vh - 86px);
+    height: calc(100dvh - 86px);
+  }
+}
+
+[data-theme="magazine"] .tp-mag-hero__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter: brightness(0.82);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+[data-theme="magazine"] .tp-mag-hero__veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.42) 0%,
+    rgba(0, 0, 0, 0) 22%,
+    rgba(0, 0, 0, 0) 50%,
+    rgba(0, 0, 0, 0.78) 100%
+  );
+  pointer-events: none;
+}
+
+/* Top strip — slot for issued/valid dates on the left, country on the
+   right. Mobile: 60px from top (notch-safe), 22px side padding. */
+[data-theme="magazine"] .tp-mag-hero__top {
+  position: absolute;
+  top: max(60px, env(safe-area-inset-top, 0px) + 28px);
+  left: 22px;
+  right: 22px;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-hero__top {
+    top: 86px;
+    left: 48px;
+    right: 48px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-hero__top-dates {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 230, 0.85);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-hero__top-dates {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-hero__top-sep {
+  margin: 0 0.6em;
+  opacity: 0.5;
+}
+
+/* Country eyebrow comes through `regionEyebrowSlot` (`<span class="tp-eyebrow">`).
+   Override the editorial token-styling so it reads correctly over the photo. */
+[data-theme="magazine"] .tp-mag-hero__top-country .tp-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 230, 0.85);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  background: transparent;
+  padding: 0;
+  border: 0;
+}
+
+/* Bottom group — eyebrow + title + tagline. Anchored to bottom of hero
+   regardless of intermediate height changes during owner edit. */
+[data-theme="magazine"] .tp-mag-hero__bottom {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 56px;
+  z-index: 2;
+  color: rgba(245, 240, 230, 1);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-hero__bottom {
+    left: 48px;
+    right: 48px;
+    bottom: 64px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-hero__bottom-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 230, 0.9);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  margin: 0 0 20px 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-hero__bottom-eyebrow {
+    font-size: 11px;
+    margin-bottom: 24px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-hero__title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.015em;
+  color: rgba(245, 240, 230, 1);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  margin: 0;
+  /* Lower bound 40px keeps the title from overflowing the 320px viewport;
+     7vw scales smoothly through tablet; 112px caps the desktop heading. */
+  font-size: clamp(40px, 7vw, 112px);
+  word-break: break-word;
+}
+
+[data-theme="magazine"] .tp-mag-hero__tagline {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1.4;
+  color: rgba(245, 240, 230, 0.92);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+  margin: 20px 0 0 0;
+  max-width: 56ch;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-hero__tagline {
+    font-size: 22px;
+    margin-top: 24px;
+  }
+}

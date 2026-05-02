@@ -1115,6 +1115,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             dateRange={dateRange}
             durationDays={p.duration_days}
             groupSize={p.group_size}
+            country={p.country}
             pricePerPersonFormatted={heroHeadlineFormatted}
             priceLabel={heroPriceLabel}
             activityChipSlot={activityChipSlot}
