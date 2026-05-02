@@ -5,7 +5,16 @@ import { useAuth } from '@clerk/nextjs'
 import { Check, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiFetch } from '@/lib/api'
-import { THEMES, THEME_LABELS, type ThemeId } from '@/lib/themes'
+import { THEME_LABELS, type ThemeId } from '@/lib/themes'
+
+/**
+ * Themes shown in the user-facing default-theme selector. THEMES enum
+ * stays full so legacy users with an old default_theme still see their
+ * saved value (rendered as a disabled 'Legacy' row); only the active
+ * choice list is filtered. Trip-page Pass C hides editorial / expedition
+ * / compact and surfaces Magazine as the single default.
+ */
+const VISIBLE_THEMES: ReadonlyArray<ThemeId> = ['magazine']
 
 /**
  * PreferencesCard — operator-level settings that aren't part of the
@@ -98,7 +107,7 @@ export default function PreferencesCard() {
 // check marks + disabled "Make your own" placeholder), but persists to
 // the user profile, not a single trip.
 
-const DEFAULT_THEME_FALLBACK_LABEL = 'Use Classic'
+const DEFAULT_THEME_FALLBACK_LABEL = 'Use Magazine'
 
 function DefaultThemeRow({
   value,
@@ -184,7 +193,25 @@ function DefaultThemeRow({
             aria-label="Default trip design"
             className="absolute right-0 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-30"
           >
-            {THEMES.map((id) => {
+            {/* Legacy default-theme: surface as a disabled row so the
+                operator can see why their saved selection isn't a
+                clickable option in the new menu. */}
+            {optimistic && !VISIBLE_THEMES.includes(optimistic) && (
+              <button
+                type="button"
+                role="option"
+                aria-disabled="true"
+                disabled
+                className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm cursor-not-allowed opacity-50"
+              >
+                <Check className="w-4 h-4 flex-shrink-0 text-accent" />
+                <span className="font-semibold">{THEME_LABELS[optimistic]}</span>
+                <span className="ml-auto text-[10px] uppercase tracking-wider text-foreground/50">
+                  Legacy
+                </span>
+              </button>
+            )}
+            {VISIBLE_THEMES.map((id) => {
               const active = id === optimistic
               return (
                 <button

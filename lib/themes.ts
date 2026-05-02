@@ -13,7 +13,7 @@
 
 export const THEMES = ['editorial', 'expedition', 'compact', 'magazine'] as const
 export type ThemeId = (typeof THEMES)[number]
-export const DEFAULT_THEME: ThemeId = 'editorial'
+export const DEFAULT_THEME: ThemeId = 'magazine'
 
 export function isThemeId(value: unknown): value is ThemeId {
   return typeof value === 'string' && (THEMES as readonly string[]).includes(value)
@@ -22,8 +22,9 @@ export function isThemeId(value: unknown): value is ThemeId {
 /**
  * Coerce arbitrary input (DB string, URL param, etc.) into a valid ThemeId.
  * Anything unknown — including `null`, stale TZ-5/TZ-6 values, casing variants —
- * resolves to DEFAULT_THEME ('editorial'). Existing trips with NULL
- * design_theme thus render unchanged.
+ * resolves to DEFAULT_THEME ('magazine'). Existing trips with NULL
+ * design_theme thus render in the new default; legacy trips with an
+ * explicit design_theme value continue to render in their saved theme.
  */
 export function resolveTheme(value: string | null | undefined): ThemeId {
   if (!value) return DEFAULT_THEME

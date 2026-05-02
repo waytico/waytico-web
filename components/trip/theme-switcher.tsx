@@ -6,7 +6,19 @@ import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
 import { Check, ChevronDown } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
-import { THEMES, THEME_LABELS, resolveTheme, type ThemeId } from '@/lib/themes'
+import { THEME_LABELS, resolveTheme, type ThemeId } from '@/lib/themes'
+
+/**
+ * Themes shown in the user-facing menu. The full THEMES enum keeps all
+ * registered themes for resolveTheme() so legacy trips still render
+ * correctly; this list controls what the operator can pick going forward.
+ *
+ * Trip-page Pass C (post-Magazine merge) hides the editorial / expedition /
+ * compact entries — Magazine is the new default and the only menu choice.
+ * THEMES is intentionally unchanged so a legacy trip's saved value still
+ * resolves and renders.
+ */
+const VISIBLE_THEMES: ReadonlyArray<ThemeId> = ['magazine']
 
 type Props = {
   projectId: string
@@ -117,7 +129,26 @@ export function ThemeSwitcher({ projectId, value, isShowcase, onLocalChange }: P
           aria-label="Trip page design"
           className="absolute right-0 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-30"
         >
-          {THEMES.map((id) => {
+          {/* Legacy theme row: when the trip's saved theme isn't in
+              VISIBLE_THEMES (e.g. an old quote on Classic / Cinematic /
+              Clean), show it as a disabled row so the operator sees why
+              their saved selection isn't a clickable option here. */}
+          {!VISIBLE_THEMES.includes(optimistic) && (
+            <button
+              type="button"
+              role="option"
+              aria-disabled="true"
+              disabled
+              className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm cursor-not-allowed opacity-50"
+            >
+              <Check className="w-4 h-4 flex-shrink-0 text-accent" />
+              <span className="font-semibold">{THEME_LABELS[optimistic]}</span>
+              <span className="ml-auto text-[10px] uppercase tracking-wider text-foreground/50">
+                Legacy
+              </span>
+            </button>
+          )}
+          {VISIBLE_THEMES.map((id) => {
             const active = id === optimistic
             return (
               <button
