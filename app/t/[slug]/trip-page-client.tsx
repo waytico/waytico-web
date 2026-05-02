@@ -23,6 +23,7 @@ import { ShowcasePills, ShowcaseBanner, SHOWCASE_BANNER_HEIGHT } from '@/compone
 
 import { ThemeRoot } from '@/components/trip/theme-root'
 import { TripNav } from '@/components/trip/nav'
+import { MagazineTopNav } from '@/components/trip/magazine-topnav'
 import { TripHero } from '@/components/trip/hero'
 import { ContactAgentMenu } from '@/components/trip/contact-agent-menu'
 import { TripOverview } from '@/components/trip/overview'
@@ -1178,17 +1179,34 @@ export default function TripPageClient({ slug, initialData }: Props) {
           />
         </HeroDropZone>
 
-        <TripNav
-          visibility={{
-            overview: overviewVisible,
-            itinerary: itineraryVisible,
-            accommodations: accommodationsVisible,
-            price: priceVisible,
-            included: includedVisible,
-            terms: termsVisible,
-            contacts: contactsVisible,
-          }}
-        />
+        {resolvedTheme === 'magazine' ? (
+          <MagazineTopNav
+            owner={owner}
+            operatorContact={operatorContact}
+            visibility={{
+              overview: overviewVisible,
+              itinerary: itineraryVisible,
+              accommodations: accommodationsVisible,
+              included: includedVisible,
+              price: priceVisible,
+              terms: termsVisible,
+              contacts: contactsVisible,
+            }}
+            currentLanguage={p.language ?? 'en'}
+          />
+        ) : (
+          <TripNav
+            visibility={{
+              overview: overviewVisible,
+              itinerary: itineraryVisible,
+              accommodations: accommodationsVisible,
+              price: priceVisible,
+              included: includedVisible,
+              terms: termsVisible,
+              contacts: contactsVisible,
+            }}
+          />
+        )}
 
         {showOwnerUI && (
           <input

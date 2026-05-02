@@ -25,6 +25,9 @@ type Props = {
    *  (Expedition theme overlay hero). When true we paint white with a
    *  shadow; otherwise muted ink color. */
   onPhoto?: boolean
+  /** Trigger label override. Defaults to "Contact agent". The Magazine
+   *  TopNav passes "Inquire" so the pill reads as a single-purpose CTA. */
+  label?: string
 }
 
 const ICON: Record<ChannelKey, React.ComponentType<any>> = {
@@ -53,7 +56,7 @@ const ICON: Record<ChannelKey, React.ComponentType<any>> = {
  * trips where the operator hasn't filled their brand profile yet, the
  * dropdown disappears (instead of showing an empty menu).
  */
-export function ContactAgentMenu({ owner, operatorContact, onPhoto = false }: Props) {
+export function ContactAgentMenu({ owner, operatorContact, onPhoto = false, label }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -101,7 +104,7 @@ export function ContactAgentMenu({ owner, operatorContact, onPhoto = false }: Pr
         aria-expanded={open}
       >
         <span className="border-b border-current/0 group-hover:border-current/40 transition-colors">
-          Contact agent
+          {label ?? 'Contact agent'}
         </span>
         <ChevronDown size={11} aria-hidden="true" />
       </button>
