@@ -24,6 +24,7 @@ import { ShowcasePills, ShowcaseBanner, SHOWCASE_BANNER_HEIGHT } from '@/compone
 import { ThemeRoot } from '@/components/trip/theme-root'
 import { TripNav } from '@/components/trip/nav'
 import { MagazineTopNav } from '@/components/trip/magazine-topnav'
+import { MagazineStickyBar } from '@/components/trip/magazine-stickybar'
 import { TripHero } from '@/components/trip/hero'
 import { ContactAgentMenu } from '@/components/trip/contact-agent-menu'
 import { TripOverview } from '@/components/trip/overview'
@@ -1365,6 +1366,19 @@ export default function TripPageClient({ slug, initialData }: Props) {
           />
         )}
       </ThemeRoot>
+
+      {resolvedTheme === 'magazine' && (
+        <MagazineStickyBar
+          pricingMode={pricingMode}
+          pricingLabel={p.pricing_label ?? null}
+          pricePerPerson={pricePerPersonNum}
+          priceTotal={priceTotalNum}
+          currency={p.currency}
+          owner={owner}
+          operatorContact={operatorContact}
+          visible={!(showOwnerUI && !isShowcase && !isAnonCreator)}
+        />
+      )}
 
       <PhotoLightbox
         media={lightbox}
