@@ -1282,6 +1282,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         />
 
         <TripAccommodations
+          theme={resolvedTheme}
           accommodations={accommodations as any}
           editable={ed}
           onCreate={ed ? saveAccommodationCreate : undefined}

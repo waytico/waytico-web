@@ -1906,3 +1906,231 @@
 [data-theme="magazine"] .tp-mag-day__body p:last-child {
   margin-bottom: 0;
 }
+
+/* =====================================================================
+ * Magazine theme — Pass B component classes
+ * Accommodations / Included / Price / Terms / Contacts / StickyBar / Footer
+ * ===================================================================== */
+
+/* ── Accommodations ───────────────────────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-acc__header {
+  margin-bottom: 40px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-acc__header {
+    margin-bottom: 64px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-acc__eyebrow {
+  margin: 32px 0 18px 0;
+}
+
+[data-theme="magazine"] .tp-mag-acc__heading {
+  font-size: 32px;
+  line-height: 1.05;
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-acc__heading {
+    font-size: 56px;
+    line-height: 1.02;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-acc__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+}
+
+@media (min-width: 768px) {
+  [data-theme="magazine"] .tp-mag-acc__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-acc__grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-acc__card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 24px;
+  position: relative;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--rule);
+  margin-bottom: 20px;
+  cursor: pointer;
+  position: relative;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo--drag {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26, 24, 23, 0.55);
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo-empty {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border: 1px dashed var(--rule);
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  cursor: pointer;
+  margin-bottom: 20px;
+  padding: 0;
+  transition: border-color 0.18s ease, color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo-empty:hover,
+[data-theme="magazine"] .tp-mag-acc__photo-empty--drag {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+[data-theme="magazine"] .tp-mag-acc__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+[data-theme="magazine"] .tp-mag-acc__card-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 4px 0;
+}
+
+[data-theme="magazine"] .tp-mag-acc__name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-acc__name-input {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 1.1;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--accent);
+  padding: 0 0 4px 0;
+  width: 100%;
+  outline: none;
+}
+
+[data-theme="magazine"] .tp-mag-acc__desc {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-acc__desc--placeholder {
+  color: var(--ink-mute);
+  font-style: italic;
+}
+
+[data-theme="magazine"] .tp-mag-acc__desc-input {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule);
+  padding: 8px 10px;
+  width: 100%;
+  resize: vertical;
+  outline: none;
+}
+
+[data-theme="magazine"] .tp-mag-acc__delete {
+  align-self: flex-start;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+  color: var(--ink-mute);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-acc__delete:hover {
+  color: var(--accent);
+}
+
+[data-theme="magazine"] .tp-mag-acc__add {
+  margin-top: 32px;
+}
+
+/* AddAccommodationButton (shared editorial component) — restyle inside
+   the Magazine variant scope so it matches the eyebrow + square idiom. */
+[data-theme="magazine"] .tp-mag-acc__add .tp-acc-add {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px dashed var(--rule);
+  color: var(--ink-mute);
+  padding: 14px 24px;
+  cursor: pointer;
+  border-radius: 0;
+  transition: border-color 0.18s ease, color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-acc__add .tp-acc-add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
