@@ -1275,6 +1275,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 }
               : undefined
           }
+          onPhotoClick={(m) => {
+            const full = media.find((x) => x.id === m.id)
+            if (full) setLightbox(full)
+          }}
         />
 
         <TripAccommodations

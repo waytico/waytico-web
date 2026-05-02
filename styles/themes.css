@@ -1712,3 +1712,197 @@
   color: inherit;
   text-decoration: none;
 }
+
+/* ── Itinerary (alternating day spreads) ──────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-itin__header {
+  margin-bottom: 48px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-itin__header {
+    margin-bottom: 80px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-itin__eyebrow {
+  margin: 32px 0 18px 0;
+}
+
+[data-theme="magazine"] .tp-mag-itin__heading {
+  font-size: 32px;
+  line-height: 1.05;
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-itin__heading {
+    font-size: 56px;
+    line-height: 1.02;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-itin__days {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-itin__days {
+    gap: 60px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-day {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  padding-top: 40px;
+  border-top: 1px solid var(--rule);
+  position: relative;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-day {
+    grid-template-columns: 1.4fr 1fr;
+    gap: 64px;
+    padding-top: 60px;
+    align-items: center;
+  }
+  [data-theme="magazine"] .tp-mag-day--reverse {
+    grid-template-columns: 1fr 1.4fr;
+  }
+  /* Reverse swaps which child sits in which column. */
+  [data-theme="magazine"] .tp-mag-day--reverse .tp-mag-day__photo {
+    order: 2;
+  }
+  [data-theme="magazine"] .tp-mag-day--reverse .tp-mag-day__text {
+    order: 1;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-day__handle {
+  position: absolute;
+  top: 12px;
+  left: -28px;
+  z-index: 2;
+}
+
+@media (max-width: 1023.98px) {
+  /* Mobile keeps the handle inline with the day so it stays reachable. */
+  [data-theme="magazine"] .tp-mag-day__handle {
+    position: static;
+    margin-bottom: 8px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-day__photo {
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: var(--rule);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-day__photo-img {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-empty {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 1px dashed var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-day__photo-empty {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-day__text {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+[data-theme="magazine"] .tp-mag-day__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-day__title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-day__title {
+    font-size: 36px;
+    line-height: 1.05;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-day__date {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-day__body {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-day__body {
+    font-size: 16px;
+    line-height: 1.65;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-day__body p {
+  margin: 0 0 18px 0;
+}
+
+[data-theme="magazine"] .tp-mag-day__body p:last-child {
+  margin-bottom: 0;
+}
