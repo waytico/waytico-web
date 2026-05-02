@@ -1906,3 +1906,1148 @@
 [data-theme="magazine"] .tp-mag-day__body p:last-child {
   margin-bottom: 0;
 }
+
+/* =====================================================================
+ * Magazine theme — Pass B component classes
+ * Accommodations / Included / Price / Terms / Contacts / StickyBar / Footer
+ * ===================================================================== */
+
+/* ── Accommodations ───────────────────────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-acc__header {
+  margin-bottom: 40px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-acc__header {
+    margin-bottom: 64px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-acc__eyebrow {
+  margin: 32px 0 18px 0;
+}
+
+[data-theme="magazine"] .tp-mag-acc__heading {
+  font-size: 32px;
+  line-height: 1.05;
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-acc__heading {
+    font-size: 56px;
+    line-height: 1.02;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-acc__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+}
+
+@media (min-width: 768px) {
+  [data-theme="magazine"] .tp-mag-acc__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-acc__grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-acc__card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 24px;
+  position: relative;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--rule);
+  margin-bottom: 20px;
+  cursor: pointer;
+  position: relative;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo--drag {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26, 24, 23, 0.55);
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo-empty {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border: 1px dashed var(--rule);
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  cursor: pointer;
+  margin-bottom: 20px;
+  padding: 0;
+  transition: border-color 0.18s ease, color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo-empty:hover,
+[data-theme="magazine"] .tp-mag-acc__photo-empty--drag {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+[data-theme="magazine"] .tp-mag-acc__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+[data-theme="magazine"] .tp-mag-acc__card-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 4px 0;
+}
+
+[data-theme="magazine"] .tp-mag-acc__name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-acc__name-input {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 1.1;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--accent);
+  padding: 0 0 4px 0;
+  width: 100%;
+  outline: none;
+}
+
+[data-theme="magazine"] .tp-mag-acc__desc {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-acc__desc--placeholder {
+  color: var(--ink-mute);
+  font-style: italic;
+}
+
+[data-theme="magazine"] .tp-mag-acc__desc-input {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule);
+  padding: 8px 10px;
+  width: 100%;
+  resize: vertical;
+  outline: none;
+}
+
+[data-theme="magazine"] .tp-mag-acc__delete {
+  align-self: flex-start;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+  color: var(--ink-mute);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-acc__delete:hover {
+  color: var(--accent);
+}
+
+[data-theme="magazine"] .tp-mag-acc__add {
+  margin-top: 32px;
+}
+
+/* AddAccommodationButton (shared editorial component) — restyle inside
+   the Magazine variant scope so it matches the eyebrow + square idiom. */
+[data-theme="magazine"] .tp-mag-acc__add .tp-acc-add {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px dashed var(--rule);
+  color: var(--ink-mute);
+  padding: 14px 24px;
+  cursor: pointer;
+  border-radius: 0;
+  transition: border-color 0.18s ease, color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-acc__add .tp-acc-add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Included / Not Included ──────────────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-incl__header {
+  margin-bottom: 32px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-incl__header {
+    margin-bottom: 56px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-incl__eyebrow {
+  margin: 32px 0 18px 0;
+}
+
+[data-theme="magazine"] .tp-mag-incl__heading {
+  font-size: 32px;
+  line-height: 1.05;
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-incl__heading {
+    font-size: 56px;
+    line-height: 1.02;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-incl__grid {
+  display: grid;
+  /* 2 columns even on 320px — see TZ pass-B decision #6. */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-incl__grid {
+    gap: 64px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-incl__col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+[data-theme="magazine"] .tp-mag-incl__col-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-incl__col-eyebrow {
+    font-size: 11px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-incl__empty {
+  color: var(--ink-mute);
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Re-style the IncludedList output (or owner-mode renderDisplay) so
+   items become hairline-separated rows with no +/− marker. The
+   shared component renders <ul><li><span class="mk">…</span>…</li></ul>;
+   inside the magazine column we suppress the marker and rule each li. */
+[data-theme="magazine"] .tp-mag-incl__body ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+[data-theme="magazine"] .tp-mag-incl__body li {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-incl__body li {
+    font-size: 14px;
+    padding: 14px 0;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-incl__body li:last-child {
+  border-bottom: 0;
+}
+
+[data-theme="magazine"] .tp-mag-incl__body li .mk {
+  /* Hide the +/− markers — Magazine items are pure text with rules. */
+  display: none;
+}
+
+/* Owner-mode EditableField multiline renders a <textarea> when active.
+   While editing keep it usable; render-mode (renderDisplay) yields the
+   same <ul> as public, so the rule above already covers it. */
+[data-theme="magazine"] .tp-mag-incl__body textarea {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule);
+  padding: 8px 10px;
+  width: 100%;
+  outline: none;
+  resize: vertical;
+}
+
+/* ── Price ────────────────────────────────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-price__header {
+  margin-bottom: 32px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-price__header {
+    margin-bottom: 56px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-price__eyebrow {
+  margin: 32px 0 0 0;
+}
+
+[data-theme="magazine"] .tp-mag-price__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-price__grid {
+    grid-template-columns: 1fr 1.4fr;
+    gap: 80px;
+    align-items: end;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-price__left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+[data-theme="magazine"] .tp-mag-price__from {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-price__headline-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+[data-theme="magazine"] .tp-mag-price__headline {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 56px;
+  line-height: 1;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-price__headline {
+    font-size: 80px;
+  }
+}
+
+/* Re-style HeadlineAmountEditor inside the Magazine variant — the
+   shared component renders <span class='tp-price-amount'>… so we
+   target that root and override typography. */
+[data-theme="magazine"] .tp-mag-price__headline-row .tp-price-amount {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 56px;
+  line-height: 1;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-price__headline-row .tp-price-amount {
+    font-size: 80px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-price__headline-row .tp-price-input {
+  font-family: var(--font-display);
+  font-size: 56px;
+  font-weight: 500;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--accent);
+  padding: 0;
+  outline: none;
+  width: 200px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-price__headline-row .tp-price-input {
+    font-size: 80px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-price__suffix {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+[data-theme="magazine"] .tp-mag-price__suffix .tp-price-meta {
+  margin: 0;
+  color: var(--ink-mute);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+[data-theme="magazine"] .tp-mag-price__suffix .tp-price-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+[data-theme="magazine"] .tp-mag-price__suffix .tp-price-mode-select {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  padding: 6px 8px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+[data-theme="magazine"] .tp-mag-price__secondary {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 8px 0 0 0;
+}
+
+[data-theme="magazine"] .tp-mag-price__right {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+[data-theme="magazine"] .tp-mag-price__copy {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin: 0;
+  max-width: 56ch;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-price__copy {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-price__cta {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+[data-theme="magazine"] .tp-mag-price__cta-prompt {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1.3;
+  color: var(--ink);
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-price__cta-prompt {
+    font-size: 22px;
+  }
+}
+
+/* INQUIRE button — same restyle as TopNav (ContactAgentMenu trigger),
+   scoped here so the inquire pill in the Price block matches the
+   TopNav pill exactly. */
+[data-theme="magazine"] .tp-mag-price__cta-btn button[aria-haspopup="menu"] {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 12px 24px;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  text-shadow: none;
+  transition: background 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-price__cta-btn button[aria-haspopup="menu"]:hover {
+  background: color-mix(in oklab, var(--accent) 88%, var(--ink));
+}
+
+[data-theme="magazine"] .tp-mag-price__cta-btn button[aria-haspopup="menu"] > span {
+  border-bottom: 0;
+  color: inherit;
+}
+
+[data-theme="magazine"] .tp-mag-price__cta-btn button[aria-haspopup="menu"] > svg {
+  display: none;
+}
+
+/* ── Terms ────────────────────────────────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-terms__header {
+  margin-bottom: 32px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-terms__header {
+    margin-bottom: 48px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-terms__eyebrow {
+  margin: 32px 0 18px 0;
+}
+
+[data-theme="magazine"] .tp-mag-terms__heading {
+  font-size: 28px;
+  line-height: 1.05;
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-terms__heading {
+    font-size: 44px;
+    line-height: 1.02;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-terms__hint {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-mute);
+  margin: 12px 0 0 0;
+  font-style: italic;
+}
+
+[data-theme="magazine"] .tp-mag-terms__body {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  max-width: 72ch;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-terms__body {
+    font-size: 15px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-terms__body p {
+  margin: 0 0 14px 0;
+}
+
+[data-theme="magazine"] .tp-mag-terms__body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Collapsible: clip body to ~4 lines with a soft fade to var(--bg). */
+[data-theme="magazine"] .tp-mag-terms__body--collapsible {
+  position: relative;
+  max-height: 7em;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+
+[data-theme="magazine"] .tp-mag-terms__body--collapsible.is-open {
+  max-height: none;
+}
+
+[data-theme="magazine"] .tp-mag-terms__fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4em;
+  background: linear-gradient(
+    to bottom,
+    rgba(245, 240, 230, 0) 0%,
+    var(--bg) 100%
+  );
+  pointer-events: none;
+}
+
+[data-theme="magazine"] .tp-mag-terms__toggle-row {
+  margin-top: 18px;
+}
+
+[data-theme="magazine"] .tp-mag-terms__toggle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 10px 18px;
+  border-radius: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-terms__toggle:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+[data-theme="magazine"] .tp-mag-terms__toggle-caret {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-terms__toggle-caret.is-up {
+  transform: translateY(2px) rotate(225deg);
+}
+
+/* ── Contacts ─────────────────────────────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-contacts__header {
+  margin-bottom: 32px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-contacts__header {
+    margin-bottom: 56px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-contacts__eyebrow {
+  margin: 32px 0 18px 0;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__heading {
+  font-size: 32px;
+  line-height: 1.05;
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-contacts__heading {
+    font-size: 56px;
+    line-height: 1.02;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-contacts__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-contacts__grid {
+    grid-template-columns: 1fr 1.4fr;
+    gap: 80px;
+    align-items: start;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-contacts__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__brand-name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__brand-tagline {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__brand-address {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin: 8px 0 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__channels {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__channels-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list li {
+  border-bottom: 1px solid var(--rule);
+  padding: 12px 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-contacts__list li {
+    padding: 14px 0;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list li:last-child {
+  border-bottom: 0;
+}
+
+/* Public-mode link rows (editorial ChannelTextRow renders an <a> with
+   class `tp-contacts-link`). Restyle inside Magazine column. */
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink);
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-link:hover {
+  color: var(--accent);
+}
+
+/* Owner-mode rows (ChannelTextRow in editable mode renders a
+   tp-contacts-row). Re-style for Magazine — square inputs, terracotta
+   active border, monochrome eye toggle. */
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row--hidden {
+  opacity: 0.55;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-icon {
+  color: var(--ink-mute);
+  display: inline-flex;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-value {
+  font-family: var(--font-body);
+  font-size: 14px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  flex: 1;
+  text-align: left;
+  color: var(--ink);
+  cursor: text;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--accent);
+  padding: 4px 0;
+  outline: none;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-eye {
+  background: transparent;
+  border: 0;
+  padding: 4px;
+  color: var(--ink-mute);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-eye:hover {
+  color: var(--accent);
+}
+
+[data-theme="magazine"] .tp-mag-contacts__hint {
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-mute);
+  margin: 16px 0 0 0;
+  font-style: italic;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__hint-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Mobile StickyBar ─────────────────────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-stickybar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: var(--bg);
+  border-top: 1px solid var(--rule);
+  padding: 12px 22px calc(12px + env(safe-area-inset-bottom, 0px)) 22px;
+  /* Soft shadow lifts the bar off the cream paper. */
+  box-shadow: 0 -2px 16px rgba(26, 24, 23, 0.06);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-stickybar {
+    /* Desktop has the TopNav INQUIRE pill — bar disappears. */
+    display: none;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-stickybar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+[data-theme="magazine"] .tp-mag-stickybar__price {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+[data-theme="magazine"] .tp-mag-stickybar__from {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  line-height: 1;
+}
+
+[data-theme="magazine"] .tp-mag-stickybar__amount {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1.05;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+}
+
+[data-theme="magazine"] .tp-mag-stickybar__suffix {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  line-height: 1.2;
+}
+
+[data-theme="magazine"] .tp-mag-stickybar__inquire button[aria-haspopup="menu"] {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  text-shadow: none;
+  white-space: nowrap;
+  transition: background 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-stickybar__inquire button[aria-haspopup="menu"]:hover {
+  background: color-mix(in oklab, var(--accent) 88%, var(--ink));
+}
+
+[data-theme="magazine"] .tp-mag-stickybar__inquire button[aria-haspopup="menu"] > span {
+  border-bottom: 0;
+  color: inherit;
+}
+
+[data-theme="magazine"] .tp-mag-stickybar__inquire button[aria-haspopup="menu"] > svg {
+  display: none;
+}
+
+/* The dropdown menu opens below the sticky bar by default; reposition
+   to drop _up_ so it stays on-screen (default would clip below viewport).
+   ContactAgentMenu's portal-less menu uses `mt-2` and `right-0` from
+   shadcn semantic tokens — override the top-anchor inside StickyBar. */
+[data-theme="magazine"] .tp-mag-stickybar__inquire .relative > [role="menu"] {
+  top: auto;
+  bottom: calc(100% + 8px);
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-footer {
+  /* var(--bg-alt) is the dark Magazine slab (#1A1817) — see
+     :root[data-theme="magazine"] block in this file. */
+  background: var(--bg-alt);
+  color: rgba(245, 240, 230, 0.85);
+  padding: 40px 0 32px 0;
+  margin-top: 60px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-footer {
+    padding: 64px 0 40px 0;
+    margin-top: 80px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-footer__inner {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-inline: clamp(24px, 5vw, 48px);
+}
+
+[data-theme="magazine"] .tp-mag-footer__cols {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid rgba(245, 240, 230, 0.18);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-footer__cols {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 48px;
+    padding-bottom: 40px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-footer__col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+[data-theme="magazine"] .tp-mag-footer__col-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 230, 0.55);
+  margin: 0 0 4px 0;
+}
+
+[data-theme="magazine"] .tp-mag-footer__brand-name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.005em;
+  color: rgba(245, 240, 230, 1);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-footer__brand-tagline {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.4;
+  color: rgba(245, 240, 230, 0.75);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-footer__col-text {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(245, 240, 230, 0.85);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-footer__link {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(245, 240, 230, 0.85);
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-footer__link:hover {
+  color: var(--accent);
+}
+
+[data-theme="magazine"] .tp-mag-footer__bottom {
+  padding-top: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-theme="magazine"] .tp-mag-footer__copy {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 230, 0.45);
+  margin: 0;
+  text-align: center;
+}

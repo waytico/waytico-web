@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { UI } from '@/lib/ui-strings'
-import type { PricingMode, Mutations } from './trip-types'
+import type { PricingMode, Mutations, OperatorContact, OwnerBrand } from './trip-types'
+import type { ThemeId } from '@/lib/themes'
 import { fmtPrice, currencyGlyph } from '@/lib/trip-format'
+import { ContactAgentMenu } from './contact-agent-menu'
 
 type PriceProps = {
   pricingMode: PricingMode | null
@@ -18,6 +20,15 @@ type PriceProps = {
   saveProjectPatch?: Mutations['saveProjectPatch']
   /** True when the section should render at all (price > 0 OR owner mode). */
   visible: boolean
+  /** When 'magazine', renders the Magazine variant — 2-col layout with
+   *  large Cormorant headline on the left and an Inquire CTA on the
+   *  right. Other values keep the editorial layout. */
+  theme?: ThemeId
+  /** Owner brand + per-trip override — Magazine uses these to power
+   *  the INQUIRE button via ContactAgentMenu. Editorial ignores them
+   *  (it has no in-section CTA). */
+  owner?: OwnerBrand
+  operatorContact?: OperatorContact
 }
 
 /**
@@ -36,6 +47,10 @@ type PriceProps = {
  */
 export function TripPrice(props: PriceProps) {
   if (!props.visible) return null
+
+  if (props.theme === 'magazine') {
+    return <PriceMagazine {...props} />
+  }
 
   const mode: PricingMode = props.pricingMode ?? 'per_group'
   const headline =
@@ -311,3 +326,110 @@ const SUPPORTED_CURRENCIES: Array<{ code: string; label: string }> = [
   { code: 'JPY', label: 'JPY (¥)' },
   { code: 'CHF', label: 'CHF' },
 ]
+
+/* ── Magazine variant ─────────────────────────────────────────────── */
+
+/**
+ * Magazine variant — 2-col grid on desktop (left: headline price + suffix,
+ * right: fine-print + INQUIRE button), stacked on mobile.
+ *
+ * Re-uses HeadlineAmountEditor and PriceModeSuffix from the editorial
+ * branch so the owner-mode editors (number + currency picker + mode
+ * dropdown + custom-label input) all keep their existing behaviour.
+ * Only the wrapper markup + typography differ; pricingMode semantics
+ * (per_group / per_traveler / other), backend reconcilePricing pairing
+ * with priceTotal/pricePerPerson, and the suffix labels are unchanged.
+ */
+function PriceMagazine(props: PriceProps) {
+  const mode: PricingMode = props.pricingMode ?? 'per_group'
+  const headline =
+    mode === 'per_traveler' ? props.pricePerPerson : props.priceTotal
+  const headlineFormatted = fmtPrice(headline, props.currency || 'USD')
+
+  const secondary =
+    mode === 'per_traveler' ? props.priceTotal : props.pricePerPerson
+  const secondaryFormatted = fmtPrice(secondary, props.currency || 'USD')
+  const secondaryLabel =
+    mode === 'per_traveler' ? UI.totalPrice : UI.perTraveler
+
+  return (
+    <section className="tp-mag-section tp-mag-price" id="price">
+      <div className="tp-mag-container">
+        <header className="tp-mag-price__header">
+          <hr className="tp-mag-rule" />
+          <p className="tp-mag-eyebrow tp-mag-price__eyebrow">V — INVESTMENT</p>
+        </header>
+
+        <div className="tp-mag-price__grid">
+          <div className="tp-mag-price__left">
+            <p className="tp-mag-price__from">FROM</p>
+            <div className="tp-mag-price__headline-row">
+              {props.editable ? (
+                <HeadlineAmountEditor
+                  value={headline}
+                  currency={props.currency || 'USD'}
+                  onSave={async (v) => {
+                    if (!props.saveProjectPatch) return false
+                    const patch: Record<string, any> =
+                      mode === 'per_traveler'
+                        ? { pricePerPerson: v }
+                        : { priceTotal: v }
+                    return props.saveProjectPatch(patch)
+                  }}
+                  onSaveCurrency={async (next) => {
+                    if (!props.saveProjectPatch) return false
+                    return props.saveProjectPatch({ currency: next })
+                  }}
+                />
+              ) : (
+                <span className="tp-mag-price__headline">
+                  {headlineFormatted ?? '—'}
+                </span>
+              )}
+            </div>
+            <div className="tp-mag-price__suffix">
+              <PriceModeSuffix
+                mode={mode}
+                pricingLabel={props.pricingLabel}
+                editable={props.editable}
+                saveProjectPatch={props.saveProjectPatch}
+              />
+            </div>
+            {mode !== 'other' && secondaryFormatted && (
+              <p className="tp-mag-price__secondary">
+                {secondaryLabel.toUpperCase()} ·{' '}
+                <span style={{ fontFamily: 'var(--font-mono)' }}>
+                  {secondaryFormatted}
+                </span>
+                {mode === 'per_traveler' && props.groupSize != null && (
+                  <> · {props.groupSize} {UI.travelers.toUpperCase()}</>
+                )}
+              </p>
+            )}
+          </div>
+
+          <div className="tp-mag-price__right">
+            <p className="tp-mag-price__copy">
+              All prices in {props.currency?.toUpperCase() || 'USD'}. Final
+              quote depends on dates, group size, and any add-ons. We&rsquo;ll
+              tailor the proposal once you reach out.
+            </p>
+            <div className="tp-mag-price__cta">
+              <p className="tp-mag-price__cta-prompt">
+                Ready to talk it through?
+              </p>
+              <div className="tp-mag-price__cta-btn">
+                <ContactAgentMenu
+                  owner={props.owner ?? null}
+                  operatorContact={props.operatorContact ?? null}
+                  onPhoto={false}
+                  label="Inquire"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
