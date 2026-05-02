@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
+import type { ThemeId } from '@/lib/themes'
 
 type IncludedProps = {
   /**
@@ -12,6 +13,11 @@ type IncludedProps = {
   notIncludedBodySlot: ReactNode
   /** Hide the entire section in public mode when both sides are empty. */
   visible: boolean
+  /** When 'magazine', renders the Magazine variant — 2-col grid that
+   *  stays 2-col on mobile too (TZ pass-B decision #6). Items without
+   *  markers and hairline rules between them. Other values keep the
+   *  editorial card layout. */
+  theme?: ThemeId
 }
 
 /**
@@ -20,8 +26,18 @@ type IncludedProps = {
  * Per TZ-6 §6.5: the section stays visible in public mode IFF at least one
  * side has content. Owner mode always shows it (so they can add items).
  */
-export function TripIncluded({ includedBodySlot, notIncludedBodySlot, visible }: IncludedProps) {
+export function TripIncluded({ includedBodySlot, notIncludedBodySlot, visible, theme }: IncludedProps) {
   if (!visible) return null
+
+  if (theme === 'magazine') {
+    return (
+      <IncludedMagazine
+        includedBodySlot={includedBodySlot}
+        notIncludedBodySlot={notIncludedBodySlot}
+      />
+    )
+  }
+
   return (
     <section className="tp-section" id="included">
       <div className="tp-container">
@@ -64,5 +80,62 @@ export function IncludedList({ source, kind }: { source: string | null | undefin
         </li>
       ))}
     </ul>
+  )
+}
+
+/* ── Magazine variant ─────────────────────────────────────────────── */
+
+/**
+ * Magazine variant — 2-column layout on every viewport (TZ pass-B
+ * decision #6: even at 320px the columns stay side-by-side; the
+ * editorial layout collapses to stacked there but Magazine doesn't).
+ *
+ * The body slots are reused as-is — for owner-mode they carry the
+ * EditableField, for public-mode the IncludedList component. Magazine
+ * styling (no `+`/`−` markers, hairline between items) is applied via
+ * CSS scope under `[data-theme="magazine"]`.
+ */
+function IncludedMagazine({
+  includedBodySlot,
+  notIncludedBodySlot,
+}: {
+  includedBodySlot: ReactNode
+  notIncludedBodySlot: ReactNode
+}) {
+  return (
+    <section className="tp-mag-section tp-mag-incl" id="included">
+      <div className="tp-mag-container">
+        <header className="tp-mag-incl__header">
+          <hr className="tp-mag-rule" />
+          <p className="tp-mag-eyebrow tp-mag-incl__eyebrow">IV — DETAILS</p>
+          <h2 className="tp-mag-display tp-mag-incl__heading">
+            {UI.sectionLabels.included}
+          </h2>
+        </header>
+
+        <div className="tp-mag-incl__grid">
+          <div className="tp-mag-incl__col">
+            <p className="tp-mag-incl__col-eyebrow">INCLUDED</p>
+            <div className="tp-mag-incl__body">
+              {includedBodySlot ? (
+                includedBodySlot
+              ) : (
+                <p className="tp-mag-incl__empty">—</p>
+              )}
+            </div>
+          </div>
+          <div className="tp-mag-incl__col">
+            <p className="tp-mag-incl__col-eyebrow">NOT INCLUDED</p>
+            <div className="tp-mag-incl__body">
+              {notIncludedBodySlot ? (
+                notIncludedBodySlot
+              ) : (
+                <p className="tp-mag-incl__empty">—</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   )
 }

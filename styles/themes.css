@@ -2134,3 +2134,128 @@
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* ── Included / Not Included ──────────────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-incl__header {
+  margin-bottom: 32px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-incl__header {
+    margin-bottom: 56px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-incl__eyebrow {
+  margin: 32px 0 18px 0;
+}
+
+[data-theme="magazine"] .tp-mag-incl__heading {
+  font-size: 32px;
+  line-height: 1.05;
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-incl__heading {
+    font-size: 56px;
+    line-height: 1.02;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-incl__grid {
+  display: grid;
+  /* 2 columns even on 320px — see TZ pass-B decision #6. */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-incl__grid {
+    gap: 64px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-incl__col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+[data-theme="magazine"] .tp-mag-incl__col-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-incl__col-eyebrow {
+    font-size: 11px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-incl__empty {
+  color: var(--ink-mute);
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Re-style the IncludedList output (or owner-mode renderDisplay) so
+   items become hairline-separated rows with no +/− marker. The
+   shared component renders <ul><li><span class="mk">…</span>…</li></ul>;
+   inside the magazine column we suppress the marker and rule each li. */
+[data-theme="magazine"] .tp-mag-incl__body ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+[data-theme="magazine"] .tp-mag-incl__body li {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-incl__body li {
+    font-size: 14px;
+    padding: 14px 0;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-incl__body li:last-child {
+  border-bottom: 0;
+}
+
+[data-theme="magazine"] .tp-mag-incl__body li .mk {
+  /* Hide the +/− markers — Magazine items are pure text with rules. */
+  display: none;
+}
+
+/* Owner-mode EditableField multiline renders a <textarea> when active.
+   While editing keep it usable; render-mode (renderDisplay) yields the
+   same <ul> as public, so the rule above already covers it. */
+[data-theme="magazine"] .tp-mag-incl__body textarea {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule);
+  padding: 8px 10px;
+  width: 100%;
+  outline: none;
+  resize: vertical;
+}

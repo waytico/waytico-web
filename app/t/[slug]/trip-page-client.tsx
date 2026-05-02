@@ -1306,6 +1306,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         />
 
         <TripIncluded
+          theme={resolvedTheme}
           includedBodySlot={includedBodySlot}
           notIncludedBodySlot={notIncludedBodySlot}
           visible={includedVisible}
