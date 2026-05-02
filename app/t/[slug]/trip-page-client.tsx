@@ -1328,6 +1328,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         />
 
         <TripContacts
+          theme={resolvedTheme}
           owner={owner}
           operatorContact={operatorContact}
           editable={ed}

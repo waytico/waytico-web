@@ -13,12 +13,17 @@ import {
   TikTokIcon,
 } from '@/lib/contact-icons'
 import type { OperatorContact, OwnerBrand, Mutations } from './trip-types'
+import type { ThemeId } from '@/lib/themes'
 
 type Props = {
   owner: OwnerBrand
   operatorContact: OperatorContact
   editable: boolean
   saveProjectPatch?: Mutations['saveProjectPatch']
+  /** When 'magazine', renders the Magazine variant — same channel
+   *  resolution + EyeOff/inline-edit semantics, restyled wrapper +
+   *  identity panel. Other values keep the editorial layout. */
+  theme?: ThemeId
 }
 
 type ChannelKey =
@@ -140,7 +145,18 @@ const CHANNELS: Channel[] = [
  *   - small hint at the bottom linking to /dashboard for adding the
  *     channels not configured on the brand yet.
  */
-export function TripContacts({ owner, operatorContact, editable, saveProjectPatch }: Props) {
+export function TripContacts({ owner, operatorContact, editable, saveProjectPatch, theme }: Props) {
+  if (theme === 'magazine') {
+    return (
+      <ContactsMagazine
+        owner={owner}
+        operatorContact={operatorContact}
+        editable={editable}
+        saveProjectPatch={saveProjectPatch}
+      />
+    )
+  }
+
   const resolved = resolveContacts(owner, operatorContact)
   const hidden = new Set(operatorContact?.hidden_channels || [])
   const tagline = owner?.brand_tagline || null
@@ -461,4 +477,123 @@ function pick(
   if (typeof a === 'string' && a.trim().length > 0) return a
   if (typeof b === 'string' && b.trim().length > 0) return b
   return null
+}
+
+/* ── Magazine variant ─────────────────────────────────────────────── */
+
+/**
+ * Magazine variant — same channel resolution + inline-edit + EyeOff
+ * toggle semantics as the editorial section. Only the wrapper, header,
+ * and identity panel change; the per-channel ChannelTextRow component
+ * is reused so save/hide handlers stay identical.
+ */
+function ContactsMagazine({
+  owner,
+  operatorContact,
+  editable,
+  saveProjectPatch,
+}: {
+  owner: OwnerBrand
+  operatorContact: OperatorContact
+  editable: boolean
+  saveProjectPatch?: Mutations['saveProjectPatch']
+}) {
+  const resolved = resolveContacts(owner, operatorContact)
+  const hidden = new Set(operatorContact?.hidden_channels || [])
+  const tagline = owner?.brand_tagline || null
+  const logoUrl = owner?.brand_logo_url || null
+  const brandName = pick(operatorContact?.name, owner?.brand_name)
+  const address = pick(operatorContact?.address, owner?.brand_address)
+
+  const visibleChannels = CHANNELS.filter(
+    (c) => resolved[c.key] && !hidden.has(c.key),
+  )
+  const configuredChannels = CHANNELS.filter((c) => resolved[c.key])
+  const missingChannelLabels = CHANNELS.filter((c) => !resolved[c.key]).map(
+    (c) => c.label,
+  )
+
+  if (!editable && visibleChannels.length === 0 && !brandName && !address) {
+    return null
+  }
+
+  const renderedChannels = editable ? configuredChannels : visibleChannels
+
+  return (
+    <section className="tp-mag-section tp-mag-contacts" id="contacts">
+      <div className="tp-mag-container">
+        <header className="tp-mag-contacts__header">
+          <hr className="tp-mag-rule" />
+          <p className="tp-mag-eyebrow tp-mag-contacts__eyebrow">
+            VII — TALK TO US
+          </p>
+          <h2 className="tp-mag-display tp-mag-contacts__heading">
+            {UI.sectionLabels.contacts}
+          </h2>
+        </header>
+
+        <div className="tp-mag-contacts__grid">
+          <div className="tp-mag-contacts__identity">
+            {logoUrl && (
+              <img
+                src={logoUrl}
+                alt={brandName || 'Operator'}
+                className="tp-mag-contacts__logo"
+              />
+            )}
+            {brandName && (
+              <p className="tp-mag-contacts__brand-name">{brandName}</p>
+            )}
+            {tagline && (
+              <p className="tp-mag-contacts__brand-tagline">{tagline}</p>
+            )}
+            {address && (
+              <p className="tp-mag-contacts__brand-address">
+                <MapPin size={14} aria-hidden="true" />
+                <span>{address}</span>
+              </p>
+            )}
+          </div>
+
+          <div className="tp-mag-contacts__channels">
+            <p className="tp-mag-contacts__channels-eyebrow">CHANNELS</p>
+            <ul className="tp-mag-contacts__list">
+              {renderedChannels.map((c) => (
+                <ChannelTextRow
+                  key={c.key}
+                  channel={c}
+                  value={resolved[c.key]!}
+                  override={(operatorContact?.[c.key] as string | null | undefined) ?? null}
+                  hidden={hidden.has(c.key)}
+                  editable={editable}
+                  forceTextDisplay
+                  onSaveValue={(v) =>
+                    saveValue(c.key, v, operatorContact, saveProjectPatch)
+                  }
+                  onToggleHidden={() =>
+                    toggleHidden(c.key, hidden, operatorContact, saveProjectPatch)
+                  }
+                />
+              ))}
+            </ul>
+            {editable && missingChannelLabels.length > 0 && (
+              <p className="tp-mag-contacts__hint">
+                Add{' '}
+                {missingChannelLabels.length === 1
+                  ? missingChannelLabels[0]
+                  : missingChannelLabels.slice(0, -1).join(', ') +
+                    ' or ' +
+                    missingChannelLabels.slice(-1)[0]}{' '}
+                in your{' '}
+                <Link href="/dashboard" className="tp-mag-contacts__hint-link">
+                  profile
+                </Link>{' '}
+                to show {missingChannelLabels.length === 1 ? 'it' : 'them'} here.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
 }

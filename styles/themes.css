@@ -2612,3 +2612,225 @@
 [data-theme="magazine"] .tp-mag-terms__toggle-caret.is-up {
   transform: translateY(2px) rotate(225deg);
 }
+
+/* ── Contacts ─────────────────────────────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-contacts__header {
+  margin-bottom: 32px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-contacts__header {
+    margin-bottom: 56px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-contacts__eyebrow {
+  margin: 32px 0 18px 0;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__heading {
+  font-size: 32px;
+  line-height: 1.05;
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-contacts__heading {
+    font-size: 56px;
+    line-height: 1.02;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-contacts__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-contacts__grid {
+    grid-template-columns: 1fr 1.4fr;
+    gap: 80px;
+    align-items: start;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-contacts__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__brand-name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__brand-tagline {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__brand-address {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin: 8px 0 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__channels {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__channels-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list li {
+  border-bottom: 1px solid var(--rule);
+  padding: 12px 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-contacts__list li {
+    padding: 14px 0;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list li:last-child {
+  border-bottom: 0;
+}
+
+/* Public-mode link rows (editorial ChannelTextRow renders an <a> with
+   class `tp-contacts-link`). Restyle inside Magazine column. */
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink);
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-link:hover {
+  color: var(--accent);
+}
+
+/* Owner-mode rows (ChannelTextRow in editable mode renders a
+   tp-contacts-row). Re-style for Magazine — square inputs, terracotta
+   active border, monochrome eye toggle. */
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row--hidden {
+  opacity: 0.55;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-icon {
+  color: var(--ink-mute);
+  display: inline-flex;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-value {
+  font-family: var(--font-body);
+  font-size: 14px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  flex: 1;
+  text-align: left;
+  color: var(--ink);
+  cursor: text;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--accent);
+  padding: 4px 0;
+  outline: none;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-eye {
+  background: transparent;
+  border: 0;
+  padding: 4px;
+  color: var(--ink-mute);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-eye:hover {
+  color: var(--accent);
+}
+
+[data-theme="magazine"] .tp-mag-contacts__hint {
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-mute);
+  margin: 16px 0 0 0;
+  font-style: italic;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__hint-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
