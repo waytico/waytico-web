@@ -1316,6 +1316,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         />
 
         <TripTerms
+          theme={resolvedTheme}
           bodySlot={termsBodySlot}
           visible={termsVisible}
           collapsible={!ed}

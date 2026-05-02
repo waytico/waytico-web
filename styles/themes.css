@@ -2487,3 +2487,128 @@
 [data-theme="magazine"] .tp-mag-price__cta-btn button[aria-haspopup="menu"] > svg {
   display: none;
 }
+
+/* ── Terms ────────────────────────────────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-terms__header {
+  margin-bottom: 32px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-terms__header {
+    margin-bottom: 48px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-terms__eyebrow {
+  margin: 32px 0 18px 0;
+}
+
+[data-theme="magazine"] .tp-mag-terms__heading {
+  font-size: 28px;
+  line-height: 1.05;
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-terms__heading {
+    font-size: 44px;
+    line-height: 1.02;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-terms__hint {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-mute);
+  margin: 12px 0 0 0;
+  font-style: italic;
+}
+
+[data-theme="magazine"] .tp-mag-terms__body {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  max-width: 72ch;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-terms__body {
+    font-size: 15px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-terms__body p {
+  margin: 0 0 14px 0;
+}
+
+[data-theme="magazine"] .tp-mag-terms__body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Collapsible: clip body to ~4 lines with a soft fade to var(--bg). */
+[data-theme="magazine"] .tp-mag-terms__body--collapsible {
+  position: relative;
+  max-height: 7em;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+
+[data-theme="magazine"] .tp-mag-terms__body--collapsible.is-open {
+  max-height: none;
+}
+
+[data-theme="magazine"] .tp-mag-terms__fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4em;
+  background: linear-gradient(
+    to bottom,
+    rgba(245, 240, 230, 0) 0%,
+    var(--bg) 100%
+  );
+  pointer-events: none;
+}
+
+[data-theme="magazine"] .tp-mag-terms__toggle-row {
+  margin-top: 18px;
+}
+
+[data-theme="magazine"] .tp-mag-terms__toggle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 10px 18px;
+  border-radius: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-terms__toggle:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+[data-theme="magazine"] .tp-mag-terms__toggle-caret {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-terms__toggle-caret.is-up {
+  transform: translateY(2px) rotate(225deg);
+}
