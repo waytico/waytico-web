@@ -1214,3 +1214,695 @@
 
 .day.is-dragging { box-shadow: 0 14px 40px rgba(20, 14, 10, 0.18); }
 
+
+/* =====================================================================
+ * Magazine theme — component classes (scoped to [data-theme="magazine"])
+ *
+ * Pass A (this commit + Hero/Overview/Itinerary commits): TopNav shared
+ * primitives (container / section / eyebrow / display / rule), TopNav
+ * itself, Hero, Overview + stat tiles, Day spread.
+ *
+ * All selectors are scoped under [data-theme="magazine"] so they never
+ * leak into editorial / expedition / compact rendering. Existing tp-*
+ * classes above are not touched.
+ * ===================================================================== */
+
+/* ── Shared primitives ────────────────────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-inline: clamp(24px, 5vw, 48px);
+}
+
+[data-theme="magazine"] .tp-mag-section {
+  padding-block: clamp(56px, 10vw, 120px);
+  background: var(--bg);
+  overflow-x: hidden;
+}
+
+[data-theme="magazine"] .tp-mag-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+  font-weight: 400;
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-rule {
+  height: 1px;
+  background: var(--rule);
+  width: 100%;
+  border: 0;
+  margin: 0;
+}
+
+/* ── TopNav (desktop ≥1024px sticky) ──────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-topnav {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-topnav {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: rgba(245, 240, 230, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--rule);
+  }
+}
+
+[data-theme="magazine"] .tp-mag-topnav__inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 18px clamp(24px, 4vw, 48px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+[data-theme="magazine"] .tp-mag-topnav__brand {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+[data-theme="magazine"] .tp-mag-topnav__links {
+  display: flex;
+  gap: clamp(20px, 2.4vw, 36px);
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+[data-theme="magazine"] .tp-mag-topnav__link {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+  transition: color 0.18s ease;
+  white-space: nowrap;
+}
+
+[data-theme="magazine"] .tp-mag-topnav__link:hover,
+[data-theme="magazine"] .tp-mag-topnav__link:focus-visible {
+  color: var(--accent);
+}
+
+/* INQUIRE pill — restyle the ContactAgentMenu trigger via CSS scope.
+   The dropdown menu itself (rendered with shadcn semantic tokens) is
+   left untouched on purpose: it uses the page-level `bg-background` /
+   `border-border` so it stays readable on the cream paper background. */
+[data-theme="magazine"] .tp-mag-topnav__inquire button[aria-haspopup="menu"] {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  text-shadow: none;
+  transition: background 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-topnav__inquire button[aria-haspopup="menu"]:hover {
+  background: color-mix(in oklab, var(--accent) 88%, var(--ink));
+}
+
+/* The trigger's underline span is decorative for the editorial style;
+   for the Magazine pill we want a solid block, no descender line. */
+[data-theme="magazine"] .tp-mag-topnav__inquire button[aria-haspopup="menu"] > span {
+  border-bottom: 0;
+  color: inherit;
+}
+
+/* Hide the ChevronDown — the Magazine pill reads as a single CTA, the
+   dropdown affordance is implicit. */
+[data-theme="magazine"] .tp-mag-topnav__inquire button[aria-haspopup="menu"] > svg {
+  display: none;
+}
+
+/* ── Hero (full-bleed adaptive) ───────────────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-hero {
+  position: relative;
+  width: 100%;
+  height: 100vh;          /* fallback for older browsers */
+  height: 100dvh;          /* modern viewport accounts for mobile UI chrome */
+  overflow: hidden;
+  background: var(--ink);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-hero {
+    /* Reserve room for the fixed TopNav (≈86px including padding + rule). */
+    height: calc(100vh - 86px);
+    height: calc(100dvh - 86px);
+  }
+}
+
+[data-theme="magazine"] .tp-mag-hero__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter: brightness(0.82);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+[data-theme="magazine"] .tp-mag-hero__veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.42) 0%,
+    rgba(0, 0, 0, 0) 22%,
+    rgba(0, 0, 0, 0) 50%,
+    rgba(0, 0, 0, 0.78) 100%
+  );
+  pointer-events: none;
+}
+
+/* Top strip — slot for issued/valid dates on the left, country on the
+   right. Mobile: 60px from top (notch-safe), 22px side padding. */
+[data-theme="magazine"] .tp-mag-hero__top {
+  position: absolute;
+  top: max(60px, env(safe-area-inset-top, 0px) + 28px);
+  left: 22px;
+  right: 22px;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-hero__top {
+    top: 86px;
+    left: 48px;
+    right: 48px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-hero__top-dates {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 230, 0.85);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-hero__top-dates {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-hero__top-sep {
+  margin: 0 0.6em;
+  opacity: 0.5;
+}
+
+/* Country eyebrow comes through `regionEyebrowSlot` (`<span class="tp-eyebrow">`).
+   Override the editorial token-styling so it reads correctly over the photo. */
+[data-theme="magazine"] .tp-mag-hero__top-country .tp-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 230, 0.85);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  background: transparent;
+  padding: 0;
+  border: 0;
+}
+
+/* Bottom group — eyebrow + title + tagline. Anchored to bottom of hero
+   regardless of intermediate height changes during owner edit. */
+[data-theme="magazine"] .tp-mag-hero__bottom {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 56px;
+  z-index: 2;
+  color: rgba(245, 240, 230, 1);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-hero__bottom {
+    left: 48px;
+    right: 48px;
+    bottom: 64px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-hero__bottom-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 230, 0.9);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  margin: 0 0 20px 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-hero__bottom-eyebrow {
+    font-size: 11px;
+    margin-bottom: 24px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-hero__title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.015em;
+  color: rgba(245, 240, 230, 1);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  margin: 0;
+  /* Lower bound 40px keeps the title from overflowing the 320px viewport;
+     7vw scales smoothly through tablet; 112px caps the desktop heading. */
+  font-size: clamp(40px, 7vw, 112px);
+  word-break: break-word;
+}
+
+[data-theme="magazine"] .tp-mag-hero__tagline {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1.4;
+  color: rgba(245, 240, 230, 0.92);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+  margin: 20px 0 0 0;
+  max-width: 56ch;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-hero__tagline {
+    font-size: 22px;
+    margin-top: 24px;
+  }
+}
+
+/* ── Overview (asymmetric grid + meta-rail + stat tiles) ──────────── */
+
+[data-theme="magazine"] .tp-mag-overview__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-overview__grid {
+    grid-template-columns: 1fr 2fr;
+    gap: 80px;
+    align-items: start;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-overview__eyebrow {
+  margin-bottom: 18px;
+}
+
+[data-theme="magazine"] .tp-mag-overview__heading {
+  font-size: 32px;
+  line-height: 1.05;
+  margin: 0 0 24px 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-overview__heading {
+    font-size: 56px;
+    line-height: 1.02;
+    margin-bottom: 32px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-overview__meta {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+[data-theme="magazine"] .tp-mag-overview__meta-row {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  line-height: 1.6;
+}
+
+[data-theme="magazine"] .tp-mag-overview__prose {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-overview__prose {
+    font-size: 15px;
+    line-height: 1.65;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-overview__prose p {
+  margin: 0 0 22px 0;
+}
+
+[data-theme="magazine"] .tp-mag-overview__prose p:last-child {
+  margin-bottom: 0;
+}
+
+/* Stat tiles row — 2x2 mobile, 4-up desktop. Hairline rule above. */
+
+[data-theme="magazine"] .tp-mag-stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 1px solid var(--rule);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-stat-tiles {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+    margin-top: 64px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+}
+
+[data-theme="magazine"] .tp-mag-stat-tile__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+[data-theme="magazine"] .tp-mag-stat-tile__value {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-stat-tile__value {
+    font-size: 24px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-stat-tile__sub {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+[data-theme="magazine"] .tp-mag-stat-tile__placeholder {
+  color: var(--ink-mute);
+  font-style: italic;
+}
+
+[data-theme="magazine"] .tp-mag-stat-tile__hint {
+  font-size: 12px;
+  color: var(--ink-mute);
+  margin-left: 4px;
+  transition: transform 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-stat-tile--clickable {
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-stat-tile--clickable:hover {
+  color: var(--accent);
+}
+
+[data-theme="magazine"] .tp-mag-stat-tile--clickable:hover .tp-mag-stat-tile__hint {
+  transform: translateY(2px);
+  color: var(--accent);
+}
+
+/* The owner-mode duration / price slots wrap an internal <a> with the
+   editorial color override (`color: inherit`) — unify hover with the
+   tile so the link feels like part of the tile, not a nested element. */
+[data-theme="magazine"] .tp-mag-stat-tile--clickable a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ── Itinerary (alternating day spreads) ──────────────────────────── */
+
+[data-theme="magazine"] .tp-mag-itin__header {
+  margin-bottom: 48px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-itin__header {
+    margin-bottom: 80px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-itin__eyebrow {
+  margin: 32px 0 18px 0;
+}
+
+[data-theme="magazine"] .tp-mag-itin__heading {
+  font-size: 32px;
+  line-height: 1.05;
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-itin__heading {
+    font-size: 56px;
+    line-height: 1.02;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-itin__days {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-itin__days {
+    gap: 60px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-day {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  padding-top: 40px;
+  border-top: 1px solid var(--rule);
+  position: relative;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-day {
+    grid-template-columns: 1.4fr 1fr;
+    gap: 64px;
+    padding-top: 60px;
+    align-items: center;
+  }
+  [data-theme="magazine"] .tp-mag-day--reverse {
+    grid-template-columns: 1fr 1.4fr;
+  }
+  /* Reverse swaps which child sits in which column. */
+  [data-theme="magazine"] .tp-mag-day--reverse .tp-mag-day__photo {
+    order: 2;
+  }
+  [data-theme="magazine"] .tp-mag-day--reverse .tp-mag-day__text {
+    order: 1;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-day__handle {
+  position: absolute;
+  top: 12px;
+  left: -28px;
+  z-index: 2;
+}
+
+@media (max-width: 1023.98px) {
+  /* Mobile keeps the handle inline with the day so it stays reachable. */
+  [data-theme="magazine"] .tp-mag-day__handle {
+    position: static;
+    margin-bottom: 8px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-day__photo {
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: var(--rule);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-day__photo-img {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-empty {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 1px dashed var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-day__photo-empty {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-day__text {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+[data-theme="magazine"] .tp-mag-day__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-day__title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-day__title {
+    font-size: 36px;
+    line-height: 1.05;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-day__date {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-day__body {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-day__body {
+    font-size: 16px;
+    line-height: 1.65;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-day__body p {
+  margin: 0 0 18px 0;
+}
+
+[data-theme="magazine"] .tp-mag-day__body p:last-child {
+  margin-bottom: 0;
+}

@@ -23,6 +23,7 @@ import { ShowcasePills, ShowcaseBanner, SHOWCASE_BANNER_HEIGHT } from '@/compone
 
 import { ThemeRoot } from '@/components/trip/theme-root'
 import { TripNav } from '@/components/trip/nav'
+import { MagazineTopNav } from '@/components/trip/magazine-topnav'
 import { TripHero } from '@/components/trip/hero'
 import { ContactAgentMenu } from '@/components/trip/contact-agent-menu'
 import { TripOverview } from '@/components/trip/overview'
@@ -1114,6 +1115,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             dateRange={dateRange}
             durationDays={p.duration_days}
             groupSize={p.group_size}
+            country={p.country}
             pricePerPersonFormatted={heroHeadlineFormatted}
             priceLabel={heroPriceLabel}
             activityChipSlot={activityChipSlot}
@@ -1178,17 +1180,34 @@ export default function TripPageClient({ slug, initialData }: Props) {
           />
         </HeroDropZone>
 
-        <TripNav
-          visibility={{
-            overview: overviewVisible,
-            itinerary: itineraryVisible,
-            accommodations: accommodationsVisible,
-            price: priceVisible,
-            included: includedVisible,
-            terms: termsVisible,
-            contacts: contactsVisible,
-          }}
-        />
+        {resolvedTheme === 'magazine' ? (
+          <MagazineTopNav
+            owner={owner}
+            operatorContact={operatorContact}
+            visibility={{
+              overview: overviewVisible,
+              itinerary: itineraryVisible,
+              accommodations: accommodationsVisible,
+              included: includedVisible,
+              price: priceVisible,
+              terms: termsVisible,
+              contacts: contactsVisible,
+            }}
+            currentLanguage={p.language ?? 'en'}
+          />
+        ) : (
+          <TripNav
+            visibility={{
+              overview: overviewVisible,
+              itinerary: itineraryVisible,
+              accommodations: accommodationsVisible,
+              price: priceVisible,
+              included: includedVisible,
+              terms: termsVisible,
+              contacts: contactsVisible,
+            }}
+          />
+        )}
 
         {showOwnerUI && (
           <input
@@ -1215,7 +1234,26 @@ export default function TripPageClient({ slug, initialData }: Props) {
           />
         )}
 
-        <TripOverview bodySlot={overviewBodySlot} visible={overviewVisible} />
+        <TripOverview
+          theme={resolvedTheme}
+          bodySlot={overviewBodySlot}
+          visible={overviewVisible}
+          datesStart={p.dates_start}
+          datesEnd={p.dates_end}
+          durationDays={p.duration_days}
+          groupSize={p.group_size}
+          country={p.country}
+          region={p.region}
+          activityType={p.activity_type}
+          language={p.language ?? 'en'}
+          priceFormatted={heroHeadlineFormatted}
+          priceLabel={heroPriceLabel}
+          dateStatSlot={dateStatSlot}
+          durationStatSlot={durationStatSlot}
+          groupStatSlot={groupStatSlot}
+          priceStatSlot={priceStatSlot}
+          showOwnerUI={showOwnerUI}
+        />
 
         <TripItinerary
           theme={resolvedTheme}
@@ -1237,6 +1275,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 }
               : undefined
           }
+          onPhotoClick={(m) => {
+            const full = media.find((x) => x.id === m.id)
+            if (full) setLightbox(full)
+          }}
         />
 
         <TripAccommodations

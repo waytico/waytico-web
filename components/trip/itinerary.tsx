@@ -49,6 +49,11 @@ type ItineraryProps = {
    *  is expected to PATCH /api/projects/:id with the new itinerary
    *  (including refreshed dayNumber values). */
   onReorder?: (next: Day[]) => Promise<boolean> | void
+  /** Open the trip-level PhotoLightbox from a day photo click. Magazine
+   *  variant inlines the day's primary photo (no PhotosBlock), so it
+   *  needs a direct callback. Other variants ignore it (lightbox open
+   *  goes through renderDayExtras → PhotosBlock as before). */
+  onPhotoClick?: (m: MediaLite) => void
 }
 
 function getDayPhoto(media: MediaLite[], dayId: string): string | null {
@@ -103,6 +108,22 @@ export function TripItinerary(props: ItineraryProps) {
       </span>
     </header>
   )
+
+  if (itineraryStyle === 'magazine') {
+    return (
+      <ItineraryMagazine
+        itinerary={itinerary}
+        media={props.media}
+        datesStart={datesStart}
+        language={language}
+        editable={!!editable}
+        onReorder={onReorder}
+        onPhotoClick={props.onPhotoClick}
+        renderDayTitle={props.renderDayTitle}
+        renderDayDescription={props.renderDayDescription}
+      />
+    )
+  }
 
   if (!editable) {
     // Public/non-editable view — plain layout for the chosen theme.
@@ -506,4 +527,243 @@ function SortableDay({
 function DayDescription({ children }: { children: ReactNode }) {
   if (!children) return null
   return <p className="day-desc">{children}</p>
+}
+
+/* ── Magazine variant ─────────────────────────────────────────────── */
+
+/** Pick the day's primary photo: the lowest sort_order media row that is
+ *  not a document and belongs to this day. The Magazine variant
+ *  intentionally renders only one photo per day (TZ pass-A decision #7) —
+ *  the others remain in the database and continue to show in the
+ *  editorial / expedition / compact themes. */
+function getMagazineDayPhoto(media: MediaLite[], dayId: string): MediaLite | null {
+  const list = media
+    .filter((m) => m.day_id === dayId && m.type !== 'document')
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+  return list[0] ?? null
+}
+
+type ItineraryMagazineProps = {
+  itinerary: Day[]
+  media: MediaLite[]
+  datesStart?: string | null
+  language?: string | null
+  editable: boolean
+  onReorder?: (next: Day[]) => Promise<boolean> | void
+  onPhotoClick?: (m: MediaLite) => void
+  renderDayTitle: (day: Day) => ReactNode
+  renderDayDescription: (day: Day) => ReactNode
+}
+
+function ItineraryMagazine(props: ItineraryMagazineProps) {
+  const {
+    itinerary,
+    media,
+    datesStart,
+    language,
+    editable,
+    onReorder,
+    onPhotoClick,
+    renderDayTitle,
+    renderDayDescription,
+  } = props
+
+  // Local mirror so we can do an optimistic reorder before the backend
+  // confirms (mirrors the DndSortable wrapper used by the other variants).
+  // Sync from props whenever upstream order changes (agent reorders via
+  // chat while the operator has the page open).
+  const [items, setItems] = useState<Day[]>(itinerary)
+  if (
+    items.length !== itinerary.length ||
+    items.some((d, i) => d.id !== itinerary[i].id)
+  ) {
+    setItems(itinerary)
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  async function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e
+    if (!over || active.id === over.id) return
+    const oldIndex = items.findIndex((d) => (d.id || `day-${d.dayNumber}`) === active.id)
+    const newIndex = items.findIndex((d) => (d.id || `day-${d.dayNumber}`) === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    const reordered = arrayMove(items, oldIndex, newIndex).map((d, i) => ({
+      ...d,
+      dayNumber: i + 1,
+      // Strip per-day date so backend reconcileDates() recomputes from dates_start.
+      date: null,
+    })) as Day[]
+    setItems(reordered)
+    if (onReorder) {
+      const ok = await onReorder(reordered)
+      // Optimistic rollback on failed PATCH (TZ pitfall #12).
+      if (ok === false) setItems(itinerary)
+    }
+  }
+
+  const dayIds = items.map((d) => d.id || `day-${d.dayNumber}`)
+
+  const header = (
+    <header className="tp-mag-itin__header">
+      <hr className="tp-mag-rule" />
+      <p className="tp-mag-eyebrow tp-mag-itin__eyebrow">
+        II — {UI.sectionLabels.itinerary.toUpperCase()}
+      </p>
+      <h2 className="tp-mag-display tp-mag-itin__heading">
+        {UI.sectionLabels.itinerary}
+      </h2>
+    </header>
+  )
+
+  const dayList = items.map((day, idx) => (
+    <MagazineDay
+      key={day.id || `day-${day.dayNumber}`}
+      day={day}
+      idx={idx}
+      photo={getMagazineDayPhoto(media, day.id)}
+      datesStart={datesStart}
+      language={language}
+      editable={editable}
+      onPhotoClick={onPhotoClick}
+      renderDayTitle={renderDayTitle}
+      renderDayDescription={renderDayDescription}
+    />
+  ))
+
+  if (!editable) {
+    return (
+      <section className="tp-mag-section tp-mag-itin" id="itinerary">
+        <div className="tp-mag-container">
+          {header}
+          <div className="tp-mag-itin__days">{dayList}</div>
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section className="tp-mag-section tp-mag-itin" id="itinerary">
+      <div className="tp-mag-container">
+        {header}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={dayIds} strategy={verticalListSortingStrategy}>
+            <div className="tp-mag-itin__days">{dayList}</div>
+          </SortableContext>
+        </DndContext>
+      </div>
+    </section>
+  )
+}
+
+/** Single day spread.
+ *
+ * Desktop ≥1024px: alternating image/text layout — even-indexed days
+ * (Day 1, 3, 5…) put the photo on the left, odd-indexed reverse it.
+ * Mobile <1024px: single column, photo on top, no reverse.
+ *
+ * In owner mode the day is wrapped in a sortable handle so dnd-kit can
+ * reorder. Inline-edit clicks on the title/description are not
+ * intercepted thanks to the PointerSensor 4px activation distance.
+ */
+function MagazineDay(props: {
+  day: Day
+  idx: number
+  photo: MediaLite | null
+  datesStart?: string | null
+  language?: string | null
+  editable: boolean
+  onPhotoClick?: (m: MediaLite) => void
+  renderDayTitle: (day: Day) => ReactNode
+  renderDayDescription: (day: Day) => ReactNode
+}) {
+  const {
+    day,
+    idx,
+    photo,
+    datesStart,
+    language,
+    editable,
+    onPhotoClick,
+    renderDayTitle,
+    renderDayDescription,
+  } = props
+  const id = day.id || `day-${day.dayNumber}`
+  const sortable = useSortable({ id })
+
+  const dragStyle: React.CSSProperties = editable
+    ? {
+        transform: CSS.Transform.toString(sortable.transform),
+        transition: sortable.transition,
+        opacity: sortable.isDragging ? 0.6 : 1,
+        zIndex: sortable.isDragging ? 10 : undefined,
+        position: 'relative',
+      }
+    : {}
+
+  const isReverse = idx % 2 === 1
+  const dayDateLabel = fmtDayDate(resolveDayDate(day, datesStart), language)
+  const eyebrowText = `${UI.day.toUpperCase()} ${pad2(day.dayNumber)}`
+
+  const photoNode = photo ? (
+    <button
+      type="button"
+      className="tp-mag-day__photo-btn"
+      onClick={() => onPhotoClick?.(photo)}
+      aria-label="Open photo"
+    >
+      <img
+        src={photo.url}
+        alt={photo.caption || ''}
+        className="tp-mag-day__photo-img"
+        draggable={false}
+      />
+    </button>
+  ) : editable ? (
+    <div className="tp-mag-day__photo-empty" aria-hidden="true">
+      <span>+ Add photo</span>
+    </div>
+  ) : null
+
+  return (
+    <article
+      ref={editable ? sortable.setNodeRef : undefined}
+      className={
+        'tp-mag-day' +
+        (isReverse ? ' tp-mag-day--reverse' : '') +
+        (editable && sortable.isDragging ? ' is-dragging' : '')
+      }
+      style={dragStyle}
+    >
+      {editable && (
+        <button
+          type="button"
+          className="tp-itin-handle tp-mag-day__handle"
+          aria-label="Drag to reorder day"
+          title="Drag to reorder"
+          {...sortable.attributes}
+          {...sortable.listeners}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+      )}
+
+      {photoNode && <div className="tp-mag-day__photo">{photoNode}</div>}
+
+      <div className="tp-mag-day__text">
+        <p className="tp-mag-day__eyebrow">{eyebrowText}</p>
+        <h3 className="tp-mag-day__title">{renderDayTitle(day)}</h3>
+        {dayDateLabel && <p className="tp-mag-day__date">{dayDateLabel}</p>}
+        <div className="tp-mag-day__body">{renderDayDescription(day)}</div>
+      </div>
+    </article>
+  )
 }
