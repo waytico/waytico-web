@@ -1294,6 +1294,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
         />
 
         <TripPrice
+          theme={resolvedTheme}
+          owner={owner}
+          operatorContact={operatorContact}
           pricingMode={pricingMode}
           pricingLabel={p.pricing_label ?? null}
           pricePerPerson={pricePerPersonNum}
