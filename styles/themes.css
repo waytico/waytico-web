@@ -1787,12 +1787,14 @@
   margin-bottom: 0;
 }
 
-/* Italic "lede" — first sentence of the first paragraph. The frontend
-   wraps it in <em class="tp-mag-lede"> via DescriptionParagraphs when
-   theme === 'magazine'. The class is explicit (rather than relying on
-   the default <em> italic) so we keep precise control if we ever swap
-   the display font for one whose italic style differs. */
-[data-theme="magazine"] .tp-mag-overview__prose em.tp-mag-lede {
+/* Italic "lede" — first sentence of the first paragraph in any
+   magazine prose block (Overview and per-day descriptions). The
+   frontend wraps it in <em class="tp-mag-lede"> via
+   DescriptionParagraphs when theme === 'magazine'. The class is
+   explicit (rather than relying on the default <em> italic) so we
+   keep precise control if we ever swap the display font for one
+   whose italic style differs. */
+[data-theme="magazine"] em.tp-mag-lede {
   font-style: italic;
   font-weight: inherit;
   color: inherit;
@@ -2012,17 +2014,31 @@
 }
 
 [data-theme="magazine"] .tp-mag-day__body {
-  font-family: var(--font-body);
-  font-size: 13.5px;
-  line-height: 1.6;
-  color: var(--ink-soft);
+  /* Editorial body — same family + reading size as Overview prose so
+     the day spreads read as a continuation of the overview voice. The
+     first paragraph's first sentence is wrapped in <em class="tp-mag-lede">
+     by DescriptionParagraphs (theme="magazine"), inheriting the shared
+     italic-lede rule below. */
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.55;
+  font-weight: 400;
+  color: var(--ink);
 }
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-day__body {
-    font-size: 16px;
-    line-height: 1.65;
+    font-size: 22px;
+    line-height: 1.5;
   }
+}
+
+[data-theme="magazine"] .tp-mag-day__body p {
+  margin: 0 0 22px 0;
+}
+
+[data-theme="magazine"] .tp-mag-day__body p:last-child {
+  margin-bottom: 0;
 }
 
 [data-theme="magazine"] .tp-mag-day__body p {

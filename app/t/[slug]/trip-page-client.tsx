@@ -1207,11 +1207,14 @@ export default function TripPageClient({ slug, initialData }: Props) {
           placeholder="Click to add a short summary of this day"
           rows={2}
           className="w-full"
+          renderDisplay={(text) => (
+            <DescriptionParagraphs text={text} theme={resolvedTheme} />
+          )}
           onSave={(v) => (day.id ? saveDayPatch(day.id, { description: v }) : Promise.resolve(false))}
         />
       )
     }
-    return day.description || null
+    return <DescriptionParagraphs text={day.description} theme={resolvedTheme} />
   }
 
   const renderDayExtras = (day: any): ReactNode => {
