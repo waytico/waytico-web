@@ -70,10 +70,10 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           aria-label={label}
-          className="inline-flex items-center gap-1.5 px-2.5 lg:px-3 py-1 rounded-full text-sm font-medium bg-accent text-accent-foreground hover:bg-accent/90 transition-colors"
+          className="inline-flex items-center gap-1.5 px-2.5 lg:px-3 py-1 rounded-full text-sm font-medium bg-accent text-accent-foreground hover:bg-accent/90 transition-colors whitespace-nowrap"
         >
           <Send className="w-4 h-4" aria-hidden="true" />
-          <span className="hidden lg:inline">{label}</span>
+          <span>{label}</span>
         </button>
       )}
 

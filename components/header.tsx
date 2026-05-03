@@ -87,7 +87,8 @@ function GlobalLeft() {
           href="/"
           className="inline-flex items-center gap-1 h-7 px-2.5 text-xs font-medium border border-accent/40 text-accent hover:bg-accent/10 transition-colors rounded-md whitespace-nowrap"
         >
-          <Plus className="w-3.5 h-3.5" /> New quote
+          <Plus className="w-3.5 h-3.5" />
+          New<span className="hidden sm:inline">&nbsp;quote</span>
         </Link>
       </SignedIn>
     </div>
