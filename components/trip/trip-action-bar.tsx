@@ -180,20 +180,27 @@ export function TripActionBar({
     onActivate: status === 'quoted' ? () => setActivateStubOpen(true) : undefined,
   })
 
-  // Single-row layout — status pill flush left, actions group flush
-  // right. Wraps to a second line on extreme widths via flex-wrap (rare
-  // on mobile because the four right-hand actions are icon-only).
+  // Pill-wrapper layout matching the Claude Design v2 handoff:
+  //
+  //   ╭─[ • QUOTE ⌄ │ 🔒 Client │ 🎨 Design │ 👁 Preview │ ✈ Share ]─╮
+  //
+  // One soft cream capsule hugs all controls. Status pill stays flush
+  // left; the actions group is flush right via ml-auto so Share lands
+  // at the trailing edge. A single hairline divider after the status
+  // pill is always visible — it separates the trip-state control from
+  // the agent's tools. Inter-action dividers only show on lg+ alongside
+  // the labels — bare-icon mode (mobile / tablet / laptop) reads
+  // cleaner without them.
   const inlineRow = (
-    <div className="flex items-center justify-between gap-2 sm:gap-3 w-full">
-      {/* LEFT: status pill — also a dropdown trigger that opens the
-          actions menu (Make it a trip / Archive / Delete / Restore —
-          depends on current status). */}
+    <div className="flex items-center gap-1 lg:gap-1.5 w-full rounded-full bg-secondary/40 border border-border/50 px-1.5 py-0.5">
+      {/* Status pill — also opens the action menu (Make it a trip /
+          Archive / Delete / Restore — depends on current status). */}
       <div ref={triggerWrapRef} className="relative inline-block">
         <button
           type="button"
           onClick={() => items.length > 0 && setMenuOpen((v) => !v)}
           disabled={busy || items.length === 0}
-          className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-sans font-semibold uppercase tracking-wider rounded-full transition-opacity hover:opacity-80 disabled:opacity-60 ${meta.chipClass}`}
+          className={`inline-flex items-center gap-2 px-3 py-1 text-xs font-sans font-semibold uppercase tracking-wider rounded-full transition-opacity hover:opacity-80 disabled:opacity-60 ${meta.chipClass}`}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
         >
@@ -231,10 +238,13 @@ export function TripActionBar({
         )}
       </div>
 
-      {/* RIGHT: agent tools. Mobile renders icon-only (no text labels)
-          so all four fit in a single row alongside the status pill on
-          phones. Desktop keeps the labels. */}
-      <div className="flex items-center gap-1 sm:gap-2">
+      {/* Always-visible divider between status pill and action group. */}
+      <div className="w-px h-5 bg-border/60 mx-0.5" aria-hidden="true" />
+
+      {/* Agent tools. Bare icons below lg, labelled at lg+. Inter-tool
+          dividers ride along with the labels. Share is the primary CTA
+          — solid terracotta — and anchors the right edge. */}
+      <div className="flex items-center gap-0.5 lg:gap-1 ml-auto">
         {showClientInfoToggle && (
           <>
             <button
@@ -243,14 +253,14 @@ export function TripActionBar({
               aria-pressed={clientInfoOpen ? 'true' : 'false'}
               aria-label={clientInfoOpen ? 'Hide client info' : 'Show client info'}
               className={
-                'inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full text-sm transition-colors ' +
+                'inline-flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded-full text-sm transition-colors ' +
                 (clientInfoOpen
                   ? 'bg-accent/10 text-accent'
-                  : 'text-foreground/70 hover:text-foreground hover:bg-secondary')
+                  : 'text-foreground/70 hover:text-foreground hover:bg-background/60')
               }
             >
               <Lock className="w-4 h-4" />
-              <span className="hidden lg:inline">Client info</span>
+              <span className="hidden lg:inline">Client</span>
               <span className="hidden lg:inline">
                 {clientInfoOpen ? (
                   <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
@@ -273,12 +283,12 @@ export function TripActionBar({
           type="button"
           onClick={onPreviewAsClient}
           aria-label="Preview as client"
-          className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
+          className="inline-flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-background/60 transition-colors"
         >
           <Eye className="w-4 h-4" />
-          <span className="hidden lg:inline">Preview as client</span>
+          <span className="hidden lg:inline">Preview</span>
         </button>
-        {canShare && <ShareMenu title={title} url={shareUrl} publicStatus={status} />}
+        {canShare && <ShareMenu title={title} url={shareUrl} publicStatus={status} label="Share" />}
       </div>
     </div>
   )
