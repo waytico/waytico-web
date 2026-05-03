@@ -206,7 +206,7 @@ export function TripActionBar({
     <div className="flex items-center gap-1 lg:gap-1.5 w-full rounded-full bg-secondary/40 border border-border/50 px-1.5 py-0.5">
       {/* Status pill — also opens the action menu (Make it a trip /
           Archive / Delete / Restore — depends on current status). */}
-      <div ref={triggerWrapRef} className="relative inline-block">
+      <div ref={triggerWrapRef} className="relative inline-block lg:mr-3">
         <button
           type="button"
           onClick={() => items.length > 0 && setMenuOpen((v) => !v)}
@@ -250,7 +250,7 @@ export function TripActionBar({
       </div>
 
       {/* Always-visible divider between status pill and action group. */}
-      <div className="w-px h-5 bg-border/60 mx-0.5" aria-hidden="true" />
+      <div className="w-px h-5 bg-border/60 mx-0.5 hidden lg:block" aria-hidden="true" />
 
       {/* Agent tools. Bare icons below lg, labelled at lg+. Inter-tool
           dividers ride along with the labels. Share is the primary CTA
@@ -312,12 +312,12 @@ export function TripActionBar({
           </button>
         )}
         <div className="w-px h-5 bg-border/60 hidden lg:block" aria-hidden="true" />
-        {canShare && (
-          <div className="lg:ml-3">
-            <ShareMenu title={title} url={shareUrl} publicStatus={status} label="Share" />
-          </div>
-        )}
       </div>
+      {canShare && (
+        <div className="ml-auto lg:ml-3">
+          <ShareMenu title={title} url={shareUrl} publicStatus={status} label="Share" />
+        </div>
+      )}
     </div>
   )
 
