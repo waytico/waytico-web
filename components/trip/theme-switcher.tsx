@@ -122,7 +122,7 @@ export function ThemeSwitcher({ projectId, value, isShowcase, onLocalChange }: P
       >
         <Palette className="w-4 h-4" aria-hidden="true" />
         <span className="hidden lg:inline">Design</span>
-        <ChevronDown className="w-3.5 h-3.5" />
+        <ChevronDown className="w-3.5 h-3.5 hidden lg:inline" />
       </button>
 
       {open && (
