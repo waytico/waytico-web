@@ -298,7 +298,14 @@ export function EditableField(props: Props) {
           onKeyDown={(e) => { if (e.key === 'Enter') setEditing(true) }}
           className={`group inline-flex items-center gap-1 ${interactive} ${props.className ?? ''}`}
         >
-          <span>{displayStr}</span>
+          {/* `renderDisplay` is declared in BaseProps and was previously
+           *  consumed only by the multiline branch. Allowing the text
+           *  branch to honour it lets callers (e.g. the Magazine day
+           *  title which splits "Head, italic-tail." across a span +
+           *  <em>) keep their formatted display while still using a
+           *  single-line input on click — matches the feel operators
+           *  expect for short typed phrases. */}
+          {props.renderDisplay ? props.renderDisplay(displayStr) : <span>{displayStr}</span>}
           {inlineIcon}
         </span>
       )

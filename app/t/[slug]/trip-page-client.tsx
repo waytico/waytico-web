@@ -28,7 +28,7 @@ import { MagazineStickyBar } from '@/components/trip/magazine-stickybar'
 import { TripHero } from '@/components/trip/hero'
 import { ContactAgentMenu } from '@/components/trip/contact-agent-menu'
 import { TripOverview, MagazineSectionSubtitleLines } from '@/components/trip/overview'
-import { TripItinerary } from '@/components/trip/itinerary'
+import { TripItinerary, MagazineDayTitle } from '@/components/trip/itinerary'
 import { TripIncluded, IncludedList } from '@/components/trip/included'
 import { TripPrice } from '@/components/trip/price'
 import { TripTerms } from '@/components/trip/terms'
@@ -1172,19 +1172,30 @@ export default function TripPageClient({ slug, initialData }: Props) {
     ))
 
   // ── Itinerary slot renderers ──
-  const renderDayTitle = (day: any): ReactNode =>
-    ed ? (
-      <EditableField
-        as="text"
-        editable
-        value={day.title}
-        required
-        className="w-full"
-        onSave={(v) => (day.id ? saveDayPatch(day.id, { title: v }) : Promise.resolve(false))}
-      />
-    ) : (
-      day.title || ''
-    )
+  const renderDayTitle = (day: any): ReactNode => {
+    const isMagazine = resolvedTheme === 'magazine'
+    if (ed) {
+      return (
+        <EditableField
+          as="text"
+          editable
+          value={day.title}
+          required
+          className="w-full"
+          renderDisplay={
+            isMagazine
+              ? (text) => <MagazineDayTitle text={text} />
+              : undefined
+          }
+          onSave={(v) => (day.id ? saveDayPatch(day.id, { title: v }) : Promise.resolve(false))}
+        />
+      )
+    }
+    if (isMagazine) {
+      return <MagazineDayTitle text={day.title || ''} />
+    }
+    return day.title || ''
+  }
 
   const renderDayDescription = (day: any): ReactNode => {
     if (ed) {

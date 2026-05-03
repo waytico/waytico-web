@@ -1962,6 +1962,21 @@
   }
 }
 
+/* Comma-split day title — head regular, tail italic. The frontend
+   wraps each piece in a matching span / <em> via MagazineDayTitle when
+   theme === 'magazine'. The classes are explicit (rather than relying
+   on the default <em> italic) so we keep precise control if we ever
+   swap the display font for one whose italic style differs. */
+[data-theme="magazine"] .tp-mag-day__title-head {
+  font-style: normal;
+}
+
+[data-theme="magazine"] .tp-mag-day__title-tail {
+  font-style: italic;
+  font-weight: inherit;
+  color: inherit;
+}
+
 [data-theme="magazine"] .tp-mag-day__date {
   font-family: var(--font-mono);
   font-size: 10px;
