@@ -72,6 +72,14 @@ type HeroProps = {
    *  Receives `onPhoto` so the slot can adjust contrast over the
    *  Expedition theme's full-bleed photo background. */
   contactAgentSlot?: (ctx: { onPhoto: boolean }) => ReactNode
+  /** 6-char quote code (uppercase). Surfaces in the hero top strip in two
+   *  ways depending on the viewer:
+   *   - Public (status pill present): appended after the status label →
+   *     "QUOTED · A3K9P2".
+   *   - Owner (status null, dates row visible): rendered as the first
+   *     pair in the dates row → "QUOTE A3K9P2 — ISSUED … — VALID UNTIL …".
+   *  Hidden when null. */
+  code?: string | null
 }
 
 /**
@@ -96,6 +104,7 @@ function HeroTopStrip({
   proposalSlot,
   validUntilSlot,
   contactAgentSlot,
+  code,
   onPhoto = false,
 }: {
   status?: string | null
@@ -104,12 +113,16 @@ function HeroTopStrip({
   proposalSlot?: ReactNode
   validUntilSlot?: ReactNode
   contactAgentSlot?: (ctx: { onPhoto: boolean }) => ReactNode
+  code?: string | null
   onPhoto?: boolean
 }) {
   const hasStatus = !!status && ['quoted', 'active', 'completed'].includes(status)
   const hasProposal = !!(proposalDate || proposalSlot)
   const hasValidUntil = !!(validUntil || validUntilSlot)
-  const hasDates = hasProposal || hasValidUntil
+  // Owner-side QUOTE pair surfaces only when the public status pill isn't
+  // already carrying the code (avoids double-display for the same datum).
+  const hasOwnerCode = !!code && !hasStatus
+  const hasDates = hasOwnerCode || hasProposal || hasValidUntil
   const renderedContactAgent = contactAgentSlot ? contactAgentSlot({ onPhoto }) : null
   const hasContactAgent = !!renderedContactAgent
 
@@ -155,7 +168,7 @@ function HeroTopStrip({
             className="sm:col-start-1 sm:justify-self-start"
             style={{ pointerEvents: 'auto' }}
           >
-            <PublicStatusPill status={status} onPhoto={onPhoto} />
+            <PublicStatusPill status={status} onPhoto={onPhoto} code={code} />
           </div>
         )}
 
@@ -173,6 +186,15 @@ function HeroTopStrip({
             className="uppercase grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-start sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:gap-y-0 sm:col-start-3 sm:justify-self-end"
             style={{ ...datesStyle, pointerEvents: 'auto' }}
           >
+            {hasOwnerCode && (
+              <>
+                <span>Quote</span>
+                <span>{code}</span>
+              </>
+            )}
+            {hasOwnerCode && (hasProposal || hasValidUntil) && (
+              <span className="hidden sm:inline opacity-50">—</span>
+            )}
             {hasProposal && (
               <>
                 <span>{UI.proposal}</span>
@@ -278,6 +300,7 @@ export function TripHero(props: HeroProps) {
           proposalSlot={props.proposalSlot}
           validUntilSlot={props.validUntilSlot}
           contactAgentSlot={props.contactAgentSlot}
+          code={props.code}
           onPhoto={!!heroPhoto}
         />
         <div className="tp-container" style={{ position: 'relative', zIndex: 1 }}>
@@ -298,6 +321,7 @@ export function TripHero(props: HeroProps) {
           proposalSlot={props.proposalSlot}
           validUntilSlot={props.validUntilSlot}
           contactAgentSlot={props.contactAgentSlot}
+          code={props.code}
         />
         <div className="tp-container tp-hero--card">
           <div className="tp-hero-meta" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -356,6 +380,7 @@ export function TripHero(props: HeroProps) {
         proposalSlot={props.proposalSlot}
         validUntilSlot={props.validUntilSlot}
         contactAgentSlot={props.contactAgentSlot}
+        code={props.code}
       />
       <div className="tp-container tp-hero--split">
         <div className="tp-hero-meta">{meta}</div>
@@ -471,6 +496,7 @@ function HeroMagazine(props: HeroProps) {
     durationDays,
     country,
     ownerOverlay,
+    code,
   } = props
 
   // Bottom eyebrow: "{COUNTRY} — {N} DAYS". Each part hides individually
@@ -507,6 +533,7 @@ function HeroMagazine(props: HeroProps) {
         proposalSlot={proposalSlot}
         validUntilSlot={validUntilSlot}
         contactAgentSlot={contactAgentSlot}
+        code={code}
         onPhoto={true}
       />
 

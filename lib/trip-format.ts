@@ -146,3 +146,22 @@ export function dayNumeral(n: number | null | undefined): string {
   return pad2(n)
 }
 
+/**
+ * Extract the 6-character quote code from a trip slug.
+ *
+ * Slugs are generated server-side as `{title-base}-{suffix}` where suffix is
+ * `Math.random().toString(36).substring(2, 8)` — exactly 6 chars from
+ * `[0-9a-z]`. We surface that suffix to humans (uppercase) as a stable
+ * shortcode they can read out loud or quote in messages, alongside the URL.
+ *
+ * Returns null when the slug doesn't end with a 6-char [0-9a-z] segment
+ * (e.g. the seeded showcase slug `paris-weekend-getaway`). Callers must
+ * treat null as "no code to display" and hide the field entirely — never
+ * fall back to a partial slice.
+ */
+export function extractQuoteCode(slug: string | null | undefined): string | null {
+  if (!slug) return null
+  const match = /-([0-9a-z]{6})$/.exec(slug)
+  if (!match) return null
+  return match[1].toUpperCase()
+}

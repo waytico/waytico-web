@@ -47,6 +47,7 @@ import {
   fmtPrice,
   coercePrice,
   addDaysISO,
+  extractQuoteCode,
 } from '@/lib/trip-format'
 import { useTripMutations } from '@/hooks/use-trip-mutations'
 import { usePhotoUpload, type MediaRecord } from '@/hooks/use-photo-upload'
@@ -1167,6 +1168,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             theme={resolvedTheme}
             heroPhoto={heroPhoto?.url || null}
             status={!showOwnerUI ? p.status : null}
+            code={extractQuoteCode(slug)}
             dateRange={dateRange}
             durationDays={p.duration_days}
             groupSize={p.group_size}

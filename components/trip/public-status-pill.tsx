@@ -22,9 +22,16 @@ const PUBLIC_STATUSES: Status[] = ['quoted', 'active', 'completed']
 export function PublicStatusPill({
   status,
   onPhoto = false,
+  code,
 }: {
   status: string | null | undefined
   onPhoto?: boolean
+  /**
+   * Optional 6-char quote code (uppercase) — appended after the status
+   * label as `· CODE` so traveler-facing surface shows both the lifecycle
+   * stage and a stable shortcode. Hidden when null/undefined.
+   */
+  code?: string | null
 }) {
   if (!status) return null
   if (!PUBLIC_STATUSES.includes(status as Status)) return null
@@ -54,7 +61,7 @@ export function PublicStatusPill({
         color,
         textShadow: onPhoto ? '0 1px 4px rgba(0,0,0,0.4)' : undefined,
       }}
-      aria-label={`Trip status: ${UI.status[s] || s}`}
+      aria-label={`Trip status: ${UI.status[s] || s}${code ? `, code ${code}` : ''}`}
     >
       <span
         aria-hidden="true"
@@ -67,6 +74,12 @@ export function PublicStatusPill({
         }}
       />
       <span>{UI.status[s] || s}</span>
+      {code && (
+        <>
+          <span aria-hidden="true" style={{ opacity: 0.5 }}>·</span>
+          <span>{code}</span>
+        </>
+      )}
     </span>
   )
 }
