@@ -54,8 +54,6 @@ type ItineraryProps = {
    *  needs a direct callback. Other variants ignore it (lightbox open
    *  goes through renderDayExtras → PhotosBlock as before). */
   onPhotoClick?: (m: MediaLite) => void
-  /** Magazine-only narrative subtitle slot under the eyebrow. */
-  subtitleSlot?: ReactNode
 }
 
 function getDayPhoto(media: MediaLite[], dayId: string): string | null {
@@ -123,7 +121,6 @@ export function TripItinerary(props: ItineraryProps) {
         onPhotoClick={props.onPhotoClick}
         renderDayTitle={props.renderDayTitle}
         renderDayDescription={props.renderDayDescription}
-        subtitleSlot={props.subtitleSlot}
       />
     )
   }
@@ -556,7 +553,6 @@ type ItineraryMagazineProps = {
   onPhotoClick?: (m: MediaLite) => void
   renderDayTitle: (day: Day) => ReactNode
   renderDayDescription: (day: Day) => ReactNode
-  subtitleSlot?: ReactNode
 }
 
 function ItineraryMagazine(props: ItineraryMagazineProps) {
@@ -570,7 +566,6 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
     onPhotoClick,
     renderDayTitle,
     renderDayDescription,
-    subtitleSlot,
   } = props
 
   // Local mirror so we can do an optimistic reorder before the backend
@@ -613,19 +608,16 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
 
   const dayIds = items.map((d) => d.id || `day-${d.dayNumber}`)
 
-  const header = (
-    <header className="tp-mag-itin__header">
-      <hr className="tp-mag-rule" />
-      <p className="tp-mag-eyebrow tp-mag-itin__eyebrow">
-        {UI.sectionLabels.itinerary.toUpperCase()}
-      </p>
-      {subtitleSlot && (
-        <h2 className="tp-mag-display tp-mag-section-subtitle">
-          {subtitleSlot}
-        </h2>
-      )}
-    </header>
-  )
+  // Section opens with just a hairline rule. The eyebrow+subtitle header
+  // was removed — the canonical Magazine reference jumps straight from
+  // the overview block's prose into "DAY 01 — …", with no "ITINERARY"
+  // label between them. Each day spread carries its own DAY NN eyebrow,
+  // which is the only label the section needs. The rule keeps the visual
+  // separation between sections that other Magazine blocks also use.
+  // The id="itinerary" anchor on the section lands on this rule, which
+  // sits immediately above the first day — TopNav's "Itinerary" link
+  // therefore takes the visitor straight to Day 1 (intended UX).
+  const sectionLead = <hr className="tp-mag-rule" />
 
   const dayList = items.map((day, idx) => (
     <MagazineDay
@@ -646,7 +638,7 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
     return (
       <section className="tp-mag-section tp-mag-itin" id="itinerary">
         <div className="tp-mag-container">
-          {header}
+          {sectionLead}
           <div className="tp-mag-itin__days">{dayList}</div>
         </div>
       </section>
@@ -656,7 +648,7 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
   return (
     <section className="tp-mag-section tp-mag-itin" id="itinerary">
       <div className="tp-mag-container">
-        {header}
+        {sectionLead}
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

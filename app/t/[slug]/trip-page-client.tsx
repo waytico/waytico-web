@@ -1631,7 +1631,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
             const full = media.find((x) => x.id === m.id)
             if (full) setLightbox(full)
           }}
-          subtitleSlot={subtitleSlotFor('itinerary')}
         />
 
         <TripAccommodations

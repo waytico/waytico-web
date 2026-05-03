@@ -1800,33 +1800,6 @@
 
 /* ── Itinerary (alternating day spreads) ──────────────────────────── */
 
-[data-theme="magazine"] .tp-mag-itin__header {
-  margin-bottom: 48px;
-}
-
-@media (min-width: 1024px) {
-  [data-theme="magazine"] .tp-mag-itin__header {
-    margin-bottom: 80px;
-  }
-}
-
-[data-theme="magazine"] .tp-mag-itin__eyebrow {
-  margin: 32px 0 18px 0;
-}
-
-[data-theme="magazine"] .tp-mag-itin__heading {
-  font-size: 32px;
-  line-height: 1.05;
-  margin: 0;
-}
-
-@media (min-width: 1024px) {
-  [data-theme="magazine"] .tp-mag-itin__heading {
-    font-size: 56px;
-    line-height: 1.02;
-  }
-}
-
 [data-theme="magazine"] .tp-mag-itin__days {
   display: flex;
   flex-direction: column;
