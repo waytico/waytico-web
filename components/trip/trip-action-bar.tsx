@@ -266,8 +266,7 @@ export function TripActionBar({
                   }
                 >
                   <Lock className="w-4 h-4" />
-                  <span className="hidden sm:inline">Client info</span>
-                  <span className="sm:hidden">Client</span>
+                  <span>Client info</span>
                   {clientInfoOpen ? (
                     <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
                   ) : (
@@ -303,8 +302,7 @@ export function TripActionBar({
               }
             >
               <Eye className="w-4 h-4" />
-              <span className="hidden sm:inline">Preview as client</span>
-              <span className="sm:hidden">Preview</span>
+              <span>Preview as client</span>
             </button>
             {canShare && (
               <div
