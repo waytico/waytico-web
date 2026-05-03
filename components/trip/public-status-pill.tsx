@@ -19,6 +19,21 @@ type Status = 'quoted' | 'active' | 'completed'
 
 const PUBLIC_STATUSES: Status[] = ['quoted', 'active', 'completed']
 
+/**
+ * Public-side labels — distinct from UI.status which is the owner-side
+ * string ("Quoted" reads as a state in the action bar). On the traveler-
+ * facing hero strip the pill names the document, not the state, so
+ * "Quote · R10FNU" reads as "this is a Quote, code R10FNU" rather than
+ * "the Quoted-status thing, code R10FNU". Same shift would apply to a
+ * future "Booking" or "Trip" surface; keeping the map separate makes
+ * that future change a one-line edit here.
+ */
+const PUBLIC_STATUS_LABELS: Record<Status, string> = {
+  quoted: 'Quote',
+  active: 'Active',
+  completed: 'Completed',
+}
+
 export function PublicStatusPill({
   status,
   onPhoto = false,
@@ -36,6 +51,7 @@ export function PublicStatusPill({
   if (!status) return null
   if (!PUBLIC_STATUSES.includes(status as Status)) return null
   const s = status as Status
+  const label = PUBLIC_STATUS_LABELS[s]
 
   const color = onPhoto
     ? 'rgba(255,255,255,0.92)'
@@ -73,7 +89,7 @@ export function PublicStatusPill({
           flexShrink: 0,
         }}
       />
-      <span>{UI.status[s] || s}</span>
+      <span>{label}</span>
       {code && (
         <>
           <span aria-hidden="true" style={{ opacity: 0.5 }}>·</span>

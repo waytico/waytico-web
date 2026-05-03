@@ -149,27 +149,57 @@ function HeroTopStrip({
   // a quote with no contact channel still keeps status flush left.
   //
   // Width: the strip's CONTENT spans the full hero width with breakpoint-
-  // scaled padding (16/32/48px), anchoring corners of the photo. The
-  // hairline rule sits on the INNER content container so it runs between
-  // the left and right padding insets — not corner-to-corner of the
-  // viewport. The design canon shows this padding-bounded rule on the
-  // hero photo, mirroring the editorial-magazine "type panel" inset
-  // where the rule is part of the content rhythm, not a frame on the
-  // photo itself.
+  // scaled inset (16/32/48px). The hairline rule lives on an INNER
+  // wrapper that uses `mx` (not `px`) for that inset, so the rule runs
+  // BETWEEN the inset positions rather than corner-to-corner of the
+  // photo. Padding-based insets push the rule to the photo edges (the
+  // border attaches to the element's outer edge regardless of padding);
+  // margin-based insets shrink the bordered box itself, so the rule
+  // ends where the inset begins -- which matches the design canon's
+  // "type panel" rule that sits inside the photo's content frame.
   //
   // The rule renders identically across owner / public / preview modes
-  // because it lives on the always-present content container -- earlier
-  // versions tied it to mobile-only `border-t between status and dates`
-  // which evaporated in owner mode (no status pill -> no border-t).
+  // and across breakpoints because it lives on the always-present
+  // content wrapper -- earlier versions tied it to mobile-only
+  // border-t which evaporated in owner mode (no status pill -> no
+  // border-t).
   //
-  // Vertical alignment: items-center (not baseline). The status pill is
-  // an inline-flex with a 6px round dot inside — its baseline as
+  // Layout splits by mode:
+  //
+  //   TOURIST DESKTOP (hasStatus + sm:+) -- 3-col grid:
+  //     [QUOTE · code]   [Contact agent]   [Issued -- Valid until]
+  //                         (centered)         (right-aligned)
+  //     The traveler reads left-to-right: identity of the document,
+  //     how to reach the operator, when the offer is valid. Centring
+  //     the contact-agent slot puts the action surface visually at
+  //     the optical centre of the strip.
+  //
+  //   OWNER DESKTOP (no status, sm:+) -- flex-row:
+  //     [Quote code -- Issued -- Valid until]              [Contact agent]
+  //     Owner-side strip keeps the quote code + dates flush left
+  //     because contact-agent isn't rendered for owners (the operator
+  //     IS the contact). Empty right slot would leave a hole; flex
+  //     packs everything tight on the left.
+  //
+  //   ANY MOBILE -- flex-col stacked:
+  //     status -> dates -> contact, with hairline between status and
+  //     dates when both present (consistent with prior behaviour).
+  //
+  // Vertical alignment: items-center (not baseline). The status pill
+  // is an inline-flex with a 6px round dot inside -- its baseline as
   // resolved by the browser sits below its visual centreline, which
   // pushed the dates row visually upward when items-baseline was used.
   // Centring the cross-axis avoids relying on the inline-flex baseline
   // computation; the eyebrow text rows are similar enough in height
   // (~16px line-box) that center alignment reads as level on the eye.
   const ruleColor = onPhoto ? 'rgba(255,255,255,0.22)' : 'var(--rule)'
+  const isTourist = hasStatus
+
+  // Desktop layout class differs by mode. Mobile is always flex-col.
+  const desktopLayout = isTourist
+    ? 'sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4'
+    : 'sm:flex sm:flex-row sm:items-center sm:gap-4'
+
   return (
     <div
       style={{
@@ -182,12 +212,12 @@ function HeroTopStrip({
       }}
     >
       <div
-        className="w-full px-4 sm:px-8 lg:px-12 py-5 flex flex-col gap-3 items-start sm:flex-row sm:items-center sm:gap-4 border-b"
+        className={`mx-4 sm:mx-8 lg:mx-12 py-5 flex flex-col gap-3 items-start ${desktopLayout} border-b`}
         style={{ borderBottomColor: ruleColor }}
       >
         {hasStatus && (
           <div
-            className="order-1 sm:order-none"
+            className="order-1 sm:order-none sm:justify-self-start"
             style={{ pointerEvents: 'auto' }}
           >
             <PublicStatusPill status={status} onPhoto={onPhoto} code={code} />
@@ -196,7 +226,9 @@ function HeroTopStrip({
 
         {hasDates && (
           <div
-            className={`order-2 sm:order-none uppercase grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-start sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:gap-y-0 sm:mr-auto ${
+            className={`order-2 sm:order-none uppercase grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-start sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:gap-y-0 ${
+              isTourist ? 'sm:justify-self-end' : 'sm:mr-auto'
+            } ${
               hasStatus ? 'w-full pt-3 border-t sm:w-auto sm:pt-0 sm:border-t-0' : ''
             }`}
             style={{
@@ -234,7 +266,9 @@ function HeroTopStrip({
 
         {hasContactAgent && (
           <div
-            className="order-3 sm:order-none"
+            className={`order-3 sm:order-none ${
+              isTourist ? 'sm:justify-self-center' : ''
+            }`}
             style={{ pointerEvents: 'auto' }}
           >
             {renderedContactAgent}
