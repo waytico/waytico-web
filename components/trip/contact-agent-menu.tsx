@@ -112,7 +112,7 @@ export function ContactAgentMenu({ owner, operatorContact, onPhoto = false, labe
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-30"
+          className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-30"
         >
           {channels.map(({ key, value }) => {
             const Icon = ICON[key]

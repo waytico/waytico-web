@@ -159,6 +159,15 @@ function HeroTopStrip({
           </div>
         )}
 
+        {hasContactAgent && (
+          <div
+            className="justify-self-start sm:col-start-2 sm:justify-self-center"
+            style={{ pointerEvents: 'auto' }}
+          >
+            {renderedContactAgent}
+          </div>
+        )}
+
         {hasDates && (
           <div
             className="uppercase grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-start sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:gap-y-0 sm:col-start-3 sm:justify-self-end"
@@ -179,15 +188,6 @@ function HeroTopStrip({
                 <span>{validUntilSlot ?? (validUntil ? fmtDate(validUntil) : null)}</span>
               </>
             )}
-          </div>
-        )}
-
-        {hasContactAgent && (
-          <div
-            className="justify-self-start sm:col-start-2 sm:justify-self-center"
-            style={{ pointerEvents: 'auto' }}
-          >
-            {renderedContactAgent}
           </div>
         )}
       </div>
