@@ -1655,16 +1655,22 @@
 }
 
 [data-theme="magazine"] .tp-mag-overview__prose {
-  font-family: var(--font-body);
-  font-size: 13.5px;
-  line-height: 1.6;
+  /* Editorial body — display serif (Cormorant Garamond) at a reading size,
+     not the sans body font. Matches the Magazine v2 design canon where the
+     overview paragraphs are set in the same family as the headings, just
+     at a smaller size. Inter sits at 13-15px for secondary text only
+     (day-spread paragraphs, captions). */
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.55;
+  font-weight: 400;
   color: var(--ink);
 }
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-overview__prose {
-    font-size: 15px;
-    line-height: 1.65;
+    font-size: 22px;
+    line-height: 1.5;
   }
 }
 
@@ -1674,6 +1680,17 @@
 
 [data-theme="magazine"] .tp-mag-overview__prose p:last-child {
   margin-bottom: 0;
+}
+
+/* Italic "lede" — first sentence of the first paragraph. The frontend
+   wraps it in <em class="tp-mag-lede"> via DescriptionParagraphs when
+   theme === 'magazine'. The class is explicit (rather than relying on
+   the default <em> italic) so we keep precise control if we ever swap
+   the display font for one whose italic style differs. */
+[data-theme="magazine"] .tp-mag-overview__prose em.tp-mag-lede {
+  font-style: italic;
+  font-weight: inherit;
+  color: inherit;
 }
 
 /* Stat tiles row — 2x2 mobile, 4-up desktop. Hairline rule above. */

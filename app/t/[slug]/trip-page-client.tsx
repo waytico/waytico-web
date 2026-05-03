@@ -40,7 +40,7 @@ import type { PricingMode } from '@/components/trip/trip-types'
 import { TripFooter } from '@/components/trip/trip-footer'
 
 import { apiFetch } from '@/lib/api'
-import { resolveTheme } from '@/lib/themes'
+import { resolveTheme, type ThemeId } from '@/lib/themes'
 import { UI } from '@/lib/ui-strings'
 import {
   fmtDateRange,
@@ -579,7 +579,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
       onSave={(v) => saveProjectPatch({ description: v })}
     />
   ) : (
-    <DescriptionParagraphs text={p.description} />
+    <DescriptionParagraphs text={p.description} theme={resolvedTheme} />
   )
 
   const heroTaglineSlot: ReactNode = ed ? (
@@ -1597,18 +1597,97 @@ export default function TripPageClient({ slug, initialData }: Props) {
 // Helpers — kept in the same file to avoid further fragmentation.
 // ─────────────────────────────────────────────────────────────────
 
-function DescriptionParagraphs({ text }: { text: string | null | undefined }) {
+function DescriptionParagraphs({
+  text,
+  theme,
+}: {
+  text: string | null | undefined
+  theme?: ThemeId
+}) {
   if (!text) return null
   const paras = text.split('\n\n').filter(Boolean)
+  const isMagazine = theme === 'magazine'
+
   return (
     <>
-      {paras.map((p, i) => (
-        <p key={i} style={{ marginTop: i === 0 ? 0 : '1em' }}>
-          {p}
-        </p>
-      ))}
+      {paras.map((para, i) => {
+        // Magazine theme: render the first sentence of the first paragraph
+        // in italic — editorial "lede" treatment matching the design canon.
+        // Other themes render plain. Owner-mode editing path bypasses this
+        // entirely (it uses EditableField, not DescriptionParagraphs).
+        if (isMagazine && i === 0) {
+          const split = splitFirstSentence(para)
+          if (split) {
+            return (
+              <p key={i} style={{ marginTop: 0 }}>
+                <em className="tp-mag-lede">{split.lede}</em>
+                {split.rest ? ' ' : null}
+                {split.rest}
+              </p>
+            )
+          }
+        }
+        return (
+          <p key={i} style={{ marginTop: i === 0 ? 0 : '1em' }}>
+            {para}
+          </p>
+        )
+      })}
     </>
   )
+}
+
+/**
+ * Split a paragraph into "first sentence" + "rest". Returns null when the
+ * paragraph has no terminal punctuation (`.`, `!`, `?`) — in that case the
+ * caller should render plain. Handles common edge cases:
+ *  - leading whitespace is trimmed before the search
+ *  - sentence-ending dots inside common abbreviations (Mr., Mrs., Dr., St.,
+ *    Mt., e.g., i.e., etc.) are skipped so they don't false-trigger
+ *  - ellipsis ("…" or "...") is treated as part of the sentence
+ *  - if the entire paragraph is one sentence, lede = whole paragraph,
+ *    rest = empty (italic-lede wraps the whole thing — acceptable: the
+ *    design canon uses short paragraphs as openers too)
+ */
+function splitFirstSentence(text: string): { lede: string; rest: string } | null {
+  const trimmed = text.trimStart()
+  if (!trimmed) return null
+
+  const ABBREV = /\b(?:Mr|Mrs|Ms|Mx|Dr|St|Mt|Sr|Jr|vs|etc|e\.g|i\.e|p\.s|a\.m|p\.m|cf|approx|no|ca|ft|in|pp|vol)\.$/i
+
+  // Walk through the string looking for `.` `!` `?` followed by whitespace
+  // (or end of string). Skip terminators that immediately follow an
+  // abbreviation we know about. Treat `...` and `…` as a single terminator.
+  for (let i = 0; i < trimmed.length; i++) {
+    const ch = trimmed[i]
+    if (ch !== '.' && ch !== '!' && ch !== '?' && ch !== '…') continue
+
+    // Collapse `...` and `…` into one terminator position (point to last char).
+    let endIdx = i
+    if (ch === '.' && trimmed.slice(i, i + 3) === '...') {
+      endIdx = i + 2
+      i = endIdx
+    }
+
+    // Lookahead: next char must be whitespace or end-of-string for this to
+    // count as a sentence boundary. Inside-word periods (URLs, decimals)
+    // are skipped.
+    const next = trimmed[endIdx + 1]
+    if (next !== undefined && next !== ' ' && next !== '\t' && next !== '\n') continue
+
+    // Skip when the period belongs to a known abbreviation.
+    if (ch === '.') {
+      const headSoFar = trimmed.slice(0, endIdx + 1)
+      if (ABBREV.test(headSoFar)) continue
+    }
+
+    const lede = trimmed.slice(0, endIdx + 1)
+    const rest = trimmed.slice(endIdx + 1).trimStart()
+    return { lede, rest }
+  }
+
+  // No terminator found — entire paragraph is treated as the lede.
+  return { lede: trimmed, rest: '' }
 }
 
 function ActiveSections({
