@@ -28,10 +28,17 @@ type Props = {
   isShowcase?: boolean
   onLocalThemeChange?: (next: ThemeId) => void
   /**
-   * Top offset (px) for the sticky position. Used in showcase mode to
-   * push the action bar below the demo banner so both stay visible.
-   * Default 0.
+   * `false` (default) — render only the actions row; the parent (the
+   *   global Header) owns positioning, sticky, max-width and padding.
+   *   This is the trip-page-owner path.
+   *
+   * `true` — wrap the row in its own sticky bar with a max-width
+   *   container. Used by the showcase demo where there's no global
+   *   Header to host the row, so the bar floats below the orange
+   *   ShowcaseBanner instead. Pass `topOffset` (px) to slide it
+   *   underneath whatever sits above it.
    */
+  standalone?: boolean
   topOffset?: number
   /**
    * Themes that gate ClientInfo behind a toggle (Magazine) opt in by
@@ -47,15 +54,19 @@ type Props = {
 }
 
 /**
- * Thin action bar shown under the global Header for owners (not previewing).
- * Uses `relative z-30` so dropdowns render above the hero section's
- * absolutely-positioned elements.
+ * Trip action row for the owner: status pill (left) + 4 actions (right).
  *
- *   Left:  status pill — also a dropdown trigger that opens the action menu
- *          (Activate / Archive / Delete / Restore — depends on current status)
- *   Right: theme switcher · Preview as client · Share
+ * By default this returns just the inline row — it expects to live
+ * inside the global Header's `tripActions` slot, where the Header owns
+ * sticky-ness and outer chrome. Set `standalone` to wrap the row in
+ * its own sticky bar (used in showcase mode where there's no Header
+ * to host it).
  *
- * Hidden entirely in preview mode and for non-owners.
+ * Mobile keeps the labels off the four right-hand actions: Lock /
+ * palette / eye / Send icons only. Operators are 90% on desktop, so
+ * this trade-off saves a row of vertical chrome on phones without
+ * hurting the primary user. Status pill on the left keeps its label
+ * because it's the only control that conveys current state.
  */
 export function TripActionBar({
   projectId,
@@ -70,6 +81,7 @@ export function TripActionBar({
   onRequestDelete,
   isShowcase,
   onLocalThemeChange,
+  standalone = false,
   topOffset = 0,
   showClientInfoToggle,
   clientInfoOpen,
@@ -168,159 +180,130 @@ export function TripActionBar({
     onActivate: status === 'quoted' ? () => setActivateStubOpen(true) : undefined,
   })
 
+  // Single-row layout — status pill flush left, actions group flush
+  // right. Wraps to a second line on extreme widths via flex-wrap (rare
+  // on mobile because the four right-hand actions are icon-only).
+  const inlineRow = (
+    <div className="flex items-center justify-between gap-2 sm:gap-3 w-full">
+      {/* LEFT: status pill — also a dropdown trigger that opens the
+          actions menu (Make it a trip / Archive / Delete / Restore —
+          depends on current status). */}
+      <div ref={triggerWrapRef} className="relative inline-block">
+        <button
+          type="button"
+          onClick={() => items.length > 0 && setMenuOpen((v) => !v)}
+          disabled={busy || items.length === 0}
+          className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-sans font-semibold uppercase tracking-wider rounded-full transition-opacity hover:opacity-80 disabled:opacity-60 ${meta.chipClass}`}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+        >
+          {meta.hasDot && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+          <span>{meta.label}</span>
+          {items.length > 0 && <ChevronDown className="w-3.5 h-3.5" />}
+        </button>
+
+        {menuOpen && items.length > 0 && (
+          <div
+            role="menu"
+            className="absolute left-0 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-30"
+          >
+            {items.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false)
+                  item.onClick()
+                }}
+                disabled={busy}
+                className={
+                  'block w-full text-left px-4 py-2 text-sm transition-colors disabled:opacity-60 ' +
+                  (item.variant === 'danger'
+                    ? 'text-destructive hover:bg-destructive/10'
+                    : 'hover:bg-secondary')
+                }
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* RIGHT: agent tools. Mobile renders icon-only (no text labels)
+          so all four fit in a single row alongside the status pill on
+          phones. Desktop keeps the labels. */}
+      <div className="flex items-center gap-1 sm:gap-2">
+        {showClientInfoToggle && (
+          <>
+            <button
+              type="button"
+              onClick={onToggleClientInfo}
+              aria-pressed={clientInfoOpen ? 'true' : 'false'}
+              aria-label={clientInfoOpen ? 'Hide client info' : 'Show client info'}
+              className={
+                'inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full text-sm transition-colors ' +
+                (clientInfoOpen
+                  ? 'bg-accent/10 text-accent'
+                  : 'text-foreground/70 hover:text-foreground hover:bg-secondary')
+              }
+            >
+              <Lock className="w-4 h-4" />
+              <span className="hidden sm:inline">Client info</span>
+              <span className="hidden sm:inline">
+                {clientInfoOpen ? (
+                  <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
+                )}
+              </span>
+            </button>
+            <div className="w-px h-5 bg-border/60 hidden sm:block" aria-hidden="true" />
+          </>
+        )}
+        <ThemeSwitcher
+          projectId={projectId}
+          value={designTheme}
+          isShowcase={isShowcase}
+          onLocalChange={onLocalThemeChange}
+        />
+        <div className="w-px h-5 bg-border/60 hidden sm:block" aria-hidden="true" />
+        <button
+          type="button"
+          onClick={onPreviewAsClient}
+          aria-label="Preview as client"
+          className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
+        >
+          <Eye className="w-4 h-4" />
+          <span className="hidden sm:inline">Preview as client</span>
+        </button>
+        {canShare && <ShareMenu title={title} url={shareUrl} publicStatus={status} />}
+      </div>
+    </div>
+  )
+
+  // Default — return inline content; the global Header hosts it.
+  if (!standalone) {
+    return (
+      <>
+        {inlineRow}
+        <ActivateStubModal open={activateStubOpen} onClose={() => setActivateStubOpen(false)} />
+      </>
+    )
+  }
+
+  // Standalone — wrap in our own sticky bar (used by the showcase
+  // demo where there's no global Header to host the row).
   return (
     <>
       <div
         className="sticky z-30 w-full border-b border-border/60 bg-background/95 backdrop-blur-sm"
         style={{ top: topOffset }}
       >
-        <div
-          className={
-            'max-w-7xl mx-auto px-4 py-2 ' +
-            (showClientInfoToggle
-              ? // 4 buttons + status — too wide for one row on phones.
-                // Stack: status pill alone on top, 4 actions in a 2×2 grid below.
-                // From sm up, fall back to the canonical single-row layout.
-                'flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3'
-              : // 3 buttons + status fit in one row on every breakpoint.
-                'flex items-center justify-between gap-3')
-          }
-        >
-          {/* LEFT: status dropdown — pill shows current status, click reveals
-              the actions list. Replaces what used to be three controls
-              (chip + Activate/Restore button + ⋮ overflow). */}
-          <div ref={triggerWrapRef} className="relative inline-block">
-            <button
-              type="button"
-              onClick={() => items.length > 0 && setMenuOpen((v) => !v)}
-              disabled={busy || items.length === 0}
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-sans font-semibold uppercase tracking-wider rounded-full transition-opacity hover:opacity-80 disabled:opacity-60 ${meta.chipClass}`}
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-            >
-              {meta.hasDot && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
-              <span>{meta.label}</span>
-              {items.length > 0 && <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
-
-            {menuOpen && items.length > 0 && (
-              <div
-                role="menu"
-                className="absolute left-0 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-30"
-              >
-                {items.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setMenuOpen(false)
-                      item.onClick()
-                    }}
-                    disabled={busy}
-                    className={
-                      'block w-full text-left px-4 py-2 text-sm transition-colors disabled:opacity-60 ' +
-                      (item.variant === 'danger'
-                        ? 'text-destructive hover:bg-destructive/10'
-                        : 'hover:bg-secondary')
-                    }
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* RIGHT: agent tools.
-
-              Magazine adds Client info → 4 actions total. On phones the
-              row would overflow (see screenshots), so when the toggle is
-              shown we lay actions out as a 2×2 grid below the status pill.
-              From sm-up this collapses back to today's single-row flex.
-
-              For the grid to lay 2×2 cleanly, every cell needs to behave
-              the same. Plain `<button>`s get `w-full sm:w-auto`. Component
-              children (ThemeSwitcher, ShareMenu) get a wrapping div with
-              the same classes — internal markup stays untouched, the
-              wrapper owns its grid cell. */}
-          <div
-            className={
-              showClientInfoToggle
-                ? 'grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2'
-                : 'flex items-center gap-2'
-            }
-          >
-            {showClientInfoToggle && (
-              <>
-                <button
-                  type="button"
-                  onClick={onToggleClientInfo}
-                  aria-pressed={clientInfoOpen ? 'true' : 'false'}
-                  aria-label={clientInfoOpen ? 'Hide client info' : 'Show client info'}
-                  className={
-                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors w-full sm:w-auto justify-center sm:justify-start ' +
-                    (clientInfoOpen
-                      ? 'bg-accent/10 text-accent'
-                      : 'text-foreground/70 hover:text-foreground hover:bg-secondary')
-                  }
-                >
-                  <Lock className="w-4 h-4" />
-                  <span>Client info</span>
-                  {clientInfoOpen ? (
-                    <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
-                  )}
-                </button>
-                <div className="w-px h-5 bg-border/60 hidden sm:block" aria-hidden="true" />
-              </>
-            )}
-            <div
-              className={
-                showClientInfoToggle
-                  ? 'w-full sm:w-auto flex justify-center sm:justify-start sm:contents'
-                  : 'contents'
-              }
-            >
-              <ThemeSwitcher
-                projectId={projectId}
-                value={designTheme}
-                isShowcase={isShowcase}
-                onLocalChange={onLocalThemeChange}
-              />
-            </div>
-            <div className="w-px h-5 bg-border/60 hidden sm:block" aria-hidden="true" />
-            <button
-              type="button"
-              onClick={onPreviewAsClient}
-              className={
-                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors ' +
-                (showClientInfoToggle
-                  ? 'w-full sm:w-auto justify-center sm:justify-start'
-                  : '')
-              }
-            >
-              <Eye className="w-4 h-4" />
-              <span>Preview as client</span>
-            </button>
-            {canShare && (
-              <div
-                className={
-                  showClientInfoToggle
-                    ? 'w-full sm:w-auto flex justify-center sm:justify-start sm:contents'
-                    : 'contents'
-                }
-              >
-                <ShareMenu title={title} url={shareUrl} publicStatus={status} />
-              </div>
-            )}
-          </div>
-        </div>
+        <div className="max-w-7xl mx-auto px-4 py-2">{inlineRow}</div>
       </div>
-
       <ActivateStubModal open={activateStubOpen} onClose={() => setActivateStubOpen(false)} />
     </>
   )
 }
-

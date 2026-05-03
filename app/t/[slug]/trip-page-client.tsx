@@ -923,15 +923,54 @@ export default function TripPageClient({ slug, initialData }: Props) {
     >
       {/* Owner chrome — outside ThemeRoot so it uses shadcn semantic tokens
           (per TZ-6 §11 — owner UI must work even on a dark Expedition theme).
-          In showcase mode the orange banner replaces the global Header — its
-          two CTAs (Start your own quote / Sign up) are the only navigation
-          a demo visitor needs. Anon-creator state has its own sticky banner
-          with sign-up + share CTAs, so the global Header is hidden there too
-          to avoid two sticky bars stacking. */}
-      {showOwnerUI && !isShowcase && !isAnonCreator && <Header />}
+
+          Non-showcase / non-anon owner path: global Header hosts the
+          TripActionBar in its `tripActions` slot — one sticky bar instead
+          of two. Desktop renders status+actions inline in the centre;
+          mobile drops them onto a second row inside the same sticky
+          container.
+
+          Showcase / anon-creator paths keep their dedicated banners and,
+          for showcase, render TripActionBar standalone (its own sticky
+          wrapper, slid below the orange ShowcaseBanner via topOffset). */}
+      {showOwnerUI && !isShowcase && !isAnonCreator && (
+        <Header
+          tripActions={
+            p.id ? (
+              <TripActionBar
+                projectId={p.id}
+                status={p.status}
+                title={p.title}
+                shareUrl={shareUrl}
+                canShare={showOwnerUI || isAnonCreator}
+                designTheme={p.design_theme}
+                onPreviewAsClient={() => setPreviewAsClient(true)}
+                onStatusChanged={() => setOwnerRefreshKey((k) => k + 1)}
+                onRequestArchive={() => setArchiveOpen(true)}
+                onRequestDelete={handleDeleteProject}
+                isShowcase={isShowcase}
+                onLocalThemeChange={(next) => {
+                  setData((prev) =>
+                    prev?.project
+                      ? { ...prev, project: { ...prev.project, design_theme: next } }
+                      : prev,
+                  )
+                }}
+                /* Magazine: gate ClientInfo behind a toggle. Other themes
+                   render the block unconditionally — these props stay
+                   undefined and the toggle button is not rendered. */
+                showClientInfoToggle={resolvedTheme === 'magazine'}
+                clientInfoOpen={clientInfoOpen}
+                onToggleClientInfo={() => setClientInfoOpen((v) => !v)}
+              />
+            ) : undefined
+          }
+        />
+      )}
       {isShowcase && <ShowcaseBanner />}
-      {showOwnerUI && p.id && !isAnonCreator && (
+      {isShowcase && showOwnerUI && p.id && (
         <TripActionBar
+          standalone
           projectId={p.id}
           status={p.status}
           title={p.title}
@@ -943,22 +982,14 @@ export default function TripPageClient({ slug, initialData }: Props) {
           onRequestArchive={() => setArchiveOpen(true)}
           onRequestDelete={handleDeleteProject}
           isShowcase={isShowcase}
-          topOffset={isShowcase ? SHOWCASE_BANNER_HEIGHT : 0}
+          topOffset={SHOWCASE_BANNER_HEIGHT}
           onLocalThemeChange={(next) => {
             setData((prev) =>
-              prev?.project ? { ...prev, project: { ...prev.project, design_theme: next } } : prev,
+              prev?.project
+                ? { ...prev, project: { ...prev.project, design_theme: next } }
+                : prev,
             )
           }}
-          /* Magazine: gate ClientInfo behind a toggle. Other themes
-             render the block unconditionally — these props stay
-             undefined and the toggle button is not rendered. Hidden
-             in showcase / anon-creator modes (the block doesn't
-             render there at all, see condition below). */
-          showClientInfoToggle={
-            resolvedTheme === 'magazine' && !isShowcase && !isAnonCreator
-          }
-          clientInfoOpen={clientInfoOpen}
-          onToggleClientInfo={() => setClientInfoOpen((v) => !v)}
         />
       )}
 

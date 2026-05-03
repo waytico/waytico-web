@@ -302,16 +302,28 @@
   border-bottom: 1px solid var(--rule);
 }
 
-/* When viewed by the owner, the action bar above is sticky-pinned to the
-   top, so the in-theme nav has to sit below it (~48px) instead of at 0.
-   Public viewers don't see the action bar — for them top:0 is correct. */
+/* Owner viewport: the global Header now hosts both the global nav and
+   the trip-action row in a single sticky bar. Two breakpoints:
+
+     • mobile (<sm): bar is 2 rows tall — global nav above, actions
+       below. Combined height ≈ 84px.
+     • desktop (≥sm): bar is 1 row, all in line — ≈ 44px.
+
+   The in-theme nav sits below whatever sticks above it. Public viewers
+   don't see the bar at all so top:0 is correct for them. */
 [data-owner-view="true"] .tp-nav {
-  top: 48px;
+  top: 84px;
 }
-/* Showcase / demo: the orange banner (52px) sits sticky above the action
-   bar (48px), so the in-theme nav has to sit below both. */
+@media (min-width: 640px) {
+  [data-owner-view="true"] .tp-nav {
+    top: 44px;
+  }
+}
+/* Showcase / demo: the orange banner (52px) sits above the standalone
+   action bar (44px). 52 + 44 = 96px on every viewport (banner is
+   always one row). */
 [data-showcase="true"] .tp-nav {
-  top: 100px;
+  top: 96px;
 }
 .tp-nav-inner {
   max-width: 1120px; margin: 0 auto; padding: 14px 32px;
@@ -1294,11 +1306,11 @@
   }
 
   [data-owner-view="true"] [data-theme="magazine"] .tp-mag-topnav {
-    top: 48px;
+    top: 44px;
   }
 
   [data-showcase="true"] [data-theme="magazine"] .tp-mag-topnav {
-    top: 100px;
+    top: 96px;
   }
 }
 
