@@ -773,38 +773,3 @@ function MagazineDay(props: {
     </article>
   )
 }
-
-/**
- * Magazine day title — split on the first comma. The tail (everything
- * after the comma) renders italic, matching the magazine voice canon:
- * "Pale tile, late gold." → Pale tile, *late gold.*
- * "A river, and its terraces." → A river, *and its terraces.*
- *
- * If the title contains no comma, render plain (legacy single-fragment
- * titles "Arrival in Vancouver" still work — no italic, no spans).
- *
- * Used by trip-page-client both directly (public viewer) and as the
- * `renderDisplay` callback of the EditableField used for the day title
- * in owner mode — so the operator sees the formatted italic-tail layout
- * when not actively editing.
- */
-export function MagazineDayTitle({ text }: { text: string }) {
-  if (!text) return null
-  const idx = text.indexOf(',')
-  if (idx === -1) {
-    // Legacy single-fragment title — render plain.
-    return <span>{text}</span>
-  }
-  const head = text.slice(0, idx)
-  const tail = text.slice(idx + 1).trimStart()
-  if (!tail) {
-    // Stray trailing comma — degrade gracefully.
-    return <span>{head}</span>
-  }
-  return (
-    <>
-      <span className="tp-mag-day__title-head">{head}, </span>
-      <em className="tp-mag-day__title-tail">{tail}</em>
-    </>
-  )
-}
