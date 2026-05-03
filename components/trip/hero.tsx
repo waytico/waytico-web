@@ -560,34 +560,25 @@ function HeroMagazine(props: HeroProps) {
     country,
     dateRange,
     dateStatSlot,
-    durationStatSlot,
     ownerOverlay,
     code,
     highlightsSlots,
   } = props
 
-  // Bottom eyebrow lives on TWO lines, matching the prior stat-tile
-  // semantics:
+  // Bottom eyebrow lives on TWO lines:
   //
   //   Line 1 — "{COUNTRY} — {N} DAYS" (mono uppercase eyebrow)
-  //     COUNTRY is read-only (no editor; it's a derived hero field).
-  //     N DAYS reads from durationStatSlot when owner mode passes one
-  //     (which wraps the digit in an <a href="#itinerary"> smooth-
-  //     scroll, since duration is a derived count of itinerary days
-  //     and the only way to actually change it is to add/remove days
-  //     in the Itinerary block — same affordance the stat tile had).
-  //     Public mode falls back to the spelled-out word ("SEVEN DAYS")
-  //     to keep the editorial register on this line — the design canon
-  //     uses words on the eyebrow line where compactness isn't at a
-  //     premium. Owner mode shows a digit because the slot is a click
-  //     target (digits scan as actionable; spelled-out words don't).
+  //     COUNTRY is read-only. Duration is the spelled-out word ("SIX DAYS")
+  //     in both owner and public modes — calm typography on a hero, not a
+  //     click target. Operators change duration by adding / removing days
+  //     in the itinerary block, same as everywhere else.
   //
   //   Line 2 — "{DATES}" (serif italic mixed-case sub-line)
-  //     Owner mode receives dateStatSlot — an inline pair of
-  //     EditableField date pickers (start / end), exactly the slot the
-  //     prior stat tile consumed. Public mode renders the long-form
-  //     dateRange ("Jun 24 — Jun 28, 2026") set in display serif italic
-  //     through the .--dates modifier in CSS.
+  //     Owner mode receives dateStatSlot — a click-to-edit single-input
+  //     date editor (start only; end is auto-derived by the backend's
+  //     reconcileDates). Public mode renders the long-form dateRange
+  //     ("Jun 24 — Jun 28, 2026") set in display serif italic through the
+  //     .--dates modifier in CSS.
   //
   // Each line hides independently when its source data is empty.
   const bottomCountry = country ? country.toUpperCase() : null
@@ -595,11 +586,13 @@ function HeroMagazine(props: HeroProps) {
     durationDays != null ? numberToWords(durationDays) : null
   const durationDisplay =
     durationDays != null ? durationWord ?? String(durationDays) : null
+  // Magazine intentionally ignores any inbound durationStatSlot. Owner and
+  // public both render the spelled-out word ("SIX DAYS") so the eyebrow
+  // line reads consistently — no stat-tile clickable digit here.
   const bottomDuration: ReactNode =
-    durationStatSlot ??
-    (durationDisplay != null
+    durationDisplay != null
       ? `${durationDisplay} ${UI.days.toUpperCase()}`
-      : null)
+      : null
   const bottomDates: ReactNode = dateStatSlot ?? dateRange ?? null
 
   type EyebrowPart = { key: string; node: ReactNode }
