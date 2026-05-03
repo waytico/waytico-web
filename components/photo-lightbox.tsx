@@ -8,15 +8,24 @@ import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-cr
 import 'react-image-crop/dist/ReactCrop.css'
 import { replacePhoto, type MediaRecord } from '@/lib/upload-photo'
 
+type Mode = 'view' | 'edit'
+
 type Props = {
   media: MediaRecord | null
   owner: boolean
   projectId: string | null
   onClose: () => void
   onReplaced: (updated: MediaRecord) => void
+  /**
+   * Initial mode when lightbox opens. Default 'view'. Pass 'edit' when
+   * the open action is "edit photo" (e.g. Magazine day photo's pencil
+   * button) — the operator lands directly on the crop UI without an
+   * intermediate "Crop" tap. Mode resets back to this value whenever
+   * media.id changes (next open). After a successful crop the lightbox
+   * still falls back to 'view' so the operator sees the result.
+   */
+  initialMode?: Mode
 }
-
-type Mode = 'view' | 'edit'
 
 export default function PhotoLightbox({
   media,
@@ -24,21 +33,25 @@ export default function PhotoLightbox({
   projectId,
   onClose,
   onReplaced,
+  initialMode = 'view',
 }: Props) {
   const { getToken } = useAuth()
   const imgRef = useRef<HTMLImageElement | null>(null)
-  const [mode, setMode] = useState<Mode>('view')
+  const [mode, setMode] = useState<Mode>(initialMode)
   const [crop, setCrop] = useState<Crop>()
   const [saving, setSaving] = useState(false)
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [loadingEdit, setLoadingEdit] = useState(false)
 
-  // Reset when opening a different photo
+  // Reset when opening a different photo OR when the requested initial
+  // mode changes (e.g. operator clicks the photo body for view, then the
+  // edit-pencil for the same media — mode must flip even though id is
+  // the same).
   useEffect(() => {
-    setMode('view')
+    setMode(initialMode)
     setCrop(undefined)
     setSaving(false)
-  }, [media?.id])
+  }, [media?.id, initialMode])
 
   // Load image as blob URL when entering edit mode — avoids tainted-canvas / cache quirks
   useEffect(() => {

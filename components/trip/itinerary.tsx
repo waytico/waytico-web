@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
 import type { ThemeId } from '@/lib/themes'
 import { ITINERARY_STYLE } from '@/lib/themes'
@@ -24,7 +24,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, ImagePlus, Loader2, Pencil, Trash2 } from 'lucide-react'
 
 type ItineraryProps = {
   theme: ThemeId
@@ -49,11 +49,30 @@ type ItineraryProps = {
    *  is expected to PATCH /api/projects/:id with the new itinerary
    *  (including refreshed dayNumber values). */
   onReorder?: (next: Day[]) => Promise<boolean> | void
-  /** Open the trip-level PhotoLightbox from a day photo click. Magazine
-   *  variant inlines the day's primary photo (no PhotosBlock), so it
-   *  needs a direct callback. Other variants ignore it (lightbox open
-   *  goes through renderDayExtras → PhotosBlock as before). */
-  onPhotoClick?: (m: MediaLite) => void
+  /* ── Magazine-only owner photo handlers (additive). Other variants use
+   *     PhotosBlock via renderDayExtras and ignore these props.
+   *
+   *     The Magazine variant surfaces a single primary photo per day —
+   *     hosted directly inside the day spread, not via PhotosBlock — so
+   *     it needs its own upload / replace / delete / edit hooks rather
+   *     than reusing PhotosBlock's API.
+   * ────────────────────────────────────────────────────────────────── */
+  /** Empty-state upload: append a new day photo via handleUpload. */
+  onDayUpload?: (files: File[], dayId: string) => void
+  /** Filled-state replace: in-place file swap on the existing media.id
+   *  (uses replacePhoto so sort_order/day_id stay; no race with delete). */
+  onDayPhotoReplace?: (file: File, dayId: string, prevPhotoId: string) => void
+  /** Filled-state delete: remove the displayed primary photo. The next
+   *  photo in sort_order order (if any) becomes primary on the next render. */
+  onDayDelete?: (mediaId: string) => void
+  /** Filled-state edit-pencil: open the trip-level PhotoLightbox at
+   *  initialMode='edit' (parent wires that up to setLightbox + crop UI). */
+  onDayPhotoEdit?: (m: MediaLite) => void
+  /** Per-day uploading-counter map (from usePhotoUpload). Keyed by day.id. */
+  uploadingByDay?: Record<string, number>
+  /** Anon-creator intercept: short-circuits both click-to-pick and
+   *  drag-and-drop with a "Sign up to edit" toast before any S3 call. */
+  interceptUpload?: () => void
 }
 
 function getDayPhoto(media: MediaLite[], dayId: string): string | null {
@@ -118,9 +137,14 @@ export function TripItinerary(props: ItineraryProps) {
         language={language}
         editable={!!editable}
         onReorder={onReorder}
-        onPhotoClick={props.onPhotoClick}
         renderDayTitle={props.renderDayTitle}
         renderDayDescription={props.renderDayDescription}
+        onDayUpload={props.onDayUpload}
+        onDayPhotoReplace={props.onDayPhotoReplace}
+        onDayDelete={props.onDayDelete}
+        onDayPhotoEdit={props.onDayPhotoEdit}
+        uploadingByDay={props.uploadingByDay}
+        interceptUpload={props.interceptUpload}
       />
     )
   }
@@ -539,8 +563,12 @@ function DayDescription({ children }: { children: ReactNode }) {
  *  not a document and belongs to this day. The Magazine variant
  *  intentionally renders only one photo per day (TZ pass-A decision #7) —
  *  the others remain in the database and continue to show in the
- *  editorial / expedition / compact themes. */
-function getMagazineDayPhoto(media: MediaLite[], dayId: string): MediaLite | null {
+ *  editorial / expedition / compact themes.
+ *
+ *  Returns null if the day has no stable id yet (legacy row with no UUID
+ *  — never matches a media.day_id, so there can't be a photo anyway). */
+function getMagazineDayPhoto(media: MediaLite[], dayId: string | undefined): MediaLite | null {
+  if (!dayId) return null
   const list = media
     .filter((m) => m.day_id === dayId && m.type !== 'document')
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -554,9 +582,15 @@ type ItineraryMagazineProps = {
   language?: string | null
   editable: boolean
   onReorder?: (next: Day[]) => Promise<boolean> | void
-  onPhotoClick?: (m: MediaLite) => void
   renderDayTitle: (day: Day) => ReactNode
   renderDayDescription: (day: Day) => ReactNode
+  /** Owner-mode photo handlers — see ItineraryProps for the contract. */
+  onDayUpload?: (files: File[], dayId: string) => void
+  onDayPhotoReplace?: (file: File, dayId: string, prevPhotoId: string) => void
+  onDayDelete?: (mediaId: string) => void
+  onDayPhotoEdit?: (m: MediaLite) => void
+  uploadingByDay?: Record<string, number>
+  interceptUpload?: () => void
 }
 
 function ItineraryMagazine(props: ItineraryMagazineProps) {
@@ -567,9 +601,14 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
     language,
     editable,
     onReorder,
-    onPhotoClick,
     renderDayTitle,
     renderDayDescription,
+    onDayUpload,
+    onDayPhotoReplace,
+    onDayDelete,
+    onDayPhotoEdit,
+    uploadingByDay,
+    interceptUpload,
   } = props
 
   // Local mirror so we can do an optimistic reorder before the backend
@@ -633,9 +672,14 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
       datesStart={datesStart}
       language={language}
       editable={editable}
-      onPhotoClick={onPhotoClick}
       renderDayTitle={renderDayTitle}
       renderDayDescription={renderDayDescription}
+      onDayUpload={onDayUpload}
+      onDayPhotoReplace={onDayPhotoReplace}
+      onDayDelete={onDayDelete}
+      onDayPhotoEdit={onDayPhotoEdit}
+      uploading={day.id ? (uploadingByDay?.[day.id] ?? 0) : 0}
+      interceptUpload={interceptUpload}
     />
   ))
 
@@ -677,6 +721,10 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
  * In owner mode the day is wrapped in a sortable handle so dnd-kit can
  * reorder. Inline-edit clicks on the title/description are not
  * intercepted thanks to the PointerSensor 4px activation distance.
+ *
+ * Photo handling lives in <MagazineDayPhoto> below — see that component
+ * for the public/owner contract (Magazine: ONE photo per day, public
+ * stays read-only, owner gets upload / replace / edit-pencil / delete).
  */
 function MagazineDay(props: {
   day: Day
@@ -685,9 +733,14 @@ function MagazineDay(props: {
   datesStart?: string | null
   language?: string | null
   editable: boolean
-  onPhotoClick?: (m: MediaLite) => void
   renderDayTitle: (day: Day) => ReactNode
   renderDayDescription: (day: Day) => ReactNode
+  onDayUpload?: (files: File[], dayId: string) => void
+  onDayPhotoReplace?: (file: File, dayId: string, prevPhotoId: string) => void
+  onDayDelete?: (mediaId: string) => void
+  onDayPhotoEdit?: (m: MediaLite) => void
+  uploading: number
+  interceptUpload?: () => void
 }) {
   const {
     day,
@@ -696,9 +749,14 @@ function MagazineDay(props: {
     datesStart,
     language,
     editable,
-    onPhotoClick,
     renderDayTitle,
     renderDayDescription,
+    onDayUpload,
+    onDayPhotoReplace,
+    onDayDelete,
+    onDayPhotoEdit,
+    uploading,
+    interceptUpload,
   } = props
   const id = day.id || `day-${day.dayNumber}`
   const sortable = useSortable({ id })
@@ -717,25 +775,15 @@ function MagazineDay(props: {
   const dayDateLabel = fmtDayDate(resolveDayDate(day, datesStart), language)
   const eyebrowText = `${UI.day.toUpperCase()} ${pad2(day.dayNumber)}`
 
-  const photoNode = photo ? (
-    <button
-      type="button"
-      className="tp-mag-day__photo-btn"
-      onClick={() => onPhotoClick?.(photo)}
-      aria-label="Open photo"
-    >
-      <img
-        src={photo.url}
-        alt={photo.caption || ''}
-        className="tp-mag-day__photo-img"
-        draggable={false}
-      />
-    </button>
-  ) : editable ? (
-    <div className="tp-mag-day__photo-empty" aria-hidden="true">
-      <span>+ Add photo</span>
-    </div>
-  ) : null
+  // Photo block: render only when there is something to show.
+  // Public + no photo → no block at all (clean reading layout).
+  // Public + photo    → MagazineDayPhoto in static mode.
+  // Owner + photo     → MagazineDayPhoto with overlay actions.
+  // Owner + no photo  → MagazineDayPhoto empty-state picker.
+  // Owner without a stable day.id (legacy row) — also no block: we can't
+  // attach uploads to a phantom day_id; the operator must save the day
+  // first (which lands an id).
+  const showPhotoBlock = editable ? Boolean(day.id) : Boolean(photo)
 
   return (
     <article
@@ -778,8 +826,269 @@ function MagazineDay(props: {
         <div className="tp-mag-day__body">{renderDayDescription(day)}</div>
       </div>
 
-      {photoNode && <div className="tp-mag-day__photo">{photoNode}</div>}
+      {showPhotoBlock && (
+        <div className="tp-mag-day__photo">
+          <MagazineDayPhoto
+            dayId={day.id || ''}
+            photo={photo}
+            editable={editable}
+            uploading={uploading}
+            onUpload={onDayUpload}
+            onReplace={onDayPhotoReplace}
+            onDelete={onDayDelete}
+            onEdit={onDayPhotoEdit}
+            interceptUpload={interceptUpload}
+          />
+        </div>
+      )}
     </article>
+  )
+}
+
+/**
+ * Magazine day photo — single primary photo per day with all owner-mode
+ * surfaces (upload / replace / edit-pencil / delete). Public viewer gets
+ * a non-interactive <img>; clicking it does nothing (lightbox is owner-
+ * only in Magazine, and only via the explicit pencil button).
+ *
+ * States (all owner-mode):
+ *   - empty + idle     → clickable placeholder + dropzone, "Drag or add photo"
+ *   - empty + drag-over→ same placeholder, accent-tinted ring
+ *   - uploading        → placeholder with spinner pill (replace happens in place
+ *                        on filled state too — pill rides on top of <img>)
+ *   - filled + idle    → <img> + overlay actions:
+ *                          [pill: Drag or change photo]
+ *                          [edit-pencil] (opens lightbox in initialMode='edit')
+ *                          [trash]
+ *   - filled + drag-over → <img> + "Drop to replace" overlay
+ *
+ * Anon-creator: interceptUpload short-circuits both the picker click and
+ * any drag-and-drop before any S3 work — same pattern as HeroDropZone.
+ *
+ * Replace semantics:
+ *   - Empty → onUpload(files, dayId) — append a new media row (sort_order
+ *     auto). On filled days with multiple photos (legacy), this would
+ *     never be hit (we'd be in filled state).
+ *   - Filled → onReplace(file, dayId, prevPhotoId) — in-place PATCH on
+ *     the existing media.id via replacePhoto, preserving sort_order and
+ *     day_id. No race with delete.
+ *   - Multi-file drop → only the first file is consumed, with a toast
+ *     hint (mirrors handleHeroUpload UX).
+ */
+function MagazineDayPhoto(props: {
+  dayId: string
+  photo: MediaLite | null
+  editable: boolean
+  uploading: number
+  onUpload?: (files: File[], dayId: string) => void
+  onReplace?: (file: File, dayId: string, prevPhotoId: string) => void
+  onDelete?: (mediaId: string) => void
+  onEdit?: (m: MediaLite) => void
+  interceptUpload?: () => void
+}) {
+  const { dayId, photo, editable, uploading, onUpload, onReplace, onDelete, onEdit, interceptUpload } = props
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const [dragOver, setDragOver] = useState(false)
+
+  // Public viewer — just the image, no interactivity.
+  if (!editable) {
+    if (!photo) return null
+    return (
+      <img
+        src={photo.url}
+        alt={photo.caption || ''}
+        className="tp-mag-day__photo-img"
+        draggable={false}
+      />
+    )
+  }
+
+  // Owner from here on.
+  const isUploading = uploading > 0
+
+  const handleFiles = (files: FileList | File[] | null) => {
+    if (!files) return
+    const list = Array.from(files).filter(
+      (f) =>
+        ['image/jpeg', 'image/png', 'image/webp'].includes(f.type) &&
+        f.size <= 15 * 1024 * 1024,
+    )
+    if (list.length === 0) return
+    if (list.length > 1) {
+      // Magazine surfaces one photo per day; rest of the array is
+      // dropped. We don't fall back to the editorial gallery here
+      // because that would visibly differ from the operator's intent
+      // (they dropped on Magazine, they expect Magazine semantics).
+      // The first file wins.
+    }
+    const first = list[0]
+    if (photo && onReplace) {
+      onReplace(first, dayId, photo.id)
+    } else if (!photo && onUpload) {
+      onUpload([first], dayId)
+    }
+  }
+
+  const triggerPicker = () => {
+    if (interceptUpload) {
+      interceptUpload()
+      return
+    }
+    inputRef.current?.click()
+  }
+
+  const handleDelete = () => {
+    if (!photo || !onDelete) return
+    if (interceptUpload) {
+      interceptUpload()
+      return
+    }
+    onDelete(photo.id)
+  }
+
+  const handleEdit = () => {
+    if (!photo || !onEdit) return
+    if (interceptUpload) {
+      interceptUpload()
+      return
+    }
+    onEdit(photo)
+  }
+
+  const dropHandlers = {
+    onDragEnter: (e: React.DragEvent) => {
+      e.preventDefault()
+      if (interceptUpload) return
+      if (e.dataTransfer?.types?.includes('Files')) setDragOver(true)
+    },
+    onDragOver: (e: React.DragEvent) => {
+      e.preventDefault()
+      if (interceptUpload) return
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+    },
+    onDragLeave: (e: React.DragEvent) => {
+      if (e.currentTarget === e.target) setDragOver(false)
+    },
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault()
+      setDragOver(false)
+      if (interceptUpload) {
+        interceptUpload()
+        return
+      }
+      const files = e.dataTransfer?.files
+      if (files && files.length > 0) handleFiles(files)
+    },
+  }
+
+  // Hidden file input — shared between empty and filled clickable surfaces.
+  const fileInput = (
+    <input
+      ref={inputRef}
+      type="file"
+      accept="image/jpeg,image/png,image/webp"
+      className="hidden"
+      onChange={(e) => {
+        handleFiles(e.target.files)
+        e.target.value = ''
+      }}
+    />
+  )
+
+  // Empty state — clickable placeholder that doubles as a dropzone.
+  if (!photo) {
+    return (
+      <>
+        {fileInput}
+        <button
+          type="button"
+          onClick={triggerPicker}
+          className={
+            'tp-mag-day__photo-empty' + (dragOver ? ' is-dragover' : '')
+          }
+          aria-label="Add day photo"
+          {...dropHandlers}
+        >
+          {isUploading ? (
+            <span className="tp-mag-day__photo-empty-label">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Uploading…
+            </span>
+          ) : (
+            <span className="tp-mag-day__photo-empty-label">
+              <ImagePlus className="h-3.5 w-3.5" />
+              Drag or add photo
+            </span>
+          )}
+        </button>
+      </>
+    )
+  }
+
+  // Filled state — <img> + overlay actions, always-visible (mobile has
+  // no hover affordance).
+  return (
+    <div
+      className={
+        'tp-mag-day__photo-zone' + (dragOver ? ' is-dragover' : '')
+      }
+      {...dropHandlers}
+    >
+      {fileInput}
+      <img
+        src={photo.url}
+        alt={photo.caption || ''}
+        className="tp-mag-day__photo-img"
+        draggable={false}
+      />
+
+      {dragOver && (
+        <div className="tp-mag-day__photo-drag-overlay" aria-hidden="true">
+          <span>Drop photo to replace</span>
+        </div>
+      )}
+
+      <div className="tp-mag-day__photo-actions">
+        {isUploading ? (
+          <span className="tp-mag-day__photo-pill">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Uploading…
+          </span>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={triggerPicker}
+              className="tp-mag-day__photo-pill is-clickable"
+              aria-label="Change day photo"
+            >
+              <ImagePlus className="h-3.5 w-3.5" />
+              <span className="tp-mag-day__photo-pill-label">
+                Drag or change photo
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={handleEdit}
+              className="tp-mag-day__photo-action-btn"
+              aria-label="Edit photo"
+              title="Edit"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="tp-mag-day__photo-action-btn"
+              aria-label="Delete day photo"
+              title="Delete"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
   )
 }
 

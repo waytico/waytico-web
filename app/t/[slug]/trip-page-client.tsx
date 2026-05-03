@@ -356,7 +356,23 @@ export default function TripPageClient({ slug, initialData }: Props) {
     (initialData?.media as MediaRecord[]) || [],
   )
   const [tasks, setTasks] = useState<any[]>(initialData?.tasks || [])
-  const [lightbox, setLightbox] = useState<MediaRecord | null>(null)
+  // Lightbox carries both `media` and `mode` so an open-with-edit (Magazine
+  // day photo's pencil) and an open-with-view (PhotosBlock click) can flow
+  // through the same setter without a stale-mode race. Closing always
+  // resets to mode='view' so the next open isn't biased.
+  const [lightbox, setLightbox] = useState<{
+    media: MediaRecord | null
+    mode: 'view' | 'edit'
+  }>({ media: null, mode: 'view' })
+  const openLightbox = useCallback(
+    (m: MediaRecord, mode: 'view' | 'edit' = 'view') => {
+      setLightbox({ media: m, mode })
+    },
+    [],
+  )
+  const closeLightbox = useCallback(() => {
+    setLightbox({ media: null, mode: 'view' })
+  }, [])
   const [heroDragOver, setHeroDragOver] = useState(false)
   const [docDragOver, setDocDragOver] = useState(false)
   const [uploadingDoc, setUploadingDoc] = useState(false)
@@ -510,7 +526,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
     return () => window.removeEventListener('waytico:trip-refresh', handler)
   }, [])
 
-  const { uploadingByDay, handleUpload, handleDelete, handleHeroUpload } = usePhotoUpload({
+  const { uploadingByDay, handleUpload, handleDelete, handleHeroUpload, handleDayPhotoReplace } = usePhotoUpload({
     projectId: data?.project?.id,
     media,
     setMedia,
@@ -1230,7 +1246,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           uploading={uploadingByDay[day.id] || 0}
           onUpload={handleUpload}
           onDelete={handleDelete}
-          onOpen={setLightbox}
+          onOpen={(m) => openLightbox(m)}
           interceptUpload={
             isAnonCreator ? () => toast.error('Sign up to edit') : undefined
           }
@@ -1641,10 +1657,30 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 }
               : undefined
           }
-          onPhotoClick={(m) => {
-            const full = media.find((x) => x.id === m.id)
-            if (full) setLightbox(full)
-          }}
+          /* Magazine-only photo handlers. Other variants ignore these.
+             Empty day → onDayUpload appends a new media row.
+             Filled day → onDayPhotoReplace patches the existing media in
+             place (no race vs delete; same media.id, day_id, sort_order).
+             Edit-pencil → openLightbox(media, 'edit') drops the operator
+             into crop UI directly.
+             Delete → handleDelete on the displayed primary; the next
+             photo in sort_order order (if any, e.g. from legacy
+             editorial uploads) becomes primary on next render. */
+          onDayUpload={ed ? handleUpload : undefined}
+          onDayPhotoReplace={ed ? handleDayPhotoReplace : undefined}
+          onDayDelete={ed ? handleDelete : undefined}
+          onDayPhotoEdit={
+            ed
+              ? (m) => {
+                  const full = media.find((x) => x.id === m.id)
+                  if (full) openLightbox(full, 'edit')
+                }
+              : undefined
+          }
+          uploadingByDay={ed ? uploadingByDay : undefined}
+          interceptUpload={
+            isAnonCreator ? () => toast.error('Sign up to edit') : undefined
+          }
         />
 
         <TripAccommodations
@@ -1751,13 +1787,18 @@ export default function TripPageClient({ slug, initialData }: Props) {
       )}
 
       <PhotoLightbox
-        media={lightbox}
+        media={lightbox.media}
         owner={showOwnerUI}
         projectId={data.project?.id || null}
-        onClose={() => setLightbox(null)}
+        initialMode={lightbox.mode}
+        onClose={closeLightbox}
         onReplaced={(updated) => {
           setMedia((cur) => cur.map((m) => (m.id === updated.id ? updated : m)))
-          setLightbox(updated)
+          // Stay open on the freshly-cropped photo. PhotoLightbox itself
+          // resets to 'view' inside applyCrop, so we don't need to bias
+          // the mode here; pinning to 'view' makes the post-save state
+          // intent obvious.
+          setLightbox({ media: updated, mode: 'view' })
         }}
       />
 

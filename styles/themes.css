@@ -1913,15 +1913,6 @@
   }
 }
 
-[data-theme="magazine"] .tp-mag-day__photo-btn {
-  display: block;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
 [data-theme="magazine"] .tp-mag-day__photo-img {
   display: block;
   width: 100%;
@@ -1936,6 +1927,10 @@
   }
 }
 
+/* ── Magazine day photo: empty-state placeholder ──────────────────────
+   Owner-only. Doubles as a clickable file picker AND drop zone (drag
+   handlers are wired in MagazineDayPhoto). The element is a <button>;
+   we strip native chrome and lay out the icon+label as a flex row. */
 [data-theme="magazine"] .tp-mag-day__photo-empty {
   width: 100%;
   aspect-ratio: 16 / 10;
@@ -1948,12 +1943,167 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--ink-mute);
+  /* Strip native button defaults so it inherits the hairline-dashed
+     placeholder look from the editorial-side empty states. */
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: var(--font-mono);
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-empty:hover,
+[data-theme="magazine"] .tp-mag-day__photo-empty:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-empty.is-dragover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-empty-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-day__photo-empty {
     aspect-ratio: 4 / 3;
   }
+}
+
+/* ── Magazine day photo: filled-state owner overlay ───────────────────
+   Wrapper sits above the <img>. Hosts the drag-over overlay AND the
+   top-right action group (change pill + edit pencil + trash). The
+   overlay actions are positioned relative to this wrapper, so they
+   stay anchored to the photo even when the photo goes full-bleed on
+   mobile. The image keeps its own aspect-ratio sizing — wrapper just
+   inherits the layout cell. */
+[data-theme="magazine"] .tp-mag-day__photo-zone {
+  position: relative;
+  display: block;
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-zone.is-dragover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--accent);
+  pointer-events: none;
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-drag-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 2;
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-drag-overlay span {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1a1a1a;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Action group sits in the photo's top-right corner. Always visible
+   in owner mode (mobile has no hover affordance, and we deliberately
+   match the hero pattern of an always-visible pill rather than a
+   reveal-on-hover one — the operator should see what's available without
+   hunting for it). */
+[data-theme="magazine"] .tp-mag-day__photo-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+/* Pill — "Drag or change photo" / uploading status. Mirrors hero's
+   black-fill pill so operators see one consistent affordance across
+   surfaces, but lives under the magazine theme namespace so its tokens
+   can't bleed elsewhere. */
+[data-theme="magazine"] .tp-mag-day__photo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: none;
+  cursor: default;
+  white-space: nowrap;
+  transition: background-color 120ms ease;
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-pill.is-clickable {
+  cursor: pointer;
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-pill.is-clickable:hover,
+[data-theme="magazine"] .tp-mag-day__photo-pill.is-clickable:focus-visible {
+  background: rgba(0, 0, 0, 0.8);
+  outline: none;
+}
+
+/* Hide the pill label below ~480px so the action group doesn't push
+   the trash button off the photo on small phones. The icon stays —
+   ImagePlus is enough signal at that size. */
+@media (max-width: 479.98px) {
+  [data-theme="magazine"] .tp-mag-day__photo-pill-label {
+    display: none;
+  }
+  [data-theme="magazine"] .tp-mag-day__photo-pill {
+    padding: 8px;
+  }
+}
+
+/* Standalone circular action button — edit-pencil / trash. Same
+   visual weight as the pill (black 60%) so the trio reads as one
+   coherent control group. */
+[data-theme="magazine"] .tp-mag-day__photo-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+[data-theme="magazine"] .tp-mag-day__photo-action-btn:hover,
+[data-theme="magazine"] .tp-mag-day__photo-action-btn:focus-visible {
+  background: rgba(0, 0, 0, 0.8);
+  outline: none;
 }
 
 [data-theme="magazine"] .tp-mag-day__header {

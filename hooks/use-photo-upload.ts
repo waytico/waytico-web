@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { uploadPhoto, deletePhoto, type MediaRecord } from '@/lib/upload-photo'
+import { uploadPhoto, deletePhoto, replacePhoto, type MediaRecord } from '@/lib/upload-photo'
 
 export type { MediaRecord }
 
@@ -179,11 +179,65 @@ export function usePhotoUpload({ projectId, media, setMedia, isShowcase, isAnon 
     [projectId, media, getToken, setMedia, bumpUploading, isShowcase, isAnon, fakePhotoRecord],
   )
 
+  // Day-photo replace: in-place swap of an existing per-day photo's
+  // file, keeping the same media.id, day_id and sort_order. Used by the
+  // Magazine theme, where each day surfaces a single primary photo —
+  // appending another row would leave the old photo as primary until the
+  // delete lands (because getMagazineDayPhoto sorts by sort_order, so
+  // prepend-into-array doesn't help). replacePhoto goes through PATCH
+  // /api/media/:id which is bound to the existing record, so there is
+  // no race between upload and delete; the server best-effort cleans up
+  // the old S3 object.
+  const handleDayPhotoReplace = useCallback(
+    async (file: File, dayId: string, prevPhotoId: string) => {
+      if (!projectId) return
+      if (isAnon) {
+        toast.error('Sign up to edit')
+        return
+      }
+      if (isShowcase) {
+        // Showcase keeps the existing media.id, day_id and sort_order
+        // and just swaps the url to a fresh blob URL — F5 disposes it
+        // along with the rest of the showcase state.
+        setMedia((prev) =>
+          prev.map((m) =>
+            m.id === prevPhotoId
+              ? ({
+                  ...m,
+                  url: URL.createObjectURL(file),
+                  file_name: file.name,
+                  file_size: file.size,
+                  mime_type: file.type,
+                } as MediaRecord)
+              : m,
+          ),
+        )
+        return
+      }
+      const token = await getToken()
+      if (!token) {
+        toast.error('Sign up to edit')
+        return
+      }
+      bumpUploading(dayId, 1)
+      try {
+        const updated = await replacePhoto(projectId, prevPhotoId, file, file.name, token)
+        setMedia((prev) => prev.map((m) => (m.id === prevPhotoId ? updated : m)))
+      } catch (e: any) {
+        toast.error(e?.message || 'Could not replace photo')
+      } finally {
+        bumpUploading(dayId, -1)
+      }
+    },
+    [projectId, getToken, setMedia, bumpUploading, isShowcase, isAnon],
+  )
+
   return {
     uploadingByDay,
     handleUpload,
     handleDelete,
     handleHeroUpload,
+    handleDayPhotoReplace,
   }
 }
 
