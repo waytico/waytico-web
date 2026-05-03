@@ -174,7 +174,18 @@ export function TripActionBar({
         className="sticky z-30 w-full border-b border-border/60 bg-background/95 backdrop-blur-sm"
         style={{ top: topOffset }}
       >
-        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between gap-3">
+        <div
+          className={
+            'max-w-7xl mx-auto px-4 py-2 ' +
+            (showClientInfoToggle
+              ? // 4 buttons + status — too wide for one row on phones.
+                // Stack: status pill alone on top, 4 actions in a 2×2 grid below.
+                // From sm up, fall back to the canonical single-row layout.
+                'flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3'
+              : // 3 buttons + status fit in one row on every breakpoint.
+                'flex items-center justify-between gap-3')
+          }
+        >
           {/* LEFT: status dropdown — pill shows current status, click reveals
               the actions list. Replaces what used to be three controls
               (chip + Activate/Restore button + ⋮ overflow). */}
@@ -221,8 +232,25 @@ export function TripActionBar({
             )}
           </div>
 
-          {/* RIGHT: agent tools */}
-          <div className="flex items-center gap-2">
+          {/* RIGHT: agent tools.
+
+              Magazine adds Client info → 4 actions total. On phones the
+              row would overflow (see screenshots), so when the toggle is
+              shown we lay actions out as a 2×2 grid below the status pill.
+              From sm-up this collapses back to today's single-row flex.
+
+              For the grid to lay 2×2 cleanly, every cell needs to behave
+              the same. Plain `<button>`s get `w-full sm:w-auto`. Component
+              children (ThemeSwitcher, ShareMenu) get a wrapping div with
+              the same classes — internal markup stays untouched, the
+              wrapper owns its grid cell. */}
+          <div
+            className={
+              showClientInfoToggle
+                ? 'grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2'
+                : 'flex items-center gap-2'
+            }
+          >
             {showClientInfoToggle && (
               <>
                 <button
@@ -231,7 +259,7 @@ export function TripActionBar({
                   aria-pressed={clientInfoOpen ? 'true' : 'false'}
                   aria-label={clientInfoOpen ? 'Hide client info' : 'Show client info'}
                   className={
-                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ' +
+                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors w-full sm:w-auto justify-center sm:justify-start ' +
                     (clientInfoOpen
                       ? 'bg-accent/10 text-accent'
                       : 'text-foreground/70 hover:text-foreground hover:bg-secondary')
@@ -249,23 +277,46 @@ export function TripActionBar({
                 <div className="w-px h-5 bg-border/60 hidden sm:block" aria-hidden="true" />
               </>
             )}
-            <ThemeSwitcher
-              projectId={projectId}
-              value={designTheme}
-              isShowcase={isShowcase}
-              onLocalChange={onLocalThemeChange}
-            />
+            <div
+              className={
+                showClientInfoToggle
+                  ? 'w-full sm:w-auto flex justify-center sm:justify-start sm:contents'
+                  : 'contents'
+              }
+            >
+              <ThemeSwitcher
+                projectId={projectId}
+                value={designTheme}
+                isShowcase={isShowcase}
+                onLocalChange={onLocalThemeChange}
+              />
+            </div>
             <div className="w-px h-5 bg-border/60 hidden sm:block" aria-hidden="true" />
             <button
               type="button"
               onClick={onPreviewAsClient}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
+              className={
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors ' +
+                (showClientInfoToggle
+                  ? 'w-full sm:w-auto justify-center sm:justify-start'
+                  : '')
+              }
             >
               <Eye className="w-4 h-4" />
               <span className="hidden sm:inline">Preview as client</span>
               <span className="sm:hidden">Preview</span>
             </button>
-            {canShare && <ShareMenu title={title} url={shareUrl} publicStatus={status} />}
+            {canShare && (
+              <div
+                className={
+                  showClientInfoToggle
+                    ? 'w-full sm:w-auto flex justify-center sm:justify-start sm:contents'
+                    : 'contents'
+                }
+              >
+                <ShareMenu title={title} url={shareUrl} publicStatus={status} />
+              </div>
+            )}
           </div>
         </div>
       </div>
