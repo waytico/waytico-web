@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
 import type { ThemeId } from '@/lib/themes'
 import { HERO_STYLE } from '@/lib/themes'
-import { fmtDate, numberToWords } from '@/lib/trip-format'
+import { fmtDate } from '@/lib/trip-format'
 import { PublicStatusPill } from './public-status-pill'
 
 export type HeroOperatorContact = {
@@ -512,29 +512,43 @@ function HeroMagazine(props: HeroProps) {
     contactAgentSlot,
     durationDays,
     country,
+    dateRange,
+    dateStatSlot,
     ownerOverlay,
     code,
     highlightsSlots,
   } = props
 
-  // Bottom eyebrow: "{COUNTRY} — {N} DAYS". Each part hides individually
-  // when missing; if neither is present the line is omitted. The country
-  // already lives here, so the top strip never renders a second copy.
-  // Magazine spells the day count out — "SEVEN DAYS" reads more editorial
-  // than "7 DAYS"; numerals stay everywhere else (stat tiles, day badges)
-  // where compactness matters more than register.
+  // Bottom eyebrow: "{DATES} · {N} DAYS · {COUNTRY}". Each piece hides
+  // individually when missing; if none are present the line is omitted.
+  //
+  // DATES are the only editable piece — owner mode passes dateStatSlot
+  // (an inline EditableField pair start/end). Public mode renders the
+  // formatted dateRange string. The slot visually inherits the eyebrow's
+  // mono uppercase tracking through CSS rules scoped to
+  // .tp-mag-hero__bottom-eyebrow .editable-field-* in themes.css.
+  //
+  // DAYS is a literal digit ("7 DAYS") — the previous "SEVEN DAYS"
+  // reading was decided when DAYS was the only item on this line, but
+  // alongside numeric dates the spelled-out word breaks the rhythm
+  // (DATES use digits, COUNTRY is a word — DAYS as a digit lets the
+  // line scan as fact / count / fact).
+  //
+  // DURATION is read-only here: editing it inline gives a false
+  // affordance — duration is a derived count of itinerary entries,
+  // changed by adding/removing days in the Itinerary block, not by
+  // overwriting the digit. reconcileDates() on the backend recomputes
+  // it whenever itinerary changes; the digit re-renders accordingly.
   const bottomCountry = country ? country.toUpperCase() : null
-  const durationWord =
-    durationDays != null ? numberToWords(durationDays) : null
-  const durationDisplay =
-    durationDays != null
-      ? durationWord ?? String(durationDays)
-      : null
   const bottomDuration =
-    durationDisplay != null ? `${durationDisplay} ${UI.days.toUpperCase()}` : null
-  const bottomEyebrowParts = [bottomCountry, bottomDuration].filter(
-    (p): p is string => !!p,
-  )
+    durationDays != null ? `${durationDays} ${UI.days.toUpperCase()}` : null
+  const bottomDates: ReactNode = dateStatSlot ?? dateRange ?? null
+
+  type EyebrowPart = { key: string; node: ReactNode }
+  const bottomParts: EyebrowPart[] = []
+  if (bottomDates) bottomParts.push({ key: 'dates', node: bottomDates })
+  if (bottomDuration) bottomParts.push({ key: 'dur', node: bottomDuration })
+  if (bottomCountry) bottomParts.push({ key: 'cou', node: bottomCountry })
 
   return (
     <header className="tp-mag-hero" style={{ position: 'relative' }}>
@@ -567,9 +581,21 @@ function HeroMagazine(props: HeroProps) {
       <div className="tp-mag-hero__bottom">
         <div className="tp-mag-hero__bottom-grid">
           <div className="tp-mag-hero__bottom-text">
-            {bottomEyebrowParts.length > 0 && (
+            {bottomParts.length > 0 && (
               <p className="tp-mag-hero__bottom-eyebrow">
-                {bottomEyebrowParts.join(' — ')}
+                {bottomParts.map((part, i) => (
+                  <span key={part.key} className="tp-mag-hero__bottom-eyebrow-part">
+                    {i > 0 && (
+                      <span
+                        className="tp-mag-hero__bottom-eyebrow-sep"
+                        aria-hidden="true"
+                      >
+                        {' · '}
+                      </span>
+                    )}
+                    {part.node}
+                  </span>
+                ))}
               </p>
             )}
             <h1 className="tp-mag-hero__title">{titleSlot}</h1>

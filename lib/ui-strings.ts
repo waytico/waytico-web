@@ -21,6 +21,7 @@ export const UI = {
   forTheGroup: 'for the group',
   travelers: 'travelers',
   traveler: 'traveler',
+  group: 'Group',
   days: 'days',
   day: 'day',
   notIncluded: 'Not included',

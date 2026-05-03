@@ -1379,20 +1379,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
           theme={resolvedTheme}
           bodySlot={overviewBodySlot}
           visible={overviewVisible}
-          datesStart={p.dates_start}
-          datesEnd={p.dates_end}
-          durationDays={p.duration_days}
-          groupSize={p.group_size}
-          country={p.country}
-          region={p.region}
-          activityType={p.activity_type}
-          language={p.language ?? 'en'}
-          priceFormatted={heroHeadlineFormatted}
-          priceLabel={heroPriceLabel}
-          dateStatSlot={dateStatSlot}
-          durationStatSlot={durationStatSlot}
-          groupStatSlot={groupStatSlot}
-          priceStatSlot={priceStatSlot}
           showOwnerUI={showOwnerUI}
           subtitleSlot={subtitleSlotFor('overview')}
         />

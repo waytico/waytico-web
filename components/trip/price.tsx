@@ -7,6 +7,7 @@ import type { PricingMode, Mutations, OperatorContact, OwnerBrand } from './trip
 import type { ThemeId } from '@/lib/themes'
 import { fmtPrice, currencyGlyph } from '@/lib/trip-format'
 import { ContactAgentMenu } from './contact-agent-menu'
+import { EditableField } from '@/components/editable/editable-field'
 
 type PriceProps = {
   pricingMode: PricingMode | null
@@ -409,9 +410,35 @@ function PriceMagazine(props: PriceProps) {
                 <span style={{ fontFamily: 'var(--font-mono)' }}>
                   {secondaryFormatted}
                 </span>
-                {mode === 'per_traveler' && props.groupSize != null && (
-                  <> · {props.groupSize} {UI.travelers.toUpperCase()}</>
-                )}
+              </p>
+            )}
+
+            {/* GROUP — moved here from the Overview stat-tiles row when
+                Magazine adopted the canon's no-key-facts-band layout.
+                Renders whenever group_size is set (public + owner) or
+                whenever owner mode wants a placeholder. Hidden in
+                public mode if no group is set. The label sits in mono
+                eyebrow style; the number is the only editable piece. */}
+            {(props.editable || props.groupSize != null) && (
+              <p className="tp-mag-price__group">
+                {UI.group.toUpperCase()} ·{' '}
+                <span style={{ fontFamily: 'var(--font-mono)' }}>
+                  {props.editable ? (
+                    <EditableField
+                      as="number"
+                      editable
+                      value={props.groupSize}
+                      placeholder="0"
+                      onSave={async (v) => {
+                        if (!props.saveProjectPatch) return false
+                        return props.saveProjectPatch({ groupSize: v })
+                      }}
+                    />
+                  ) : (
+                    props.groupSize
+                  )}
+                  {' '}{UI.travelers.toUpperCase()}
+                </span>
               </p>
             )}
           </div>

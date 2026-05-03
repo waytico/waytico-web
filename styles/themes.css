@@ -1497,6 +1497,13 @@
   color: rgba(245, 240, 230, 0.9);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   margin: 0 0 20px 0;
+  /* Allow the parts (DATES · DAYS · COUNTRY) to wrap as a group rather
+     than break a piece across lines. Each part is its own inline-block
+     wrapper so it stays atomic. */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  align-items: baseline;
 }
 
 @media (min-width: 1024px) {
@@ -1504,6 +1511,37 @@
     font-size: 11px;
     margin-bottom: 24px;
   }
+}
+
+[data-theme="magazine"] .tp-mag-hero__bottom-eyebrow-part {
+  /* Each "part" is one of DATES / DAYS / COUNTRY. The dot separator is
+     rendered as a sibling span — keeping it inside this wrapper would
+     make the whole part-with-leading-dot non-atomic for wrap purposes. */
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+[data-theme="magazine"] .tp-mag-hero__bottom-eyebrow-sep {
+  /* Subtle interpunct between parts. Width matches the eyebrow's letter
+     spacing so visually the dot floats centred between adjacent words. */
+  opacity: 0.65;
+  white-space: pre;
+}
+
+/* When owner-mode passes dateStatSlot (an inline pair of EditableField
+   components for start / end dates), force the inputs to inherit the
+   eyebrow's mono uppercase tracking. Without this they'd render in the
+   default sans body font and visually break the editorial line. The
+   span-with-role="button" view-mode display gets the same treatment. */
+[data-theme="magazine"] .tp-mag-hero__bottom-eyebrow .editable-field,
+[data-theme="magazine"] .tp-mag-hero__bottom-eyebrow input,
+[data-theme="magazine"] .tp-mag-hero__bottom-eyebrow [role="button"] {
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
 }
 
 [data-theme="magazine"] .tp-mag-hero__title {
@@ -1691,106 +1729,6 @@
   font-style: italic;
   font-weight: inherit;
   color: inherit;
-}
-
-/* Stat tiles row — 2x2 mobile, 4-up desktop. Hairline rule above. */
-
-[data-theme="magazine"] .tp-mag-stat-tiles {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  margin-top: 40px;
-  padding-top: 32px;
-  border-top: 1px solid var(--rule);
-}
-
-@media (min-width: 1024px) {
-  [data-theme="magazine"] .tp-mag-stat-tiles {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 32px;
-    margin-top: 64px;
-  }
-}
-
-[data-theme="magazine"] .tp-mag-stat-tile {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  text-decoration: none;
-  color: inherit;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  text-align: left;
-}
-
-[data-theme="magazine"] .tp-mag-stat-tile__label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-mute);
-}
-
-[data-theme="magazine"] .tp-mag-stat-tile__value {
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 18px;
-  line-height: 1.2;
-  letter-spacing: -0.005em;
-  color: var(--ink);
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-@media (min-width: 1024px) {
-  [data-theme="magazine"] .tp-mag-stat-tile__value {
-    font-size: 24px;
-  }
-}
-
-[data-theme="magazine"] .tp-mag-stat-tile__sub {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-mute);
-}
-
-[data-theme="magazine"] .tp-mag-stat-tile__placeholder {
-  color: var(--ink-mute);
-  font-style: italic;
-}
-
-[data-theme="magazine"] .tp-mag-stat-tile__hint {
-  font-size: 12px;
-  color: var(--ink-mute);
-  margin-left: 4px;
-  transition: transform 0.18s ease;
-}
-
-[data-theme="magazine"] .tp-mag-stat-tile--clickable {
-  cursor: pointer;
-  transition: color 0.18s ease;
-}
-
-[data-theme="magazine"] .tp-mag-stat-tile--clickable:hover {
-  color: var(--accent);
-}
-
-[data-theme="magazine"] .tp-mag-stat-tile--clickable:hover .tp-mag-stat-tile__hint {
-  transform: translateY(2px);
-  color: var(--accent);
-}
-
-/* The owner-mode duration / price slots wrap an internal <a> with the
-   editorial color override (`color: inherit`) — unify hover with the
-   tile so the link feels like part of the tile, not a nested element. */
-[data-theme="magazine"] .tp-mag-stat-tile--clickable a {
-  color: inherit;
-  text-decoration: none;
 }
 
 /* ── Itinerary (alternating day spreads) ──────────────────────────── */
@@ -2491,6 +2429,30 @@
   text-transform: uppercase;
   color: var(--ink-mute);
   margin: 8px 0 0 0;
+}
+
+/* GROUP line — mirrors __secondary visually but is a separate slot
+   conceptually. Sits below secondary, holds the editable group-size
+   number (owner mode) or the count (public). EditableField wrappers
+   inside inherit the mono uppercase tracking so the inline editor
+   stays visually aligned with the surrounding eyebrow text. */
+[data-theme="magazine"] .tp-mag-price__group {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 4px 0 0 0;
+}
+
+[data-theme="magazine"] .tp-mag-price__group .editable-field,
+[data-theme="magazine"] .tp-mag-price__group input,
+[data-theme="magazine"] .tp-mag-price__group [role="button"] {
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
 }
 
 [data-theme="magazine"] .tp-mag-price__right {
