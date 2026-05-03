@@ -20,6 +20,8 @@ type TermsProps = {
    *  eyebrow + Cormorant heading + collapsible body with terracotta
    *  toggle pill. Other values keep the editorial layout. */
   theme?: ThemeId
+  /** Magazine-only narrative subtitle slot under the eyebrow. */
+  subtitleSlot?: ReactNode
 }
 
 /**
@@ -39,7 +41,7 @@ type TermsProps = {
  * trip-page-client.tsx and arrives via `bodySlot`. The Magazine variant
  * only restyles the wrapper.
  */
-export function TripTerms({ bodySlot, visible, ownerHint, collapsible, theme }: TermsProps) {
+export function TripTerms({ bodySlot, visible, ownerHint, collapsible, theme, subtitleSlot }: TermsProps) {
   if (!visible) return null
 
   if (theme === 'magazine') {
@@ -48,6 +50,7 @@ export function TripTerms({ bodySlot, visible, ownerHint, collapsible, theme }: 
         bodySlot={bodySlot}
         ownerHint={ownerHint}
         collapsible={!!collapsible}
+        subtitleSlot={subtitleSlot}
       />
     )
   }
@@ -133,10 +136,12 @@ function TermsMagazine({
   bodySlot,
   ownerHint,
   collapsible,
+  subtitleSlot,
 }: {
   bodySlot: ReactNode
   ownerHint?: ReactNode
   collapsible: boolean
+  subtitleSlot?: ReactNode
 }) {
   const [open, setOpen] = useState(false)
 
@@ -146,9 +151,11 @@ function TermsMagazine({
         <header className="tp-mag-terms__header">
           <hr className="tp-mag-rule" />
           <p className="tp-mag-eyebrow tp-mag-terms__eyebrow">VI — FINE PRINT</p>
-          <h2 className="tp-mag-display tp-mag-terms__heading">
-            {UI.sectionLabels.terms}
-          </h2>
+          {subtitleSlot && (
+            <h2 className="tp-mag-display tp-mag-section-subtitle">
+              {subtitleSlot}
+            </h2>
+          )}
           {ownerHint && (
             <p className="tp-mag-terms__hint">{ownerHint}</p>
           )}

@@ -45,6 +45,12 @@ type OverviewProps = {
 
   /** True when the viewer is the owner (drives placeholders + edit chrome). */
   showOwnerUI?: boolean
+
+  /** Magazine-only narrative subtitle rendered under the eyebrow. Public
+   *  mode passes plain text or null; owner mode passes EditableField.
+   *  Replaces the static "Overview" heading on Magazine — eyebrow plus
+   *  subtitle carry the section identity, no need for a second label. */
+  subtitleSlot?: ReactNode
 }
 
 /**
@@ -98,6 +104,7 @@ function OverviewMagazine(props: OverviewProps) {
     groupStatSlot,
     priceStatSlot,
     showOwnerUI,
+    subtitleSlot,
   } = props
 
   // Magazine overview keeps its section visible whenever there's
@@ -138,9 +145,11 @@ function OverviewMagazine(props: OverviewProps) {
             <p className="tp-mag-eyebrow tp-mag-overview__eyebrow">
               I — {UI.sectionLabels.overview.toUpperCase()}
             </p>
-            <h2 className="tp-mag-display tp-mag-overview__heading">
-              {UI.sectionLabels.overview}
-            </h2>
+            {subtitleSlot && (
+              <h2 className="tp-mag-display tp-mag-section-subtitle">
+                {subtitleSlot}
+              </h2>
+            )}
             {metaRailRows.length > 0 && (
               <ul className="tp-mag-overview__meta">
                 {metaRailRows.map((row) => (

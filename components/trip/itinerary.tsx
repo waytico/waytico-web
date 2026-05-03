@@ -54,6 +54,8 @@ type ItineraryProps = {
    *  needs a direct callback. Other variants ignore it (lightbox open
    *  goes through renderDayExtras → PhotosBlock as before). */
   onPhotoClick?: (m: MediaLite) => void
+  /** Magazine-only narrative subtitle slot under the eyebrow. */
+  subtitleSlot?: ReactNode
 }
 
 function getDayPhoto(media: MediaLite[], dayId: string): string | null {
@@ -121,6 +123,7 @@ export function TripItinerary(props: ItineraryProps) {
         onPhotoClick={props.onPhotoClick}
         renderDayTitle={props.renderDayTitle}
         renderDayDescription={props.renderDayDescription}
+        subtitleSlot={props.subtitleSlot}
       />
     )
   }
@@ -553,6 +556,7 @@ type ItineraryMagazineProps = {
   onPhotoClick?: (m: MediaLite) => void
   renderDayTitle: (day: Day) => ReactNode
   renderDayDescription: (day: Day) => ReactNode
+  subtitleSlot?: ReactNode
 }
 
 function ItineraryMagazine(props: ItineraryMagazineProps) {
@@ -566,6 +570,7 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
     onPhotoClick,
     renderDayTitle,
     renderDayDescription,
+    subtitleSlot,
   } = props
 
   // Local mirror so we can do an optimistic reorder before the backend
@@ -614,9 +619,11 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
       <p className="tp-mag-eyebrow tp-mag-itin__eyebrow">
         II — {UI.sectionLabels.itinerary.toUpperCase()}
       </p>
-      <h2 className="tp-mag-display tp-mag-itin__heading">
-        {UI.sectionLabels.itinerary}
-      </h2>
+      {subtitleSlot && (
+        <h2 className="tp-mag-display tp-mag-section-subtitle">
+          {subtitleSlot}
+        </h2>
+      )}
     </header>
   )
 

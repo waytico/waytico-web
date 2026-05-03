@@ -627,6 +627,59 @@ export default function TripPageClient({ slug, initialData }: Props) {
       ? currentHighlights.map((s) => (s ? <span>{s}</span> : null))
       : undefined
 
+  /* ── Section subtitles (Magazine theme renders these under each
+   *    section eyebrow). Sparse-by-design — public mode passes nothing
+   *    when there's no subtitle for a section. Owner mode always passes
+   *    an EditableField placeholder so the operator can fill it in.
+   *
+   *    saveSectionSubtitle does a full-object PATCH (sectionSubtitles
+   *    schema replaces the whole dict on PUT, so the helper merges the
+   *    edit into the current dict before sending). Empty/whitespace
+   *    saves clear that key (sent as null).
+   *  ─────────────────────────────────────────────────────────────── */
+  type SubtitleKey =
+    | 'overview'
+    | 'itinerary'
+    | 'accommodations'
+    | 'price'
+    | 'included'
+    | 'terms'
+    | 'contacts'
+  const currentSubtitles: Record<SubtitleKey, string | null> = {
+    overview: p.section_subtitles?.overview ?? null,
+    itinerary: p.section_subtitles?.itinerary ?? null,
+    accommodations: p.section_subtitles?.accommodations ?? null,
+    price: p.section_subtitles?.price ?? null,
+    included: p.section_subtitles?.included ?? null,
+    terms: p.section_subtitles?.terms ?? null,
+    contacts: p.section_subtitles?.contacts ?? null,
+  }
+  const saveSectionSubtitle = (
+    key: SubtitleKey,
+    raw: string,
+  ): Promise<boolean> => {
+    const trimmed = raw.trim().slice(0, 200)
+    const next: Record<string, string | null> = { ...currentSubtitles }
+    next[key] = trimmed.length > 0 ? trimmed : null
+    return saveProjectPatch({ sectionSubtitles: next })
+  }
+  const subtitleSlotFor = (key: SubtitleKey): ReactNode => {
+    if (ed) {
+      return (
+        <EditableField
+          as="text"
+          editable
+          value={currentSubtitles[key]}
+          placeholder="Add subtitle…"
+          maxLength={200}
+          onSave={(v) => saveSectionSubtitle(key, v)}
+        />
+      )
+    }
+    const v = currentSubtitles[key]
+    return v ? <span>{v}</span> : null
+  }
+
   const activityChipSlot: ReactNode | null =
     p.activity_type || ed ? (
       <span className="tp-chip">
@@ -1341,6 +1394,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           groupStatSlot={groupStatSlot}
           priceStatSlot={priceStatSlot}
           showOwnerUI={showOwnerUI}
+          subtitleSlot={subtitleSlotFor('overview')}
         />
 
         <TripItinerary
@@ -1367,6 +1421,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             const full = media.find((x) => x.id === m.id)
             if (full) setLightbox(full)
           }}
+          subtitleSlot={subtitleSlotFor('itinerary')}
         />
 
         <TripAccommodations
@@ -1379,6 +1434,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           interceptUpload={
             isAnonCreator ? () => toast.error('Sign up to edit') : undefined
           }
+          subtitleSlot={subtitleSlotFor('accommodations')}
         />
 
         <TripPrice
@@ -1394,6 +1450,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           editable={ed}
           saveProjectPatch={ed ? saveProjectPatch : undefined}
           visible={priceVisible}
+          subtitleSlot={subtitleSlotFor('price')}
         />
 
         <TripIncluded
@@ -1401,6 +1458,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           includedBodySlot={includedBodySlot}
           notIncludedBodySlot={notIncludedBodySlot}
           visible={includedVisible}
+          subtitleSlot={subtitleSlotFor('included')}
         />
 
         <TripTerms
@@ -1413,6 +1471,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
               ? 'Edits here apply to this trip only. Update your profile terms to change them across this and future trips.'
               : undefined
           }
+          subtitleSlot={subtitleSlotFor('terms')}
         />
 
         <TripContacts
@@ -1421,6 +1480,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           operatorContact={operatorContact}
           editable={ed}
           saveProjectPatch={ed ? saveProjectPatch : undefined}
+          subtitleSlot={subtitleSlotFor('contacts')}
         />
 
         {/* Active-trip sections — render as themed sections that reuse the

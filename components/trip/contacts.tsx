@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { Mail, Phone, MapPin, Globe, Eye, EyeOff } from 'lucide-react'
 import { UI } from '@/lib/ui-strings'
@@ -24,6 +25,8 @@ type Props = {
    *  resolution + EyeOff/inline-edit semantics, restyled wrapper +
    *  identity panel. Other values keep the editorial layout. */
   theme?: ThemeId
+  /** Magazine-only narrative subtitle slot under the eyebrow. */
+  subtitleSlot?: ReactNode
 }
 
 type ChannelKey =
@@ -145,7 +148,7 @@ const CHANNELS: Channel[] = [
  *   - small hint at the bottom linking to /dashboard for adding the
  *     channels not configured on the brand yet.
  */
-export function TripContacts({ owner, operatorContact, editable, saveProjectPatch, theme }: Props) {
+export function TripContacts({ owner, operatorContact, editable, saveProjectPatch, theme, subtitleSlot }: Props) {
   if (theme === 'magazine') {
     return (
       <ContactsMagazine
@@ -153,6 +156,7 @@ export function TripContacts({ owner, operatorContact, editable, saveProjectPatc
         operatorContact={operatorContact}
         editable={editable}
         saveProjectPatch={saveProjectPatch}
+        subtitleSlot={subtitleSlot}
       />
     )
   }
@@ -492,11 +496,13 @@ function ContactsMagazine({
   operatorContact,
   editable,
   saveProjectPatch,
+  subtitleSlot,
 }: {
   owner: OwnerBrand
   operatorContact: OperatorContact
   editable: boolean
   saveProjectPatch?: Mutations['saveProjectPatch']
+  subtitleSlot?: ReactNode
 }) {
   const resolved = resolveContacts(owner, operatorContact)
   const hidden = new Set(operatorContact?.hidden_channels || [])
@@ -527,9 +533,11 @@ function ContactsMagazine({
           <p className="tp-mag-eyebrow tp-mag-contacts__eyebrow">
             VII — TALK TO US
           </p>
-          <h2 className="tp-mag-display tp-mag-contacts__heading">
-            {UI.sectionLabels.contacts}
-          </h2>
+          {subtitleSlot && (
+            <h2 className="tp-mag-display tp-mag-section-subtitle">
+              {subtitleSlot}
+            </h2>
+          )}
         </header>
 
         <div className="tp-mag-contacts__grid">

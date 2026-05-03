@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import type { ReactNode } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
 import { ImagePlus, Loader2 } from 'lucide-react'
@@ -26,6 +27,8 @@ type Props = {
    *  square photos, mono eyebrow per card, no rounded chrome. Other
    *  values keep the editorial layout. */
   theme?: ThemeId
+  /** Magazine-only narrative subtitle slot under the eyebrow. */
+  subtitleSlot?: ReactNode
 }
 
 /**
@@ -43,6 +46,7 @@ export function TripAccommodations({
   onDelete,
   interceptUpload,
   theme,
+  subtitleSlot,
 }: Props) {
   const hasAny = accommodations.length > 0
   if (!editable && !hasAny) return null
@@ -56,6 +60,7 @@ export function TripAccommodations({
         onUpdate={onUpdate}
         onDelete={onDelete}
         interceptUpload={interceptUpload}
+        subtitleSlot={subtitleSlot}
       />
     )
   }
@@ -458,6 +463,7 @@ function AccommodationsMagazine({
   onUpdate,
   onDelete,
   interceptUpload,
+  subtitleSlot,
 }: {
   accommodations: Accommodation[]
   editable: boolean
@@ -465,6 +471,7 @@ function AccommodationsMagazine({
   onUpdate?: Mutations['saveAccommodationPatch']
   onDelete?: Mutations['saveAccommodationDelete']
   interceptUpload?: () => void
+  subtitleSlot?: ReactNode
 }) {
   const hasAny = accommodations.length > 0
   return (
@@ -473,9 +480,11 @@ function AccommodationsMagazine({
         <header className="tp-mag-acc__header">
           <hr className="tp-mag-rule" />
           <p className="tp-mag-eyebrow tp-mag-acc__eyebrow">III — STAYS</p>
-          <h2 className="tp-mag-display tp-mag-acc__heading">
-            {UI.sectionLabels.accommodations}
-          </h2>
+          {subtitleSlot && (
+            <h2 className="tp-mag-display tp-mag-section-subtitle">
+              {subtitleSlot}
+            </h2>
+          )}
         </header>
 
         {hasAny && (

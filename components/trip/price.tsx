@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
 import type { PricingMode, Mutations, OperatorContact, OwnerBrand } from './trip-types'
 import type { ThemeId } from '@/lib/themes'
@@ -29,6 +30,8 @@ type PriceProps = {
    *  (it has no in-section CTA). */
   owner?: OwnerBrand
   operatorContact?: OperatorContact
+  /** Magazine-only narrative subtitle slot under the eyebrow. */
+  subtitleSlot?: ReactNode
 }
 
 /**
@@ -358,6 +361,11 @@ function PriceMagazine(props: PriceProps) {
         <header className="tp-mag-price__header">
           <hr className="tp-mag-rule" />
           <p className="tp-mag-eyebrow tp-mag-price__eyebrow">V — INVESTMENT</p>
+          {props.subtitleSlot && (
+            <h2 className="tp-mag-display tp-mag-section-subtitle">
+              {props.subtitleSlot}
+            </h2>
+          )}
         </header>
 
         <div className="tp-mag-price__grid">

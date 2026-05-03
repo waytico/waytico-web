@@ -91,6 +91,17 @@ export type ProjectLite = {
    *  pre-pipeline_hero v8, or operator cleared them). Order is meaningful
    *  (visit order when known, prominence otherwise). */
   highlights?: string[]
+  /** Per-section narrative subtitle (Magazine renders under each eyebrow).
+   *  Sparse-by-design: missing keys are normal. */
+  section_subtitles?: {
+    overview?: string | null
+    itinerary?: string | null
+    accommodations?: string | null
+    price?: string | null
+    included?: string | null
+    terms?: string | null
+    contacts?: string | null
+  }
   description: string | null
   region: string | null
   country: string | null

@@ -1280,6 +1280,33 @@
   margin: 0;
 }
 
+/* ── Section subtitle (narrative phrase under each section eyebrow) ─
+   Replaces the static section heading on Magazine — eyebrow plus
+   subtitle carry the section identity. Italic Cormorant, slightly
+   smaller than the legacy section heading so it reads as a phrase
+   rather than a label. Kept on the same baseline as the editorial
+   tp-display weight so themes nest cleanly. The owner-mode
+   EditableField placeholder ("Add subtitle…") inherits this size,
+   which is intentional — placeholder copy looks lighter in italic
+   and invites a contribution rather than shouting. */
+[data-theme="magazine"] .tp-mag-section-subtitle {
+  font-size: 28px;
+  line-height: 1.1;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--ink);
+  margin: 0 0 24px 0;
+  letter-spacing: -0.005em;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-section-subtitle {
+    font-size: 44px;
+    line-height: 1.05;
+    margin-bottom: 32px;
+  }
+}
+
 /* ── TopNav (desktop ≥1024px sticky) ──────────────────────────────── */
 
 /* Magazine TopNav lives inside <ThemeRoot> after the hero, like Classic

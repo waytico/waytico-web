@@ -18,6 +18,8 @@ type IncludedProps = {
    *  markers and hairline rules between them. Other values keep the
    *  editorial card layout. */
   theme?: ThemeId
+  /** Magazine-only narrative subtitle slot under the eyebrow. */
+  subtitleSlot?: ReactNode
 }
 
 /**
@@ -26,7 +28,7 @@ type IncludedProps = {
  * Per TZ-6 §6.5: the section stays visible in public mode IFF at least one
  * side has content. Owner mode always shows it (so they can add items).
  */
-export function TripIncluded({ includedBodySlot, notIncludedBodySlot, visible, theme }: IncludedProps) {
+export function TripIncluded({ includedBodySlot, notIncludedBodySlot, visible, theme, subtitleSlot }: IncludedProps) {
   if (!visible) return null
 
   if (theme === 'magazine') {
@@ -34,6 +36,7 @@ export function TripIncluded({ includedBodySlot, notIncludedBodySlot, visible, t
       <IncludedMagazine
         includedBodySlot={includedBodySlot}
         notIncludedBodySlot={notIncludedBodySlot}
+        subtitleSlot={subtitleSlot}
       />
     )
   }
@@ -98,9 +101,11 @@ export function IncludedList({ source, kind }: { source: string | null | undefin
 function IncludedMagazine({
   includedBodySlot,
   notIncludedBodySlot,
+  subtitleSlot,
 }: {
   includedBodySlot: ReactNode
   notIncludedBodySlot: ReactNode
+  subtitleSlot?: ReactNode
 }) {
   return (
     <section className="tp-mag-section tp-mag-incl" id="included">
@@ -108,9 +113,11 @@ function IncludedMagazine({
         <header className="tp-mag-incl__header">
           <hr className="tp-mag-rule" />
           <p className="tp-mag-eyebrow tp-mag-incl__eyebrow">IV — DETAILS</p>
-          <h2 className="tp-mag-display tp-mag-incl__heading">
-            {UI.sectionLabels.included}
-          </h2>
+          {subtitleSlot && (
+            <h2 className="tp-mag-display tp-mag-section-subtitle">
+              {subtitleSlot}
+            </h2>
+          )}
         </header>
 
         <div className="tp-mag-incl__grid">
