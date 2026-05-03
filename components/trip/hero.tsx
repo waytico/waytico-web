@@ -142,63 +142,47 @@ function HeroTopStrip({
     textShadow: onPhoto ? '0 1px 4px rgba(0,0,0,0.4)' : undefined,
   }
 
-  // Layout — three slots (status / contact agent / dates) laid out as a
-  // 3-column grid on desktop and stacked on mobile. col-start makes each
-  // slot land in its own column regardless of which siblings are missing,
-  // so an owner-view trip with no status pill keeps dates flush right and
-  // a quote with no contact channel still keeps status flush left.
+  // Layout — unified 3-col grid on desktop, flex-col stacked on mobile.
+  // Same `grid-cols-[1fr_auto_1fr]` for both tourist (status present) and
+  // owner (no status) modes. Each slot pins itself to its column via
+  // sm:col-start-N regardless of DOM order, so:
+  //
+  //   TOURIST DESKTOP (hasStatus):
+  //     [QUOTE · code]        [Contact agent]        [Issued — Valid until]
+  //      col-1, flush left     col-2, centered        col-3, flush right
+  //
+  //   OWNER DESKTOP (no status):
+  //     [empty col-1]         [Contact agent if any]  [Quote · Issued · Valid until]
+  //                            col-2, centered         col-3, flush right
+  //     Dates always end at col-3's right edge, which coincides with the
+  //     hairline rule's right end (border-b on the mx-* wrapper). When
+  //     contact-agent isn't rendered for an owner (operator IS the contact),
+  //     col-2 is just empty space — dates stay anchored right.
+  //
+  //   ANY MOBILE — flex-col stacked, ordered status -> dates -> contact via
+  //     order-1/2/3. Hairline between status and dates when both present.
+  //
+  // Slot wrappers carry `sm:flex sm:items-center` + an explicit lineHeight
+  // so all three slots have identical intrinsic height — necessary because
+  // PublicStatusPill is an inline-flex span and dates is a flex container,
+  // and bare grid items-center centers their margin-boxes which can differ
+  // by a couple of px when intrinsic line-heights diverge. Forcing the
+  // line-box to the same value collapses that asymmetry visually.
   //
   // Width: the strip's CONTENT spans the full hero width with breakpoint-
   // scaled inset (16/32/48px). The hairline rule lives on an INNER
   // wrapper that uses `mx` (not `px`) for that inset, so the rule runs
-  // BETWEEN the inset positions rather than corner-to-corner of the
-  // photo. Padding-based insets push the rule to the photo edges (the
-  // border attaches to the element's outer edge regardless of padding);
-  // margin-based insets shrink the bordered box itself, so the rule
-  // ends where the inset begins -- which matches the design canon's
-  // "type panel" rule that sits inside the photo's content frame.
+  // BETWEEN the inset positions rather than corner-to-corner of the photo.
+  // Margin-based insets shrink the bordered box itself, so dates pinned to
+  // col-3 with justify-self-end terminate exactly where the rule ends.
   //
   // The rule renders identically across owner / public / preview modes
   // and across breakpoints because it lives on the always-present
-  // content wrapper -- earlier versions tied it to mobile-only
-  // border-t which evaporated in owner mode (no status pill -> no
-  // border-t).
-  //
-  // Layout splits by mode:
-  //
-  //   TOURIST DESKTOP (hasStatus + sm:+) -- 3-col grid:
-  //     [QUOTE · code]   [Contact agent]   [Issued -- Valid until]
-  //                         (centered)         (right-aligned)
-  //     The traveler reads left-to-right: identity of the document,
-  //     how to reach the operator, when the offer is valid. Centring
-  //     the contact-agent slot puts the action surface visually at
-  //     the optical centre of the strip.
-  //
-  //   OWNER DESKTOP (no status, sm:+) -- flex-row:
-  //     [Quote code -- Issued -- Valid until]              [Contact agent]
-  //     Owner-side strip keeps the quote code + dates flush left
-  //     because contact-agent isn't rendered for owners (the operator
-  //     IS the contact). Empty right slot would leave a hole; flex
-  //     packs everything tight on the left.
-  //
-  //   ANY MOBILE -- flex-col stacked:
-  //     status -> dates -> contact, with hairline between status and
-  //     dates when both present (consistent with prior behaviour).
-  //
-  // Vertical alignment: items-center (not baseline). The status pill
-  // is an inline-flex with a 6px round dot inside -- its baseline as
-  // resolved by the browser sits below its visual centreline, which
-  // pushed the dates row visually upward when items-baseline was used.
-  // Centring the cross-axis avoids relying on the inline-flex baseline
-  // computation; the eyebrow text rows are similar enough in height
-  // (~16px line-box) that center alignment reads as level on the eye.
+  // content wrapper -- earlier versions tied it to mobile-only border-t
+  // which evaporated in owner mode (no status pill -> no border-t).
   const ruleColor = onPhoto ? 'rgba(255,255,255,0.22)' : 'var(--rule)'
-  const isTourist = hasStatus
 
-  // Desktop layout class differs by mode. Mobile is always flex-col.
-  const desktopLayout = isTourist
-    ? 'sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4'
-    : 'sm:flex sm:flex-row sm:items-center sm:gap-4'
+  const desktopLayout = 'sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4'
 
   return (
     <div
@@ -217,8 +201,8 @@ function HeroTopStrip({
       >
         {hasStatus && (
           <div
-            className="order-1 sm:order-none sm:justify-self-start"
-            style={{ pointerEvents: 'auto' }}
+            className="order-1 sm:order-none sm:col-start-1 sm:justify-self-start sm:flex sm:items-center"
+            style={{ pointerEvents: 'auto', lineHeight: 1.2 }}
           >
             <PublicStatusPill status={status} onPhoto={onPhoto} code={code} />
           </div>
@@ -226,14 +210,13 @@ function HeroTopStrip({
 
         {hasDates && (
           <div
-            className={`order-2 sm:order-none uppercase grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-start sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:gap-y-0 ${
-              isTourist ? 'sm:justify-self-end' : 'sm:mr-auto'
-            } ${
+            className={`order-2 sm:order-none uppercase grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-start sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:gap-y-0 sm:col-start-3 sm:justify-self-end ${
               hasStatus ? 'w-full pt-3 border-t sm:w-auto sm:pt-0 sm:border-t-0' : ''
             }`}
             style={{
               ...datesStyle,
               pointerEvents: 'auto',
+              lineHeight: 1.2,
               ...(hasStatus ? { borderTopColor: ruleColor } : {}),
             }}
           >
@@ -266,10 +249,8 @@ function HeroTopStrip({
 
         {hasContactAgent && (
           <div
-            className={`order-3 sm:order-none ${
-              isTourist ? 'sm:justify-self-center' : ''
-            }`}
-            style={{ pointerEvents: 'auto' }}
+            className="order-3 sm:order-none sm:col-start-2 sm:justify-self-center sm:flex sm:items-center"
+            style={{ pointerEvents: 'auto', lineHeight: 1.2 }}
           >
             {renderedContactAgent}
           </div>

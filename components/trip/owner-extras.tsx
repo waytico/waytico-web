@@ -37,7 +37,7 @@ export function HeroOwnerOverlay({
           </div>
         )}
       </div>
-      <div className="absolute top-4 right-4 z-10 flex items-center gap-2 pointer-events-auto">
+      <div className="absolute top-20 right-4 z-10 flex items-center gap-2 pointer-events-auto">
         {hasBg && heroPhotoId && (
           <button
             type="button"
