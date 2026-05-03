@@ -1029,7 +1029,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           Showcase / anon-creator paths keep their dedicated banners and,
           for showcase, render TripActionBar standalone (its own sticky
           wrapper, slid below the orange ShowcaseBanner via topOffset). */}
-      {showOwnerUI && !isShowcase && !isAnonCreator && (
+      {isOwner && !isShowcase && !isAnonCreator && (
         <Header
           tripActions={
             p.id ? (
@@ -1038,7 +1038,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 status={p.status}
                 title={p.title}
                 shareUrl={shareUrl}
-                canShare={showOwnerUI || isAnonCreator}
+                canShare={isOwner}
                 designTheme={p.design_theme}
                 onPreviewAsClient={() => setPreviewAsClient(true)}
                 onStatusChanged={() => setOwnerRefreshKey((k) => k + 1)}
@@ -1058,6 +1058,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 showClientInfoToggle={resolvedTheme === 'magazine'}
                 clientInfoOpen={clientInfoOpen}
                 onToggleClientInfo={() => setClientInfoOpen((v) => !v)}
+                /* In preview mode the Preview button becomes a pulsing
+                   "Exit preview" pill at the same x-position so the operator
+                   can toggle preview on/off without moving the mouse. */
+                previewMode={previewAsClient}
+                onExitPreview={() => setPreviewAsClient(false)}
               />
             ) : undefined
           }
@@ -1135,23 +1140,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
       )}
 
       <ActivationToast />
-
-      {previewAsClient && (
-        <div className="sticky top-0 z-40 bg-accent text-accent-foreground">
-          <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
-            <p className="text-sm flex-1 min-w-0 flex items-center gap-2">
-              <Eye className="w-4 h-4 flex-shrink-0" />
-              <span>You&apos;re previewing as your client sees this page.</span>
-            </p>
-            <button
-              onClick={() => setPreviewAsClient(false)}
-              className="text-sm font-semibold px-3 py-1 rounded-full bg-accent-foreground/15 hover:bg-accent-foreground/25 transition-colors animate-pulse flex-shrink-0"
-            >
-              Exit preview
-            </button>
-          </div>
-        </div>
-      )}
 
       {isAnonCreator && data?.project?.status === 'quoted' && projectIdForClaim && (
         <>

@@ -51,6 +51,15 @@ type Props = {
   showClientInfoToggle?: boolean
   clientInfoOpen?: boolean
   onToggleClientInfo?: () => void
+  /**
+   * When true, the Preview slot is replaced by an "Exit preview" pill that
+   * pulses in accent colors. The owner is currently viewing the trip page
+   * as a client; pressing the pill leaves preview mode. The pill occupies
+   * exactly the same x-coordinate as the Preview button it replaces, so
+   * the operator can toggle preview on / off without moving the mouse.
+   */
+  previewMode?: boolean
+  onExitPreview?: () => void
 }
 
 /**
@@ -86,6 +95,8 @@ export function TripActionBar({
   showClientInfoToggle,
   clientInfoOpen,
   onToggleClientInfo,
+  previewMode = false,
+  onExitPreview,
 }: Props) {
   const router = useRouter()
   const { getToken } = useAuth()
@@ -279,15 +290,28 @@ export function TripActionBar({
           onLocalChange={onLocalThemeChange}
         />
         <div className="w-px h-5 bg-border/60 hidden lg:block" aria-hidden="true" />
-        <button
-          type="button"
-          onClick={onPreviewAsClient}
-          aria-label="Preview as client"
-          className="inline-flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-background/60 transition-colors"
-        >
-          <Eye className="w-4 h-4" />
-          <span className="hidden lg:inline">Preview</span>
-        </button>
+        {previewMode ? (
+          <button
+            type="button"
+            onClick={onExitPreview}
+            aria-label="Exit preview"
+            className="inline-flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded-full text-sm bg-accent text-accent-foreground animate-pulse hover:opacity-90 transition-opacity"
+          >
+            <Eye className="w-4 h-4" />
+            <span className="hidden lg:inline">Exit preview</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onPreviewAsClient}
+            aria-label="Preview as client"
+            className="inline-flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-background/60 transition-colors"
+          >
+            <Eye className="w-4 h-4" />
+            <span className="hidden lg:inline">Preview</span>
+          </button>
+        )}
+        <div className="w-px h-5 bg-border/60 hidden lg:block" aria-hidden="true" />
         {canShare && <ShareMenu title={title} url={shareUrl} publicStatus={status} label="Share" />}
       </div>
     </div>
