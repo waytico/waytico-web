@@ -1320,7 +1320,7 @@
   padding: 18px clamp(24px, 4vw, 48px);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 24px;
 }
 

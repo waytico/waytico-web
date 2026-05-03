@@ -1272,8 +1272,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
         {resolvedTheme === 'magazine' ? (
           <MagazineTopNav
-            owner={owner}
-            operatorContact={operatorContact}
             visibility={{
               overview: overviewVisible,
               itinerary: itineraryVisible,
