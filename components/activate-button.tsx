@@ -92,7 +92,7 @@ export default function ActivateButton({ projectId, publicStatus, variant = 'def
           {variant === 'compact' ? 'Processing…' : 'Starting checkout…'}
         </>
       ) : (
-        <>{variant === 'compact' ? 'Activate' : 'Activate this trip'}</>
+        <>{variant === 'compact' ? 'Make it a trip' : 'Make it a trip'}</>
       )}
     </button>
   )

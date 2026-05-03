@@ -82,7 +82,7 @@ export function buildTripMenu(status: string, cb: MenuCallbacks): MenuItem[] {
     items.push({ label: 'Delete', onClick: cb.requestDelete, variant: 'danger' })
   } else if (status === 'quoted') {
     if (cb.onActivate) {
-      items.push({ label: 'Activate', onClick: cb.onActivate })
+      items.push({ label: 'Make it a trip', onClick: cb.onActivate })
     }
     items.push({ label: 'Archive…', onClick: cb.requestArchive })
     items.push({ label: 'Delete', onClick: cb.requestDelete, variant: 'danger' })

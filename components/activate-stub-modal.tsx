@@ -57,10 +57,10 @@ export function ActivateStubModal({ open, onClose }: Props) {
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-xl font-serif font-semibold mb-2">Activate this trip</h2>
+        <h2 className="text-xl font-serif font-semibold mb-2">Make it a trip</h2>
         <p className="text-sm text-foreground/70 mb-4 leading-relaxed">
-          Activation moves the trip from quote into operational mode, opening up the prep
-          features for you and the client:
+          Once your client has booked, this switches the page from quote into operational
+          mode, opening up the prep features for you and the client:
         </p>
 
         <ul className="space-y-2 mb-5">
@@ -77,7 +77,7 @@ export function ActivateStubModal({ open, onClose }: Props) {
             Coming soon
           </p>
           <p className="text-sm text-foreground/75 leading-snug">
-            The full activation flow is in beta. We&apos;ll let you know the moment it&apos;s
+            The full booking flow is in beta. We&apos;ll let you know the moment it&apos;s
             ready to use on real client trips.
           </p>
         </div>
