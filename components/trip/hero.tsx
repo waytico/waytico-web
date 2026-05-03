@@ -148,20 +148,29 @@ function HeroTopStrip({
   // so an owner-view trip with no status pill keeps dates flush right and
   // a quote with no contact channel still keeps status flush left.
   //
-  // The hairline rule lives on the OUTER absolute wrapper so it spans
-  // the full hero width (matches the design canon — the line runs from
-  // the left edge of the photo to the right edge, not just inside the
-  // max-w-7xl content column). Keeping it on the outer wrapper also
-  // means it renders identically across owner / public / preview modes
-  // and across breakpoints — earlier the rule was anchored to the
-  // inner container with `sm:border-b` plus a per-element `border-t`
-  // between status and dates, which made it disappear on mobile in
-  // owner mode (no status pill -> no border-t -> no rule).
+  // Width: the strip spans the FULL hero width, not the max-w-7xl content
+  // column. The design canon (Magazine v2) anchors the strip to the photo
+  // edges with even padding on both sides — operator name flush left,
+  // dates flush right, hairline running corner to corner. Centering the
+  // strip in a 1280px column on a 1920px viewport leaves the dates
+  // floating in mid-air while the photo continues 320px past them on
+  // each side. Padding scales with breakpoint (16/32/48px) so the strip
+  // breathes on tablet/desktop without losing the edge-to-edge anchor.
   //
-  // Inner alignment is `items-baseline` on desktop so the status pill
-  // sits on the same baseline as the dates row — `items-center` was
-  // centring two boxes of different heights and the dates visually
-  // floated above the pill's text baseline.
+  // The hairline rule lives on the OUTER absolute wrapper so it spans
+  // the full hero width AND renders identically across owner / public /
+  // preview modes AND across breakpoints — earlier the rule was anchored
+  // to the inner container with `sm:border-b` plus a per-element
+  // `border-t` between status and dates, which made it disappear on
+  // mobile in owner mode (no status pill -> no border-t -> no rule).
+  //
+  // Vertical alignment: items-center (not baseline). The status pill is
+  // an inline-flex with a 6px round dot inside — its baseline as
+  // resolved by the browser sits below its visual centreline, which
+  // pushed the dates row visually upward when items-baseline was used.
+  // Centring the cross-axis avoids relying on the inline-flex baseline
+  // computation; the eyebrow text rows are similar enough in height
+  // (~16px line-box) that center alignment reads as level on the eye.
   const ruleColor = onPhoto ? 'rgba(255,255,255,0.22)' : 'var(--rule)'
   return (
     <div
@@ -176,7 +185,7 @@ function HeroTopStrip({
       }}
     >
       <div
-        className="max-w-7xl mx-auto px-4 py-5 flex flex-col gap-3 items-start sm:flex-row sm:items-baseline sm:gap-4"
+        className="w-full px-4 sm:px-8 lg:px-12 py-5 flex flex-col gap-3 items-start sm:flex-row sm:items-center sm:gap-4"
       >
         {hasStatus && (
           <div
@@ -189,7 +198,7 @@ function HeroTopStrip({
 
         {hasDates && (
           <div
-            className={`order-2 sm:order-none uppercase grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-start sm:flex sm:flex-wrap sm:items-baseline sm:gap-2 sm:gap-y-0 sm:mr-auto ${
+            className={`order-2 sm:order-none uppercase grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-start sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:gap-y-0 sm:mr-auto ${
               hasStatus ? 'w-full pt-3 border-t sm:w-auto sm:pt-0 sm:border-t-0' : ''
             }`}
             style={{
