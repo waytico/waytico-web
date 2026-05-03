@@ -755,21 +755,25 @@ function MagazineDay(props: {
         </button>
       )}
 
-      {/* DOM order — eyebrow / title / date / photo / body — matches the
-       *  mobile reading order (header on top, full-bleed photo below it,
-       *  body text after the photo). On desktop a CSS grid with named
-       *  areas re-lays the same nodes into a 2-column spread so the
-       *  photo sits beside the text — alternating left/right via the
-       *  --reverse modifier. */}
-      <header className="tp-mag-day__header">
-        <p className="tp-mag-day__eyebrow">{eyebrowText}</p>
-        <h3 className="tp-mag-day__title">{renderDayTitle(day)}</h3>
-        {dayDateLabel && <p className="tp-mag-day__date">{dayDateLabel}</p>}
-      </header>
+      {/* Two siblings of <article>: a text column (header + body) and a
+       *  photo. On desktop the grid puts text-col in one column and
+       *  photo in the other (alternating left/right via --reverse).
+       *  On mobile the text-col uses display:contents to "promote" its
+       *  header + body up to the article's flex parent, so the visual
+       *  order becomes header / photo / body — matching the magazine
+       *  mobile canon. The photo also goes full-bleed on mobile (see
+       *  themes.css). */}
+      <div className="tp-mag-day__text-col">
+        <header className="tp-mag-day__header">
+          <p className="tp-mag-day__eyebrow">{eyebrowText}</p>
+          <h3 className="tp-mag-day__title">{renderDayTitle(day)}</h3>
+          {dayDateLabel && <p className="tp-mag-day__date">{dayDateLabel}</p>}
+        </header>
+
+        <div className="tp-mag-day__body">{renderDayDescription(day)}</div>
+      </div>
 
       {photoNode && <div className="tp-mag-day__photo">{photoNode}</div>}
-
-      <div className="tp-mag-day__body">{renderDayDescription(day)}</div>
     </article>
   )
 }

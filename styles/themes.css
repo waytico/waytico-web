@@ -1813,9 +1813,11 @@
 }
 
 [data-theme="magazine"] .tp-mag-day {
-  /* Mobile: simple stack — header / photo / body — DOM order is the
-     reading order. The padding-top + border-top draw the hairline rule
-     between consecutive days. */
+  /* Mobile: a flex column that reads header / photo / body. The
+     <div .tp-mag-day__text-col> wrapper that exists in the DOM uses
+     display:contents below 1024px, so its children (header + body)
+     are promoted to direct flex children of .tp-mag-day. With
+     `order` we then place them around the photo. */
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -1824,33 +1826,56 @@
   position: relative;
 }
 
+@media (max-width: 1023px) {
+  /* Promote header + body up to .tp-mag-day's flex container. */
+  [data-theme="magazine"] .tp-mag-day__text-col {
+    display: contents;
+  }
+  /* Mobile reading order: header (1) / photo (2) / body (3).
+     The header gets a small bottom-margin override against the flex
+     gap so the photo sits visually closer to its title than to the
+     body paragraph below it — matching the magazine cadence. */
+  [data-theme="magazine"] .tp-mag-day__header { order: 1; }
+  [data-theme="magazine"] .tp-mag-day__photo  { order: 2; }
+  [data-theme="magazine"] .tp-mag-day__body   { order: 3; }
+}
+
 @media (min-width: 1024px) {
+  /* Desktop: two-column spread. Default (Day 1, 3, 5…) places the
+     photo on the LEFT in the wider column (1.4fr), the text column
+     on the RIGHT in the narrower column (1fr). --reverse (Day 2, 4,
+     6…) flips this so even-numbered days mirror, producing the
+     alternating spread the magazine canon uses. align-items: center
+     vertically centers the text column inside the (taller) photo's
+     row. */
   [data-theme="magazine"] .tp-mag-day {
-    /* Desktop: 2-column spread with named grid areas. The same DOM
-       (header / photo / body) is re-laid so header + body share the
-       text column and the photo spans both rows in the photo column.
-       --reverse swaps which column gets the photo, producing
-       alternating spreads down the page. */
     display: grid;
     grid-template-columns: 1.4fr 1fr;
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      "header photo"
-      "body   photo";
     column-gap: 64px;
-    row-gap: 32px;
     padding-top: 60px;
-    align-items: start;
+    align-items: center;
   }
-  [data-theme="magazine"] .tp-mag-day__header { grid-area: header; }
-  [data-theme="magazine"] .tp-mag-day__photo  { grid-area: photo; align-self: stretch; }
-  [data-theme="magazine"] .tp-mag-day__body   { grid-area: body; }
+  [data-theme="magazine"] .tp-mag-day__photo {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  [data-theme="magazine"] .tp-mag-day__text-col {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-self: center;
+  }
 
   [data-theme="magazine"] .tp-mag-day--reverse {
     grid-template-columns: 1fr 1.4fr;
-    grid-template-areas:
-      "photo header"
-      "photo body";
+  }
+  [data-theme="magazine"] .tp-mag-day--reverse .tp-mag-day__photo {
+    grid-column: 2;
+  }
+  [data-theme="magazine"] .tp-mag-day--reverse .tp-mag-day__text-col {
+    grid-column: 1;
   }
 }
 
