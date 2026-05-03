@@ -306,24 +306,24 @@
    the trip-action row in a single sticky bar. Two breakpoints:
 
      • mobile (<sm): bar is 2 rows tall — global nav above, actions
-       below. Combined height ≈ 84px.
-     • desktop (≥sm): bar is 1 row, all in line — ≈ 44px.
+       below. Combined height ≈ 78px.
+     • desktop (≥sm): bar is 1 row, all in line — ≈ 40px.
 
    The in-theme nav sits below whatever sticks above it. Public viewers
    don't see the bar at all so top:0 is correct for them. */
 [data-owner-view="true"] .tp-nav {
-  top: 84px;
+  top: 78px;
 }
 @media (min-width: 640px) {
   [data-owner-view="true"] .tp-nav {
-    top: 44px;
+    top: 40px;
   }
 }
 /* Showcase / demo: the orange banner (52px) sits above the standalone
-   action bar (44px). 52 + 44 = 96px on every viewport (banner is
+   action bar (40px). 52 + 40 = 92px on every viewport (banner is
    always one row). */
 [data-showcase="true"] .tp-nav {
-  top: 96px;
+  top: 92px;
 }
 .tp-nav-inner {
   max-width: 1120px; margin: 0 auto; padding: 14px 32px;
@@ -1306,11 +1306,11 @@
   }
 
   [data-owner-view="true"] [data-theme="magazine"] .tp-mag-topnav {
-    top: 44px;
+    top: 40px;
   }
 
   [data-showcase="true"] [data-theme="magazine"] .tp-mag-topnav {
-    top: 96px;
+    top: 92px;
   }
 }
 

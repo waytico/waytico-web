@@ -250,8 +250,8 @@ export function TripActionBar({
               }
             >
               <Lock className="w-4 h-4" />
-              <span className="hidden sm:inline">Client info</span>
-              <span className="hidden sm:inline">
+              <span className="hidden lg:inline">Client info</span>
+              <span className="hidden lg:inline">
                 {clientInfoOpen ? (
                   <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
                 ) : (
@@ -259,7 +259,7 @@ export function TripActionBar({
                 )}
               </span>
             </button>
-            <div className="w-px h-5 bg-border/60 hidden sm:block" aria-hidden="true" />
+            <div className="w-px h-5 bg-border/60 hidden lg:block" aria-hidden="true" />
           </>
         )}
         <ThemeSwitcher
@@ -268,7 +268,7 @@ export function TripActionBar({
           isShowcase={isShowcase}
           onLocalChange={onLocalThemeChange}
         />
-        <div className="w-px h-5 bg-border/60 hidden sm:block" aria-hidden="true" />
+        <div className="w-px h-5 bg-border/60 hidden lg:block" aria-hidden="true" />
         <button
           type="button"
           onClick={onPreviewAsClient}
@@ -276,7 +276,7 @@ export function TripActionBar({
           className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
         >
           <Eye className="w-4 h-4" />
-          <span className="hidden sm:inline">Preview as client</span>
+          <span className="hidden lg:inline">Preview as client</span>
         </button>
         {canShare && <ShareMenu title={title} url={shareUrl} publicStatus={status} />}
       </div>

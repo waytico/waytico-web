@@ -38,7 +38,7 @@ export default function Header({ tripActions }: Props) {
   if (!tripActions) {
     return (
       <header className="sticky top-0 z-30 w-full border-b border-border/50 bg-background/95 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-1.5 flex items-center justify-between">
           <GlobalLeft />
           <GlobalRight />
         </div>
@@ -52,10 +52,10 @@ export default function Header({ tripActions }: Props) {
     <header className="sticky top-0 z-30 w-full border-b border-border/50 bg-background/95 backdrop-blur-sm">
       <div
         className="
-          max-w-7xl mx-auto px-4 py-2
+          max-w-7xl mx-auto px-4 py-1.5
           grid items-center
-          grid-cols-[auto_1fr] grid-rows-[auto_auto] gap-x-3 gap-y-2
-          sm:grid-cols-[auto_1fr_auto] sm:grid-rows-1 sm:gap-y-0 sm:gap-x-4
+          grid-cols-[auto_1fr] grid-rows-[auto_auto] gap-x-3 gap-y-1.5
+          sm:grid-cols-[auto_1fr_auto] sm:grid-rows-1 sm:gap-y-0 sm:gap-x-3
         "
       >
         <div className="row-start-1 col-start-1 justify-self-start">

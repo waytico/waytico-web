@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { Check, ChevronDown } from 'lucide-react'
+import { Check, ChevronDown, Palette } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { THEME_LABELS, resolveTheme, type ThemeId } from '@/lib/themes'
 
@@ -115,11 +115,13 @@ export function ThemeSwitcher({ projectId, value, isShowcase, onLocalChange }: P
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={busy || isPending}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-60"
+        aria-label="Pick a design"
         aria-haspopup="listbox"
         aria-expanded={open}
+        className="inline-flex items-center gap-1.5 px-2 lg:px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-60"
       >
-        <span>Pick a design</span>
+        <Palette className="w-4 h-4" aria-hidden="true" />
+        <span className="hidden lg:inline">Pick a design</span>
         <ChevronDown className="w-3.5 h-3.5" />
       </button>
 

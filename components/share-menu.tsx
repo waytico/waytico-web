@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { Send } from 'lucide-react'
 import { toast } from 'sonner'
 
 type Props = {
@@ -68,9 +69,11 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
+          aria-label={label}
+          className="inline-flex items-center gap-1.5 px-2 lg:px-3 py-1.5 rounded-full text-sm text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
         >
-          {label}
+          <Send className="w-4 h-4" aria-hidden="true" />
+          <span className="hidden lg:inline">{label}</span>
         </button>
       )}
 
