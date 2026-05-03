@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Edit3 } from 'lucide-react'
 import { toast } from 'sonner'
 
 type BaseProps = {
@@ -13,6 +14,13 @@ type BaseProps = {
   /** Optional custom rendering when NOT editing (e.g. bullet list for multiline).
    *  Only used if the field has a non-empty value. */
   renderDisplay?: (value: string) => ReactNode
+  /** Show a subtle pencil icon next to the field in display mode (owner only).
+   *  Helps owners spot what's editable at a glance — same affordance the
+   *  proposalDate / validUntil dates have always had on the hero strip,
+   *  now consistent across every editable field on the page.
+   *  Defaults to true. Pass false in places where the icon clashes with
+   *  layout (e.g. inside other compound widgets). */
+  withEditIcon?: boolean
 }
 
 type TextProps = BaseProps & {
@@ -192,6 +200,27 @@ export function EditableField(props: Props) {
   if (!editing) {
     const hasValue = displayStr.length > 0
     const interactive = 'cursor-text rounded-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-accent/40'
+    const showIcon = props.withEditIcon !== false
+
+    // Single-line affordance: inline-flex keeps the field flowing inline-like
+    // (so it can sit inside a sentence or stat tile) while giving us a flex
+    // context to place the pencil icon next to the value.
+    const inlineIcon = showIcon ? (
+      <Edit3
+        className="w-3 h-3 opacity-40 group-hover:opacity-90 transition-opacity flex-shrink-0"
+        aria-hidden="true"
+      />
+    ) : null
+
+    // Multiline affordance: position the icon top-right via absolute so it
+    // never breaks the long-text flow (overview, day description, terms,
+    // included/not-included). Caller's className still owns text styling.
+    const blockIcon = showIcon ? (
+      <Edit3
+        className="absolute top-1 right-1 w-3 h-3 opacity-40 group-hover:opacity-90 transition-opacity pointer-events-none"
+        aria-hidden="true"
+      />
+    ) : null
 
     if (hasValue) {
       // Custom display for multiline if provided
@@ -202,9 +231,10 @@ export function EditableField(props: Props) {
             tabIndex={0}
             onClick={() => setEditing(true)}
             onKeyDown={(e) => { if (e.key === 'Enter') setEditing(true) }}
-            className={`${interactive} ${props.className ?? ''}`}
+            className={`relative group ${interactive} ${showIcon ? 'pr-5' : ''} ${props.className ?? ''}`}
           >
             {props.renderDisplay(displayStr)}
+            {blockIcon}
           </div>
         )
       }
@@ -215,10 +245,11 @@ export function EditableField(props: Props) {
             tabIndex={0}
             onClick={() => setEditing(true)}
             onKeyDown={(e) => { if (e.key === 'Enter') setEditing(true) }}
-            className={`${interactive} ${props.className ?? ''}`}
+            className={`relative group ${interactive} ${showIcon ? 'pr-5' : ''} ${props.className ?? ''}`}
             style={{ whiteSpace: 'pre-line' }}
           >
             {displayStr}
+            {blockIcon}
           </div>
         )
       }
@@ -232,9 +263,10 @@ export function EditableField(props: Props) {
             tabIndex={0}
             onClick={() => setEditing(true)}
             onKeyDown={(e) => { if (e.key === 'Enter') setEditing(true) }}
-            className={`${interactive} ${props.className ?? ''}`}
+            className={`group inline-flex items-center gap-1 ${interactive} ${props.className ?? ''}`}
           >
-            {fmt}
+            <span>{fmt}</span>
+            {inlineIcon}
           </span>
         )
       }
@@ -247,11 +279,14 @@ export function EditableField(props: Props) {
             tabIndex={0}
             onClick={() => setEditing(true)}
             onKeyDown={(e) => { if (e.key === 'Enter') setEditing(true) }}
-            className={`${interactive} ${props.className ?? ''}`}
+            className={`group inline-flex items-center gap-1 ${interactive} ${props.className ?? ''}`}
           >
-            {props.prefix ?? ''}
-            {formatted}
-            {props.suffix ? ` ${props.suffix}` : ''}
+            <span>
+              {props.prefix ?? ''}
+              {formatted}
+              {props.suffix ? ` ${props.suffix}` : ''}
+            </span>
+            {inlineIcon}
           </span>
         )
       }
@@ -261,14 +296,16 @@ export function EditableField(props: Props) {
           tabIndex={0}
           onClick={() => setEditing(true)}
           onKeyDown={(e) => { if (e.key === 'Enter') setEditing(true) }}
-          className={`${interactive} ${props.className ?? ''}`}
+          className={`group inline-flex items-center gap-1 ${interactive} ${props.className ?? ''}`}
         >
-          {displayStr}
+          <span>{displayStr}</span>
+          {inlineIcon}
         </span>
       )
     }
 
-    // Empty + owner: show subtle placeholder
+    // Empty + owner: show subtle placeholder. Same icon affordance applies —
+    // an empty editable field is still an editable field.
     const placeholderText = props.placeholder ?? 'Click to edit'
     return (
       <span
@@ -276,9 +313,10 @@ export function EditableField(props: Props) {
         tabIndex={0}
         onClick={() => setEditing(true)}
         onKeyDown={(e) => { if (e.key === 'Enter') setEditing(true) }}
-        className={`${interactive} ${props.className ?? ''} text-muted-foreground/70 italic`}
+        className={`group inline-flex items-center gap-1 ${interactive} ${props.className ?? ''} text-muted-foreground/70 italic`}
       >
-        {placeholderText}
+        <span>{placeholderText}</span>
+        {inlineIcon}
       </span>
     )
   }

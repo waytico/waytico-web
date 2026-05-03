@@ -12,6 +12,7 @@ import {
   Sparkles,
   StickyNote,
   Compass,
+  Edit3,
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -444,13 +445,17 @@ function Field({
           onClick={() => setEditing(true)}
           title={label}
           aria-label={label}
-          className={`${baseBox} text-left truncate ${
+          className={`group ${baseBox} text-left flex items-center gap-1.5 ${
             filled
               ? 'bg-card border-border hover:border-foreground/30 text-foreground'
               : 'bg-card/40 border-dashed border-border hover:border-foreground/30 text-foreground/40 italic'
           }`}
         >
-          {displayValue || placeholder}
+          <span className="flex-1 min-w-0 truncate">{displayValue || placeholder}</span>
+          <Edit3
+            className="w-3 h-3 opacity-40 group-hover:opacity-90 transition-opacity flex-shrink-0"
+            aria-hidden="true"
+          />
         </button>
       )}
     </div>

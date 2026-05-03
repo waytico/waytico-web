@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { Edit3, Trash2, Eye, EyeOff, FileText, Upload, X } from 'lucide-react'
+import { Trash2, Eye, EyeOff, FileText, Upload, X } from 'lucide-react'
 
 import ActivationToast from '@/components/activation-toast'
 import PhotosBlock from '@/components/photos-block'
@@ -1187,34 +1187,22 @@ export default function TripPageClient({ slug, initialData }: Props) {
             validUntil={validUntilISO}
             proposalSlot={
               ed ? (
-                <span className="inline-flex items-center gap-1 group">
-                  <EditableField
-                    as="date"
-                    editable
-                    value={proposalDateISO}
-                    onSave={(v) => saveProjectPatch({ proposalDate: v || null })}
-                  />
-                  <Edit3
-                    className="w-3 h-3 opacity-40 group-hover:opacity-90 transition-opacity"
-                    aria-hidden="true"
-                  />
-                </span>
+                <EditableField
+                  as="date"
+                  editable
+                  value={proposalDateISO}
+                  onSave={(v) => saveProjectPatch({ proposalDate: v || null })}
+                />
               ) : undefined
             }
             validUntilSlot={
               ed ? (
-                <span className="inline-flex items-center gap-1 group">
-                  <EditableField
-                    as="date"
-                    editable
-                    value={validUntilISO}
-                    onSave={(v) => saveProjectPatch({ validUntil: v || null })}
-                  />
-                  <Edit3
-                    className="w-3 h-3 opacity-40 group-hover:opacity-90 transition-opacity"
-                    aria-hidden="true"
-                  />
-                </span>
+                <EditableField
+                  as="date"
+                  editable
+                  value={validUntilISO}
+                  onSave={(v) => saveProjectPatch({ validUntil: v || null })}
+                />
               ) : undefined
             }
             operatorContact={operatorContact}
