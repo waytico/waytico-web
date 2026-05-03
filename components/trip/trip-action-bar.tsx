@@ -312,7 +312,11 @@ export function TripActionBar({
           </button>
         )}
         <div className="w-px h-5 bg-border/60 hidden lg:block" aria-hidden="true" />
-        {canShare && <ShareMenu title={title} url={shareUrl} publicStatus={status} label="Share" />}
+        {canShare && (
+          <div className="lg:ml-3">
+            <ShareMenu title={title} url={shareUrl} publicStatus={status} label="Share" />
+          </div>
+        )}
       </div>
     </div>
   )

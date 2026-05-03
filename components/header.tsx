@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
 import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
 
 type Props = {
@@ -72,7 +71,7 @@ export default function Header({ tripActions }: Props) {
   )
 }
 
-/** Left global slot: Waytico wordmark + "+ New quote" pill (signed-in only). */
+/** Left global slot: Waytico wordmark (links to home). */
 function GlobalLeft() {
   return (
     <div className="flex items-center gap-2">
@@ -82,15 +81,6 @@ function GlobalLeft() {
       >
         Waytico
       </Link>
-      <SignedIn>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1 h-7 px-2.5 text-xs font-medium border border-accent/40 text-accent hover:bg-accent/10 transition-colors rounded-md whitespace-nowrap"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          New<span className="hidden sm:inline">&nbsp;quote</span>
-        </Link>
-      </SignedIn>
     </div>
   )
 }

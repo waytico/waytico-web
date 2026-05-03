@@ -1068,6 +1068,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
           }
         />
       )}
+
+      {isOwner && previewAsClient && !isShowcase && !isAnonCreator && (
+        <div className="sticky top-[84px] sm:top-11 z-20 bg-accent text-accent-foreground">
+          <div className="w-full px-4 sm:px-8 lg:px-12 py-1 flex items-center justify-center gap-2 text-xs">
+            <Eye className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>You&apos;re previewing as your client sees this page.</span>
+          </div>
+        </div>
+      )}
       {isShowcase && <ShowcaseBanner />}
       {isShowcase && showOwnerUI && p.id && (
         <TripActionBar
