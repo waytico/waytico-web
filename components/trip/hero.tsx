@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
 import type { ThemeId } from '@/lib/themes'
 import { HERO_STYLE } from '@/lib/themes'
-import { fmtDate } from '@/lib/trip-format'
+import { fmtDate, numberToWords } from '@/lib/trip-format'
 import { PublicStatusPill } from './public-status-pill'
 
 export type HeroOperatorContact = {
@@ -145,12 +145,17 @@ function HeroTopStrip({
   //  desktop (≥640px):
   //    grid-cols-[1fr_auto_1fr]  ← center column hugs content
   //    [status (left)]   [contact (centered)]   [dates (right)]
+  //    bottom hairline runs under the whole strip — separates metadata
+  //    band from the hero content below.
   //
   //  mobile (<640px):
-  //    grid-cols-1
-  //    status / dates / contact, top-to-bottom, left-aligned
+  //    grid-cols-1, top-to-bottom: dates → status → contact
+  //    Reordered so the lifecycle dates lead (they're the most concrete
+  //    fact a recipient looks for); status pill with the quote code sits
+  //    under a thin rule, contact follows last as the action surface.
   //    dates render as their own 2-col grid: label | date, label | date
   //    so the date columns line up under each other.
+  const ruleColor = onPhoto ? 'rgba(255,255,255,0.2)' : 'var(--rule)'
   return (
     <div
       style={{
@@ -162,11 +167,19 @@ function HeroTopStrip({
         pointerEvents: 'none',
       }}
     >
-      <div className="max-w-7xl mx-auto px-4 py-5 grid grid-cols-1 gap-3 items-start sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4">
+      <div
+        className="max-w-7xl mx-auto px-4 py-5 grid grid-cols-1 gap-3 items-start sm:border-b sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4"
+        style={{ borderBottomColor: ruleColor }}
+      >
         {hasStatus && (
           <div
-            className="sm:col-start-1 sm:justify-self-start"
-            style={{ pointerEvents: 'auto' }}
+            className={`order-2 sm:order-none sm:col-start-1 sm:justify-self-start ${
+              hasDates ? 'border-t pt-3 sm:border-t-0 sm:pt-0' : ''
+            }`}
+            style={{
+              pointerEvents: 'auto',
+              ...(hasDates ? { borderTopColor: ruleColor } : {}),
+            }}
           >
             <PublicStatusPill status={status} onPhoto={onPhoto} code={code} />
           </div>
@@ -174,7 +187,7 @@ function HeroTopStrip({
 
         {hasContactAgent && (
           <div
-            className="justify-self-start sm:col-start-2 sm:justify-self-center"
+            className="order-3 sm:order-none justify-self-start sm:col-start-2 sm:justify-self-center"
             style={{ pointerEvents: 'auto' }}
           >
             {renderedContactAgent}
@@ -183,7 +196,7 @@ function HeroTopStrip({
 
         {hasDates && (
           <div
-            className="uppercase grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-start sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:gap-y-0 sm:col-start-3 sm:justify-self-end"
+            className="order-1 sm:order-none uppercase grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-start sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:gap-y-0 sm:col-start-3 sm:justify-self-end"
             style={{ ...datesStyle, pointerEvents: 'auto' }}
           >
             {hasOwnerCode && (
@@ -502,9 +515,18 @@ function HeroMagazine(props: HeroProps) {
   // Bottom eyebrow: "{COUNTRY} — {N} DAYS". Each part hides individually
   // when missing; if neither is present the line is omitted. The country
   // already lives here, so the top strip never renders a second copy.
+  // Magazine spells the day count out — "SEVEN DAYS" reads more editorial
+  // than "7 DAYS"; numerals stay everywhere else (stat tiles, day badges)
+  // where compactness matters more than register.
   const bottomCountry = country ? country.toUpperCase() : null
+  const durationWord =
+    durationDays != null ? numberToWords(durationDays) : null
+  const durationDisplay =
+    durationDays != null
+      ? durationWord ?? String(durationDays)
+      : null
   const bottomDuration =
-    durationDays != null ? `${durationDays} ${UI.days.toUpperCase()}` : null
+    durationDisplay != null ? `${durationDisplay} ${UI.days.toUpperCase()}` : null
   const bottomEyebrowParts = [bottomCountry, bottomDuration].filter(
     (p): p is string => !!p,
   )

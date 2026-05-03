@@ -165,3 +165,38 @@ export function extractQuoteCode(slug: string | null | undefined): string | null
   if (!match) return null
   return match[1].toUpperCase()
 }
+
+/**
+ * Render a small natural number as an UPPERCASE English word.
+ *
+ * Used in the Magazine hero bottom eyebrow so a 7-day trip reads as
+ * "PORTUGAL — SEVEN DAYS" instead of "PORTUGAL — 7 DAYS" — gives the
+ * editorial register that Magazine is going for. Numerals stay correct
+ * everywhere else (stat tiles, day badges) where compactness matters.
+ *
+ * Range: 1–30. Anything outside that returns null and the caller is
+ * expected to fall back to the numeric form. The cap covers the
+ * realistic length of a tour and avoids dragging in a full
+ * number-to-words library.
+ */
+const ONES_WORDS = [
+  '', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE',
+  'SIX', 'SEVEN', 'EIGHT', 'NINE',
+]
+const TEENS_WORDS = [
+  'TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN',
+  'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN',
+]
+const TENS_WORDS = ['', '', 'TWENTY', 'THIRTY']
+
+export function numberToWords(n: number | null | undefined): string | null {
+  if (n == null || !Number.isFinite(n)) return null
+  if (!Number.isInteger(n)) return null
+  if (n < 1 || n > 30) return null
+  if (n < 10) return ONES_WORDS[n]
+  if (n < 20) return TEENS_WORDS[n - 10]
+  const tens = Math.floor(n / 10)
+  const ones = n % 10
+  if (ones === 0) return TENS_WORDS[tens]
+  return `${TENS_WORDS[tens]}-${ONES_WORDS[ones]}`
+}
