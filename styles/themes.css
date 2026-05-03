@@ -1987,6 +1987,21 @@
   }
 }
 
+/* Day title with \n separator — head + italic tail rendered on a
+   single line. The frontend wraps each piece via MagazineDayTitle
+   when theme === 'magazine'. The classes are explicit (rather than
+   relying on the default <em> italic) so the styling stays
+   predictable if we ever swap the display font. */
+[data-theme="magazine"] .tp-mag-day__title-head {
+  font-style: normal;
+}
+
+[data-theme="magazine"] .tp-mag-day__title-tail {
+  font-style: italic;
+  font-weight: inherit;
+  color: inherit;
+}
+
 [data-theme="magazine"] .tp-mag-day__date {
   font-family: var(--font-mono);
   font-size: 10px;

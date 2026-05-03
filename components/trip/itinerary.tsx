@@ -777,3 +777,47 @@ function MagazineDay(props: {
     </article>
   )
 }
+
+/**
+ * Magazine day title — split on a single embedded \n into a regular
+ * head and an italic tail, rendered on ONE line with a space between
+ * them. Same separator semantics as the hero title (Head\nTail), but
+ * the day title visually stays on a single row — the \n only marks
+ * "where italic begins".
+ *
+ * Examples:
+ *   "Arrival in\nVancouver"          → Arrival in *Vancouver*
+ *   "Victoria and\nButchart Gardens" → Victoria and *Butchart Gardens*
+ *
+ * If the title has no \n (legacy data, "Arrival in Vancouver" as one
+ * fragment), render plain regular — no italic, no spans. The pipeline
+ * + editor agent (pipeline_days v11 / trip_editor v15) produce new
+ * day titles in the Head\nTail shape; existing titles stay valid and
+ * render plain until the operator asks the agent to rewrite them.
+ *
+ * Used by trip-page-client both directly (public viewer) and as the
+ * `renderDisplay` callback of the EditableField used for the day title
+ * in owner mode — so the operator sees the formatted italic-tail layout
+ * when not actively editing.
+ */
+export function MagazineDayTitle({ text }: { text: string }) {
+  if (!text) return null
+  const idx = text.indexOf('\n')
+  if (idx === -1) {
+    // Legacy single-fragment title — render plain.
+    return <span>{text}</span>
+  }
+  const head = text.slice(0, idx).trimEnd()
+  const tail = text.slice(idx + 1).trimStart()
+  if (!tail) {
+    // Stray trailing \n — degrade gracefully to plain head.
+    return <span>{head}</span>
+  }
+  return (
+    <>
+      <span className="tp-mag-day__title-head">{head}</span>
+      {' '}
+      <em className="tp-mag-day__title-tail">{tail}</em>
+    </>
+  )
+}
