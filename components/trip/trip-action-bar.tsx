@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { ChevronDown, Eye, Lock } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye, Lock } from 'lucide-react'
 import ShareMenu from '@/components/share-menu'
 import { ActivateStubModal } from '@/components/activate-stub-modal'
 import { apiFetch } from '@/lib/api'
@@ -240,6 +240,11 @@ export function TripActionBar({
                   <Lock className="w-4 h-4" />
                   <span className="hidden sm:inline">Client info</span>
                   <span className="sm:hidden">Client</span>
+                  {clientInfoOpen ? (
+                    <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
+                  )}
                 </button>
                 <div className="w-px h-5 bg-border/60 hidden sm:block" aria-hidden="true" />
               </>
