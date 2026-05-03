@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { Trash2, Eye, EyeOff, FileText, Upload, X } from 'lucide-react'
+import { Trash2, Eye, EyeOff, FileText, Upload, X, Edit3 } from 'lucide-react'
 
 import ActivationToast from '@/components/activation-toast'
 import PhotosBlock from '@/components/photos-block'
@@ -61,6 +61,100 @@ type Props = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://waytico-web.onrender.com'
+
+/**
+ * Owner-mode hero date editor. Shows the formatted range
+ * ("Jun 30 — Jul 5, 2026") as a single click target; opening it reveals
+ * a narrow, light-styled date picker for the start date only. The end
+ * date follows automatically — the backend's reconcileDates() rebuilds
+ * dates_end and stamps each itinerary day from the new start, so there
+ * is no second input to keep in sync. The input is forced to a light
+ * color-scheme so the native calendar icon stays visible on the
+ * full-bleed Magazine hero photo.
+ */
+function DateStartEditor({
+  datesStart,
+  datesEnd,
+  onSave,
+}: {
+  datesStart: string | null
+  datesEnd: string | null
+  onSave: (v: string) => Promise<boolean>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+  const startIso = (datesStart ?? '').slice(0, 10)
+
+  useEffect(() => {
+    if (editing) {
+      setDraft(startIso)
+      // Defer to next tick so the input is mounted before we focus / open.
+      const id = setTimeout(() => {
+        inputRef.current?.focus()
+        try {
+          inputRef.current?.showPicker?.()
+        } catch {
+          /* showPicker is browser-gated; focus is enough on the rest. */
+        }
+      }, 0)
+      return () => clearTimeout(id)
+    }
+  }, [editing, startIso])
+
+  const formatted = fmtDateRangeLong(datesStart, datesEnd)
+
+  const commit = async () => {
+    setEditing(false)
+    if (draft && draft !== startIso) {
+      await onSave(draft)
+    }
+  }
+  const cancel = () => setEditing(false)
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="date"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            commit()
+          }
+          if (e.key === 'Escape') {
+            e.preventDefault()
+            cancel()
+          }
+        }}
+        className="bg-white text-foreground border border-border rounded px-2 py-0.5 italic text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+        style={{ width: '160px', colorScheme: 'light' }}
+      />
+    )
+  }
+
+  const display = formatted ?? 'Click to edit'
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      onClick={() => setEditing(true)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') setEditing(true)
+      }}
+      className="group inline-flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity"
+    >
+      <span>{display}</span>
+      <Edit3
+        className="w-3 h-3 opacity-40 group-hover:opacity-90 transition-opacity"
+        aria-hidden="true"
+      />
+    </span>
+  )
+}
 
 export default function TripPageClient({ slug, initialData }: Props) {
   const router = useRouter()
@@ -737,23 +831,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
   // undefined so the formatted strings render as before.
 
   const dateStatSlot: ReactNode | undefined = ed ? (
-    <span style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
-      <EditableField
-        as="date"
-        editable
-        value={p.dates_start}
-        placeholder="Start"
-        onSave={(v) => saveProjectPatch({ datesStart: v })}
-      />
-      <span style={{ color: 'var(--ink-mute)' }}>–</span>
-      <EditableField
-        as="date"
-        editable
-        value={p.dates_end}
-        placeholder="End"
-        onSave={(v) => saveProjectPatch({ datesEnd: v })}
-      />
-    </span>
+    <DateStartEditor
+      datesStart={p.dates_start ?? null}
+      datesEnd={p.dates_end ?? null}
+      onSave={async (v) => saveProjectPatch({ datesStart: v })}
+    />
   ) : undefined
 
   // Hero duration tile is read-only even in owner mode. The tile is a
@@ -1391,6 +1473,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         />
 
         <TripItinerary
+          key={`itinerary-${p.dates_start ?? 'no-start'}-${itinerary.length}`}
           theme={resolvedTheme}
           itinerary={itinerary as any}
           media={media as any}
