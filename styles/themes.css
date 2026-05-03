@@ -1497,9 +1497,9 @@
   color: rgba(245, 240, 230, 0.9);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   margin: 0 0 20px 0;
-  /* Allow the parts (DATES · DAYS · COUNTRY) to wrap as a group rather
-     than break a piece across lines. Each part is its own inline-block
-     wrapper so it stays atomic. */
+  /* Allow the parts (COUNTRY · DAYS, or just DATES) to wrap as a
+     group rather than break a piece across lines. Each part is its
+     own inline-block wrapper so it stays atomic. */
   display: flex;
   flex-wrap: wrap;
   gap: 0;
@@ -1513,35 +1513,57 @@
   }
 }
 
+/* Second eyebrow line (DATES). Sits 4-6px under the COUNTRY/DAYS line
+   so the two read as a tight pair, then the standard 20-24px gap to
+   the title is preserved by the bottom margin of THIS line — the
+   first line's margin-bottom is overridden to a small in-pair gap. */
+[data-theme="magazine"] .tp-mag-hero__bottom-eyebrow:has(+ .tp-mag-hero__bottom-eyebrow--dates) {
+  margin-bottom: 6px;
+}
+
+[data-theme="magazine"] .tp-mag-hero__bottom-eyebrow--dates {
+  /* When the dates line stands on its own (no COUNTRY/DAYS line above)
+     it inherits the standard 20/24px bottom margin from the base rule.
+     When it follows the COUNTRY/DAYS line, the :has() selector above
+     tightens the upper margin and we leave the bottom margin at its
+     default 20/24px so the gap to the title is preserved. */
+  opacity: 0.92;
+}
+
 [data-theme="magazine"] .tp-mag-hero__bottom-eyebrow-part {
-  /* Each "part" is one of DATES / DAYS / COUNTRY. The dot separator is
-     rendered as a sibling span — keeping it inside this wrapper would
-     make the whole part-with-leading-dot non-atomic for wrap purposes. */
+  /* Each "part" is one of COUNTRY / DAYS / DATES. The dot/em-dash
+     separator is rendered as a sibling span — keeping it inside this
+     wrapper would make the whole part-with-leading-separator non-
+     atomic for wrap purposes. */
   display: inline-flex;
   align-items: baseline;
   white-space: nowrap;
 }
 
 [data-theme="magazine"] .tp-mag-hero__bottom-eyebrow-sep {
-  /* Subtle interpunct between parts. Width matches the eyebrow's letter
-     spacing so visually the dot floats centred between adjacent words. */
+  /* Separator between parts on a single eyebrow line. Width matches
+     the eyebrow's letter spacing so the dash sits centred between
+     adjacent words. */
   opacity: 0.65;
   white-space: pre;
 }
 
 /* When owner-mode passes dateStatSlot (an inline pair of EditableField
-   components for start / end dates), force the inputs to inherit the
-   eyebrow's mono uppercase tracking. Without this they'd render in the
-   default sans body font and visually break the editorial line. The
+   components for start / end dates) or durationStatSlot (an <a> linking
+   to #itinerary), force the children to inherit the eyebrow's mono
+   uppercase tracking. Without this they'd render in the default sans
+   body font / link-blue and visually break the editorial line. The
    span-with-role="button" view-mode display gets the same treatment. */
 [data-theme="magazine"] .tp-mag-hero__bottom-eyebrow .editable-field,
 [data-theme="magazine"] .tp-mag-hero__bottom-eyebrow input,
-[data-theme="magazine"] .tp-mag-hero__bottom-eyebrow [role="button"] {
+[data-theme="magazine"] .tp-mag-hero__bottom-eyebrow [role="button"],
+[data-theme="magazine"] .tp-mag-hero__bottom-eyebrow a {
   font-family: inherit;
   font-size: inherit;
   letter-spacing: inherit;
   text-transform: inherit;
   color: inherit;
+  text-decoration: none;
 }
 
 [data-theme="magazine"] .tp-mag-hero__title {

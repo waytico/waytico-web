@@ -514,41 +514,67 @@ function HeroMagazine(props: HeroProps) {
     country,
     dateRange,
     dateStatSlot,
+    durationStatSlot,
     ownerOverlay,
     code,
     highlightsSlots,
   } = props
 
-  // Bottom eyebrow: "{DATES} · {N} DAYS · {COUNTRY}". Each piece hides
-  // individually when missing; if none are present the line is omitted.
+  // Bottom eyebrow lives on TWO lines, matching the prior stat-tile
+  // semantics:
   //
-  // DATES are the only editable piece — owner mode passes dateStatSlot
-  // (an inline EditableField pair start/end). Public mode renders the
-  // formatted dateRange string. The slot visually inherits the eyebrow's
-  // mono uppercase tracking through CSS rules scoped to
-  // .tp-mag-hero__bottom-eyebrow .editable-field-* in themes.css.
+  //   Line 1 — "{COUNTRY} — {N} DAYS"
+  //     COUNTRY is read-only (no editor; it's a derived hero field).
+  //     N DAYS reads from durationStatSlot when owner mode passes one
+  //     (which wraps the digit in an <a href="#itinerary"> smooth-
+  //     scroll, since duration is a derived count of itinerary days
+  //     and the only way to actually change it is to add/remove days
+  //     in the Itinerary block — same affordance the stat tile had).
+  //     Public mode falls back to the plain digit + " DAYS" string.
   //
-  // DAYS is a literal digit ("7 DAYS") — the previous "SEVEN DAYS"
-  // reading was decided when DAYS was the only item on this line, but
-  // alongside numeric dates the spelled-out word breaks the rhythm
-  // (DATES use digits, COUNTRY is a word — DAYS as a digit lets the
-  // line scan as fact / count / fact).
+  //   Line 2 — "{DATES}"
+  //     Owner mode receives dateStatSlot — an inline pair of
+  //     EditableField date pickers (start / end), exactly the slot the
+  //     prior stat tile consumed. Public mode renders the formatted
+  //     dateRange string.
   //
-  // DURATION is read-only here: editing it inline gives a false
-  // affordance — duration is a derived count of itinerary entries,
-  // changed by adding/removing days in the Itinerary block, not by
-  // overwriting the digit. reconcileDates() on the backend recomputes
-  // it whenever itinerary changes; the digit re-renders accordingly.
+  // Each line hides independently when its source data is empty.
   const bottomCountry = country ? country.toUpperCase() : null
-  const bottomDuration =
-    durationDays != null ? `${durationDays} ${UI.days.toUpperCase()}` : null
+  const bottomDuration: ReactNode =
+    durationStatSlot ??
+    (durationDays != null
+      ? `${durationDays} ${UI.days.toUpperCase()}`
+      : null)
   const bottomDates: ReactNode = dateStatSlot ?? dateRange ?? null
 
   type EyebrowPart = { key: string; node: ReactNode }
-  const bottomParts: EyebrowPart[] = []
-  if (bottomDates) bottomParts.push({ key: 'dates', node: bottomDates })
-  if (bottomDuration) bottomParts.push({ key: 'dur', node: bottomDuration })
-  if (bottomCountry) bottomParts.push({ key: 'cou', node: bottomCountry })
+  const line1Parts: EyebrowPart[] = []
+  if (bottomCountry) line1Parts.push({ key: 'cou', node: bottomCountry })
+  if (bottomDuration) line1Parts.push({ key: 'dur', node: bottomDuration })
+
+  const renderLine = (parts: EyebrowPart[], extraClass?: string) => {
+    if (parts.length === 0) return null
+    const cls = extraClass
+      ? `tp-mag-hero__bottom-eyebrow ${extraClass}`
+      : 'tp-mag-hero__bottom-eyebrow'
+    return (
+      <p className={cls}>
+        {parts.map((part, i) => (
+          <span key={part.key} className="tp-mag-hero__bottom-eyebrow-part">
+            {i > 0 && (
+              <span
+                className="tp-mag-hero__bottom-eyebrow-sep"
+                aria-hidden="true"
+              >
+                {' — '}
+              </span>
+            )}
+            {part.node}
+          </span>
+        ))}
+      </p>
+    )
+  }
 
   return (
     <header className="tp-mag-hero" style={{ position: 'relative' }}>
@@ -581,23 +607,12 @@ function HeroMagazine(props: HeroProps) {
       <div className="tp-mag-hero__bottom">
         <div className="tp-mag-hero__bottom-grid">
           <div className="tp-mag-hero__bottom-text">
-            {bottomParts.length > 0 && (
-              <p className="tp-mag-hero__bottom-eyebrow">
-                {bottomParts.map((part, i) => (
-                  <span key={part.key} className="tp-mag-hero__bottom-eyebrow-part">
-                    {i > 0 && (
-                      <span
-                        className="tp-mag-hero__bottom-eyebrow-sep"
-                        aria-hidden="true"
-                      >
-                        {' · '}
-                      </span>
-                    )}
-                    {part.node}
-                  </span>
-                ))}
-              </p>
-            )}
+            {renderLine(line1Parts)}
+            {bottomDates &&
+              renderLine(
+                [{ key: 'dates', node: bottomDates }],
+                'tp-mag-hero__bottom-eyebrow--dates',
+              )}
             <h1 className="tp-mag-hero__title">{titleSlot}</h1>
             {taglineSlot && <p className="tp-mag-hero__tagline">{taglineSlot}</p>}
           </div>
