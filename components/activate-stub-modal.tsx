@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 type Props = {
@@ -26,6 +27,13 @@ const FEATURES = [
  */
 export function ActivateStubModal({ open, onClose }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null)
+  // SSR guard: createPortal needs document.body which only exists in
+  // the browser. We mount the portal after first client render.
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -36,9 +44,14 @@ export function ActivateStubModal({ open, onClose }: Props) {
     return () => document.removeEventListener('keydown', onEsc)
   }, [open, onClose])
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
-  return (
+  // Render into document.body so the modal escapes the Header's
+  // stacking context (Header is sticky z-30, which traps any fixed
+  // child below z-30 visually no matter what z-index it claims).
+  // With portal, the overlay is a sibling of <main> and its z-50
+  // wins against everything sticky on the page.
+  return createPortal(
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -90,6 +103,7 @@ export function ActivateStubModal({ open, onClose }: Props) {
           Got it
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
