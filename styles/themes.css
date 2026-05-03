@@ -1424,65 +1424,12 @@
   pointer-events: none;
 }
 
-/* Top strip — slot for issued/valid dates on the left, country on the
-   right. Mobile: 60px from top (notch-safe), 22px side padding. */
-[data-theme="magazine"] .tp-mag-hero__top {
-  position: absolute;
-  top: max(60px, env(safe-area-inset-top, 0px) + 28px);
-  left: 22px;
-  right: 22px;
-  z-index: 2;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
+/* Top strip uses the shared `<HeroTopStrip>` component (same as Classic
+   and Cinematic): absolutely-positioned, max-w-7xl, mono dates, status
+   pill + contact-agent slot. With `onPhoto=true` the component renders
+   white text + photo shadow — which is what Magazine's full-bleed hero
+   needs. No theme-specific overrides required. */
 
-@media (min-width: 1024px) {
-  [data-theme="magazine"] .tp-mag-hero__top {
-    top: 86px;
-    left: 48px;
-    right: 48px;
-  }
-}
-
-[data-theme="magazine"] .tp-mag-hero__top-dates {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(245, 240, 230, 0.85);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-@media (min-width: 1024px) {
-  [data-theme="magazine"] .tp-mag-hero__top-dates {
-    font-size: 11px;
-    letter-spacing: 0.18em;
-  }
-}
-
-[data-theme="magazine"] .tp-mag-hero__top-sep {
-  margin: 0 0.6em;
-  opacity: 0.5;
-}
-
-/* Country eyebrow comes through `regionEyebrowSlot` (`<span class="tp-eyebrow">`).
-   Override the editorial token-styling so it reads correctly over the photo. */
-[data-theme="magazine"] .tp-mag-hero__top-country .tp-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(245, 240, 230, 0.85);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-  background: transparent;
-  padding: 0;
-  border: 0;
-}
 
 /* Bottom group — eyebrow + title + tagline. Anchored to bottom of hero
    regardless of intermediate height changes during owner edit. */

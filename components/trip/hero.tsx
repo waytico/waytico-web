@@ -459,23 +459,20 @@ function HeroMagazine(props: HeroProps) {
     heroPhoto,
     titleSlot,
     taglineSlot,
-    regionEyebrowSlot,
+    status,
     proposalDate,
     validUntil,
     proposalSlot,
     validUntilSlot,
+    contactAgentSlot,
     durationDays,
     country,
     ownerOverlay,
   } = props
 
-  const hasProposal = !!(proposalDate || proposalSlot)
-  const hasValidUntil = !!(validUntil || validUntilSlot)
-  const hasDates = hasProposal || hasValidUntil
-  const hasCountryEyebrow = !!regionEyebrowSlot
-
   // Bottom eyebrow: "{COUNTRY} — {N} DAYS". Each part hides individually
-  // when missing; if neither is present the line is omitted.
+  // when missing; if neither is present the line is omitted. The country
+  // already lives here, so the top strip never renders a second copy.
   const bottomCountry = country ? country.toUpperCase() : null
   const bottomDuration =
     durationDays != null ? `${durationDays} ${UI.days.toUpperCase()}` : null
@@ -495,34 +492,20 @@ function HeroMagazine(props: HeroProps) {
       )}
       <div className="tp-mag-hero__veil" aria-hidden="true" />
 
-      {(hasDates || hasCountryEyebrow) && (
-        <div className="tp-mag-hero__top">
-          {hasDates ? (
-            <div className="tp-mag-hero__top-dates">
-              {hasProposal && (
-                <>
-                  {UI.proposal}{' '}
-                  {proposalSlot ?? (proposalDate ? fmtDate(proposalDate) : null)}
-                </>
-              )}
-              {hasProposal && hasValidUntil && (
-                <span className="tp-mag-hero__top-sep">—</span>
-              )}
-              {hasValidUntil && (
-                <>
-                  {UI.validUntil}{' '}
-                  {validUntilSlot ?? (validUntil ? fmtDate(validUntil) : null)}
-                </>
-              )}
-            </div>
-          ) : (
-            <div />
-          )}
-          {hasCountryEyebrow && (
-            <div className="tp-mag-hero__top-country">{regionEyebrowSlot}</div>
-          )}
-        </div>
-      )}
+      {/* Top strip — same one Classic / Cinematic use. Status pill on the
+          left in client view, contact-agent + Issued/Valid dates on the
+          right, dates stay editable in owner mode through the slots.
+          onPhoto=true switches the strip to white text + photo shadow,
+          which is exactly what Magazine's full-bleed hero needs. */}
+      <HeroTopStrip
+        status={status}
+        proposalDate={proposalDate}
+        validUntil={validUntil}
+        proposalSlot={proposalSlot}
+        validUntilSlot={validUntilSlot}
+        contactAgentSlot={contactAgentSlot}
+        onPhoto={true}
+      />
 
       <div className="tp-mag-hero__bottom">
         {bottomEyebrowParts.length > 0 && (
