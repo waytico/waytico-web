@@ -1689,8 +1689,11 @@
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-stat-tiles {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 32px;
+    /* Six tiles on desktop: DATES / DURATION / GROUP / TYPE / PLACE / FROM.
+       The previous meta-rail in the left overview column is gone — the
+       facts now live in tiles only, no duplication. */
+    grid-template-columns: repeat(6, 1fr);
+    gap: 24px;
     margin-top: 64px;
   }
 }

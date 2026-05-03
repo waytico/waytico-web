@@ -809,6 +809,47 @@ export default function TripPageClient({ slug, initialData }: Props) {
       )
     : undefined
 
+  // TYPE — activity_type. Editable in owner mode; public sees uppercased
+  // string (handled by the StatTile itself).
+  const activityStatSlot: ReactNode | undefined = ed ? (
+    <EditableField
+      as="text"
+      editable
+      value={p.activity_type}
+      placeholder="Add type"
+      maxLength={40}
+      className="uppercase"
+      onSave={(v) => saveProjectPatch({ activityType: v })}
+    />
+  ) : undefined
+
+  // PLACE — region · country. Owner sees two inline EditableFields with
+  // a "·" separator; public sees the formatted "REGION · COUNTRY"
+  // string (handled by the StatTile itself via placeText fallback).
+  const placeStatSlot: ReactNode | undefined = ed ? (
+    <span style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
+      <EditableField
+        as="text"
+        editable
+        value={p.region}
+        placeholder="Region"
+        maxLength={120}
+        className="uppercase"
+        onSave={(v) => saveProjectPatch({ region: v })}
+      />
+      <span style={{ color: 'var(--ink-mute)' }}>·</span>
+      <EditableField
+        as="text"
+        editable
+        value={p.country}
+        placeholder="Country"
+        maxLength={80}
+        className="uppercase"
+        onSave={(v) => saveProjectPatch({ country: v })}
+      />
+    </span>
+  ) : undefined
+
   // Render an Included list block — owner mode: EditableField; public mode: parsed list.
   const includedBodySlot: ReactNode = (() => {
     if (ed) {
@@ -1393,6 +1434,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
           durationStatSlot={durationStatSlot}
           groupStatSlot={groupStatSlot}
           priceStatSlot={priceStatSlot}
+          activitySlot={activityStatSlot}
+          placeSlot={placeStatSlot}
           showOwnerUI={showOwnerUI}
           subtitleSlot={subtitleSlotFor('overview')}
         />

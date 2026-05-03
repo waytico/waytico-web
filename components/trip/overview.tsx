@@ -42,6 +42,13 @@ type OverviewProps = {
   durationStatSlot?: ReactNode
   groupStatSlot?: ReactNode
   priceStatSlot?: ReactNode
+  /** Activity-type slot for the TYPE stat tile. Owner mode passes
+   *  EditableField, public mode passes the formatted value (or null). */
+  activitySlot?: ReactNode
+  /** Place slot for the PLACE stat tile (region + country combined).
+   *  Owner mode passes a small composite of two EditableFields, public
+   *  mode passes the formatted "REGION · COUNTRY" string (or null). */
+  placeSlot?: ReactNode
 
   /** True when the viewer is the owner (drives placeholders + edit chrome). */
   showOwnerUI?: boolean
@@ -103,6 +110,8 @@ function OverviewMagazine(props: OverviewProps) {
     durationStatSlot,
     groupStatSlot,
     priceStatSlot,
+    activitySlot,
+    placeSlot,
     showOwnerUI,
     subtitleSlot,
   } = props
@@ -118,24 +127,24 @@ function OverviewMagazine(props: OverviewProps) {
       durationDays != null ||
       groupSize != null ||
       priceFormatted ||
+      activityType ||
+      country ||
+      region ||
       dateStatSlot ||
       durationStatSlot ||
       groupStatSlot ||
-      priceStatSlot
+      priceStatSlot ||
+      activitySlot ||
+      placeSlot
     )
   const shouldRender = !!(showOwnerUI || visible || hasAnyStat)
   if (!shouldRender) return null
 
-  // Meta-rail eyebrow stack — left column under the heading. Each row
-  // hides individually when its source is missing.
   const dateRange = fmtDateRange(datesStart, datesEnd)
-  const metaRailRows: Array<{ key: string; text: string }> = []
-  if (dateRange) metaRailRows.push({ key: 'dates', text: dateRange })
-  if (durationDays != null) metaRailRows.push({ key: 'dur', text: `${durationDays} ${UI.days}` })
-  if (groupSize != null) metaRailRows.push({ key: 'group', text: `${groupSize} ${UI.travelers}` })
-  if (activityType) metaRailRows.push({ key: 'act', text: activityType.toUpperCase() })
+
+  // Place is region + country combined for the new PLACE stat tile.
   const placeParts = [region, country].filter((s): s is string => !!s).map((s) => s.toUpperCase())
-  if (placeParts.length > 0) metaRailRows.push({ key: 'place', text: placeParts.join(' · ') })
+  const placeText = placeParts.length > 0 ? placeParts.join(' · ') : null
 
   return (
     <section className="tp-mag-section tp-mag-overview" id="overview">
@@ -149,15 +158,6 @@ function OverviewMagazine(props: OverviewProps) {
               <h2 className="tp-mag-display tp-mag-section-subtitle">
                 {subtitleSlot}
               </h2>
-            )}
-            {metaRailRows.length > 0 && (
-              <ul className="tp-mag-overview__meta">
-                {metaRailRows.map((row) => (
-                  <li key={row.key} className="tp-mag-overview__meta-row">
-                    {row.text}
-                  </li>
-                ))}
-              </ul>
             )}
           </div>
           <div className="tp-mag-overview__right">
@@ -173,6 +173,10 @@ function OverviewMagazine(props: OverviewProps) {
           durationStatSlot={durationStatSlot}
           groupSize={groupSize ?? null}
           groupStatSlot={groupStatSlot}
+          activityType={activityType ?? null}
+          activitySlot={activitySlot}
+          placeText={placeText}
+          placeSlot={placeSlot}
           priceFormatted={priceFormatted ?? null}
           priceLabel={priceLabel ?? null}
           priceStatSlot={priceStatSlot}
@@ -192,6 +196,10 @@ function StatTilesRow(props: {
   durationStatSlot?: ReactNode
   groupSize: number | null
   groupStatSlot?: ReactNode
+  activityType: string | null
+  activitySlot?: ReactNode
+  placeText: string | null
+  placeSlot?: ReactNode
   priceFormatted: string | null
   priceLabel: string | null
   priceStatSlot?: ReactNode
@@ -204,6 +212,10 @@ function StatTilesRow(props: {
     durationStatSlot,
     groupSize,
     groupStatSlot,
+    activityType,
+    activitySlot,
+    placeText,
+    placeSlot,
     priceFormatted,
     priceLabel,
     priceStatSlot,
@@ -283,6 +295,36 @@ function StatTilesRow(props: {
         <div className="tp-mag-stat-tile" key="group">
           <span className="tp-mag-stat-tile__label">GROUP</span>
           <span className="tp-mag-stat-tile__value">{value}</span>
+        </div>,
+      )
+    }
+  }
+
+  /* TYPE — activity_type. Editable via activitySlot in owner mode. */
+  {
+    const value = activitySlot ?? (activityType ? activityType.toUpperCase() : null)
+    if (value || showOwnerUI) {
+      tiles.push(
+        <div className="tp-mag-stat-tile" key="type">
+          <span className="tp-mag-stat-tile__label">TYPE</span>
+          <span className="tp-mag-stat-tile__value">
+            {value ?? <span className="tp-mag-stat-tile__placeholder">Add type</span>}
+          </span>
+        </div>,
+      )
+    }
+  }
+
+  /* PLACE — region · country. Editable via placeSlot in owner mode. */
+  {
+    const value = placeSlot ?? placeText
+    if (value || showOwnerUI) {
+      tiles.push(
+        <div className="tp-mag-stat-tile" key="place">
+          <span className="tp-mag-stat-tile__label">PLACE</span>
+          <span className="tp-mag-stat-tile__value">
+            {value ?? <span className="tp-mag-stat-tile__placeholder">Add region</span>}
+          </span>
         </div>,
       )
     }
