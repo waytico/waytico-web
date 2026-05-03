@@ -549,7 +549,6 @@ function HeroMagazine(props: HeroProps) {
   const {
     heroPhoto,
     titleSlot,
-    taglineSlot,
     status,
     proposalDate,
     validUntil,
@@ -662,7 +661,16 @@ function HeroMagazine(props: HeroProps) {
                 'tp-mag-hero__bottom-eyebrow--dates',
               )}
             <h1 className="tp-mag-hero__title">{titleSlot}</h1>
-            {taglineSlot && <p className="tp-mag-hero__tagline">{taglineSlot}</p>}
+            {/* Tagline removed by product decision. The empty paragraph
+                below is an intentional spacer — it preserves the line of
+                vertical breathing room the prior tagline created so the
+                rest of the hero (title, eyebrow lines, top strip) keeps
+                its established rhythm. Any inbound taglineSlot is ignored
+                here; classic / cinematic / clean themes still render
+                taglineSlot via their own branches. */}
+            <p className="tp-mag-hero__tagline" aria-hidden="true">
+              &nbsp;
+            </p>
           </div>
           {highlightsSlots && highlightsSlots.some(Boolean) && (
             <ul className="tp-mag-hero__highlights" aria-label="Trip highlights">
