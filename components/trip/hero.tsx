@@ -148,17 +148,21 @@ function HeroTopStrip({
   // so an owner-view trip with no status pill keeps dates flush right and
   // a quote with no contact channel still keeps status flush left.
   //
-  //  desktop (≥640px):
-  //    flex-row, status + dates flush left, contact pushed to the right
-  //    via mr-auto on the dates wrapper. The whole strip closes with a
-  //    1px hairline along the bottom edge.
+  // The hairline rule lives on the OUTER absolute wrapper so it spans
+  // the full hero width (matches the design canon — the line runs from
+  // the left edge of the photo to the right edge, not just inside the
+  // max-w-7xl content column). Keeping it on the outer wrapper also
+  // means it renders identically across owner / public / preview modes
+  // and across breakpoints — earlier the rule was anchored to the
+  // inner container with `sm:border-b` plus a per-element `border-t`
+  // between status and dates, which made it disappear on mobile in
+  // owner mode (no status pill -> no border-t -> no rule).
   //
-  //  mobile (<640px):
-  //    flex-col, top-to-bottom: status → dates → contact.
-  //    The status pill and dates are separated by a hairline rule
-  //    (border-top on dates when both are present) — same line that
-  //    runs along the bottom of the strip on desktop, just relocated.
-  const ruleColor = onPhoto ? 'rgba(255,255,255,0.2)' : 'var(--rule)'
+  // Inner alignment is `items-baseline` on desktop so the status pill
+  // sits on the same baseline as the dates row — `items-center` was
+  // centring two boxes of different heights and the dates visually
+  // floated above the pill's text baseline.
+  const ruleColor = onPhoto ? 'rgba(255,255,255,0.22)' : 'var(--rule)'
   return (
     <div
       style={{
@@ -168,11 +172,11 @@ function HeroTopStrip({
         right: 0,
         zIndex: 3,
         pointerEvents: 'none',
+        borderBottom: `1px solid ${ruleColor}`,
       }}
     >
       <div
-        className="max-w-7xl mx-auto px-4 py-5 flex flex-col gap-3 items-start sm:flex-row sm:items-center sm:gap-4 sm:border-b"
-        style={{ borderBottomColor: ruleColor }}
+        className="max-w-7xl mx-auto px-4 py-5 flex flex-col gap-3 items-start sm:flex-row sm:items-baseline sm:gap-4"
       >
         {hasStatus && (
           <div
@@ -185,7 +189,7 @@ function HeroTopStrip({
 
         {hasDates && (
           <div
-            className={`order-2 sm:order-none uppercase grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-start sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:gap-y-0 sm:mr-auto ${
+            className={`order-2 sm:order-none uppercase grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-start sm:flex sm:flex-wrap sm:items-baseline sm:gap-2 sm:gap-y-0 sm:mr-auto ${
               hasStatus ? 'w-full pt-3 border-t sm:w-auto sm:pt-0 sm:border-t-0' : ''
             }`}
             style={{
