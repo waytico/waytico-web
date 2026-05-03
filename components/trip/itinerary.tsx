@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
 import type { ThemeId } from '@/lib/themes'
 import { ITINERARY_STYLE } from '@/lib/themes'
@@ -322,15 +322,19 @@ function DndSortable(props: {
   } = props
 
   // Local mirror so we can do an optimistic reorder before the backend
-  // confirms. Sync from props whenever upstream order changes (e.g. the
-  // agent reorders via chat while the operator has the page open).
+  // confirms. Sync from props on every reference change so any upstream
+  // edit — title, description, date, day insert/delete, drag reorder
+  // landed by another tab, agent-driven reorder via chat — flows down
+  // without waiting for a remount. The effect runs in the commit phase
+  // after each render whose deps changed, so it never overwrites the
+  // optimistic value we just set inside handleDragEnd in the same
+  // synchronous turn (parent setData fires only after the await onReorder
+  // resolves, by which point the backend has reconciled the order, and
+  // the arriving itinerary matches what we already set locally).
   const [items, setItems] = useState<Day[]>(itinerary)
-  if (
-    items.length !== itinerary.length ||
-    items.some((d, i) => d.id !== itinerary[i].id)
-  ) {
+  useEffect(() => {
     setItems(itinerary)
-  }
+  }, [itinerary])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -570,15 +574,16 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
 
   // Local mirror so we can do an optimistic reorder before the backend
   // confirms (mirrors the DndSortable wrapper used by the other variants).
-  // Sync from props whenever upstream order changes (agent reorders via
-  // chat while the operator has the page open).
+  // Sync from props on every reference change so any upstream edit —
+  // title, description, date, day insert/delete, drag reorder landed by
+  // another tab, agent-driven reorder via chat — flows down without
+  // waiting for a remount. The effect runs after each render whose deps
+  // changed, so it never overwrites the optimistic value we just set
+  // inside handleDragEnd in the same synchronous turn.
   const [items, setItems] = useState<Day[]>(itinerary)
-  if (
-    items.length !== itinerary.length ||
-    items.some((d, i) => d.id !== itinerary[i].id)
-  ) {
+  useEffect(() => {
     setItems(itinerary)
-  }
+  }, [itinerary])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
