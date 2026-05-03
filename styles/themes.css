@@ -1595,6 +1595,23 @@
   word-break: break-word;
 }
 
+/* Two-line title contract. Pipeline emits "Head\nTail in italic" — the
+   inline split-renderer in HeroMagazine wraps each side in its own
+   element so we can break the line and italicize the tail without
+   inserting a <br>. Block displays make the line break automatic and
+   keep selection / copy-paste behaving as a single h1. The tail is
+   intentionally a notch lighter (font-weight: 400) so italic Cormorant
+   doesn't read heavier than its upright sibling at display sizes. */
+[data-theme="magazine"] .tp-mag-hero__title-head,
+[data-theme="magazine"] .tp-mag-hero__title-tail {
+  display: block;
+}
+
+[data-theme="magazine"] .tp-mag-hero__title-tail {
+  font-style: italic;
+  font-weight: 400;
+}
+
 [data-theme="magazine"] .tp-mag-hero__tagline {
   font-family: var(--font-display);
   font-style: italic;

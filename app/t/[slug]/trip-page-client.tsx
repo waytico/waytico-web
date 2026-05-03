@@ -156,6 +156,117 @@ function DateStartEditor({
   )
 }
 
+function MagazineTitleEditor({
+  title,
+  onSave,
+}: {
+  title: string
+  onSave: (v: string) => Promise<boolean>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const taRef = useRef<HTMLTextAreaElement>(null)
+
+  // Auto-grow the textarea to fit its contents while the operator types.
+  // Same pattern as EditableField multiline mode — set height to scrollHeight
+  // every keystroke so there's no internal scrollbar and no fixed height.
+  const autosize = () => {
+    const el = taRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }
+
+  useEffect(() => {
+    if (!editing) return
+    setDraft(title)
+    const id = setTimeout(() => {
+      taRef.current?.focus()
+      // Place caret at end so the operator can keep typing.
+      const len = title.length
+      taRef.current?.setSelectionRange(len, len)
+      autosize()
+    }, 0)
+    return () => clearTimeout(id)
+  }, [editing, title])
+
+  const commit = async () => {
+    setEditing(false)
+    const next = draft.trim()
+    if (next && next !== title.trim()) {
+      await onSave(next)
+    }
+  }
+  const cancel = () => setEditing(false)
+
+  // EDIT mode — textarea sized to fit, transparent background so it sits
+  // over the hero photo without re-introducing a card surface. Italic
+  // styling is dropped while editing so the raw \n is unambiguous.
+  if (editing) {
+    return (
+      <h1 className="tp-mag-hero__title">
+        <textarea
+          ref={taRef}
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value)
+            autosize()
+          }}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              commit()
+            }
+            if (e.key === 'Escape') {
+              e.preventDefault()
+              cancel()
+            }
+          }}
+          rows={2}
+          className="block w-full bg-transparent border border-white/30 focus:border-white/70 focus:outline-none rounded px-2 py-1 resize-none"
+          style={{
+            font: 'inherit',
+            color: 'inherit',
+            lineHeight: 'inherit',
+            letterSpacing: 'inherit',
+          }}
+          aria-label="Edit trip title"
+        />
+      </h1>
+    )
+  }
+
+  // DISPLAY mode — same split-render as the public viewer (see
+  // <MagazineHeroTitle> in components/trip/hero.tsx) plus a click target
+  // and a subtle pencil affordance on hover.
+  const newlineIdx = title.indexOf('\n')
+  const head = newlineIdx === -1 ? title : title.slice(0, newlineIdx).trimEnd()
+  const tail = newlineIdx === -1 ? '' : title.slice(newlineIdx + 1).trimStart()
+  return (
+    <h1
+      className="tp-mag-hero__title group cursor-pointer relative"
+      role="button"
+      tabIndex={0}
+      onClick={() => setEditing(true)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          setEditing(true)
+        }
+      }}
+      aria-label="Click to edit trip title"
+    >
+      <span className="tp-mag-hero__title-head">{head || 'Untitled trip'}</span>
+      {tail && <em className="tp-mag-hero__title-tail">{tail}</em>}
+      <Edit3
+        className="absolute top-2 right-2 w-4 h-4 opacity-0 group-hover:opacity-60 transition-opacity"
+        aria-hidden="true"
+      />
+    </h1>
+  )
+}
+
 export default function TripPageClient({ slug, initialData }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -659,15 +770,28 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
   // ── Slot builders (owner mode wraps with EditableField, public uses static values) ──
 
+  // Magazine theme uses a 2-line title (line 1 regular, line 2 italic) joined
+  // by a single \n in the underlying string. MagazineTitleEditor handles
+  // click-to-edit + multiline textarea + the same split-render in display
+  // state. Other themes keep the single-line EditableField — their h1 layouts
+  // don't carry a 2-line contract, and rendering a textarea inside a card or
+  // overlay hero would break their composition.
   const titleSlot: ReactNode = ed ? (
-    <EditableField
-      as="text"
-      editable
-      value={p.title}
-      required
-      className="w-full"
-      onSave={(v) => saveProjectPatch({ title: v })}
-    />
+    resolvedTheme === 'magazine' ? (
+      <MagazineTitleEditor
+        title={p.title || ''}
+        onSave={(v) => saveProjectPatch({ title: v })}
+      />
+    ) : (
+      <EditableField
+        as="text"
+        editable
+        value={p.title}
+        required
+        className="w-full"
+        onSave={(v) => saveProjectPatch({ title: v })}
+      />
+    )
   ) : (
     p.title || ''
   )

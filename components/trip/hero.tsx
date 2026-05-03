@@ -660,17 +660,18 @@ function HeroMagazine(props: HeroProps) {
                 [{ key: 'dates', node: bottomDates }],
                 'tp-mag-hero__bottom-eyebrow--dates',
               )}
-            <h1 className="tp-mag-hero__title">{titleSlot}</h1>
-            {/* Tagline removed by product decision. The empty paragraph
-                below is an intentional spacer — it preserves the line of
-                vertical breathing room the prior tagline created so the
-                rest of the hero (title, eyebrow lines, top strip) keeps
-                its established rhythm. Any inbound taglineSlot is ignored
-                here; classic / cinematic / clean themes still render
-                taglineSlot via their own branches. */}
-            <p className="tp-mag-hero__tagline" aria-hidden="true">
-              &nbsp;
-            </p>
+            {/* Title rendering — see <MagazineHeroTitle> below for the
+                full reasoning. Public viewers receive a plain string
+                title and we split it on \n into a regular line + an
+                italicized tail line. Owner viewers receive a ready-made
+                editor component (which brings its own <h1> wrapper) and
+                we render that directly without re-wrapping. The tagline
+                placeholder that used to sit below the title has been
+                removed — the italicized second line of the title now
+                occupies that vertical slot, so highlights on the right
+                continue to bottom-align correctly via the parent's
+                align-items: flex-end on desktop. */}
+            <MagazineHeroTitle titleSlot={titleSlot} />
           </div>
           {highlightsSlots && highlightsSlots.some(Boolean) && (
             <ul className="tp-mag-hero__highlights" aria-label="Trip highlights">
@@ -691,5 +692,52 @@ function HeroMagazine(props: HeroProps) {
 
       {ownerOverlay}
     </header>
+  )
+}
+
+/**
+ * Magazine title renderer. The title contract is two lines joined by a
+ * single newline character (\n) — the AI hero pipeline emits this shape,
+ * and the trip-editor agent preserves it. Line 1 is regular weight, line
+ * 2 is italic ("the tail"). The split is purely visual — the underlying
+ * value in the database is a single string with one embedded \n.
+ *
+ * For PUBLIC viewers, trip-page-client passes the raw title string in as
+ * titleSlot, and this component handles the split-render. Single-line
+ * titles (no \n — legacy data, or AI fallback for sparse inputs) render
+ * as a single line, no italic, no breakage.
+ *
+ * For OWNER viewers, trip-page-client passes a <MagazineTitleEditor>
+ * component as titleSlot — that component brings its own <h1> wrapper
+ * with the same `tp-mag-hero__title` class and handles the click-to-edit
+ * textarea / save flow. We render it through directly without wrapping.
+ *
+ * Why not a single h1 wrapper around both cases? The owner editor needs
+ * to swap the entire h1 between "display" (split-rendered text) and
+ * "edit" (textarea) states without the parent constraining its layout.
+ * Letting it own its own wrapper keeps that swap surgical.
+ */
+function MagazineHeroTitle({ titleSlot }: { titleSlot: ReactNode }) {
+  if (typeof titleSlot !== 'string') {
+    // Owner editor brings its own <h1.tp-mag-hero__title> wrapper.
+    return <>{titleSlot}</>
+  }
+  const raw = titleSlot
+  const newlineIdx = raw.indexOf('\n')
+  if (newlineIdx === -1) {
+    // Legacy single-line title — render as before, no italic tail.
+    return <h1 className="tp-mag-hero__title">{raw}</h1>
+  }
+  const head = raw.slice(0, newlineIdx).trimEnd()
+  const tail = raw.slice(newlineIdx + 1).trimStart()
+  if (!tail) {
+    // Stray trailing \n — degrade gracefully to single-line.
+    return <h1 className="tp-mag-hero__title">{head}</h1>
+  }
+  return (
+    <h1 className="tp-mag-hero__title">
+      <span className="tp-mag-hero__title-head">{head}</span>
+      <em className="tp-mag-hero__title-tail">{tail}</em>
+    </h1>
   )
 }
