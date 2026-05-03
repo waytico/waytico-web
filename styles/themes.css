@@ -1710,10 +1710,6 @@
   }
 }
 
-[data-theme="magazine"] .tp-mag-overview__eyebrow {
-  margin-bottom: 18px;
-}
-
 [data-theme="magazine"] .tp-mag-overview__heading {
   font-size: 32px;
   line-height: 1.05;

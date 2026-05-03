@@ -17,10 +17,10 @@ type OverviewProps = {
   /** True when the viewer is the owner (drives placeholders + edit chrome). */
   showOwnerUI?: boolean
 
-  /** Magazine-only narrative subtitle rendered under the eyebrow. Public
+  /** Magazine-only narrative subtitle rendered as the section heading. Public
    *  mode passes plain text or null; owner mode passes EditableField.
-   *  Replaces the static "Overview" heading on Magazine — eyebrow plus
-   *  subtitle carry the section identity, no need for a second label. */
+   *  On Magazine the eyebrow was removed — the subtitle is the only label,
+   *  carrying the section identity on its own. */
   subtitleSlot?: ReactNode
 }
 
@@ -31,8 +31,8 @@ type OverviewProps = {
  * and in the Hero bottom eyebrow + Price block for Magazine.
  *
  * Magazine variant (theme === 'magazine') turns this into an asymmetric
- * two-column block: eyebrow + subtitle stack on the left, prose on the
- * right. The earlier four-tile stat row at the bottom (DATES / DURATION /
+ * two-column block: the section subtitle stands alone on the left, prose on
+ * the right. The earlier four-tile stat row at the bottom (DATES / DURATION /
  * GROUP / FROM) was removed in favour of distributing those facts to
  * their semantic homes — DATES + DURATION + COUNTRY into the hero bottom
  * eyebrow, GROUP + FROM-price into the Price block — matching the
@@ -74,9 +74,6 @@ function OverviewMagazine(props: OverviewProps) {
       <div className="tp-mag-container">
         <div className="tp-mag-overview__grid">
           <div className="tp-mag-overview__left">
-            <p className="tp-mag-eyebrow tp-mag-overview__eyebrow">
-              {UI.sectionLabels.overview.toUpperCase()}
-            </p>
             {subtitleSlot && (
               <h2 className="tp-mag-display tp-mag-section-subtitle">
                 {subtitleSlot}
