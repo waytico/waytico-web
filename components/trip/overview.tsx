@@ -42,13 +42,6 @@ type OverviewProps = {
   durationStatSlot?: ReactNode
   groupStatSlot?: ReactNode
   priceStatSlot?: ReactNode
-  /** Activity-type slot for the TYPE stat tile. Owner mode passes
-   *  EditableField, public mode passes the formatted value (or null). */
-  activitySlot?: ReactNode
-  /** Place slot for the PLACE stat tile (region + country combined).
-   *  Owner mode passes a small composite of two EditableFields, public
-   *  mode passes the formatted "REGION · COUNTRY" string (or null). */
-  placeSlot?: ReactNode
 
   /** True when the viewer is the owner (drives placeholders + edit chrome). */
   showOwnerUI?: boolean
@@ -110,8 +103,6 @@ function OverviewMagazine(props: OverviewProps) {
     durationStatSlot,
     groupStatSlot,
     priceStatSlot,
-    activitySlot,
-    placeSlot,
     showOwnerUI,
     subtitleSlot,
   } = props
@@ -127,24 +118,15 @@ function OverviewMagazine(props: OverviewProps) {
       durationDays != null ||
       groupSize != null ||
       priceFormatted ||
-      activityType ||
-      country ||
-      region ||
       dateStatSlot ||
       durationStatSlot ||
       groupStatSlot ||
-      priceStatSlot ||
-      activitySlot ||
-      placeSlot
+      priceStatSlot
     )
   const shouldRender = !!(showOwnerUI || visible || hasAnyStat)
   if (!shouldRender) return null
 
   const dateRange = fmtDateRange(datesStart, datesEnd)
-
-  // Place is region + country combined for the new PLACE stat tile.
-  const placeParts = [region, country].filter((s): s is string => !!s).map((s) => s.toUpperCase())
-  const placeText = placeParts.length > 0 ? placeParts.join(' · ') : null
 
   return (
     <section className="tp-mag-section tp-mag-overview" id="overview">
@@ -173,10 +155,6 @@ function OverviewMagazine(props: OverviewProps) {
           durationStatSlot={durationStatSlot}
           groupSize={groupSize ?? null}
           groupStatSlot={groupStatSlot}
-          activityType={activityType ?? null}
-          activitySlot={activitySlot}
-          placeText={placeText}
-          placeSlot={placeSlot}
           priceFormatted={priceFormatted ?? null}
           priceLabel={priceLabel ?? null}
           priceStatSlot={priceStatSlot}
@@ -196,10 +174,6 @@ function StatTilesRow(props: {
   durationStatSlot?: ReactNode
   groupSize: number | null
   groupStatSlot?: ReactNode
-  activityType: string | null
-  activitySlot?: ReactNode
-  placeText: string | null
-  placeSlot?: ReactNode
   priceFormatted: string | null
   priceLabel: string | null
   priceStatSlot?: ReactNode
@@ -212,10 +186,6 @@ function StatTilesRow(props: {
     durationStatSlot,
     groupSize,
     groupStatSlot,
-    activityType,
-    activitySlot,
-    placeText,
-    placeSlot,
     priceFormatted,
     priceLabel,
     priceStatSlot,
@@ -295,36 +265,6 @@ function StatTilesRow(props: {
         <div className="tp-mag-stat-tile" key="group">
           <span className="tp-mag-stat-tile__label">GROUP</span>
           <span className="tp-mag-stat-tile__value">{value}</span>
-        </div>,
-      )
-    }
-  }
-
-  /* TYPE — activity_type. Editable via activitySlot in owner mode. */
-  {
-    const value = activitySlot ?? (activityType ? activityType.toUpperCase() : null)
-    if (value || showOwnerUI) {
-      tiles.push(
-        <div className="tp-mag-stat-tile" key="type">
-          <span className="tp-mag-stat-tile__label">TYPE</span>
-          <span className="tp-mag-stat-tile__value">
-            {value ?? <span className="tp-mag-stat-tile__placeholder">Add type</span>}
-          </span>
-        </div>,
-      )
-    }
-  }
-
-  /* PLACE — region · country. Editable via placeSlot in owner mode. */
-  {
-    const value = placeSlot ?? placeText
-    if (value || showOwnerUI) {
-      tiles.push(
-        <div className="tp-mag-stat-tile" key="place">
-          <span className="tp-mag-stat-tile__label">PLACE</span>
-          <span className="tp-mag-stat-tile__value">
-            {value ?? <span className="tp-mag-stat-tile__placeholder">Add region</span>}
-          </span>
         </div>,
       )
     }
