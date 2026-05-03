@@ -88,3 +88,59 @@ function OverviewMagazine(props: OverviewProps) {
     </section>
   )
 }
+
+/* ── Section-subtitle split renderer ──────────────────────────────────
+ *
+ * Magazine section subtitles can be authored as 1, 2, or 3 lines
+ * separated by literal "\n" characters. The middle line is rendered
+ * italic — that's the typographic anchor of the magazine voice
+ * ("A slow / passage / south & north."). One- and two-line cases
+ * degrade gracefully so legacy single-phrase subtitles (and any
+ * other section's existing subtitle) keep working unchanged.
+ *
+ * Used by trip-page-client both directly (public viewer) and as the
+ * `renderDisplay` callback of the EditableField used for the
+ * subtitle in owner mode — so the operator sees the formatted
+ * three-line layout when not actively editing.
+ *
+ * The split happens here, not at save-time: persisted value is the
+ * raw "Head\nMiddle\nTail" string the operator typed (or the
+ * pipeline produced). Empty lines are dropped so a stray double-\n
+ * doesn't create a phantom span.
+ */
+export function MagazineSectionSubtitleLines({ text }: { text: string }) {
+  const lines = text
+    .split('\n')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+
+  if (lines.length === 0) return null
+
+  if (lines.length === 1) {
+    // Legacy single-phrase — render plain. No italic, no spans.
+    return <span>{lines[0]}</span>
+  }
+
+  if (lines.length === 2) {
+    // Hero-style head + italic tail.
+    return (
+      <>
+        <span className="tp-mag-section-subtitle__head">{lines[0]}</span>
+        <em className="tp-mag-section-subtitle__mid">{lines[1]}</em>
+      </>
+    )
+  }
+
+  // 3+ lines — head regular, middle italic, remainder concatenated as tail.
+  // The pipeline contract caps at 3 lines; >3 is an operator typing accident
+  // that we collapse rather than drop, so no input is ever silently lost.
+  const [head, mid, ...rest] = lines
+  const tail = rest.join(' ')
+  return (
+    <>
+      <span className="tp-mag-section-subtitle__head">{head}</span>
+      <em className="tp-mag-section-subtitle__mid">{mid}</em>
+      <span className="tp-mag-section-subtitle__tail">{tail}</span>
+    </>
+  )
+}

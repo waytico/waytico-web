@@ -1292,7 +1292,10 @@
 [data-theme="magazine"] .tp-mag-section-subtitle {
   font-size: 28px;
   line-height: 1.1;
-  font-style: italic;
+  /* Italic now lives only on the middle line — see __mid below. The h2
+     itself is regular weight; spans inside opt in. Single-line legacy
+     subtitles render without italic at all (graceful fallback). */
+  font-style: normal;
   font-weight: 400;
   color: var(--ink);
   margin: 0 0 24px 0;
@@ -1305,6 +1308,20 @@
     line-height: 1.05;
     margin-bottom: 32px;
   }
+}
+
+/* Three-line layout: each line on its own row. Used when the pipeline
+   emits "Head\nMiddle\nTail" for the overview key (see prompts.service.ts
+   pipeline_section_subtitles v2). MagazineSectionSubtitleLines wraps each
+   piece in the matching span; CSS turns them into block-level rows. */
+[data-theme="magazine"] .tp-mag-section-subtitle__head,
+[data-theme="magazine"] .tp-mag-section-subtitle__mid,
+[data-theme="magazine"] .tp-mag-section-subtitle__tail {
+  display: block;
+}
+
+[data-theme="magazine"] .tp-mag-section-subtitle__mid {
+  font-style: italic;
 }
 
 /* ── TopNav (desktop ≥1024px sticky) ──────────────────────────────── */

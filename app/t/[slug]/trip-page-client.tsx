@@ -27,7 +27,7 @@ import { MagazineTopNav } from '@/components/trip/magazine-topnav'
 import { MagazineStickyBar } from '@/components/trip/magazine-stickybar'
 import { TripHero } from '@/components/trip/hero'
 import { ContactAgentMenu } from '@/components/trip/contact-agent-menu'
-import { TripOverview } from '@/components/trip/overview'
+import { TripOverview, MagazineSectionSubtitleLines } from '@/components/trip/overview'
 import { TripItinerary } from '@/components/trip/itinerary'
 import { TripIncluded, IncludedList } from '@/components/trip/included'
 import { TripPrice } from '@/components/trip/price'
@@ -804,6 +804,9 @@ export default function TripPageClient({ slug, initialData }: Props) {
       placeholder="Click to add overview"
       rows={5}
       className="w-full"
+      renderDisplay={(text) => (
+        <DescriptionParagraphs text={text} theme={resolvedTheme} />
+      )}
       onSave={(v) => saveProjectPatch({ description: v })}
     />
   ) : (
@@ -893,19 +896,26 @@ export default function TripPageClient({ slug, initialData }: Props) {
   }
   const subtitleSlotFor = (key: SubtitleKey): ReactNode => {
     if (ed) {
+      // Multiline so the textarea can grow to 3 lines on Magazine
+      // (overview's "Head\nMiddle\nTail" pattern). renderDisplay shows
+      // the formatted three-line layout when not editing — clicking
+      // anywhere on it switches to a textarea preserving the literal \n's
+      // the operator typed. Save fires on blur; saveSectionSubtitle
+      // already trims and caps at 200 chars.
       return (
         <EditableField
-          as="text"
+          as="multiline"
           editable
           value={currentSubtitles[key]}
           placeholder="Add subtitle…"
-          maxLength={200}
+          rows={3}
+          renderDisplay={(text) => <MagazineSectionSubtitleLines text={text} />}
           onSave={(v) => saveSectionSubtitle(key, v)}
         />
       )
     }
     const v = currentSubtitles[key]
-    return v ? <span>{v}</span> : null
+    return v ? <MagazineSectionSubtitleLines text={v} /> : null
   }
 
   const activityChipSlot: ReactNode | null =
