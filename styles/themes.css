@@ -1270,6 +1270,13 @@
 
 /* ── TopNav (desktop ≥1024px sticky) ──────────────────────────────── */
 
+/* Magazine TopNav lives inside <ThemeRoot> after the hero, like Classic
+   .tp-nav. Sticky (not fixed) so it sits in normal flow and only pins to
+   the top once the viewer scrolls past the hero — leaving the global
+   Waytico header untouched above. Top-offsets mirror the .tp-nav
+   convention: under TripActionBar (48px) for owners, under
+   ShowcaseBanner+ActionBar (100px) in showcase, flush 0 for public. */
+
 [data-theme="magazine"] .tp-mag-topnav {
   display: none;
 }
@@ -1277,15 +1284,21 @@
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-topnav {
     display: block;
-    position: fixed;
+    position: sticky;
     top: 0;
-    left: 0;
-    right: 0;
-    z-index: 30;
+    z-index: 5;
     background: rgba(245, 240, 230, 0.92);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--rule);
+  }
+
+  [data-owner-view="true"] [data-theme="magazine"] .tp-mag-topnav {
+    top: 48px;
+  }
+
+  [data-showcase="true"] [data-theme="magazine"] .tp-mag-topnav {
+    top: 100px;
   }
 }
 
