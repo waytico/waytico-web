@@ -1,13 +1,21 @@
 'use client'
 
 import { useRef } from 'react'
-import { ImagePlus, Trash2 } from 'lucide-react'
+import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 /**
  * Owner-only chrome painted on top of the Hero. Lives outside ThemeRoot's
  * design tokens — uses shadcn semantic classes so it stays neutral
  * regardless of which trip theme is active.
+ *
+ * The hero-photo controls collapse into a single top-right zone with three
+ * mutually-exclusive states:
+ *   - empty + idle → "Drag or add photo" pill (clickable)
+ *   - uploading    → "Uploading…" pill with a spinner (passive)
+ *   - photo set    → "Drag or change photo" pill + trash button
+ * All three states sit at top-20 right-4, the same coordinate the trash
+ * button used to occupy alone — operators learn one location, not three.
  */
 export function HeroOwnerOverlay({
   hasBg,
@@ -26,6 +34,14 @@ export function HeroOwnerOverlay({
   dragOver: boolean
   emptyState: boolean
 }) {
+  const isUploading = uploadingHero > 0
+  // Pill styling shared by every state — high-contrast dark fill so it
+  // reads on both the empty-hero placeholder (dark slab) and on top of
+  // an actual photo background.
+  const pillCls =
+    'inline-flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-white transition-colors'
+  const pillClickable = `${pillCls} hover:bg-black/80`
+
   return (
     <>
       <div className="pointer-events-none absolute inset-0 z-0">
@@ -37,39 +53,56 @@ export function HeroOwnerOverlay({
           </div>
         )}
       </div>
+
       <div className="absolute top-20 right-4 z-10 flex items-center gap-2 pointer-events-auto">
-        {hasBg && heroPhotoId && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete()
-            }}
-            className="rounded-full bg-black/60 p-2 text-white transition-opacity hover:bg-black/80"
-            aria-label="Delete hero photo"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+        {/* Uploading — passive pill with spinner. Wins over both empty
+            and photo-set states because it can fire from either. */}
+        {isUploading && (
+          <span className={pillCls}>
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Uploading…
+          </span>
         )}
-      </div>
-      {emptyState && (
-        <div className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 pointer-events-auto">
+
+        {/* Empty + idle — invite the operator to add a photo. */}
+        {!isUploading && emptyState && (
           <button
             type="button"
             onClick={onPickFile}
-            disabled={uploadingHero > 0}
-            className="inline-flex items-center gap-2 rounded-full border-2 border-dashed border-border bg-background/80 px-5 py-2.5 text-sm font-medium text-muted-foreground backdrop-blur transition-colors hover:border-accent hover:text-accent disabled:opacity-60"
+            className={pillClickable}
+            aria-label="Add hero photo"
           >
-            <ImagePlus className="h-4 w-4" />
-            {uploadingHero > 0 ? 'Uploading…' : 'Add hero photo'}
+            <ImagePlus className="h-3.5 w-3.5" />
+            Drag or add photo
           </button>
-        </div>
-      )}
-      {hasBg && uploadingHero > 0 && (
-        <div className="absolute bottom-4 left-4 z-10 pointer-events-auto">
-          <span className="rounded-full bg-black/60 px-3 py-1 text-xs text-white">Uploading…</span>
-        </div>
-      )}
+        )}
+
+        {/* Photo set + idle — change pill plus standalone trash. */}
+        {!isUploading && hasBg && heroPhotoId && (
+          <>
+            <button
+              type="button"
+              onClick={onPickFile}
+              className={pillClickable}
+              aria-label="Change hero photo"
+            >
+              <ImagePlus className="h-3.5 w-3.5" />
+              Drag or change photo
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+              className="rounded-full bg-black/60 p-2 text-white transition-colors hover:bg-black/80"
+              aria-label="Delete hero photo"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </>
+        )}
+      </div>
     </>
   )
 }
