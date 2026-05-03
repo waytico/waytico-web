@@ -148,21 +148,19 @@ function HeroTopStrip({
   // so an owner-view trip with no status pill keeps dates flush right and
   // a quote with no contact channel still keeps status flush left.
   //
-  // Width: the strip spans the FULL hero width, not the max-w-7xl content
-  // column. The design canon (Magazine v2) anchors the strip to the photo
-  // edges with even padding on both sides — operator name flush left,
-  // dates flush right, hairline running corner to corner. Centering the
-  // strip in a 1280px column on a 1920px viewport leaves the dates
-  // floating in mid-air while the photo continues 320px past them on
-  // each side. Padding scales with breakpoint (16/32/48px) so the strip
-  // breathes on tablet/desktop without losing the edge-to-edge anchor.
+  // Width: the strip's CONTENT spans the full hero width with breakpoint-
+  // scaled padding (16/32/48px), anchoring corners of the photo. The
+  // hairline rule sits on the INNER content container so it runs between
+  // the left and right padding insets — not corner-to-corner of the
+  // viewport. The design canon shows this padding-bounded rule on the
+  // hero photo, mirroring the editorial-magazine "type panel" inset
+  // where the rule is part of the content rhythm, not a frame on the
+  // photo itself.
   //
-  // The hairline rule lives on the OUTER absolute wrapper so it spans
-  // the full hero width AND renders identically across owner / public /
-  // preview modes AND across breakpoints — earlier the rule was anchored
-  // to the inner container with `sm:border-b` plus a per-element
-  // `border-t` between status and dates, which made it disappear on
-  // mobile in owner mode (no status pill -> no border-t -> no rule).
+  // The rule renders identically across owner / public / preview modes
+  // because it lives on the always-present content container -- earlier
+  // versions tied it to mobile-only `border-t between status and dates`
+  // which evaporated in owner mode (no status pill -> no border-t).
   //
   // Vertical alignment: items-center (not baseline). The status pill is
   // an inline-flex with a 6px round dot inside — its baseline as
@@ -181,11 +179,11 @@ function HeroTopStrip({
         right: 0,
         zIndex: 3,
         pointerEvents: 'none',
-        borderBottom: `1px solid ${ruleColor}`,
       }}
     >
       <div
-        className="w-full px-4 sm:px-8 lg:px-12 py-5 flex flex-col gap-3 items-start sm:flex-row sm:items-center sm:gap-4"
+        className="w-full px-4 sm:px-8 lg:px-12 py-5 flex flex-col gap-3 items-start sm:flex-row sm:items-center sm:gap-4 border-b"
+        style={{ borderBottomColor: ruleColor }}
       >
         {hasStatus && (
           <div
