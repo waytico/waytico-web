@@ -12,6 +12,7 @@ import {
   Sparkles,
   StickyNote,
   Compass,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiFetch } from '@/lib/api'
@@ -33,6 +34,13 @@ type Props = {
   specialRequests: string | null
   saveProjectPatch: Mutations['saveProjectPatch']
   onClientChanged?: (client: Client) => void
+  /**
+   * When provided, renders a close (×) button in the top-right of the
+   * block header. Used by themes that gate ClientInfo behind a toggle in
+   * the action bar (Magazine). Themes that show the block unconditionally
+   * (Classic, Cinematic, Clean) leave this undefined and get no button.
+   */
+  onClose?: () => void
 }
 
 /**
@@ -65,6 +73,7 @@ export function ClientInfo({
   specialRequests,
   saveProjectPatch,
   onClientChanged,
+  onClose,
 }: Props) {
   const { getToken } = useAuth()
   const [localClient, setLocalClient] = useState<Client | null>(client)
@@ -138,9 +147,21 @@ export function ClientInfo({
               · all fields optional
             </span>
           </div>
-          <span className="text-[10px] uppercase tracking-wider font-semibold text-accent bg-accent/10 px-2 py-0.5 rounded-full whitespace-nowrap">
-            For your eyes only
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-accent bg-accent/10 px-2 py-0.5 rounded-full whitespace-nowrap">
+              For your eyes only
+            </span>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close client info"
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full text-foreground/50 hover:text-foreground hover:bg-foreground/5 transition-colors"
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ── Identity ───────────────────────────────────────── */}

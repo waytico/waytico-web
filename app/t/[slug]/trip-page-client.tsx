@@ -129,6 +129,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const [previewAsClient, setPreviewAsClient] = useState(false)
   const showOwnerUI = isOwner && !previewAsClient
   const [archiveOpen, setArchiveOpen] = useState(false)
+  // Magazine gates ClientInfo behind a toggle in the action bar. Other
+  // themes ignore this state — for them ClientInfo renders unconditionally
+  // for owners, like before.
+  const [clientInfoOpen, setClientInfoOpen] = useState(false)
   // Showcase / demo mode — detected by the seed-showcase slug. When this is
   // the live trip, we force owner UI on (every visitor sees editable fields,
   // drag, AI bar, theme switcher) and intercept all mutations into local
@@ -945,6 +949,16 @@ export default function TripPageClient({ slug, initialData }: Props) {
               prev?.project ? { ...prev, project: { ...prev.project, design_theme: next } } : prev,
             )
           }}
+          /* Magazine: gate ClientInfo behind a toggle. Other themes
+             render the block unconditionally — these props stay
+             undefined and the toggle button is not rendered. Hidden
+             in showcase / anon-creator modes (the block doesn't
+             render there at all, see condition below). */
+          showClientInfoToggle={
+            resolvedTheme === 'magazine' && !isShowcase && !isAnonCreator
+          }
+          clientInfoOpen={clientInfoOpen}
+          onToggleClientInfo={() => setClientInfoOpen((v) => !v)}
         />
       )}
 
@@ -953,18 +967,27 @@ export default function TripPageClient({ slug, initialData }: Props) {
           only fields (booking ref, notes, special requests) go through
           saveProjectPatch directly. Hidden in showcase mode — there's
           no real client behind a demo trip and the block would be a
-          distraction. */}
-      {showOwnerUI && p.id && !isShowcase && !isAnonCreator && (
-        <ClientInfo
-          projectId={p.id}
-          client={(data as any).client ?? null}
-          bookingRef={p.booking_ref ?? null}
-          internalNotes={p.internal_notes ?? null}
-          specialRequests={p.special_requests ?? null}
-          saveProjectPatch={saveProjectPatch}
-          onClientChanged={() => setOwnerRefreshKey((k) => k + 1)}
-        />
-      )}
+          distraction. On Magazine, gated behind the action-bar toggle:
+          starts closed, opens via Client info button, closes via toggle
+          or × in the block header. */}
+      {showOwnerUI &&
+        p.id &&
+        !isShowcase &&
+        !isAnonCreator &&
+        (resolvedTheme !== 'magazine' || clientInfoOpen) && (
+          <ClientInfo
+            projectId={p.id}
+            client={(data as any).client ?? null}
+            bookingRef={p.booking_ref ?? null}
+            internalNotes={p.internal_notes ?? null}
+            specialRequests={p.special_requests ?? null}
+            saveProjectPatch={saveProjectPatch}
+            onClientChanged={() => setOwnerRefreshKey((k) => k + 1)}
+            onClose={
+              resolvedTheme === 'magazine' ? () => setClientInfoOpen(false) : undefined
+            }
+          />
+        )}
 
       {showOwnerUI && p.id && !isShowcase && !isAnonCreator && (
         <ArchiveDialog

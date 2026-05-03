@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { ChevronDown, Eye } from 'lucide-react'
+import { ChevronDown, Eye, Lock } from 'lucide-react'
 import ShareMenu from '@/components/share-menu'
 import { ActivateStubModal } from '@/components/activate-stub-modal'
 import { apiFetch } from '@/lib/api'
@@ -33,6 +33,17 @@ type Props = {
    * Default 0.
    */
   topOffset?: number
+  /**
+   * Themes that gate ClientInfo behind a toggle (Magazine) opt in by
+   * setting this to true. Themes that show ClientInfo unconditionally
+   * (Classic, Cinematic, Clean) leave it undefined and the toggle is
+   * never rendered. The owner of the open/closed state lives in
+   * trip-page-client so it can drive both this toggle and the
+   * ClientInfo render.
+   */
+  showClientInfoToggle?: boolean
+  clientInfoOpen?: boolean
+  onToggleClientInfo?: () => void
 }
 
 /**
@@ -60,6 +71,9 @@ export function TripActionBar({
   isShowcase,
   onLocalThemeChange,
   topOffset = 0,
+  showClientInfoToggle,
+  clientInfoOpen,
+  onToggleClientInfo,
 }: Props) {
   const router = useRouter()
   const { getToken } = useAuth()
@@ -209,6 +223,27 @@ export function TripActionBar({
 
           {/* RIGHT: agent tools */}
           <div className="flex items-center gap-2">
+            {showClientInfoToggle && (
+              <>
+                <button
+                  type="button"
+                  onClick={onToggleClientInfo}
+                  aria-pressed={clientInfoOpen ? 'true' : 'false'}
+                  aria-label={clientInfoOpen ? 'Hide client info' : 'Show client info'}
+                  className={
+                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ' +
+                    (clientInfoOpen
+                      ? 'bg-accent/10 text-accent'
+                      : 'text-foreground/70 hover:text-foreground hover:bg-secondary')
+                  }
+                >
+                  <Lock className="w-4 h-4" />
+                  <span className="hidden sm:inline">Client info</span>
+                  <span className="sm:hidden">Client</span>
+                </button>
+                <div className="w-px h-5 bg-border/60 hidden sm:block" aria-hidden="true" />
+              </>
+            )}
             <ThemeSwitcher
               projectId={projectId}
               value={designTheme}
