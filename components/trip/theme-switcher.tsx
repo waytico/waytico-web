@@ -18,7 +18,7 @@ import { THEME_LABELS, resolveTheme, type ThemeId } from '@/lib/themes'
  * THEMES is intentionally unchanged so a legacy trip's saved value still
  * resolves and renders.
  */
-const VISIBLE_THEMES: ReadonlyArray<ThemeId> = ['magazine']
+const VISIBLE_THEMES: ReadonlyArray<ThemeId> = ['magazine', 'editorial']
 
 type Props = {
   projectId: string

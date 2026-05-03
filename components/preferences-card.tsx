@@ -14,7 +14,7 @@ import { THEME_LABELS, type ThemeId } from '@/lib/themes'
  * choice list is filtered. Trip-page Pass C hides editorial / expedition
  * / compact and surfaces Magazine as the single default.
  */
-const VISIBLE_THEMES: ReadonlyArray<ThemeId> = ['magazine']
+const VISIBLE_THEMES: ReadonlyArray<ThemeId> = ['magazine', 'editorial']
 
 /**
  * PreferencesCard — operator-level settings that aren't part of the
