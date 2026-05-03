@@ -127,12 +127,14 @@ function HeroTopStrip({
   const hasValidUntil = !!(validUntil || validUntilSlot)
   // Owner-side QUOTE pair surfaces only when the public status pill isn't
   // already carrying the code (avoids double-display for the same datum).
+  // It lives in its own slot (col-1 on desktop, order-1 on mobile), taking
+  // the visual position the status pill would otherwise occupy.
   const hasOwnerCode = !!code && !hasStatus
-  const hasDates = hasOwnerCode || hasProposal || hasValidUntil
+  const hasDates = hasProposal || hasValidUntil
   const renderedContactAgent = contactAgentSlot ? contactAgentSlot({ onPhoto }) : null
   const hasContactAgent = !!renderedContactAgent
 
-  if (!hasStatus && !hasDates && !hasContactAgent) return null
+  if (!hasStatus && !hasOwnerCode && !hasDates && !hasContactAgent) return null
 
   const datesStyle: React.CSSProperties = {
     fontSize: 11,
@@ -151,16 +153,26 @@ function HeroTopStrip({
   //     [QUOTE · code]        [Contact agent]        [Issued — Valid until]
   //      col-1, flush left     col-2, centered        col-3, flush right
   //
-  //   OWNER DESKTOP (no status):
-  //     [empty col-1]         [Contact agent if any]  [Quote · Issued · Valid until]
-  //                            col-2, centered         col-3, flush right
-  //     Dates always end at col-3's right edge, which coincides with the
-  //     hairline rule's right end (border-b on the mx-* wrapper). When
-  //     contact-agent isn't rendered for an owner (operator IS the contact),
-  //     col-2 is just empty space — dates stay anchored right.
+  //   OWNER DESKTOP (no status, hasOwnerCode):
+  //     [Quote · code]        [Contact agent if any]  [Issued — Valid until]
+  //      col-1, flush left     col-2, centered         col-3, flush right
+  //     Quote code lives in its own slot at col-1 (the visual position the
+  //     status pill would otherwise occupy). Dates always end at col-3's
+  //     right edge, which coincides with the hairline rule's right end
+  //     (border-b on the mx-* wrapper). When contact-agent isn't rendered
+  //     for an owner (operator IS the contact), col-2 is just empty space.
   //
-  //   ANY MOBILE — flex-col stacked, ordered status -> dates -> contact via
-  //     order-1/2/3. Hairline between status and dates when both present.
+  //   ANY MOBILE — flex-col stacked, ordered status/ownerCode -> dates ->
+  //     contact via order-1/2/3 (status and ownerCode are mutually exclusive,
+  //     both live in order-1). Hairline between upper row and dates when
+  //     either is present.
+  //
+  // Note on grid-flow-row-dense: items appear in DOM order status (or
+  // ownerCode) / dates / contact, but their explicit col-start values are
+  // 1 / 3 / 2 — out of natural sweep order. Without `dense`, the placement
+  // cursor advances past row 1 col 3 after dates and pushes contact to
+  // row 2 col 2. With `dense`, the algorithm backfills the empty row 1 col 2
+  // for contact, keeping all three slots on the same row.
   //
   // Slot wrappers carry `sm:flex sm:items-center` + an explicit lineHeight
   // so all three slots have identical intrinsic height — necessary because
@@ -182,7 +194,7 @@ function HeroTopStrip({
   // which evaporated in owner mode (no status pill -> no border-t).
   const ruleColor = onPhoto ? 'rgba(255,255,255,0.22)' : 'var(--rule)'
 
-  const desktopLayout = 'sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4'
+  const desktopLayout = 'sm:grid sm:grid-cols-[1fr_auto_1fr] sm:grid-flow-row-dense sm:items-center sm:gap-4'
 
   return (
     <div
@@ -208,27 +220,35 @@ function HeroTopStrip({
           </div>
         )}
 
+        {hasOwnerCode && (
+          <div
+            className="order-1 sm:order-none sm:col-start-1 sm:justify-self-start sm:flex sm:items-center uppercase"
+            style={{
+              ...datesStyle,
+              pointerEvents: 'auto',
+              lineHeight: 1.2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <span>Quote</span>
+            <span>{code}</span>
+          </div>
+        )}
+
         {hasDates && (
           <div
             className={`order-2 sm:order-none uppercase grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-start sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:gap-y-0 sm:col-start-3 sm:justify-self-end ${
-              hasStatus ? 'w-full pt-3 border-t sm:w-auto sm:pt-0 sm:border-t-0' : ''
+              hasStatus || hasOwnerCode ? 'w-full pt-3 border-t sm:w-auto sm:pt-0 sm:border-t-0' : ''
             }`}
             style={{
               ...datesStyle,
               pointerEvents: 'auto',
               lineHeight: 1.2,
-              ...(hasStatus ? { borderTopColor: ruleColor } : {}),
+              ...(hasStatus || hasOwnerCode ? { borderTopColor: ruleColor } : {}),
             }}
           >
-            {hasOwnerCode && (
-              <>
-                <span>Quote</span>
-                <span>{code}</span>
-              </>
-            )}
-            {hasOwnerCode && (hasProposal || hasValidUntil) && (
-              <span className="hidden sm:inline opacity-50">—</span>
-            )}
             {hasProposal && (
               <>
                 <span>{UI.proposal}</span>
