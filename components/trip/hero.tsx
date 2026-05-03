@@ -208,7 +208,7 @@ function HeroTopStrip({
       }}
     >
       <div
-        className={`mx-4 sm:mx-8 lg:mx-12 py-5 flex flex-col gap-3 items-start ${desktopLayout} border-b`}
+        className={`mx-4 sm:mx-8 lg:mx-12 py-5 flex flex-col gap-3 items-start ${desktopLayout} sm:border-b`}
         style={{ borderBottomColor: ruleColor }}
       >
         {hasStatus && (

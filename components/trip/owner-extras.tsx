@@ -54,7 +54,7 @@ export function HeroOwnerOverlay({
         )}
       </div>
 
-      <div className="absolute top-20 right-4 z-10 flex items-center gap-2 pointer-events-auto">
+      <div className="absolute top-32 sm:top-20 right-4 z-10 flex items-center gap-2 pointer-events-auto">
         {/* Uploading — passive pill with spinner. Wins over both empty
             and photo-set states because it can fire from either. */}
         {isUploading && (
