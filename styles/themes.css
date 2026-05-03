@@ -1881,11 +1881,32 @@
   }
 }
 
+/* Drag-reorder handle for Magazine days. The base .tp-itin-handle rule
+   (above) ships with `left: -28px` (gutter pattern) and visibility that
+   triggers on `.day:hover`. Magazine's article carries `.tp-mag-day`,
+   not `.day`, so:
+     1) the hover trigger never fires — handle stays opacity:0 on desktop
+        even when reachable;
+     2) `left: -28px` lands inside .tp-mag-container's padding-inline
+        (clamp(24px, 5vw, 48px)) — fine on ≥1280px where the container
+        is centered, but on most laptops <1280px the math goes negative
+        relative to the viewport edge and `.tp-mag-section`'s
+        `overflow-x: hidden` (kept for full-bleed mobile photos) clips
+        the handle off-screen.
+   Anchor the handle inside the article and give it a tinted background
+   so it stays legible on top of the day photo (mirrors the pattern used
+   by .tp-itin--photo-cards / .tp-itin--grid). */
 [data-theme="magazine"] .tp-mag-day__handle {
   position: absolute;
   top: 12px;
-  left: -28px;
-  z-index: 2;
+  left: 4px;
+  z-index: 5;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+}
+
+[data-theme="magazine"] .tp-mag-day:hover .tp-mag-day__handle {
+  opacity: 1;
 }
 
 @media (max-width: 1023.98px) {
