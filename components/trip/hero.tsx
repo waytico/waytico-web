@@ -118,18 +118,26 @@ function HeroTopStrip({
   const datesStyle: React.CSSProperties = {
     fontSize: 11,
     letterSpacing: '0.12em',
-    textTransform: 'uppercase',
     fontFamily: 'var(--font-mono)',
     color: onPhoto ? 'rgba(255,255,255,0.92)' : 'var(--ink-mute)',
     textShadow: onPhoto ? '0 1px 4px rgba(0,0,0,0.4)' : undefined,
   }
 
-  // Outer wrapper is absolutely positioned over the hero so it lays
-  // above the photo on the Cinematic overlay theme. The inner div
-  // re-establishes the page's max-w-7xl + px-4 horizontal alignment
-  // so the strip's left edge aligns with the hero title and its right
-  // edge with the rest of the page content (was: stretching to the
-  // viewport edges, leaving a wide visual gap on large screens).
+  // Layout — three slots (status / contact agent / dates) laid out as a
+  // 3-column grid on desktop and stacked on mobile. col-start makes each
+  // slot land in its own column regardless of which siblings are missing,
+  // so an owner-view trip with no status pill keeps dates flush right and
+  // a quote with no contact channel still keeps status flush left.
+  //
+  //  desktop (≥640px):
+  //    grid-cols-[1fr_auto_1fr]  ← center column hugs content
+  //    [status (left)]   [contact (centered)]   [dates (right)]
+  //
+  //  mobile (<640px):
+  //    grid-cols-1
+  //    status / dates / contact, top-to-bottom, left-aligned
+  //    dates render as their own 2-col grid: label | date, label | date
+  //    so the date columns line up under each other.
   return (
     <div
       style={{
@@ -141,52 +149,47 @@ function HeroTopStrip({
         pointerEvents: 'none',
       }}
     >
-      <div
-        className="max-w-7xl mx-auto px-4"
-        style={{
-          paddingTop: 20,
-          paddingBottom: 20,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 16,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', pointerEvents: 'auto' }}>
-          {hasStatus && <PublicStatusPill status={status} onPhoto={onPhoto} />}
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 20,
-            flexWrap: 'wrap',
-            justifyContent: 'flex-end',
-            pointerEvents: 'auto',
-          }}
-        >
-          {hasContactAgent && renderedContactAgent}
-          {hasDates && (
-            <div style={datesStyle}>
-              {hasProposal && (
-                <>
-                  {UI.proposal}{' '}
-                  {proposalSlot ?? (proposalDate ? fmtDate(proposalDate) : null)}
-                </>
-              )}
-              {hasProposal && hasValidUntil && (
-                <span style={{ margin: '0 0.6em', opacity: 0.5 }}>—</span>
-              )}
-              {hasValidUntil && (
-                <>
-                  {UI.validUntil}{' '}
-                  {validUntilSlot ?? (validUntil ? fmtDate(validUntil) : null)}
-                </>
-              )}
-            </div>
-          )}
-        </div>
+      <div className="max-w-7xl mx-auto px-4 py-5 grid grid-cols-1 gap-3 items-start sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4">
+        {hasStatus && (
+          <div
+            className="sm:col-start-1 sm:justify-self-start"
+            style={{ pointerEvents: 'auto' }}
+          >
+            <PublicStatusPill status={status} onPhoto={onPhoto} />
+          </div>
+        )}
+
+        {hasDates && (
+          <div
+            className="uppercase grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-start sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:gap-y-0 sm:col-start-3 sm:justify-self-end"
+            style={{ ...datesStyle, pointerEvents: 'auto' }}
+          >
+            {hasProposal && (
+              <>
+                <span>{UI.proposal}</span>
+                <span>{proposalSlot ?? (proposalDate ? fmtDate(proposalDate) : null)}</span>
+              </>
+            )}
+            {hasProposal && hasValidUntil && (
+              <span className="hidden sm:inline opacity-50">—</span>
+            )}
+            {hasValidUntil && (
+              <>
+                <span>{UI.validUntil}</span>
+                <span>{validUntilSlot ?? (validUntil ? fmtDate(validUntil) : null)}</span>
+              </>
+            )}
+          </div>
+        )}
+
+        {hasContactAgent && (
+          <div
+            className="justify-self-start sm:col-start-2 sm:justify-self-center"
+            style={{ pointerEvents: 'auto' }}
+          >
+            {renderedContactAgent}
+          </div>
+        )}
       </div>
     </div>
   )
