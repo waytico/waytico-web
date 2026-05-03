@@ -112,7 +112,7 @@ function IncludedMagazine({
       <div className="tp-mag-container">
         <header className="tp-mag-incl__header">
           <hr className="tp-mag-rule" />
-          <p className="tp-mag-eyebrow tp-mag-incl__eyebrow">IV — DETAILS</p>
+          <p className="tp-mag-eyebrow tp-mag-incl__eyebrow">DETAILS</p>
           {subtitleSlot && (
             <h2 className="tp-mag-display tp-mag-section-subtitle">
               {subtitleSlot}

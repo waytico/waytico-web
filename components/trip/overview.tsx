@@ -134,7 +134,7 @@ function OverviewMagazine(props: OverviewProps) {
         <div className="tp-mag-overview__grid">
           <div className="tp-mag-overview__left">
             <p className="tp-mag-eyebrow tp-mag-overview__eyebrow">
-              I — {UI.sectionLabels.overview.toUpperCase()}
+              {UI.sectionLabels.overview.toUpperCase()}
             </p>
             {subtitleSlot && (
               <h2 className="tp-mag-display tp-mag-section-subtitle">

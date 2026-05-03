@@ -617,7 +617,7 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
     <header className="tp-mag-itin__header">
       <hr className="tp-mag-rule" />
       <p className="tp-mag-eyebrow tp-mag-itin__eyebrow">
-        II — {UI.sectionLabels.itinerary.toUpperCase()}
+        {UI.sectionLabels.itinerary.toUpperCase()}
       </p>
       {subtitleSlot && (
         <h2 className="tp-mag-display tp-mag-section-subtitle">

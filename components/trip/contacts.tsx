@@ -531,7 +531,7 @@ function ContactsMagazine({
         <header className="tp-mag-contacts__header">
           <hr className="tp-mag-rule" />
           <p className="tp-mag-eyebrow tp-mag-contacts__eyebrow">
-            VII — TALK TO US
+            TALK TO US
           </p>
           {subtitleSlot && (
             <h2 className="tp-mag-display tp-mag-section-subtitle">

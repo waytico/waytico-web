@@ -360,7 +360,7 @@ function PriceMagazine(props: PriceProps) {
       <div className="tp-mag-container">
         <header className="tp-mag-price__header">
           <hr className="tp-mag-rule" />
-          <p className="tp-mag-eyebrow tp-mag-price__eyebrow">V — INVESTMENT</p>
+          <p className="tp-mag-eyebrow tp-mag-price__eyebrow">INVESTMENT</p>
           {props.subtitleSlot && (
             <h2 className="tp-mag-display tp-mag-section-subtitle">
               {props.subtitleSlot}
