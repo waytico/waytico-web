@@ -51,6 +51,35 @@ export function fmtDateRange(startISO: string | null | undefined, endISO: string
   return `${MONTH_SHORT[s.getMonth()]} ${s.getDate()} – ${MONTH_SHORT[e.getMonth()]} ${e.getDate()}, ${s.getFullYear()}`
 }
 
+/**
+ * Editorial long-form range — always names both months and uses an em-dash
+ * with hair spaces. "Jun 24 — Jun 28, 2026" / "Jun 24 — Jul 2, 2026".
+ *
+ * The Magazine theme uses this in the hero bottom date line where the
+ * date sits as a serif italic sub-line under the mono COUNTRY — DAYS
+ * eyebrow; the repetition of the month reads as deliberate editorial
+ * cadence rather than the compact "Jun 24–28" shorthand the other
+ * themes use in tighter stat tiles.
+ */
+export function fmtDateRangeLong(
+  startISO: string | null | undefined,
+  endISO: string | null | undefined,
+): string | null {
+  const a = toDateHead(startISO)
+  const b = toDateHead(endISO)
+  if (!a || !b) return null
+  const s = new Date(`${a}T00:00:00`)
+  const e = new Date(`${b}T00:00:00`)
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null
+  const sameYear = s.getFullYear() === e.getFullYear()
+  const startMon = MONTH_SHORT[s.getMonth()]
+  const endMon = MONTH_SHORT[e.getMonth()]
+  if (sameYear) {
+    return `${startMon} ${s.getDate()} — ${endMon} ${e.getDate()}, ${s.getFullYear()}`
+  }
+  return `${startMon} ${s.getDate()}, ${s.getFullYear()} — ${endMon} ${e.getDate()}, ${e.getFullYear()}`
+}
+
 /** "Apr 22, 2026" */
 export function fmtDate(iso: string | null | undefined): string | null {
   const head = toDateHead(iso)

@@ -1521,13 +1521,28 @@
   margin-bottom: 6px;
 }
 
+/* Second eyebrow line (DATES) — typographic register-shift away from
+   the mono uppercase eyebrow above. Renders in display serif italic
+   mixed-case, sized between the eyebrow above and the title below.
+   The pairing reads as eyebrow → italic sub-line → title — three
+   typographic layers, which is the Magazine v2 canon's voice for the
+   hero stack. Letter-spacing and uppercase reset to defaults so the
+   serif italic gets its native rendering. */
 [data-theme="magazine"] .tp-mag-hero__bottom-eyebrow--dates {
-  /* When the dates line stands on its own (no COUNTRY/DAYS line above)
-     it inherits the standard 20/24px bottom margin from the base rule.
-     When it follows the COUNTRY/DAYS line, the :has() selector above
-     tightens the upper margin and we leave the bottom margin at its
-     default 20/24px so the gap to the title is preserved. */
-  opacity: 0.92;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 1.25;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.95;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-hero__bottom-eyebrow--dates {
+    font-size: 22px;
+  }
 }
 
 [data-theme="magazine"] .tp-mag-hero__bottom-eyebrow-part {

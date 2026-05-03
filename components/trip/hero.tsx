@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
 import type { ThemeId } from '@/lib/themes'
 import { HERO_STYLE } from '@/lib/themes'
-import { fmtDate } from '@/lib/trip-format'
+import { fmtDate, numberToWords } from '@/lib/trip-format'
 import { PublicStatusPill } from './public-status-pill'
 
 export type HeroOperatorContact = {
@@ -523,27 +523,36 @@ function HeroMagazine(props: HeroProps) {
   // Bottom eyebrow lives on TWO lines, matching the prior stat-tile
   // semantics:
   //
-  //   Line 1 — "{COUNTRY} — {N} DAYS"
+  //   Line 1 — "{COUNTRY} — {N} DAYS" (mono uppercase eyebrow)
   //     COUNTRY is read-only (no editor; it's a derived hero field).
   //     N DAYS reads from durationStatSlot when owner mode passes one
   //     (which wraps the digit in an <a href="#itinerary"> smooth-
   //     scroll, since duration is a derived count of itinerary days
   //     and the only way to actually change it is to add/remove days
   //     in the Itinerary block — same affordance the stat tile had).
-  //     Public mode falls back to the plain digit + " DAYS" string.
+  //     Public mode falls back to the spelled-out word ("SEVEN DAYS")
+  //     to keep the editorial register on this line — the design canon
+  //     uses words on the eyebrow line where compactness isn't at a
+  //     premium. Owner mode shows a digit because the slot is a click
+  //     target (digits scan as actionable; spelled-out words don't).
   //
-  //   Line 2 — "{DATES}"
+  //   Line 2 — "{DATES}" (serif italic mixed-case sub-line)
   //     Owner mode receives dateStatSlot — an inline pair of
   //     EditableField date pickers (start / end), exactly the slot the
-  //     prior stat tile consumed. Public mode renders the formatted
-  //     dateRange string.
+  //     prior stat tile consumed. Public mode renders the long-form
+  //     dateRange ("Jun 24 — Jun 28, 2026") set in display serif italic
+  //     through the .--dates modifier in CSS.
   //
   // Each line hides independently when its source data is empty.
   const bottomCountry = country ? country.toUpperCase() : null
+  const durationWord =
+    durationDays != null ? numberToWords(durationDays) : null
+  const durationDisplay =
+    durationDays != null ? durationWord ?? String(durationDays) : null
   const bottomDuration: ReactNode =
     durationStatSlot ??
-    (durationDays != null
-      ? `${durationDays} ${UI.days.toUpperCase()}`
+    (durationDisplay != null
+      ? `${durationDisplay} ${UI.days.toUpperCase()}`
       : null)
   const bottomDates: ReactNode = dateStatSlot ?? dateRange ?? null
 

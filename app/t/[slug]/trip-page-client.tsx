@@ -44,6 +44,7 @@ import { resolveTheme, type ThemeId } from '@/lib/themes'
 import { UI } from '@/lib/ui-strings'
 import {
   fmtDateRange,
+  fmtDateRangeLong,
   fmtPrice,
   coercePrice,
   addDaysISO,
@@ -533,9 +534,18 @@ export default function TripPageClient({ slug, initialData }: Props) {
       : pricingMode === 'other'
         ? p.pricing_label || UI.forTheGroup
         : UI.forTheGroup
-  const dateRange = fmtDateRange(p.dates_start, p.dates_end)
-
   const resolvedTheme = resolveTheme(p.design_theme)
+
+  // Magazine renders DATES on its own serif italic sub-line where the
+  // expanded long-form ("Jun 24 — Jun 28, 2026") reads better than the
+  // compact stat-tile form ("Jun 24–28, 2026"). Other themes keep the
+  // tighter form because their dates live inside narrow stat tiles
+  // where horizontal width matters.
+  const dateRange =
+    resolvedTheme === 'magazine'
+      ? fmtDateRangeLong(p.dates_start, p.dates_end)
+      : fmtDateRange(p.dates_start, p.dates_end)
+
   const heroPhoto = media.find((m) => m.placement === 'hero') || null
   const hasHeroBg = !!heroPhoto
 
