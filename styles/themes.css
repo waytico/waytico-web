@@ -1813,8 +1813,11 @@
 }
 
 [data-theme="magazine"] .tp-mag-day {
-  display: grid;
-  grid-template-columns: 1fr;
+  /* Mobile: simple stack — header / photo / body — DOM order is the
+     reading order. The padding-top + border-top draw the hairline rule
+     between consecutive days. */
+  display: flex;
+  flex-direction: column;
   gap: 20px;
   padding-top: 40px;
   border-top: 1px solid var(--rule);
@@ -1823,20 +1826,31 @@
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-day {
+    /* Desktop: 2-column spread with named grid areas. The same DOM
+       (header / photo / body) is re-laid so header + body share the
+       text column and the photo spans both rows in the photo column.
+       --reverse swaps which column gets the photo, producing
+       alternating spreads down the page. */
+    display: grid;
     grid-template-columns: 1.4fr 1fr;
-    gap: 64px;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "header photo"
+      "body   photo";
+    column-gap: 64px;
+    row-gap: 32px;
     padding-top: 60px;
-    align-items: center;
+    align-items: start;
   }
+  [data-theme="magazine"] .tp-mag-day__header { grid-area: header; }
+  [data-theme="magazine"] .tp-mag-day__photo  { grid-area: photo; align-self: stretch; }
+  [data-theme="magazine"] .tp-mag-day__body   { grid-area: body; }
+
   [data-theme="magazine"] .tp-mag-day--reverse {
     grid-template-columns: 1fr 1.4fr;
-  }
-  /* Reverse swaps which child sits in which column. */
-  [data-theme="magazine"] .tp-mag-day--reverse .tp-mag-day__photo {
-    order: 2;
-  }
-  [data-theme="magazine"] .tp-mag-day--reverse .tp-mag-day__text {
-    order: 1;
+    grid-template-areas:
+      "photo header"
+      "photo body";
   }
 }
 
@@ -1857,6 +1871,19 @@
 
 [data-theme="magazine"] .tp-mag-day__photo {
   margin: 0;
+}
+
+/* Mobile: photo is full-bleed — escapes the container's horizontal
+   padding (which is clamp(24px, 5vw, 48px) on .tp-mag-container) so the
+   image runs edge-to-edge of the section background. The negative
+   margin mirrors that same clamp() so we always cancel exactly the
+   padding the container introduces. .tp-mag-section has overflow-x:
+   hidden, which keeps the visual cleanly clipped at the viewport
+   edges if the math is ever off by a fraction. */
+@media (max-width: 1023px) {
+  [data-theme="magazine"] .tp-mag-day__photo {
+    margin-inline: calc(-1 * clamp(24px, 5vw, 48px));
+  }
 }
 
 [data-theme="magazine"] .tp-mag-day__photo-btn {
@@ -1902,10 +1929,11 @@
   }
 }
 
-[data-theme="magazine"] .tp-mag-day__text {
+[data-theme="magazine"] .tp-mag-day__header {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
+  margin: 0;
 }
 
 [data-theme="magazine"] .tp-mag-day__eyebrow {
