@@ -86,6 +86,11 @@ export type ProjectLite = {
   /** Short poetic subtitle in the hero (5-12 words). Replaces the long
    *  description on the rendered hero — description still feeds the Overview. */
   tagline: string | null
+  /** Top-3 cities / regions / landmarks anchoring the trip — Magazine hero
+   *  renders these beside the title. Empty array = none yet (new trip
+   *  pre-pipeline_hero v8, or operator cleared them). Order is meaningful
+   *  (visit order when known, prominence otherwise). */
+  highlights?: string[]
   description: string | null
   region: string | null
   country: string | null

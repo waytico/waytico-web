@@ -1511,6 +1511,70 @@
   }
 }
 
+/* ── Hero bottom-grid: title block (left) + highlights (right). ─────
+ *  On mobile: stacks column, highlights row with · separators.
+ *  On desktop: side-by-side, highlights right-column right-aligned. */
+[data-theme="magazine"] .tp-mag-hero__bottom-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+[data-theme="magazine"] .tp-mag-hero__bottom-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+[data-theme="magazine"] .tp-mag-hero__highlights {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 230, 0.85);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="magazine"] .tp-mag-hero__highlights-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+[data-theme="magazine"] .tp-mag-hero__highlights-sep {
+  opacity: 0.5;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-hero__bottom-grid {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 32px;
+  }
+  [data-theme="magazine"] .tp-mag-hero__highlights {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    text-align: right;
+    font-size: 12px;
+  }
+  [data-theme="magazine"] .tp-mag-hero__highlights-item {
+    /* On desktop, separators are hidden — each highlight is its own row. */
+  }
+  [data-theme="magazine"] .tp-mag-hero__highlights-sep {
+    display: none;
+  }
+}
+
 /* ── Overview (asymmetric grid + meta-rail + stat tiles) ──────────── */
 
 [data-theme="magazine"] .tp-mag-overview__grid {

@@ -595,6 +595,38 @@ export default function TripPageClient({ slug, initialData }: Props) {
     p.tagline ? <span>{p.tagline}</span> : null
   )
 
+  // ── Hero highlights (top-3 cities / regions / landmarks) ──
+  // Magazine hero renders these beside the title; other themes ignore.
+  // Owner mode shows three slots (filled or placeholder) so the operator
+  // can always add up to three. Saving a single slot does a full-array
+  // replace: read current highlights, place trimmed value at that index,
+  // strip empties, send back. Empty slots collapse, so the persisted
+  // array stays compact.
+  const currentHighlights = Array.isArray(p.highlights) ? p.highlights : []
+  const saveHighlight = (index: number, raw: string): Promise<boolean> => {
+    const trimmed = raw.trim()
+    const arr = [...currentHighlights]
+    while (arr.length <= index) arr.push('')
+    arr[index] = trimmed
+    const cleaned = arr.map((s) => s.trim()).filter((s) => s.length > 0).slice(0, 3)
+    return saveProjectPatch({ highlights: cleaned })
+  }
+
+  const heroHighlightsSlots: ReactNode[] | undefined = ed
+    ? [0, 1, 2].map((i) => (
+        <EditableField
+          as="text"
+          editable
+          value={currentHighlights[i] || null}
+          placeholder={`Highlight ${i + 1}`}
+          maxLength={200}
+          onSave={(v) => saveHighlight(i, v)}
+        />
+      ))
+    : currentHighlights.length > 0
+      ? currentHighlights.map((s) => (s ? <span>{s}</span> : null))
+      : undefined
+
   const activityChipSlot: ReactNode | null =
     p.activity_type || ed ? (
       <span className="tp-chip">
@@ -1179,6 +1211,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             regionEyebrowSlot={regionEyebrowSlot}
             titleSlot={titleSlot}
             taglineSlot={heroTaglineSlot}
+            highlightsSlots={heroHighlightsSlots}
             dateStatSlot={dateStatSlot}
             durationStatSlot={durationStatSlot}
             groupStatSlot={groupStatSlot}

@@ -80,6 +80,12 @@ type HeroProps = {
    *     pair in the dates row → "QUOTE A3K9P2 — ISSUED … — VALID UNTIL …".
    *  Hidden when null. */
   code?: string | null
+  /** Top-3 trip highlights (cities / regions / landmarks). Each entry is
+   *  a slot so owner mode can wrap it with EditableField; public mode
+   *  passes plain text or null. Nulls are filtered out before render.
+   *  Currently only the Magazine theme renders these — other themes
+   *  ignore the prop. */
+  highlightsSlots?: ReactNode[]
 }
 
 /**
@@ -510,6 +516,7 @@ function HeroMagazine(props: HeroProps) {
     country,
     ownerOverlay,
     code,
+    highlightsSlots,
   } = props
 
   // Bottom eyebrow: "{COUNTRY} — {N} DAYS". Each part hides individually
@@ -560,13 +567,31 @@ function HeroMagazine(props: HeroProps) {
       />
 
       <div className="tp-mag-hero__bottom">
-        {bottomEyebrowParts.length > 0 && (
-          <p className="tp-mag-hero__bottom-eyebrow">
-            {bottomEyebrowParts.join(' — ')}
-          </p>
-        )}
-        <h1 className="tp-mag-hero__title">{titleSlot}</h1>
-        {taglineSlot && <p className="tp-mag-hero__tagline">{taglineSlot}</p>}
+        <div className="tp-mag-hero__bottom-grid">
+          <div className="tp-mag-hero__bottom-text">
+            {bottomEyebrowParts.length > 0 && (
+              <p className="tp-mag-hero__bottom-eyebrow">
+                {bottomEyebrowParts.join(' — ')}
+              </p>
+            )}
+            <h1 className="tp-mag-hero__title">{titleSlot}</h1>
+            {taglineSlot && <p className="tp-mag-hero__tagline">{taglineSlot}</p>}
+          </div>
+          {highlightsSlots && highlightsSlots.some(Boolean) && (
+            <ul className="tp-mag-hero__highlights" aria-label="Trip highlights">
+              {highlightsSlots.map((slot, i) =>
+                slot ? (
+                  <li key={i} className="tp-mag-hero__highlights-item">
+                    {i > 0 && (
+                      <span className="tp-mag-hero__highlights-sep" aria-hidden="true">·</span>
+                    )}
+                    <span className="tp-mag-hero__highlights-value">{slot}</span>
+                  </li>
+                ) : null,
+              )}
+            </ul>
+          )}
+        </div>
       </div>
 
       {ownerOverlay}
