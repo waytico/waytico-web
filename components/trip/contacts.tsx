@@ -240,8 +240,7 @@ export function TripContacts({ owner, operatorContact, editable, saveProjectPatc
             </h2>
             <p className="tp-contacts-subheading">
               <EditableField
-                as="multiline"
-                rows={2}
+                as="text"
                 editable={editable}
                 value={
                   operatorContact?.subheading?.trim() ||
@@ -254,6 +253,7 @@ export function TripContacts({ owner, operatorContact, editable, saveProjectPatc
                     !trimmed || trimmed === UI.contactsSubheading ? null : trimmed
                   return saveValue('subheading', next, operatorContact, saveProjectPatch)
                 }}
+                maxLength={200}
               />
             </p>
 
@@ -641,8 +641,7 @@ function ContactsMagazine({
             </h2>
             <p className="tp-mag-contacts__subheading">
               <EditableField
-                as="multiline"
-                rows={2}
+                as="text"
                 editable={editable}
                 value={
                   operatorContact?.subheading?.trim() ||
@@ -655,6 +654,7 @@ function ContactsMagazine({
                     !trimmed || trimmed === UI.contactsSubheading ? null : trimmed
                   return saveValue('subheading', next, operatorContact, saveProjectPatch)
                 }}
+                maxLength={200}
               />
             </p>
 
