@@ -128,8 +128,8 @@ export default function AnonUpsellModal({
             {/* Feature list */}
             <ul className="space-y-2 mb-5">
               {[
-                'Refine it with AI — just type what to change',
                 'Upload photos for each day',
+                'Edit on the page or with the AI assistant',
                 'Pick a visual theme that fits the vibe',
                 'Keep all your quotes in one place',
               ].map((item) => (
