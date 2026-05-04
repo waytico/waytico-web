@@ -1,23 +1,14 @@
 import Link from 'next/link'
 import { ScrollToTop } from '@/components/scroll-to-top'
-
-const productLinks = [
-  { href: '/how-it-works', label: 'How it works' },
-  { href: '/help/ai-assistant', label: 'AI assistant' },
-  { href: '/pricing', label: 'Pricing' },
-]
-
-const resourcesLinks = [
-  { href: '/help', label: 'Help center' },
-  { href: '/about', label: 'About' },
-]
-
-const legalLinks = [
-  { href: '/terms', label: 'Terms of Use' },
-  { href: '/privacy', label: 'Privacy Policy' },
-  { href: '/personal-information', label: 'Personal Information' },
-  { href: '/cookies', label: 'Cookies' },
-]
+import {
+  FOOTER_PRODUCT_LINKS,
+  FOOTER_RESOURCES_LINKS,
+  FOOTER_LEGAL_LINKS,
+  FOOTER_CONTACT_EMAIL,
+  FOOTER_BRAND_WORDMARK,
+  footerCopyLine,
+  type FooterLink,
+} from '@/lib/footer-content'
 
 export default function Footer() {
   return (
@@ -25,18 +16,18 @@ export default function Footer() {
       <footer className="w-full border-t border-border/50 bg-secondary">
         <div className="max-w-4xl mx-auto px-4 py-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
-            <FooterColumn title="Product" links={productLinks} />
-            <FooterColumn title="Resources" links={resourcesLinks} />
-            <FooterColumn title="Legal" links={legalLinks} />
+            <FooterColumn title="Product" links={FOOTER_PRODUCT_LINKS} />
+            <FooterColumn title="Resources" links={FOOTER_RESOURCES_LINKS} />
+            <FooterColumn title="Legal" links={FOOTER_LEGAL_LINKS} />
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-foreground">Contact</h3>
               <ul className="space-y-2">
                 <li>
                   <a
-                    href="mailto:hello@waytico.com"
+                    href={`mailto:${FOOTER_CONTACT_EMAIL}`}
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    hello@waytico.com
+                    {FOOTER_CONTACT_EMAIL}
                   </a>
                 </li>
               </ul>
@@ -47,9 +38,9 @@ export default function Footer() {
               href="/"
               className="font-serif font-semibold text-foreground/70 hover:text-foreground transition-colors"
             >
-              Waytico
+              {FOOTER_BRAND_WORDMARK}
             </Link>
-            <span>© {new Date().getFullYear()} Waytico. Built for small travel businesses.</span>
+            <span>{footerCopyLine(new Date().getFullYear())}</span>
           </div>
         </div>
       </footer>
@@ -65,7 +56,7 @@ function FooterColumn({
   links,
 }: {
   title: string
-  links: { href: string; label: string }[]
+  links: FooterLink[]
 }) {
   return (
     <div className="space-y-3">

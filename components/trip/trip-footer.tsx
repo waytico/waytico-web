@@ -1,39 +1,41 @@
 import Link from 'next/link'
 import Footer from '@/components/footer'
 import type { ThemeId } from '@/lib/themes'
-import { resolveContacts, channelHref } from '@/lib/contact-resolution'
-import type { OperatorContact, OwnerBrand } from './trip-types'
+import {
+  FOOTER_PRODUCT_LINKS,
+  FOOTER_RESOURCES_LINKS,
+  FOOTER_LEGAL_LINKS,
+  FOOTER_CONTACT_EMAIL,
+  FOOTER_BRAND_WORDMARK,
+  footerCopyLine,
+  type FooterLink,
+} from '@/lib/footer-content'
 
 type Props = {
-  /** Owner mode = render the full site Footer (product + company +
-   *  legal + contact columns) so the operator has navigation back to
-   *  the dashboard / profile / etc. Traveller mode = render a minimal
-   *  one-line strip — operator brand and channels are already covered
-   *  by the Contacts section above, and an operator-name copyright
-   *  inside a tiny grey strip would just feel like noise.
+  /** Owner mode = render the full footer (product / resources /
+   *  legal / contact + brand wordmark + copy line). Traveller mode =
+   *  minimal "© year · Powered by Waytico" strip — operator brand
+   *  identity is already covered by the Contacts section above, no
+   *  product navigation needed for a viewer-only surface.
    *
-   *  Magazine theme overrides both: a single dark Magazine footer
-   *  renders for both owner and public viewers (TZ pass-B decision #10). */
+   *  Both modes apply across themes; only the visual treatment
+   *  differs (Magazine = dark slab, Classic / Cinematic / Clean =
+   *  light shadcn semantic tokens). */
   editable: boolean
-  /** Active theme. When 'magazine' the dark Magazine footer renders
-   *  for both modes and the site Footer is suppressed. */
+  /** Active theme. Magazine renders the dark variant for both modes;
+   *  other themes use the standard site Footer (owner) or the
+   *  minimal Classic strip (public). */
   theme?: ThemeId
-  /** Brand identity + per-trip override — Magazine footer reads them
-   *  for the brand column + offices + contact rail. Editorial ignores. */
-  owner?: OwnerBrand
-  operatorContact?: OperatorContact
 }
 
-export function TripFooter({ editable, theme, owner, operatorContact }: Props) {
+export function TripFooter({ editable, theme }: Props) {
   if (theme === 'magazine') {
-    return (
-      <FooterMagazine owner={owner ?? null} operatorContact={operatorContact ?? null} />
-    )
+    return <FooterMagazine editable={editable} />
   }
 
   if (editable) {
-    // Owner mode: the standard site footer. Wrapped in a div with
-    // id=site-footer so the floating TripCommandBar's
+    // Owner mode on non-Magazine themes: full site footer. Wrapped in
+    // a div with id=site-footer so the floating TripCommandBar's
     // IntersectionObserver still finds the page bottom and fades out.
     return (
       <div id="site-footer">
@@ -42,10 +44,8 @@ export function TripFooter({ editable, theme, owner, operatorContact }: Props) {
     )
   }
 
-  // Public mode: just © year · Powered by Waytico, centred. Nothing
-  // else — Contacts above covers reachability and brand attribution.
+  // Public mode on non-Magazine themes: minimal strip, light palette.
   const year = new Date().getFullYear()
-
   return (
     <footer
       id="site-footer"
@@ -69,97 +69,110 @@ export function TripFooter({ editable, theme, owner, operatorContact }: Props) {
 /* ── Magazine variant ─────────────────────────────────────────────── */
 
 /**
- * Magazine footer — single dark slab that replaces both the public
- * one-line strip and the owner site Footer. Renders for both modes
- * (TZ pass-B decision #10) so the Magazine surface has a consistent
- * bottom regardless of viewer role.
+ * Magazine footer — dark slab with two role-dependent shapes.
  *
- * Keeps `id="site-footer"` so TripCommandBar's IntersectionObserver
- * still finds the page bottom and fades out near it.
+ *   PUBLIC (traveller / showcase visitor):
+ *     A single centred line — "© year · Powered by Waytico". Mirror of
+ *     the Classic public-mode strip but in the Magazine dark
+ *     aesthetic (cream-on-charcoal). Operator reachability lives in
+ *     the Contacts section above; nothing else belongs here.
  *
- * 4-col on desktop:
- *   1. Brand   — name (Cormorant) + tagline (italic)
- *   2. Offices — address (or hidden when none)
- *   3. Journeys — placeholder copy until journeys list lands; column is
- *                 omitted entirely when there's no content (avoids dead
- *                 slot on the grid)
- *   4. Contact — email + phone, mailto / tel links
+ *   OWNER (operator viewing their own trip page):
+ *     Full Waytico product navigation — Product / Resources / Legal /
+ *     Contact columns + brand wordmark and copyright line at the
+ *     bottom. Same content as Classic Footer (sourced from
+ *     lib/footer-content.ts) styled in the Magazine dark aesthetic.
+ *     Operator can navigate back to dashboard / pricing / help.
  *
- * Mobile collapses to a single column with the same row order.
+ * Keeps `id="site-footer"` on the outer element in both modes so
+ * TripCommandBar's IntersectionObserver still finds the page bottom
+ * and fades out near it.
  */
-function FooterMagazine({
-  owner,
-  operatorContact,
-}: {
-  owner: OwnerBrand
-  operatorContact: OperatorContact
-}) {
-  const resolved = resolveContacts(owner, operatorContact)
-  const brandName =
-    pick(operatorContact?.name, owner?.brand_name) || 'Waytico'
-  const tagline = owner?.brand_tagline || null
-  const address = pick(operatorContact?.address, owner?.brand_address)
-  const email = resolved.email
-  const phone = resolved.phone
+function FooterMagazine({ editable }: { editable: boolean }) {
   const year = new Date().getFullYear()
 
+  // Public / traveller mode — minimal centred strip.
+  if (!editable) {
+    return (
+      <footer
+        id="site-footer"
+        className="tp-mag-footer tp-mag-footer--minimal"
+      >
+        <p className="tp-mag-footer__minimal-line">
+          © {year} · Powered by{' '}
+          <Link
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="tp-mag-footer__minimal-brand"
+          >
+            Waytico
+          </Link>
+        </p>
+      </footer>
+    )
+  }
+
+  // Owner mode — full product navigation in the dark Magazine
+  // aesthetic. Content sourced from lib/footer-content.ts to stay in
+  // sync with the Classic site Footer.
   return (
     <footer id="site-footer" className="tp-mag-footer">
       <div className="tp-mag-footer__inner">
         <div className="tp-mag-footer__cols">
+          <FooterMagazineColumn
+            eyebrow="PRODUCT"
+            links={FOOTER_PRODUCT_LINKS}
+          />
+          <FooterMagazineColumn
+            eyebrow="RESOURCES"
+            links={FOOTER_RESOURCES_LINKS}
+          />
+          <FooterMagazineColumn
+            eyebrow="LEGAL"
+            links={FOOTER_LEGAL_LINKS}
+          />
           <div className="tp-mag-footer__col">
-            <p className="tp-mag-footer__col-eyebrow">BRAND</p>
-            <p className="tp-mag-footer__brand-name">{brandName}</p>
-            {tagline && (
-              <p className="tp-mag-footer__brand-tagline">{tagline}</p>
-            )}
+            <p className="tp-mag-footer__col-eyebrow">CONTACT</p>
+            <a
+              href={`mailto:${FOOTER_CONTACT_EMAIL}`}
+              className="tp-mag-footer__link"
+            >
+              {FOOTER_CONTACT_EMAIL}
+            </a>
           </div>
-
-          {address && (
-            <div className="tp-mag-footer__col">
-              <p className="tp-mag-footer__col-eyebrow">OFFICES</p>
-              <p className="tp-mag-footer__col-text">{address}</p>
-            </div>
-          )}
-
-          {(email || phone) && (
-            <div className="tp-mag-footer__col">
-              <p className="tp-mag-footer__col-eyebrow">CONTACT</p>
-              {email && (
-                <a
-                  href={channelHref('email', email)}
-                  className="tp-mag-footer__link"
-                >
-                  {email}
-                </a>
-              )}
-              {phone && (
-                <a
-                  href={channelHref('phone', phone)}
-                  className="tp-mag-footer__link"
-                >
-                  {phone}
-                </a>
-              )}
-            </div>
-          )}
         </div>
 
         <div className="tp-mag-footer__bottom">
-          <p className="tp-mag-footer__copy">
-            © {year} {brandName} · Powered by Waytico
-          </p>
+          <Link href="/" className="tp-mag-footer__brand-mark">
+            {FOOTER_BRAND_WORDMARK}
+          </Link>
+          <p className="tp-mag-footer__copy">{footerCopyLine(year)}</p>
         </div>
       </div>
     </footer>
   )
 }
 
-function pick(
-  a: string | null | undefined,
-  b: string | null | undefined,
-): string | null {
-  if (typeof a === 'string' && a.trim().length > 0) return a
-  if (typeof b === 'string' && b.trim().length > 0) return b
-  return null
+function FooterMagazineColumn({
+  eyebrow,
+  links,
+}: {
+  eyebrow: string
+  links: FooterLink[]
+}) {
+  return (
+    <div className="tp-mag-footer__col">
+      <p className="tp-mag-footer__col-eyebrow">{eyebrow}</p>
+      <ul className="tp-mag-footer__col-list">
+        {links.map((l) => (
+          <li key={l.href}>
+            <Link href={l.href} className="tp-mag-footer__link">
+              {l.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }

@@ -3504,14 +3504,61 @@
      :root[data-theme="magazine"] block in this file. */
   background: var(--bg-alt);
   color: rgba(245, 240, 230, 0.85);
-  padding: 40px 0 32px 0;
   margin-top: 60px;
 }
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-footer {
-    padding: 64px 0 40px 0;
     margin-top: 80px;
+  }
+}
+
+/* ── Public/traveller variant — minimal centred strip ── */
+
+[data-theme="magazine"] .tp-mag-footer--minimal {
+  padding: 24px 0;
+}
+
+[data-theme="magazine"] .tp-mag-footer__minimal-line {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 230, 0.55);
+  text-align: center;
+  margin: 0;
+  padding-inline: 24px;
+}
+
+[data-theme="magazine"] .tp-mag-footer__minimal-brand {
+  /* Cormorant serif wordmark inside the mono line — mirrors the
+     Classic public-mode strip's "Powered by Waytico" treatment with
+     a font swap on the brand. */
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-style: normal;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgba(245, 240, 230, 0.85);
+  text-decoration: none;
+  margin-left: 4px;
+  transition: color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-footer__minimal-brand:hover {
+  color: var(--accent);
+}
+
+/* ── Owner variant — full product navigation ── */
+
+[data-theme="magazine"] .tp-mag-footer:not(.tp-mag-footer--minimal) {
+  padding: 40px 0 32px 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-footer:not(.tp-mag-footer--minimal) {
+    padding: 64px 0 40px 0;
   }
 }
 
@@ -3523,11 +3570,22 @@
 }
 
 [data-theme="magazine"] .tp-mag-footer__cols {
+  /* Mirrors Classic Footer: 2 cols on tablet, 4 cols on desktop, 1
+     col on phone. Fixed-template (not auto-fit) because the four
+     columns are deterministic — Product / Resources / Legal /
+     Contact, all always rendered. */
   display: grid;
   grid-template-columns: 1fr;
   gap: 32px;
   padding-bottom: 32px;
   border-bottom: 1px solid rgba(245, 240, 230, 0.18);
+}
+
+@media (min-width: 640px) {
+  [data-theme="magazine"] .tp-mag-footer__cols {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 40px;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -3541,7 +3599,7 @@
 [data-theme="magazine"] .tp-mag-footer__col {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -3554,31 +3612,13 @@
   margin: 0 0 4px 0;
 }
 
-[data-theme="magazine"] .tp-mag-footer__brand-name {
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 24px;
-  line-height: 1.1;
-  letter-spacing: -0.005em;
-  color: rgba(245, 240, 230, 1);
+[data-theme="magazine"] .tp-mag-footer__col-list {
+  list-style: none;
   margin: 0;
-}
-
-[data-theme="magazine"] .tp-mag-footer__brand-tagline {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 14px;
-  line-height: 1.4;
-  color: rgba(245, 240, 230, 0.75);
-  margin: 0;
-}
-
-[data-theme="magazine"] .tp-mag-footer__col-text {
-  font-family: var(--font-body);
-  font-size: 14px;
-  line-height: 1.5;
-  color: rgba(245, 240, 230, 0.85);
-  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 [data-theme="magazine"] .tp-mag-footer__link {
@@ -3595,10 +3635,40 @@
 }
 
 [data-theme="magazine"] .tp-mag-footer__bottom {
+  /* Mirrors the editorial-footer reference: brand wordmark sits
+     left, copy line sits right on desktop. Stacks centred on mobile
+     and tablet. */
   padding-top: 24px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  [data-theme="magazine"] .tp-mag-footer__bottom {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    gap: 16px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-footer__brand-mark {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: -0.005em;
+  color: rgba(245, 240, 230, 0.95);
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-footer__brand-mark:hover {
+  color: var(--accent);
 }
 
 [data-theme="magazine"] .tp-mag-footer__copy {
@@ -3608,5 +3678,4 @@
   text-transform: uppercase;
   color: rgba(245, 240, 230, 0.45);
   margin: 0;
-  text-align: center;
 }

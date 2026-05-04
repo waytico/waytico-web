@@ -1852,8 +1852,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
       <TripFooter
         theme={resolvedTheme}
         editable={ed}
-        owner={owner}
-        operatorContact={operatorContact}
       />
 
       <ScrollToTop bottomOffset={showOwnerUI ? 88 : 24} />
