@@ -15,7 +15,7 @@ import ShareMenu from '@/components/share-menu'
 import AnonUpsellModal from '@/components/anon-upsell-modal'
 import PostClaimUpsellModal from '@/components/post-claim-upsell-modal'
 import { ScrollToTop } from '@/components/scroll-to-top'
-import { TripCommandBar } from '@/components/trip/trip-command-bar'
+import { TripChatWidget } from '@/components/trip/trip-chat-widget'
 import { TripActionBar } from '@/components/trip/trip-action-bar'
 import { ArchiveDialog } from '@/components/trip/archive-dialog'
 import { EditableField } from '@/components/editable/editable-field'
@@ -1828,7 +1828,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       {showOwnerUI && !isShowcase && !isAnonCreator && (
         <>
-          <TripCommandBar projectId={p.id} getToken={getToken} onTripUpdated={handleTripUpdated} status={p.status} theme={resolvedTheme} />
+          <TripChatWidget projectId={p.id} getToken={getToken} onTripUpdated={handleTripUpdated} status={p.status} theme={resolvedTheme} language={p.language ?? null} />
           {/* Owner-only breathing room between the last section and the
               footer. The command bar floats over the page; this spacer
               gives the operator empty space where the bar can rest
@@ -1847,7 +1847,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
               and the dark footer slab. */}
           <div
             data-theme={resolvedTheme}
-            className="h-40 md:h-44 bg-[var(--bg)]"
+            className="h-20 md:h-24 bg-[var(--bg)]"
             aria-hidden="true"
           />
         </>
@@ -1855,18 +1855,19 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       {/* Showcase mode — interactive demo overlay.
           Pulsing hint pills point at editable hero title, day cards,
-          theme switcher, photo drop zones. The real TripCommandBar is
+          theme switcher, photo drop zones. The real TripChatWidget is
           rendered, plumbed to the public showcase chat endpoint via
           isShowcase + tripContext (no auth, rate-limited, natural-
           language replies — no DB writes). */}
       {isShowcase && (
         <>
           <ShowcasePills />
-          <TripCommandBar
+          <TripChatWidget
             projectId={p.id}
             getToken={getToken}
             status={p.status}
             theme={resolvedTheme}
+            language={p.language ?? null}
             isShowcase
             onShowcaseActions={applyShowcaseActions}
             tripContext={
@@ -1880,7 +1881,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           />
           <div
             data-theme={resolvedTheme}
-            className="h-40 md:h-44 bg-[var(--bg)]"
+            className="h-20 md:h-24 bg-[var(--bg)]"
             aria-hidden="true"
           />
         </>
@@ -1891,7 +1892,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         editable={ed}
       />
 
-      <ScrollToTop bottomOffset={showOwnerUI ? 88 : 24} />
+      <ScrollToTop bottomOffset={showOwnerUI ? 80 : 24} />
     </div>
   )
 }
