@@ -3940,20 +3940,31 @@
   /* Inline-flex so the brand-credit stays glued to "Powered by" while
      the agent-login utility link (after the second separator) is
      allowed to drop to a second visual row on narrow phones without
-     breaking the centred rhythm of the line above it. */
+     breaking the centred rhythm of the line above it.
+
+     `column-gap: 0.9em` (≈10px at 11px mono with 0.18em tracking)
+     gives the brand-credit and the agent-login enough air not to
+     read as one fused phrase. The literal " · " around Waytico is
+     a text separator inside the line; `gap` only governs space
+     between flex items (the Waytico anchor, the second separator
+     span, and the login anchor). */
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: baseline;
-  gap: 0 0.5em;
+  column-gap: 0.9em;
   row-gap: 4px;
 }
 
 [data-theme="magazine"] .tp-mag-footer__minimal-sep {
   /* Visual separator between Brand and Login. Same alpha as the
      surrounding mono copy so it reads as a hairline divider, not as
-     a sibling word. Hidden from screen readers via aria-hidden. */
+     a sibling word. Hidden from screen readers via aria-hidden.
+     `letter-spacing: 0` removes the inherited 0.18em tracking that
+     would push the dot off-centre relative to the surrounding x-
+     height. */
   color: rgba(245, 240, 230, 0.35);
+  letter-spacing: 0;
 }
 
 [data-theme="magazine"] .tp-mag-footer__minimal-login {

@@ -63,8 +63,10 @@ export function TripFooter({ editable, theme }: Props) {
         </Link>
         {/* Agent-login utility link — see Magazine variant for rationale.
             Same shape on non-Magazine public footer for cross-theme
-            consistency. */}
-        <span aria-hidden="true"> · </span>
+            consistency. `mx-2` on the separator gives both sides a
+            comfortable gap so the brand-credit and the login don't
+            read as one fused phrase. */}
+        <span aria-hidden="true" className="mx-2 text-muted-foreground/60">·</span>
         <Link
           href="/sign-in"
           className="hover:text-foreground transition-colors"
