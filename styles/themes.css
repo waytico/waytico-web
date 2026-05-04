@@ -3532,23 +3532,10 @@
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-footer__cols {
-    /* auto-fit so the layout adapts cleanly to 1 / 2 / 3 visible
-       columns. Conditional Offices / Contact columns no longer
-       leave dead trailing slots when absent. min 200px keeps the
-       columns readable; the brand column gets a wider min via the
-       --brand modifier so it doesn't get squeezed into a narrow
-       gutter when only Brand renders. */
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 64px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 48px;
     padding-bottom: 40px;
   }
-}
-
-[data-theme="magazine"] .tp-mag-footer__col--brand {
-  /* Give brand a slightly larger minimum so when it's the only
-     column on a wide screen it doesn't end up the same narrow
-     width as a future Offices/Contact column would have been. */
-  min-width: 220px;
 }
 
 [data-theme="magazine"] .tp-mag-footer__col {
@@ -3578,16 +3565,12 @@
 }
 
 [data-theme="magazine"] .tp-mag-footer__brand-tagline {
-  /* Body sans, regular weight, muted — matches the editorial-footer
-     reference shape ("Private travel, designed slowly. Members by
-     introduction."). Not the italic display-serif voice the live
-     trip page uses for inline subtitles. */
-  font-family: var(--font-body);
-  font-size: 13px;
-  line-height: 1.55;
-  color: rgba(245, 240, 230, 0.65);
-  margin: 6px 0 0 0;
-  max-width: 260px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.4;
+  color: rgba(245, 240, 230, 0.75);
+  margin: 0;
 }
 
 [data-theme="magazine"] .tp-mag-footer__col-text {
@@ -3612,43 +3595,18 @@
 }
 
 [data-theme="magazine"] .tp-mag-footer__bottom {
-  /* Stack centred on mobile, split to opposite edges on desktop —
-     mirrors the editorial-footer reference where copyright sits
-     left and powered-by/regulatory IDs sit right. */
   padding-top: 24px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  text-align: center;
+  justify-content: center;
 }
 
-@media (min-width: 768px) {
-  [data-theme="magazine"] .tp-mag-footer__bottom {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    text-align: left;
-    gap: 16px;
-  }
-}
-
-[data-theme="magazine"] .tp-mag-footer__copy,
-[data-theme="magazine"] .tp-mag-footer__powered {
+[data-theme="magazine"] .tp-mag-footer__copy {
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: rgba(245, 240, 230, 0.45);
   margin: 0;
-}
-
-[data-theme="magazine"] .tp-mag-footer__powered-link {
-  color: rgba(245, 240, 230, 0.7);
-  text-decoration: none;
-  transition: color 0.18s ease;
-}
-
-[data-theme="magazine"] .tp-mag-footer__powered-link:hover {
-  color: var(--accent);
+  text-align: center;
 }
