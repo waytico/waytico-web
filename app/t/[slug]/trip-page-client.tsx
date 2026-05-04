@@ -1815,8 +1815,21 @@ export default function TripPageClient({ slug, initialData }: Props) {
               without overlapping content, and lets them scroll just past
               the last section to read the bottom edge of any block.
               ~160-176px — tall enough that the floating pill (≈64px high
-              including padding) sits with margin above and below. */}
-          <div className="h-40 md:h-44" aria-hidden="true" />
+              including padding) sits with margin above and below.
+
+              data-theme + bg-[var(--bg)] makes the spacer pick up the
+              themed cream (Magazine #F5F0E6, editorial #FAF8F5, etc.)
+              instead of the page-level shadcn `bg-background` token
+              that the parent wrapper carries. Without this the spacer
+              renders in shadcn cream — a slightly different shade from
+              Magazine cream — and the eye reads the band as a "blank
+              gap of a different colour" between the last themed section
+              and the dark footer slab. */}
+          <div
+            data-theme={resolvedTheme}
+            className="h-40 md:h-44 bg-[var(--bg)]"
+            aria-hidden="true"
+          />
         </>
       )}
 
@@ -1845,7 +1858,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
               `Total: ${heroHeadlineFormatted || ''} ${heroPriceLabel || ''}.`
             }
           />
-          <div className="h-40 md:h-44" aria-hidden="true" />
+          <div
+            data-theme={resolvedTheme}
+            className="h-40 md:h-44 bg-[var(--bg)]"
+            aria-hidden="true"
+          />
         </>
       )}
 
