@@ -508,11 +508,13 @@ function AccommodationsMagazine({
         <header className="tp-mag-acc__header">
           <hr className="tp-mag-rule" />
           <p className="tp-mag-eyebrow tp-mag-acc__eyebrow">ACCOMMODATION</p>
-          {subtitleSlot && (
-            <h2 className="tp-mag-display tp-mag-section-subtitle">
-              {subtitleSlot}
-            </h2>
-          )}
+          {/* Section subtitle deliberately omitted — the eyebrow alone
+              introduces the hotel cards, and the AI-generated narrative
+              ("Best hotels in Vancouver.") read as filler. The
+              subtitleSlot prop is still accepted for API stability but
+              not rendered here. The pipeline_section_subtitles prompt
+              (v4) and VALID_SUBTITLE_KEYS no longer emit the
+              accommodations key either. */}
         </header>
 
         <div className="tp-mag-acc__grid">
@@ -570,10 +572,18 @@ function MagazineAccommodationCard({
   const [editingDesc, setEditingDesc] = useState(false)
   const [editingDate, setEditingDate] = useState(false)
   const [editingLoc, setEditingLoc] = useState(false)
+  const [editingNights, setEditingNights] = useState(false)
+  const [editingNotes, setEditingNotes] = useState(false)
   const [draftName, setDraftName] = useState(item.name)
   const [draftDesc, setDraftDesc] = useState(item.description || '')
   const [draftDate, setDraftDate] = useState(isoDateHead(item.check_in_date))
   const [draftLoc, setDraftLoc] = useState(item.location || '')
+  // nights is stored as int on the row, edited as a string so empty
+  // input clears (number input with value='' is fine; "" → null on save)
+  const [draftNights, setDraftNights] = useState(
+    item.nights != null ? String(item.nights) : '',
+  )
+  const [draftNotes, setDraftNotes] = useState(item.notes || '')
   // Sync drafts when the canonical item changes (server PATCH or AI edit).
   if (!editingName && draftName !== item.name) setDraftName(item.name)
   if (!editingDesc && draftDesc !== (item.description || '')) {
@@ -584,6 +594,15 @@ function MagazineAccommodationCard({
   }
   if (!editingLoc && draftLoc !== (item.location || '')) {
     setDraftLoc(item.location || '')
+  }
+  if (
+    !editingNights &&
+    draftNights !== (item.nights != null ? String(item.nights) : '')
+  ) {
+    setDraftNights(item.nights != null ? String(item.nights) : '')
+  }
+  if (!editingNotes && draftNotes !== (item.notes || '')) {
+    setDraftNotes(item.notes || '')
   }
 
   const dateLabel = fmtDayDate(item.check_in_date, language)
@@ -688,6 +707,63 @@ function MagazineAccommodationCard({
           </p>
         ) : null}
 
+        {/* Number of nights — sits next to the check-in date,
+            same mono-uppercase voice. Stored as integer on the
+            row; edited as a string so empty clears. */}
+        {editingNights ? (
+          <input
+            className="tp-mag-acc__meta-input"
+            type="number"
+            min={1}
+            max={365}
+            value={draftNights}
+            autoFocus
+            placeholder="Nights"
+            onChange={(e) => setDraftNights(e.target.value)}
+            onBlur={async () => {
+              const v = draftNights.trim()
+              const parsed = v.length > 0 ? parseInt(v, 10) : NaN
+              const next =
+                Number.isFinite(parsed) && parsed >= 1 && parsed <= 365
+                  ? parsed
+                  : null
+              if (next !== (item.nights ?? null) && onUpdate) {
+                await onUpdate(item.id, { nights: next })
+              }
+              setEditingNights(false)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              if (e.key === 'Escape') {
+                setDraftNights(item.nights != null ? String(item.nights) : '')
+                setEditingNights(false)
+              }
+            }}
+          />
+        ) : item.nights != null ? (
+          <p
+            className="tp-mag-acc__nights"
+            onClick={() => {
+              if (!editable) return
+              setDraftNights(String(item.nights))
+              setEditingNights(true)
+            }}
+            style={editable ? { cursor: 'text' } : undefined}
+          >
+            {item.nights} {item.nights === 1 ? 'night' : 'nights'}
+          </p>
+        ) : editable ? (
+          <p
+            className="tp-mag-acc__nights tp-mag-acc__nights--placeholder"
+            onClick={() => {
+              setDraftNights('')
+              setEditingNights(true)
+            }}
+          >
+            Add nights
+          </p>
+        ) : null}
+
         {editingLoc ? (
           <input
             className="tp-mag-acc__meta-input"
@@ -780,6 +856,59 @@ function MagazineAccommodationCard({
             }}
           >
             Add description
+          </p>
+        ) : null}
+
+        {/* Operator-facing marketing comment — short call-out shown to
+            the client below the description ("Recommended", "Best
+            deal", "We picked this one for you"). Italic accent voice
+            visually separates it from the description body. */}
+        {editingNotes ? (
+          <input
+            className="tp-mag-acc__notes-input"
+            type="text"
+            value={draftNotes}
+            autoFocus
+            placeholder="e.g. Recommended, Best deal"
+            maxLength={500}
+            onChange={(e) => setDraftNotes(e.target.value)}
+            onBlur={async () => {
+              const v = draftNotes.trim()
+              const next = v.length > 0 ? v : null
+              if (next !== (item.notes || null) && onUpdate) {
+                await onUpdate(item.id, { notes: next })
+              }
+              setEditingNotes(false)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              if (e.key === 'Escape') {
+                setDraftNotes(item.notes || '')
+                setEditingNotes(false)
+              }
+            }}
+          />
+        ) : item.notes ? (
+          <p
+            className="tp-mag-acc__notes"
+            onClick={() => {
+              if (!editable) return
+              setDraftNotes(item.notes || '')
+              setEditingNotes(true)
+            }}
+            style={editable ? { cursor: 'text' } : undefined}
+          >
+            {item.notes}
+          </p>
+        ) : editable ? (
+          <p
+            className="tp-mag-acc__notes tp-mag-acc__notes--placeholder"
+            onClick={() => {
+              setDraftNotes('')
+              setEditingNotes(true)
+            }}
+          >
+            Add a comment (e.g. recommended, best deal)
           </p>
         ) : null}
 

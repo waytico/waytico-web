@@ -41,6 +41,12 @@ export type Accommodation = {
   check_in_date: string | null
   /** Town / city the property is in. Null when unset. */
   location: string | null
+  /** Length of stay in nights (1..365). Null when unset. */
+  nights: number | null
+  /** Short marketing / operator comment shown next to the card on the
+   *  client view (e.g. "Recommended", "Best deal", "We picked this for
+   *  you"). Null when unset. */
+  notes: string | null
   sort_order: number
 }
 
@@ -191,6 +197,8 @@ export type Mutations = {
     imageUrl?: string | null
     checkInDate?: string | null
     location?: string | null
+    nights?: number | null
+    notes?: string | null
   }) => Promise<Accommodation | null>
   saveAccommodationPatch: (id: string, patch: Record<string, unknown>) => Promise<boolean>
   saveAccommodationDelete: (id: string) => Promise<boolean>

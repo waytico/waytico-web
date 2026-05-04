@@ -2258,17 +2258,30 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 40px;
+  /* align-items: start prevents grid rows from stretching cells to
+     the row's max-content height. Without this, cells with
+     aspect-ratio (the photo block, the empty placeholder) get
+     stretched vertically and the aspect-ratio formula recomputes
+     their width to keep the ratio — which makes one cell grow wider
+     than its neighbours and breaks the 3-up layout (Magazine bug
+     reported 2026-05-04: filled card squeezed to ~80px wide while
+     idle placeholder ballooned). With start-aligned cells, each cell
+     uses its own natural height and the column tracks stay equal. */
+  align-items: start;
 }
 
 @media (min-width: 768px) {
   [data-theme="magazine"] .tp-mag-acc__grid {
-    grid-template-columns: repeat(2, 1fr);
+    /* minmax(0, 1fr) forces equal columns even when content has
+       large min-content (long unbreakable words wouldn't expand a
+       column past its 1/n share). */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-acc__grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 32px;
   }
 }
@@ -2436,7 +2449,9 @@
 }
 
 [data-theme="magazine"] .tp-mag-acc__date--placeholder,
-[data-theme="magazine"] .tp-mag-acc__location--placeholder {
+[data-theme="magazine"] .tp-mag-acc__location--placeholder,
+[data-theme="magazine"] .tp-mag-acc__nights--placeholder,
+[data-theme="magazine"] .tp-mag-acc__notes--placeholder {
   color: var(--ink-mute);
   font-style: italic;
   text-transform: none;
@@ -2449,6 +2464,44 @@
   line-height: 1.4;
   color: var(--ink-mute);
   margin: 0;
+}
+
+/* Nights — same mono-uppercase voice as the check-in date so the
+   pair reads as a single metadata strip ("MAY 5, 2026" / "3 NIGHTS"). */
+[data-theme="magazine"] .tp-mag-acc__nights {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+/* Notes — short marketing call-out under description. Italic accent
+   voice visually separates it from description body and signals it as
+   the operator's editorial pick ("Recommended", "Best deal"). */
+[data-theme="magazine"] .tp-mag-acc__notes {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.4;
+  font-style: italic;
+  color: var(--accent);
+  margin: 8px 0 0 0;
+}
+
+[data-theme="magazine"] .tp-mag-acc__notes-input {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.4;
+  font-style: italic;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--accent);
+  padding: 0 0 4px 0;
+  width: 100%;
+  outline: none;
+  margin-top: 8px;
 }
 
 [data-theme="magazine"] .tp-mag-acc__meta-input {
