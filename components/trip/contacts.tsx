@@ -235,7 +235,6 @@ export function TripContacts({ owner, operatorContact, editable, saveProjectPatc
                     !trimmed || trimmed === UI.contactsHeading ? null : trimmed
                   return saveValue('heading', next, operatorContact, saveProjectPatch)
                 }}
-                withEditIcon={false}
                 maxLength={120}
               />
             </h2>
@@ -255,7 +254,6 @@ export function TripContacts({ owner, operatorContact, editable, saveProjectPatc
                     !trimmed || trimmed === UI.contactsSubheading ? null : trimmed
                   return saveValue('subheading', next, operatorContact, saveProjectPatch)
                 }}
-                withEditIcon={false}
               />
             </p>
 
@@ -638,7 +636,6 @@ function ContactsMagazine({
                     !trimmed || trimmed === UI.contactsHeading ? null : trimmed
                   return saveValue('heading', next, operatorContact, saveProjectPatch)
                 }}
-                withEditIcon={false}
                 maxLength={120}
               />
             </h2>
@@ -658,7 +655,6 @@ function ContactsMagazine({
                     !trimmed || trimmed === UI.contactsSubheading ? null : trimmed
                   return saveValue('subheading', next, operatorContact, saveProjectPatch)
                 }}
-                withEditIcon={false}
               />
             </p>
 
