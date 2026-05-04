@@ -2832,15 +2832,6 @@
   min-width: 0;
 }
 
-[data-theme="magazine"] .tp-mag-price__from {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-mute);
-  margin: 0;
-}
-
 [data-theme="magazine"] .tp-mag-price__headline-row {
   display: flex;
   align-items: baseline;
@@ -2848,18 +2839,25 @@
   flex-wrap: wrap;
 }
 
+/* Headline price — modest, not the focal point. Cormorant with lining +
+   tabular figures so digits sit on the same baseline and same width
+   (Cormorant's default oldstyle figures look uneven for currency
+   amounts). Size is intentionally reserved — the price is data, not a
+   marquee. */
 [data-theme="magazine"] .tp-mag-price__headline {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: 56px;
-  line-height: 1;
-  letter-spacing: -0.015em;
+  font-size: 36px;
+  line-height: 1.05;
+  letter-spacing: -0.005em;
   color: var(--ink);
+  font-feature-settings: "lnum", "tnum";
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-price__headline {
-    font-size: 80px;
+    font-size: 48px;
   }
 }
 
@@ -2869,24 +2867,26 @@
 [data-theme="magazine"] .tp-mag-price__headline-row .tp-price-amount {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: 56px;
-  line-height: 1;
-  letter-spacing: -0.015em;
+  font-size: 36px;
+  line-height: 1.05;
+  letter-spacing: -0.005em;
   color: var(--ink);
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
+  font-feature-settings: "lnum", "tnum";
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-price__headline-row .tp-price-amount {
-    font-size: 80px;
+    font-size: 48px;
   }
 }
 
 [data-theme="magazine"] .tp-mag-price__headline-row .tp-price-input {
   font-family: var(--font-display);
-  font-size: 56px;
+  font-size: 36px;
   font-weight: 500;
   color: var(--ink);
   background: transparent;
@@ -2894,12 +2894,33 @@
   border-bottom: 1px solid var(--accent);
   padding: 0;
   outline: none;
-  width: 200px;
+  width: 160px;
+  font-feature-settings: "lnum", "tnum";
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-price__headline-row .tp-price-input {
-    font-size: 80px;
+    font-size: 48px;
+    width: 200px;
+  }
+}
+
+/* Public-mode suffix — single quiet line under the price ("for your
+   group of 4 people" / "per person in your group of 4 people" / custom
+   label). Body type + ink-soft so it reads as natural prose, distinct
+   from the owner-mode mono-eyebrow controls below. */
+[data-theme="magazine"] .tp-mag-price__public-suffix {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin: 8px 0 0 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-price__public-suffix {
+    font-size: 15px;
   }
 }
 
@@ -3045,6 +3066,29 @@
 
 [data-theme="magazine"] .tp-mag-price__cta-btn button[aria-haspopup="menu"] > svg {
   display: none;
+}
+
+/* Operator-written comment under the price — sparse, public-only-when-filled.
+   Mirrors the .tp-mag-acc__block-note pattern: same body voice for the
+   public viewer, same EditableField slot rhythm for the owner. Sits at
+   the bottom of the left column under the diagnostic rows. */
+[data-theme="magazine"] .tp-mag-price__note-slot,
+[data-theme="magazine"] .tp-mag-price__note {
+  margin: 16px 0 0 0;
+  max-width: 56ch;
+}
+
+[data-theme="magazine"] p.tp-mag-price__note {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] p.tp-mag-price__note {
+    font-size: 15px;
+  }
 }
 
 /* ── Terms ────────────────────────────────────────────────────────── */

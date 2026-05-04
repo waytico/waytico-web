@@ -31,8 +31,19 @@ type PriceProps = {
    *  (it has no in-section CTA). */
   owner?: OwnerBrand
   operatorContact?: OperatorContact
-  /** Magazine-only narrative subtitle slot under the eyebrow. */
+  /** Magazine-only narrative subtitle slot under the eyebrow.
+   *  DEPRECATED for price — kept only so editorial branch keeps
+   *  compiling if some legacy caller still passes it. Magazine variant
+   *  no longer renders subtitle for price; uses `note` instead. */
   subtitleSlot?: ReactNode
+  /** Magazine-only operator-written comment that sits below the headline
+   *  price. Lives on trip_projects.price_note. Same sparse-by-design
+   *  pattern as accommodations.note: public viewer sees it only when
+   *  filled; owner sees a placeholder pill when empty. */
+  note?: string | null
+  /** Owner-mode save callback for `note`. Returns true on success.
+   *  Trip-page-client wires this to saveProjectPatch({ priceNote: next }). */
+  onNoteChange?: (next: string | null) => Promise<boolean>
 }
 
 /**
@@ -334,15 +345,27 @@ const SUPPORTED_CURRENCIES: Array<{ code: string; label: string }> = [
 /* ── Magazine variant ─────────────────────────────────────────────── */
 
 /**
- * Magazine variant — 2-col grid on desktop (left: headline price + suffix,
- * right: fine-print + INQUIRE button), stacked on mobile.
+ * Magazine variant — 2-col grid on desktop (left: headline price + suffix
+ * + optional operator note, right: fine-print + INQUIRE button), stacked
+ * on mobile.
  *
- * Re-uses HeadlineAmountEditor and PriceModeSuffix from the editorial
- * branch so the owner-mode editors (number + currency picker + mode
- * dropdown + custom-label input) all keep their existing behaviour.
- * Only the wrapper markup + typography differ; pricingMode semantics
- * (per_group / per_traveler / other), backend reconcilePricing pairing
- * with priceTotal/pricePerPerson, and the suffix labels are unchanged.
+ * Public viewer sees ONLY:
+ *   1. headline price
+ *   2. suffix line — group-aware ("for your group of N people" /
+ *      "per person in your group of N people" / custom label).
+ *      When groupSize is null, no suffix is shown — just the price.
+ *      Custom-label mode shows the operator's label regardless of groupSize.
+ *   3. operator-written `note` if filled (sparse: hidden when empty)
+ *
+ * Owner mode keeps every existing affordance:
+ *   - currency picker glyph + inline number editor
+ *   - mode dropdown (per_group / per_traveler / other) + custom-label input
+ *   - secondary line (PER TRAVELER · CA$1,171 / TOTAL · CA$4,684)
+ *   - GROUP · N TRAVELERS line (editable group size)
+ *   - the same `note` field, with placeholder pill when empty
+ *
+ * Re-uses HeadlineAmountEditor and PriceModeSuffix (owner branch) so the
+ * editors keep their existing behaviour.
  */
 function PriceMagazine(props: PriceProps) {
   const mode: PricingMode = props.pricingMode ?? 'per_group'
@@ -356,22 +379,33 @@ function PriceMagazine(props: PriceProps) {
   const secondaryLabel =
     mode === 'per_traveler' ? UI.totalPrice : UI.perTraveler
 
+  // Public-mode suffix copy — group-aware, never shown in owner mode
+  // (owner has the dropdown widget instead).
+  const publicSuffix: string | null = (() => {
+    if (mode === 'other') {
+      // Operator's custom label wins regardless of groupSize.
+      return props.pricingLabel || null
+    }
+    if (props.groupSize == null) {
+      // No group-size set → just the price, no suffix.
+      return null
+    }
+    if (mode === 'per_traveler') {
+      return `per person in your group of ${props.groupSize} people`
+    }
+    return `for your group of ${props.groupSize} people`
+  })()
+
   return (
     <section className="tp-mag-section tp-mag-price" id="price">
       <div className="tp-mag-container">
         <header className="tp-mag-price__header">
           <hr className="tp-mag-rule" />
-          <p className="tp-mag-eyebrow tp-mag-price__eyebrow">INVESTMENT</p>
-          {props.subtitleSlot && (
-            <h2 className="tp-mag-display tp-mag-section-subtitle">
-              {props.subtitleSlot}
-            </h2>
-          )}
+          <p className="tp-mag-eyebrow tp-mag-price__eyebrow">PRICE</p>
         </header>
 
         <div className="tp-mag-price__grid">
           <div className="tp-mag-price__left">
-            <p className="tp-mag-price__from">FROM</p>
             <div className="tp-mag-price__headline-row">
               {props.editable ? (
                 <HeadlineAmountEditor
@@ -396,15 +430,26 @@ function PriceMagazine(props: PriceProps) {
                 </span>
               )}
             </div>
-            <div className="tp-mag-price__suffix">
-              <PriceModeSuffix
-                mode={mode}
-                pricingLabel={props.pricingLabel}
-                editable={props.editable}
-                saveProjectPatch={props.saveProjectPatch}
-              />
-            </div>
-            {mode !== 'other' && secondaryFormatted && (
+
+            {/* Owner — full mode controls (dropdown + custom-label input).
+                Public — single quiet suffix line, group-aware. */}
+            {props.editable ? (
+              <div className="tp-mag-price__suffix">
+                <PriceModeSuffix
+                  mode={mode}
+                  pricingLabel={props.pricingLabel}
+                  editable={props.editable}
+                  saveProjectPatch={props.saveProjectPatch}
+                />
+              </div>
+            ) : publicSuffix ? (
+              <p className="tp-mag-price__public-suffix">{publicSuffix}</p>
+            ) : null}
+
+            {/* Owner-only diagnostic rows: secondary line + GROUP · N TRAVELERS.
+                These are NEVER shown to the tourist — public sees only the
+                headline + one-line suffix above. */}
+            {props.editable && mode !== 'other' && secondaryFormatted && (
               <p className="tp-mag-price__secondary">
                 {secondaryLabel.toUpperCase()} ·{' '}
                 <span style={{ fontFamily: 'var(--font-mono)' }}>
@@ -413,34 +458,33 @@ function PriceMagazine(props: PriceProps) {
               </p>
             )}
 
-            {/* GROUP — moved here from the Overview stat-tiles row when
-                Magazine adopted the canon's no-key-facts-band layout.
-                Renders whenever group_size is set (public + owner) or
-                whenever owner mode wants a placeholder. Hidden in
-                public mode if no group is set. The label sits in mono
-                eyebrow style; the number is the only editable piece. */}
-            {(props.editable || props.groupSize != null) && (
+            {props.editable && (
               <p className="tp-mag-price__group">
                 {UI.group.toUpperCase()} ·{' '}
                 <span style={{ fontFamily: 'var(--font-mono)' }}>
-                  {props.editable ? (
-                    <EditableField
-                      as="number"
-                      editable
-                      value={props.groupSize}
-                      placeholder="0"
-                      onSave={async (v) => {
-                        if (!props.saveProjectPatch) return false
-                        return props.saveProjectPatch({ groupSize: v })
-                      }}
-                    />
-                  ) : (
-                    props.groupSize
-                  )}
+                  <EditableField
+                    as="number"
+                    editable
+                    value={props.groupSize}
+                    placeholder="0"
+                    onSave={async (v) => {
+                      if (!props.saveProjectPatch) return false
+                      return props.saveProjectPatch({ groupSize: v })
+                    }}
+                  />
                   {' '}{UI.travelers.toUpperCase()}
                 </span>
               </p>
             )}
+
+            {/* Operator-written comment block — sparse-by-design.
+                Public viewer sees it only when filled; owner sees a
+                placeholder pill when empty. */}
+            <PriceBlockNote
+              note={props.note ?? null}
+              editable={props.editable}
+              onNoteChange={props.onNoteChange}
+            />
           </div>
 
           <div className="tp-mag-price__right">
@@ -466,5 +510,44 @@ function PriceMagazine(props: PriceProps) {
         </div>
       </div>
     </section>
+  )
+}
+
+/**
+ * Operator-written comment for the Price block — same pattern as
+ * BlockNote in accommodations.tsx. Lives on `trip_projects.price_note`.
+ *
+ * Public viewer with empty value renders nothing (no reserved space).
+ * Owner sees the EditableField with placeholder hint when empty.
+ */
+function PriceBlockNote({
+  note,
+  editable,
+  onNoteChange,
+}: {
+  note: string | null
+  editable: boolean
+  onNoteChange?: (next: string | null) => Promise<boolean>
+}) {
+  if (!editable && !note) return null
+  if (!editable) {
+    return <p className="tp-mag-price__note">{note}</p>
+  }
+  return (
+    <div className="tp-mag-price__note-slot">
+      <EditableField
+        as="text"
+        value={note ?? ''}
+        editable
+        placeholder="Add a comment for the price (e.g. Includes a 10% early-bird discount)"
+        maxLength={500}
+        className="tp-mag-price__note"
+        onSave={async (v) => {
+          if (!onNoteChange) return false
+          const trimmed = v.trim()
+          return onNoteChange(trimmed.length > 0 ? trimmed : null)
+        }}
+      />
+    </div>
   )
 }

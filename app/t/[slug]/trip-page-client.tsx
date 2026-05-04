@@ -885,7 +885,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
     | 'overview'
     | 'itinerary'
     | 'accommodations'
-    | 'price'
     | 'included'
     | 'terms'
     | 'contacts'
@@ -893,7 +892,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
     overview: p.section_subtitles?.overview ?? null,
     itinerary: p.section_subtitles?.itinerary ?? null,
     accommodations: p.section_subtitles?.accommodations ?? null,
-    price: p.section_subtitles?.price ?? null,
     included: p.section_subtitles?.included ?? null,
     terms: p.section_subtitles?.terms ?? null,
     contacts: p.section_subtitles?.contacts ?? null,
@@ -1713,7 +1711,12 @@ export default function TripPageClient({ slug, initialData }: Props) {
           editable={ed}
           saveProjectPatch={ed ? saveProjectPatch : undefined}
           visible={priceVisible}
-          subtitleSlot={subtitleSlotFor('price')}
+          note={(p as any).price_note ?? null}
+          onNoteChange={
+            ed
+              ? async (next) => saveProjectPatch({ priceNote: next })
+              : undefined
+          }
         />
 
         <TripIncluded
