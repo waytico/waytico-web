@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Mail, Phone, MapPin, Globe, Eye, EyeOff } from 'lucide-react'
 import { UI } from '@/lib/ui-strings'
+import { EditableField } from '@/components/editable/editable-field'
 import {
   WhatsAppIcon,
   TelegramIcon,
@@ -220,7 +221,43 @@ export function TripContacts({ owner, operatorContact, editable, saveProjectPatc
 
           {/* Right: questions header + reachable channels */}
           <div className="tp-contacts-channels">
-            <h2 className="tp-contacts-heading">{UI.contactsHeading}</h2>
+            <h2 className="tp-contacts-heading">
+              <EditableField
+                as="text"
+                editable={editable}
+                value={
+                  operatorContact?.heading?.trim() || UI.contactsHeading
+                }
+                placeholder={UI.contactsHeading}
+                onSave={(v) => {
+                  const trimmed = v.trim()
+                  const next =
+                    !trimmed || trimmed === UI.contactsHeading ? null : trimmed
+                  return saveValue('heading', next, operatorContact, saveProjectPatch)
+                }}
+                withEditIcon={false}
+                maxLength={120}
+              />
+            </h2>
+            <p className="tp-contacts-subheading">
+              <EditableField
+                as="multiline"
+                rows={2}
+                editable={editable}
+                value={
+                  operatorContact?.subheading?.trim() ||
+                  UI.contactsSubheading
+                }
+                placeholder={UI.contactsSubheading}
+                onSave={(v) => {
+                  const trimmed = v.trim()
+                  const next =
+                    !trimmed || trimmed === UI.contactsSubheading ? null : trimmed
+                  return saveValue('subheading', next, operatorContact, saveProjectPatch)
+                }}
+                withEditIcon={false}
+              />
+            </p>
 
             {/* Email/phone — text rows with leading icon */}
             <ul className="tp-contacts-list">
@@ -420,7 +457,7 @@ function ChannelTextRow({
 /* ──────────────────────────────────────────────────────────────────── */
 
 async function saveValue(
-  key: ChannelKey,
+  key: ChannelKey | 'heading' | 'subheading',
   next: string | null,
   current: OperatorContact,
   saveProjectPatch?: Mutations['saveProjectPatch'],
@@ -587,7 +624,43 @@ function ContactsMagazine({
           </div>
 
           <div className="tp-mag-contacts__channels">
-            <h2 className="tp-mag-contacts__heading">{UI.contactsHeading}</h2>
+            <h2 className="tp-mag-contacts__heading">
+              <EditableField
+                as="text"
+                editable={editable}
+                value={
+                  operatorContact?.heading?.trim() || UI.contactsHeading
+                }
+                placeholder={UI.contactsHeading}
+                onSave={(v) => {
+                  const trimmed = v.trim()
+                  const next =
+                    !trimmed || trimmed === UI.contactsHeading ? null : trimmed
+                  return saveValue('heading', next, operatorContact, saveProjectPatch)
+                }}
+                withEditIcon={false}
+                maxLength={120}
+              />
+            </h2>
+            <p className="tp-mag-contacts__subheading">
+              <EditableField
+                as="multiline"
+                rows={2}
+                editable={editable}
+                value={
+                  operatorContact?.subheading?.trim() ||
+                  UI.contactsSubheading
+                }
+                placeholder={UI.contactsSubheading}
+                onSave={(v) => {
+                  const trimmed = v.trim()
+                  const next =
+                    !trimmed || trimmed === UI.contactsSubheading ? null : trimmed
+                  return saveValue('subheading', next, operatorContact, saveProjectPatch)
+                }}
+                withEditIcon={false}
+              />
+            </p>
 
             {sourceChannels.length > 0 && (
               <ul className="tp-mag-contacts__icons">
@@ -636,6 +709,13 @@ function ContactsMagazine({
                   )
                 })}
               </ul>
+            )}
+
+            {editable && (sourceChannels.length > 0 || !!address) && (
+              <p className="tp-mag-contacts__hint tp-mag-contacts__hint--intro">
+                Click HIDE to keep that contact away from clients. Tap
+                Preview at the top to see what they see.
+              </p>
             )}
 
             {editable && missingChannelLabels.length > 0 && (

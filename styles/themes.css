@@ -971,6 +971,15 @@
   margin: 0;
 }
 
+.tp-contacts-subheading {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+  margin: 4px 0 8px 0;
+}
+
 .tp-contacts-list {
   list-style: none;
   margin: 0;
@@ -3581,13 +3590,30 @@
   line-height: 1.15;
   letter-spacing: -0.005em;
   color: var(--ink);
-  margin: 0 0 16px 0;
+  margin: 0;
 }
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-contacts__heading {
     font-size: 28px;
-    margin: 0 0 20px 0;
+  }
+}
+
+/* Italic small line under the heading, defaults to UI.contactsSubheading
+   (editable per-trip). */
+[data-theme="magazine"] .tp-mag-contacts__subheading {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--ink-soft);
+  margin: 6px 0 16px 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-contacts__subheading {
+    font-size: 17px;
+    margin: 8px 0 20px 0;
   }
 }
 
@@ -3738,6 +3764,10 @@
   line-height: 1.5;
   color: var(--ink-mute);
   margin: 16px 0 0 0;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__hint + .tp-mag-contacts__hint {
+  margin-top: 4px;
 }
 
 [data-theme="magazine"] .tp-mag-contacts__hint-link {

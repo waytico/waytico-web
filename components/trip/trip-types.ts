@@ -58,10 +58,17 @@ export type OperatorContact = {
   facebook?: string | null
   youtube?: string | null
   tiktok?: string | null
+  /** Per-trip override of the Contacts section heading. Empty/null falls
+   *  back to UI.contactsHeading ("Questions about this trip?"). */
+  heading?: string | null
+  /** Per-trip override of the small italic line under the heading.
+   *  Empty/null falls back to UI.contactsSubheading. */
+  subheading?: string | null
   /** Channels listed here are suppressed from public render on this
    *  trip even if a value (override or brand default) exists. Lets the
    *  operator hide a single channel per-trip without clearing the
-   *  brand default. */
+   *  brand default. Also accepts the literal string "address" to
+   *  suppress the brand street address. */
   hidden_channels?: string[] | null
 } | null
 

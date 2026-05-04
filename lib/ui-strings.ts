@@ -31,6 +31,7 @@ export const UI = {
   totalPrice: 'Total',
   bookCta: 'Reserve dates',
   contactsHeading: 'Questions about this trip?',
+  contactsSubheading: "Reach out — I'd love to hear from you.",
   emptyList: 'Nothing listed.',
   segType: {
     transport: 'Transport',
