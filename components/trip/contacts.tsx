@@ -552,15 +552,17 @@ function ContactsMagazine({
               const addressHidden = hidden.has('address')
               if (!editable && addressHidden) return null
               return (
-                <p
+                <div
                   className={
                     addressHidden
-                      ? 'tp-mag-contacts__brand-address is-hidden'
-                      : 'tp-mag-contacts__brand-address'
+                      ? 'tp-mag-contacts__address-block is-hidden'
+                      : 'tp-mag-contacts__address-block'
                   }
                 >
-                  <MapPin size={14} aria-hidden="true" />
-                  <span>{address}</span>
+                  <p className="tp-mag-contacts__brand-address">
+                    <MapPin size={14} aria-hidden="true" />
+                    <span>{address}</span>
+                  </p>
                   {editable && (
                     <button
                       type="button"
@@ -574,12 +576,12 @@ function ContactsMagazine({
                       }
                       title={addressHidden ? 'Show on this trip' : 'Hide from this trip'}
                       aria-label={addressHidden ? 'Show on this trip' : 'Hide from this trip'}
-                      className="tp-mag-contacts__address-eye"
+                      className="tp-mag-contacts__visibility-toggle"
                     >
-                      {addressHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                      {addressHidden ? 'SHOW' : 'HIDE'}
                     </button>
                   )}
-                </p>
+                </div>
               )
             })()}
           </div>
@@ -625,21 +627,15 @@ function ContactsMagazine({
                           }
                           title={isHidden ? 'Show on this trip' : 'Hide from this trip'}
                           aria-label={isHidden ? 'Show on this trip' : 'Hide from this trip'}
-                          className="tp-mag-contacts__icon-eye"
+                          className="tp-mag-contacts__visibility-toggle"
                         >
-                          {isHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                          {isHidden ? 'SHOW' : 'HIDE'}
                         </button>
                       )}
                     </li>
                   )
                 })}
               </ul>
-            )}
-
-            {editable && (sourceChannels.length > 0 || !!address) && (
-              <p className="tp-mag-contacts__hint tp-mag-contacts__hint--intro">
-                Click the eye to hide a contact from the client view.
-              </p>
             )}
 
             {editable && missingChannelLabels.length > 0 && (
