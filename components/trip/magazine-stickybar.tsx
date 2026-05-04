@@ -93,28 +93,39 @@ export function MagazineStickyBar({
         : UI.forTheGroup
 
   return (
-    <div
-      className={
-        'tp-mag-stickybar' +
-        (footerVisible ? ' tp-mag-stickybar--hidden' : '')
-      }
-      role="region"
-      aria-label="Pricing and inquiry"
-      aria-hidden={footerVisible || undefined}
-    >
-      <div className="tp-mag-stickybar__inner">
-        <div className="tp-mag-stickybar__price">
-          <span className="tp-mag-stickybar__from">FROM</span>
-          <span className="tp-mag-stickybar__amount">{headlineFormatted}</span>
-          <span className="tp-mag-stickybar__suffix">{suffix.toUpperCase()}</span>
-        </div>
-        <div className="tp-mag-stickybar__inquire">
-          <ContactAgentMenu
-            owner={owner}
-            operatorContact={operatorContact}
-            onPhoto={false}
-            label="Inquire"
-          />
+    // Wrap in data-theme so the [data-theme="magazine"] .tp-mag-stickybar*
+    // selectors in styles/themes.css match. The component is rendered
+    // OUTSIDE the page-level <ThemeRoot> in trip-page-client (it sits
+    // after </ThemeRoot> alongside other top-level overlays). Without
+    // this wrapper NONE of the bar's CSS — including position:fixed,
+    // display:none on desktop, and the new --hidden modifier — applies,
+    // and the bar renders unstyled in the document flow as a stack of
+    // text fragments. Same defect that affected FooterMagazine; same
+    // fix.
+    <div data-theme="magazine">
+      <div
+        className={
+          'tp-mag-stickybar' +
+          (footerVisible ? ' tp-mag-stickybar--hidden' : '')
+        }
+        role="region"
+        aria-label="Pricing and inquiry"
+        aria-hidden={footerVisible || undefined}
+      >
+        <div className="tp-mag-stickybar__inner">
+          <div className="tp-mag-stickybar__price">
+            <span className="tp-mag-stickybar__from">FROM</span>
+            <span className="tp-mag-stickybar__amount">{headlineFormatted}</span>
+            <span className="tp-mag-stickybar__suffix">{suffix.toUpperCase()}</span>
+          </div>
+          <div className="tp-mag-stickybar__inquire">
+            <ContactAgentMenu
+              owner={owner}
+              operatorContact={operatorContact}
+              onPhoto={false}
+              label="Inquire"
+            />
+          </div>
         </div>
       </div>
     </div>
