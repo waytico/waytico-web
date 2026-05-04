@@ -2277,8 +2277,6 @@
   display: flex;
   flex-direction: column;
   background: var(--bg);
-  border-bottom: 1px solid var(--rule);
-  padding-bottom: 24px;
   position: relative;
 }
 
@@ -2345,15 +2343,6 @@
   gap: 8px;
 }
 
-[data-theme="magazine"] .tp-mag-acc__card-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin: 0 0 4px 0;
-}
-
 [data-theme="magazine"] .tp-mag-acc__name {
   font-family: var(--font-display);
   font-weight: 500;
@@ -2404,48 +2393,156 @@
   outline: none;
 }
 
+/* Trash icon button — replaces the textual "Remove" label.
+   Sits in the card's top-right (absolute) so it doesn't push the
+   description down or interfere with the body's vertical rhythm. */
 [data-theme="magazine"] .tp-mag-acc__delete {
-  align-self: flex-start;
-  margin-top: 8px;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  z-index: 2;
+  transition: background-color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-acc__delete:hover,
+[data-theme="magazine"] .tp-mag-acc__delete:focus-visible {
+  background: rgba(0, 0, 0, 0.8);
+  outline: none;
+}
+
+/* ── Per-card meta fields (check-in date + location) ──────────────────
+   Sit between the name and the description in the same flex column.
+   Date follows the same Intl-formatted look as the day date strip
+   under day titles (.tp-mag-day__date), keeping the page typographic
+   voice consistent. Location uses a quieter, smaller mono accent —
+   a city name is short and reads as metadata, not narrative. */
+[data-theme="magazine"] .tp-mag-acc__date {
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.18em;
+  font-size: 11px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-acc__date--placeholder,
+[data-theme="magazine"] .tp-mag-acc__location--placeholder {
+  color: var(--ink-mute);
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0.06em;
+}
+
+[data-theme="magazine"] .tp-mag-acc__location {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-mute);
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-acc__meta-input {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink);
   background: transparent;
   border: 0;
-  color: var(--ink-mute);
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.18s ease;
+  border-bottom: 1px solid var(--accent);
+  padding: 0 0 4px 0;
+  width: 100%;
+  outline: none;
 }
 
-[data-theme="magazine"] .tp-mag-acc__delete:hover {
-  color: var(--accent);
-}
-
-[data-theme="magazine"] .tp-mag-acc__add {
-  margin-top: 32px;
-}
-
-/* AddAccommodationButton (shared editorial component) — restyle inside
-   the Magazine variant scope so it matches the eyebrow + square idiom. */
-[data-theme="magazine"] .tp-mag-acc__add .tp-acc-add {
+/* ── Placeholder card ─────────────────────────────────────────────────
+   Owner-mode only — sits in the same .tp-mag-acc__grid as filled
+   cards, so it inherits the column track sizing automatically (1 col
+   mobile, 2 cols ≥768px, 3 cols ≥1024px). Appearance mirrors the
+   day photo's empty state: dashed hairline, mono uppercase label,
+   accent-tinted hover. Click expands inline into a name input
+   that creates the accommodation on Enter / blur. */
+[data-theme="magazine"] .tp-mag-acc__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  /* Match the accommodation card photo aspect-ratio so the empty grid
+     reads as a row of card-shaped slots, not a row of buttons. */
+  aspect-ratio: 4 / 3;
+  border: 1px dashed var(--rule);
+  background: transparent;
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  background: transparent;
-  border: 1px dashed var(--rule);
   color: var(--ink-mute);
-  padding: 14px 24px;
   cursor: pointer;
-  border-radius: 0;
+  padding: 0;
   transition: border-color 0.18s ease, color 0.18s ease;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
-[data-theme="magazine"] .tp-mag-acc__add .tp-acc-add:hover {
+[data-theme="magazine"] .tp-mag-acc__placeholder:hover,
+[data-theme="magazine"] .tp-mag-acc__placeholder:focus-visible {
   border-color: var(--accent);
   color: var(--accent);
+  outline: none;
+}
+
+[data-theme="magazine"] .tp-mag-acc__placeholder--editing {
+  cursor: default;
+  /* Editing variant lets the input occupy the natural width of the
+     placeholder cell — no aspect-ratio lock so the input doesn't get
+     vertically centered weird-looking inside a 4:3 box. */
+  aspect-ratio: auto;
+  padding: 24px;
+  align-items: stretch;
+  justify-content: center;
+}
+
+[data-theme="magazine"] .tp-mag-acc__placeholder--editing:hover,
+[data-theme="magazine"] .tp-mag-acc__placeholder--editing:focus-within {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+[data-theme="magazine"] .tp-mag-acc__placeholder-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-theme="magazine"] .tp-mag-acc__placeholder-label {
+  display: inline-block;
+}
+
+[data-theme="magazine"] .tp-mag-acc__placeholder-input {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 20px;
+  line-height: 1.2;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--accent);
+  padding: 0 0 4px 0;
+  width: 100%;
+  outline: none;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 /* ── Included / Not Included ──────────────────────────────────────── */

@@ -223,6 +223,8 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
       name: string
       description?: string | null
       imageUrl?: string | null
+      checkInDate?: string | null
+      location?: string | null
     }): Promise<any> => {
       if (!projectId) return null
       if (isShowcase) {
@@ -232,6 +234,8 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
           name: input.name,
           description: input.description ?? null,
           image_url: input.imageUrl ?? null,
+          check_in_date: input.checkInDate ?? null,
+          location: input.location ?? null,
           sort_order: 999,
         }
         setData((prev) => {

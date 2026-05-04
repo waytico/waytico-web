@@ -4,10 +4,11 @@ import { useState, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { ImagePlus, Loader2 } from 'lucide-react'
+import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
 import { UI } from '@/lib/ui-strings'
 import type { Accommodation, Mutations } from './trip-types'
 import { uploadAccommodationPhoto, ALLOWED_MIME, MAX_FILE_SIZE } from '@/lib/upload-photo'
+import { fmtDayDate } from '@/lib/trip-format'
 import type { ThemeId } from '@/lib/themes'
 
 type Props = {
@@ -29,6 +30,10 @@ type Props = {
   theme?: ThemeId
   /** Magazine-only narrative subtitle slot under the eyebrow. */
   subtitleSlot?: ReactNode
+  /** Trip language — used to format the per-card check-in date label
+   *  the same way day dates are formatted (Magazine only; other
+   *  themes don't surface the field). */
+  language?: string | null
 }
 
 /**
@@ -47,6 +52,7 @@ export function TripAccommodations({
   interceptUpload,
   theme,
   subtitleSlot,
+  language,
 }: Props) {
   const hasAny = accommodations.length > 0
   if (!editable && !hasAny) return null
@@ -61,6 +67,7 @@ export function TripAccommodations({
         onDelete={onDelete}
         interceptUpload={interceptUpload}
         subtitleSlot={subtitleSlot}
+        language={language}
       />
     )
   }
@@ -464,6 +471,7 @@ function AccommodationsMagazine({
   onDelete,
   interceptUpload,
   subtitleSlot,
+  language,
 }: {
   accommodations: Accommodation[]
   editable: boolean
@@ -472,14 +480,34 @@ function AccommodationsMagazine({
   onDelete?: Mutations['saveAccommodationDelete']
   interceptUpload?: () => void
   subtitleSlot?: ReactNode
+  language?: string | null
 }) {
   const hasAny = accommodations.length > 0
+  // Public mode with no cards — section hidden entirely (subtitle and
+  // eyebrow included). Owner mode below always renders, even with zero
+  // cards, so the operator can fill placeholders to seed the block.
+  if (!editable && !hasAny) return null
+
+  // Placeholder count: always show enough cells to fill at least one
+  // 3-up row (so the empty-state reads as an active surface, not a
+  // single button) AND always one trailing slot after the last filled
+  // card (so adding another stay is always one click away — drops to
+  // the next row past the third card automatically).
+  //   0 cards → 3 placeholders   (3 cells in row 1)
+  //   1 card  → 1 + 2            (3 cells in row 1)
+  //   2 cards → 2 + 1            (3 cells in row 1)
+  //   3 cards → 3 + 1            (3 in row 1, 1 in row 2)
+  //   N cards → N + 1
+  const placeholderCount = editable
+    ? Math.max(1, 3 - accommodations.length)
+    : 0
+
   return (
     <section className="tp-mag-section tp-mag-acc" id="accommodations">
       <div className="tp-mag-container">
         <header className="tp-mag-acc__header">
           <hr className="tp-mag-rule" />
-          <p className="tp-mag-eyebrow tp-mag-acc__eyebrow">STAYS</p>
+          <p className="tp-mag-eyebrow tp-mag-acc__eyebrow">ACCOMMODATION</p>
           {subtitleSlot && (
             <h2 className="tp-mag-display tp-mag-section-subtitle">
               {subtitleSlot}
@@ -487,26 +515,26 @@ function AccommodationsMagazine({
           )}
         </header>
 
-        {hasAny && (
-          <div className="tp-mag-acc__grid">
-            {accommodations.map((a) => (
-              <MagazineAccommodationCard
-                key={a.id}
-                item={a}
-                editable={editable}
-                onUpdate={onUpdate}
-                onDelete={onDelete}
-                interceptUpload={interceptUpload}
+        <div className="tp-mag-acc__grid">
+          {accommodations.map((a) => (
+            <MagazineAccommodationCard
+              key={a.id}
+              item={a}
+              editable={editable}
+              onUpdate={onUpdate}
+              onDelete={onDelete}
+              interceptUpload={interceptUpload}
+              language={language}
+            />
+          ))}
+          {editable && onCreate &&
+            Array.from({ length: placeholderCount }).map((_, i) => (
+              <MagazinePlaceholderCard
+                key={`placeholder-${i}`}
+                onCreate={onCreate}
               />
             ))}
-          </div>
-        )}
-
-        {editable && onCreate && (
-          <div className="tp-mag-acc__add">
-            <AddAccommodationButton onCreate={onCreate} />
-          </div>
-        )}
+        </div>
       </div>
     </section>
   )
@@ -518,25 +546,47 @@ function MagazineAccommodationCard({
   onUpdate,
   onDelete,
   interceptUpload,
+  language,
 }: {
   item: Accommodation
   editable: boolean
   onUpdate?: Mutations['saveAccommodationPatch']
   onDelete?: Mutations['saveAccommodationDelete']
   interceptUpload?: () => void
+  language?: string | null
 }) {
   // I-LOST-006 mitigation: keep the local draft state in sync with the
   // canonical `item` prop, so that edit-toggle (or a backend agent
   // reorder) doesn't carry stale text from a previous selection.
+  // Postgres DATE comes back as an ISO timestamp string (eg
+  // "2026-05-15T00:00:00.000Z") via the `pg` driver. <input type="date">
+  // demands a strict YYYY-MM-DD value, so we normalise on read and the
+  // sync block below repeats the same slice when the canonical value
+  // changes underneath us (server PATCH or AI edit).
+  const isoDateHead = (v: string | null | undefined): string =>
+    typeof v === 'string' && v.length >= 10 ? v.slice(0, 10) : ''
+
   const [editingName, setEditingName] = useState(false)
   const [editingDesc, setEditingDesc] = useState(false)
+  const [editingDate, setEditingDate] = useState(false)
+  const [editingLoc, setEditingLoc] = useState(false)
   const [draftName, setDraftName] = useState(item.name)
   const [draftDesc, setDraftDesc] = useState(item.description || '')
+  const [draftDate, setDraftDate] = useState(isoDateHead(item.check_in_date))
+  const [draftLoc, setDraftLoc] = useState(item.location || '')
   // Sync drafts when the canonical item changes (server PATCH or AI edit).
   if (!editingName && draftName !== item.name) setDraftName(item.name)
   if (!editingDesc && draftDesc !== (item.description || '')) {
     setDraftDesc(item.description || '')
   }
+  if (!editingDate && draftDate !== isoDateHead(item.check_in_date)) {
+    setDraftDate(isoDateHead(item.check_in_date))
+  }
+  if (!editingLoc && draftLoc !== (item.location || '')) {
+    setDraftLoc(item.location || '')
+  }
+
+  const dateLabel = fmtDayDate(item.check_in_date, language)
 
   return (
     <article className="tp-mag-acc__card">
@@ -549,8 +599,6 @@ function MagazineAccommodationCard({
         }}
       />
       <div className="tp-mag-acc__body">
-        <p className="tp-mag-acc__card-eyebrow">STAY</p>
-
         {editingName ? (
           <input
             className="tp-mag-acc__name-input"
@@ -587,6 +635,107 @@ function MagazineAccommodationCard({
             {item.name}
           </h3>
         )}
+
+        {/* Check-in date and location — fontfaces match the rest of the
+            page: date uses the same Intl-formatted label as day dates
+            (.tp-mag-acc__date inherits .tp-mag-day__date typography);
+            location uses the mono-accent voice the day eyebrow uses. */}
+        {editingDate ? (
+          <input
+            className="tp-mag-acc__meta-input"
+            type="date"
+            value={draftDate}
+            autoFocus
+            onChange={(e) => setDraftDate(e.target.value)}
+            onBlur={async () => {
+              const v = draftDate.trim()
+              const next = v.length > 0 ? v : null
+              const current = isoDateHead(item.check_in_date) || null
+              if (next !== current && onUpdate) {
+                await onUpdate(item.id, { checkInDate: next })
+              }
+              setEditingDate(false)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              if (e.key === 'Escape') {
+                setDraftDate(isoDateHead(item.check_in_date))
+                setEditingDate(false)
+              }
+            }}
+          />
+        ) : dateLabel ? (
+          <p
+            className="tp-mag-acc__date"
+            onClick={() => {
+              if (!editable) return
+              setDraftDate(isoDateHead(item.check_in_date))
+              setEditingDate(true)
+            }}
+            style={editable ? { cursor: 'text' } : undefined}
+          >
+            {dateLabel}
+          </p>
+        ) : editable ? (
+          <p
+            className="tp-mag-acc__date tp-mag-acc__date--placeholder"
+            onClick={() => {
+              setDraftDate(isoDateHead(item.check_in_date))
+              setEditingDate(true)
+            }}
+          >
+            Add check-in date
+          </p>
+        ) : null}
+
+        {editingLoc ? (
+          <input
+            className="tp-mag-acc__meta-input"
+            type="text"
+            value={draftLoc}
+            autoFocus
+            placeholder="City"
+            maxLength={200}
+            onChange={(e) => setDraftLoc(e.target.value)}
+            onBlur={async () => {
+              const v = draftLoc.trim()
+              const next = v.length > 0 ? v : null
+              if (next !== (item.location || null) && onUpdate) {
+                await onUpdate(item.id, { location: next })
+              }
+              setEditingLoc(false)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              if (e.key === 'Escape') {
+                setDraftLoc(item.location || '')
+                setEditingLoc(false)
+              }
+            }}
+          />
+        ) : item.location ? (
+          <p
+            className="tp-mag-acc__location"
+            onClick={() => {
+              if (!editable) return
+              setDraftLoc(item.location || '')
+              setEditingLoc(true)
+            }}
+            style={editable ? { cursor: 'text' } : undefined}
+          >
+            {item.location}
+          </p>
+        ) : editable ? (
+          <p
+            className="tp-mag-acc__location tp-mag-acc__location--placeholder"
+            onClick={() => {
+              setDraftLoc(item.location || '')
+              setEditingLoc(true)
+            }}
+          >
+            Add city
+          </p>
+        ) : null}
 
         {editingDesc ? (
           <textarea
@@ -643,12 +792,78 @@ function MagazineAccommodationCard({
               await onDelete(item.id)
             }}
             aria-label={`Delete ${item.name}`}
+            title="Delete"
           >
-            Remove
+            <Trash2 className="h-4 w-4" />
           </button>
         )}
       </div>
     </article>
+  )
+}
+
+/**
+ * Empty placeholder card occupying a grid cell. Click → reveals an
+ * inline name input → Enter / blur creates the accommodation. Once
+ * created, the parent grid recomputes and a fresh placeholder takes
+ * its slot at the tail.
+ *
+ * Lives inside the Magazine grid (.tp-mag-acc__grid) so it inherits
+ * the same column track sizing as filled cards — no width hacks.
+ */
+function MagazinePlaceholderCard({
+  onCreate,
+}: {
+  onCreate: NonNullable<Mutations['saveAccommodationCreate']>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState('')
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className="tp-mag-acc__placeholder"
+        onClick={() => setEditing(true)}
+        aria-label="Add accommodation"
+      >
+        <span className="tp-mag-acc__placeholder-icon" aria-hidden="true">
+          <ImagePlus className="h-5 w-5" />
+        </span>
+        <span className="tp-mag-acc__placeholder-label">+ Add accommodation</span>
+      </button>
+    )
+  }
+
+  const commit = async () => {
+    const v = name.trim()
+    if (v) {
+      await onCreate({ name: v })
+    }
+    setName('')
+    setEditing(false)
+  }
+
+  return (
+    <div className="tp-mag-acc__placeholder tp-mag-acc__placeholder--editing">
+      <input
+        className="tp-mag-acc__placeholder-input"
+        value={name}
+        autoFocus
+        placeholder="Hotel / lodge / camp name"
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={async (e) => {
+          if (e.key === 'Enter') {
+            await commit()
+          }
+          if (e.key === 'Escape') {
+            setName('')
+            setEditing(false)
+          }
+        }}
+        onBlur={commit}
+      />
+    </div>
   )
 }
 

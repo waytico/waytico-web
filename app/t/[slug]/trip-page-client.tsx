@@ -1694,6 +1694,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             isAnonCreator ? () => toast.error('Sign up to edit') : undefined
           }
           subtitleSlot={subtitleSlotFor('accommodations')}
+          language={p.language ?? 'en'}
         />
 
         <TripPrice

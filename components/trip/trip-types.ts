@@ -37,6 +37,10 @@ export type Accommodation = {
   name: string
   description: string | null
   image_url: string | null
+  /** ISO YYYY-MM-DD when the guest checks in. Null when unset. */
+  check_in_date: string | null
+  /** Town / city the property is in. Null when unset. */
+  location: string | null
   sort_order: number
 }
 
@@ -181,7 +185,13 @@ export type Mutations = {
   saveProjectPatch: (patch: Record<string, unknown>) => Promise<boolean>
   saveDayPatch: (dayId: string, patch: Record<string, unknown>) => Promise<boolean>
   /** Accommodations are a separate entity (not nested per-day). */
-  saveAccommodationCreate: (input: { name: string; description?: string | null; imageUrl?: string | null }) => Promise<Accommodation | null>
+  saveAccommodationCreate: (input: {
+    name: string
+    description?: string | null
+    imageUrl?: string | null
+    checkInDate?: string | null
+    location?: string | null
+  }) => Promise<Accommodation | null>
   saveAccommodationPatch: (id: string, patch: Record<string, unknown>) => Promise<boolean>
   saveAccommodationDelete: (id: string) => Promise<boolean>
 }
