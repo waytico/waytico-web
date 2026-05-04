@@ -3937,6 +3937,42 @@
   text-align: center;
   margin: 0;
   padding-inline: 24px;
+  /* Inline-flex so the brand-credit stays glued to "Powered by" while
+     the agent-login utility link (after the second separator) is
+     allowed to drop to a second visual row on narrow phones without
+     breaking the centred rhythm of the line above it. */
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0 0.5em;
+  row-gap: 4px;
+}
+
+[data-theme="magazine"] .tp-mag-footer__minimal-sep {
+  /* Visual separator between Brand and Login. Same alpha as the
+     surrounding mono copy so it reads as a hairline divider, not as
+     a sibling word. Hidden from screen readers via aria-hidden. */
+  color: rgba(245, 240, 230, 0.35);
+}
+
+[data-theme="magazine"] .tp-mag-footer__minimal-login {
+  /* Inherits the mono-uppercase rhythm of the surrounding line — the
+     login is utility chrome, not a poetic display element. Slightly
+     lower alpha than the Powered-by copy so the brand-credit reads
+     first; hover lifts it onto the accent terracotta to mark its
+     interactivity. */
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 230, 0.55);
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-footer__minimal-login:hover {
+  color: var(--accent);
 }
 
 [data-theme="magazine"] .tp-mag-footer__minimal-brand {

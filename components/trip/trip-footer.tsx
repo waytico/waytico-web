@@ -61,6 +61,16 @@ export function TripFooter({ editable, theme }: Props) {
         >
           Waytico
         </Link>
+        {/* Agent-login utility link — see Magazine variant for rationale.
+            Same shape on non-Magazine public footer for cross-theme
+            consistency. */}
+        <span aria-hidden="true"> · </span>
+        <Link
+          href="/sign-in"
+          className="hover:text-foreground transition-colors"
+        >
+          Agent login
+        </Link>
       </div>
     </footer>
   )
@@ -115,6 +125,22 @@ function FooterMagazine({ editable }: { editable: boolean }) {
               className="tp-mag-footer__minimal-brand"
             >
               Waytico
+            </Link>
+            {/* Agent-login utility link. Inline after the brand-credit so
+                it reads as chrome, not as a CTA — most of the time the
+                visitor is the traveller and won't notice it. The rare
+                case is an operator who landed on their own trip page
+                without an active session. Separator stays a `·` for
+                consistency with the rest of the line; on narrow mobile
+                the parent flex-wrap allows the login to drop to a
+                second visual row without breaking the centred copy
+                line above. */}
+            <span className="tp-mag-footer__minimal-sep" aria-hidden="true">·</span>
+            <Link
+              href="/sign-in"
+              className="tp-mag-footer__minimal-login"
+            >
+              Agent login
             </Link>
           </p>
         </footer>
