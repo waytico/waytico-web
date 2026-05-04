@@ -118,6 +118,84 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
     [projectId, getToken, setData, isShowcase],
   )
 
+  /**
+   * Save a single hero highlight slot (Magazine theme).
+   *
+   * Replaces the legacy saveHighlight which read the array from a closure
+   * and PATCHed the full array via saveProjectPatch — that path lost
+   * writes when two slots were edited before the first PATCH response
+   * returned (last-write-wins on a stale closure). The new path scopes
+   * the write to a single slot via PATCH /api/projects/:id/highlights/:idx;
+   * the backend wraps the read + patch + write in a single transaction
+   * with SELECT FOR UPDATE so concurrent slot edits serialize on the row
+   * lock.
+   *
+   * In showcase mode, the functional setData updater reads the latest
+   * local highlights, places the trimmed value at idx, and compacts —
+   * matching the backend's compaction rules (empties stripped, cap at 3).
+   * Because the updater receives the latest state from React, there is
+   * no closure race even though no network call happens.
+   */
+  const saveHighlightSlot = useCallback(
+    async (idx: number, raw: string | null): Promise<boolean> => {
+      if (!projectId) return false
+      const trimmed = typeof raw === 'string' ? raw.trim() : ''
+
+      if (isShowcase) {
+        setData((prev) => {
+          if (!prev?.project) return prev
+          const cur: unknown = (prev.project as any).highlights
+          const arr: string[] = Array.isArray(cur)
+            ? cur.map((s) => (typeof s === 'string' ? s : ''))
+            : []
+          while (arr.length <= idx) arr.push('')
+          arr[idx] = trimmed
+          const cleaned = arr
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0)
+            .slice(0, 3)
+          return {
+            ...prev,
+            project: { ...prev.project, highlights: cleaned },
+          }
+        })
+        return true
+      }
+
+      try {
+        const token = await getToken()
+        if (!token) {
+          toast.error('Sign up to edit')
+          return false
+        }
+        const res = await apiFetch(`/api/projects/${projectId}/highlights/${idx}`, {
+          method: 'PATCH',
+          token,
+          body: JSON.stringify({ value: trimmed.length === 0 ? null : trimmed }),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          toast.error(err?.error || 'Save failed')
+          return false
+        }
+        const payload = await res.json()
+        if (Array.isArray(payload?.highlights)) {
+          setData((prev) =>
+            prev?.project
+              ? { ...prev, project: { ...prev.project, highlights: payload.highlights } }
+              : prev,
+          )
+        }
+        return true
+      } catch {
+        toast.error('Save failed')
+        return false
+      }
+    },
+    [projectId, getToken, setData, isShowcase],
+  )
+
+
   const saveTaskPatch = useCallback(
     async (taskId: string, patch: Record<string, any>): Promise<boolean> => {
       if (isShowcase) {
@@ -463,6 +541,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
 
   return {
     saveProjectPatch,
+    saveHighlightSlot,
     saveTaskPatch,
     saveDayPatch,
     saveAccommodationCreate,

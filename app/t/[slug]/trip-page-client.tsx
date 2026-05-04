@@ -393,6 +393,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
   const {
     saveProjectPatch,
+    saveHighlightSlot,
     saveTaskPatch,
     saveDayPatch,
     saveWhatToBring,
@@ -845,18 +846,14 @@ export default function TripPageClient({ slug, initialData }: Props) {
   // ── Hero highlights (top-3 cities / regions / landmarks) ──
   // Magazine hero renders these beside the title; other themes ignore.
   // Owner mode shows three slots (filled or placeholder) so the operator
-  // can always add up to three. Saving a single slot does a full-array
-  // replace: read current highlights, place trimmed value at that index,
-  // strip empties, send back. Empty slots collapse, so the persisted
-  // array stays compact.
+  // can always add up to three. Each slot writes via the atomic per-slot
+  // endpoint (PATCH /api/projects/:id/highlights/:idx) — the backend
+  // wraps read + patch + write in a single transaction with SELECT FOR
+  // UPDATE so concurrent slot edits serialize on the row lock instead
+  // of racing on a closure. Empty slots collapse server-side.
   const currentHighlights = Array.isArray(p.highlights) ? p.highlights : []
   const saveHighlight = (index: number, raw: string): Promise<boolean> => {
-    const trimmed = raw.trim()
-    const arr = [...currentHighlights]
-    while (arr.length <= index) arr.push('')
-    arr[index] = trimmed
-    const cleaned = arr.map((s) => s.trim()).filter((s) => s.length > 0).slice(0, 3)
-    return saveProjectPatch({ highlights: cleaned })
+    return saveHighlightSlot(index, raw)
   }
 
   const heroHighlightsSlots: ReactNode[] | undefined = ed
