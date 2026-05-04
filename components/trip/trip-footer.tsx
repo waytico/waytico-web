@@ -77,15 +77,20 @@ export function TripFooter({ editable, theme, owner, operatorContact }: Props) {
  * Keeps `id="site-footer"` so TripCommandBar's IntersectionObserver
  * still finds the page bottom and fades out near it.
  *
- * 4-col on desktop:
- *   1. Brand   — name (Cormorant) + tagline (italic)
- *   2. Offices — address (or hidden when none)
- *   3. Journeys — placeholder copy until journeys list lands; column is
- *                 omitted entirely when there's no content (avoids dead
- *                 slot on the grid)
- *   4. Contact — email + phone, mailto / tel links
+ * Columns are conditional — Brand is always rendered, Offices and
+ * Contact only when the operator has the underlying data. The CSS
+ * uses auto-fit grid so the layout adapts cleanly to 1 / 2 / 3
+ * visible columns without leaving dead trailing slots.
  *
- * Mobile collapses to a single column with the same row order.
+ *   1. Brand   — name (display serif, large) + tagline (body, muted).
+ *                No eyebrow — brand identity reads directly.
+ *   2. Offices — eyebrow + address. Hidden when no address.
+ *   3. Contact — eyebrow + email / phone as mailto / tel links.
+ *                Hidden when neither is present.
+ *
+ * Bottom row splits at the edges on desktop (© year brand on the
+ * left, Powered by Waytico on the right) and stacks centred on
+ * mobile.
  */
 function FooterMagazine({
   owner,
@@ -107,8 +112,7 @@ function FooterMagazine({
     <footer id="site-footer" className="tp-mag-footer">
       <div className="tp-mag-footer__inner">
         <div className="tp-mag-footer__cols">
-          <div className="tp-mag-footer__col">
-            <p className="tp-mag-footer__col-eyebrow">BRAND</p>
+          <div className="tp-mag-footer__col tp-mag-footer__col--brand">
             <p className="tp-mag-footer__brand-name">{brandName}</p>
             {tagline && (
               <p className="tp-mag-footer__brand-tagline">{tagline}</p>
@@ -147,7 +151,18 @@ function FooterMagazine({
 
         <div className="tp-mag-footer__bottom">
           <p className="tp-mag-footer__copy">
-            © {year} {brandName} · Powered by Waytico
+            © {year} {brandName}
+          </p>
+          <p className="tp-mag-footer__powered">
+            Powered by{' '}
+            <Link
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="tp-mag-footer__powered-link"
+            >
+              Waytico
+            </Link>
           </p>
         </div>
       </div>
