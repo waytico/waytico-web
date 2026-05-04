@@ -3648,6 +3648,32 @@
   gap: 8px;
 }
 
+[data-theme="magazine"] .tp-mag-contacts__brand-address.is-hidden {
+  opacity: 0.45;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__brand-address > span {
+  flex: 1;
+  min-width: 0;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__address-eye {
+  background: transparent;
+  border: 0;
+  padding: 2px;
+  color: var(--ink-mute);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__address-eye:hover {
+  color: var(--accent);
+}
+
 [data-theme="magazine"] .tp-mag-contacts__channels {
   display: flex;
   flex-direction: column;
@@ -3721,6 +3747,10 @@
   line-height: 1.5;
   color: var(--ink-mute);
   margin: 16px 0 0 0;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__hint + .tp-mag-contacts__hint {
+  margin-top: 4px;
 }
 
 [data-theme="magazine"] .tp-mag-contacts__hint-link {

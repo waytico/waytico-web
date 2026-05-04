@@ -431,7 +431,7 @@ async function saveValue(
 }
 
 async function toggleHidden(
-  key: ChannelKey,
+  key: ChannelKey | 'address',
   hidden: Set<string>,
   current: OperatorContact,
   saveProjectPatch?: Mutations['saveProjectPatch'],
@@ -548,12 +548,40 @@ function ContactsMagazine({
             {tagline && (
               <p className="tp-mag-contacts__brand-tagline">{tagline}</p>
             )}
-            {address && (
-              <p className="tp-mag-contacts__brand-address">
-                <MapPin size={14} aria-hidden="true" />
-                <span>{address}</span>
-              </p>
-            )}
+            {address && (() => {
+              const addressHidden = hidden.has('address')
+              if (!editable && addressHidden) return null
+              return (
+                <p
+                  className={
+                    addressHidden
+                      ? 'tp-mag-contacts__brand-address is-hidden'
+                      : 'tp-mag-contacts__brand-address'
+                  }
+                >
+                  <MapPin size={14} aria-hidden="true" />
+                  <span>{address}</span>
+                  {editable && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        toggleHidden(
+                          'address',
+                          hidden,
+                          operatorContact,
+                          saveProjectPatch,
+                        )
+                      }
+                      title={addressHidden ? 'Show on this trip' : 'Hide from this trip'}
+                      aria-label={addressHidden ? 'Show on this trip' : 'Hide from this trip'}
+                      className="tp-mag-contacts__address-eye"
+                    >
+                      {addressHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  )}
+                </p>
+              )
+            })()}
           </div>
 
           <div className="tp-mag-contacts__channels">
@@ -606,6 +634,12 @@ function ContactsMagazine({
                   )
                 })}
               </ul>
+            )}
+
+            {editable && (sourceChannels.length > 0 || !!address) && (
+              <p className="tp-mag-contacts__hint tp-mag-contacts__hint--intro">
+                Click the eye to hide a contact from the client view.
+              </p>
             )}
 
             {editable && missingChannelLabels.length > 0 && (
