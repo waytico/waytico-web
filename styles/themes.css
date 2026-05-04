@@ -2103,6 +2103,19 @@
 
 /* ── Itinerary (alternating day spreads) ──────────────────────────── */
 
+/* Section header (rule + ITINERARY eyebrow) — same visual contract as
+   .tp-mag-acc__header. Sits at the top of the itinerary section, above
+   the first day. The first day's own top rule is suppressed below so
+   the eyebrow visually owns the slot instead of stacking against a
+   duplicate hairline. */
+[data-theme="magazine"] .tp-mag-itin__header {
+  margin-bottom: 0;
+}
+
+[data-theme="magazine"] .tp-mag-itin__eyebrow {
+  margin: 32px 0 18px 0;
+}
+
 [data-theme="magazine"] .tp-mag-itin__days {
   display: flex;
   flex-direction: column;
@@ -2112,6 +2125,22 @@
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-itin__days {
     gap: 60px;
+  }
+}
+
+/* The section header above already carries the rule; the first day
+   would otherwise stack its own border-top directly under it. Drop the
+   duplicate line + its padding so Day 01 sits flush under the
+   ITINERARY eyebrow at both viewports. Subsequent days keep their
+   per-day rule, which is what produces the cadence between spreads. */
+[data-theme="magazine"] .tp-mag-itin__days > .tp-mag-day:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-itin__days > .tp-mag-day:first-child {
+    padding-top: 0;
   }
 }
 

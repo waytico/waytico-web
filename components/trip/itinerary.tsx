@@ -652,16 +652,21 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
 
   const dayIds = items.map((d) => d.id || `day-${d.dayNumber}`)
 
-  // Section opens with just a hairline rule. The eyebrow+subtitle header
-  // was removed — the canonical Magazine reference jumps straight from
-  // the overview block's prose into "DAY 01 — …", with no "ITINERARY"
-  // label between them. Each day spread carries its own DAY NN eyebrow,
-  // which is the only label the section needs. The rule keeps the visual
-  // separation between sections that other Magazine blocks also use.
-  // The id="itinerary" anchor on the section lands on this rule, which
-  // sits immediately above the first day — TopNav's "Itinerary" link
-  // therefore takes the visitor straight to Day 1 (intended UX).
-  const sectionLead = <hr className="tp-mag-rule" />
+  // Section opens with a hairline rule + ITINERARY eyebrow, mirroring
+  // the Accommodation block's header on the same page. Visually the
+  // eyebrow sits in the slot the first day would otherwise own — the
+  // first day's own border-top + padding-top are suppressed in CSS
+  // (.tp-mag-itin__days > .tp-mag-day:first-child) so the section
+  // header replaces the would-be top rule of Day 01 instead of stacking
+  // a second line directly under the section rule.
+  // The id="itinerary" anchor on the section lands on this header, so
+  // TopNav's "Itinerary" link takes the visitor straight to Day 1.
+  const sectionLead = (
+    <header className="tp-mag-itin__header">
+      <hr className="tp-mag-rule" />
+      <p className="tp-mag-eyebrow tp-mag-itin__eyebrow">ITINERARY</p>
+    </header>
+  )
 
   const dayList = items.map((day, idx) => (
     <MagazineDay
