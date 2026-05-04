@@ -508,7 +508,7 @@ export function TripChatWidget({
         {messages.map((m, i) => (
           <div
             key={`${m.ts}-${i}`}
-            className={`tp-chat-msg tp-chat-msg--${m.role}${m.isError ? ' tp-chat-msg--error' : ''}`}
+            className={`tp-chat-msg tp-chat-msg--${m.role}${m.role === 'agent' && m.isError ? ' tp-chat-msg--error' : ''}`}
           >
             <div className="tp-chat-msg__bubble">
               {m.text}
