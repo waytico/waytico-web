@@ -546,10 +546,14 @@ function PriceDetails({
 }) {
   const heading = kind === 'in' ? 'Included' : 'Not included'
 
-  // Public viewer: render comma-joined inline prose, drop empty lines
-  // and any leading bullet markers ("- " / "• ") so the operator's
-  // authoring shorthand still renders cleanly. When the source has no
-  // items at all, render nothing — the slot disappears.
+  // Public viewer: render BOTH variants in the DOM and toggle by viewport
+  // — desktop ≥1024px shows the hairline-divided list (sca­nnable
+  // checklist register), <1024px shows comma-joined inline prose
+  // (compact, no vertical sprawl on phones). Sharing source data avoids
+  // any drift between the two renders.
+  // Drop empty lines and leading bullet markers ("- " / "• ") from the
+  // operator's authoring shorthand; if the parsed list is empty, the
+  // slot disappears entirely.
   if (!editable) {
     if (!source) return null
     const items = source
@@ -560,7 +564,14 @@ function PriceDetails({
     return (
       <div className="tp-mag-price__details">
         <p className="tp-mag-price__details-heading">{heading}</p>
-        <p className="tp-mag-price__details-text">{items.join(', ')}</p>
+        {/* Mobile prose — joined with commas. CSS hides this ≥1024px. */}
+        <p className="tp-mag-price__details-prose">{items.join(', ')}</p>
+        {/* Desktop list — hairline-divided rows. CSS hides this <1024px. */}
+        <ul className="tp-mag-price__details-list">
+          {items.map((item, i) => (
+            <li key={i}>{item}</li>
+          ))}
+        </ul>
       </div>
     )
   }
@@ -568,7 +579,8 @@ function PriceDetails({
   // Owner mode: always render the slot (even when empty) so the
   // operator can click into the EditableField placeholder. Multi-line
   // textarea preserves the per-line input pattern from the old
-  // TripIncluded block.
+  // TripIncluded block. Owner sees a single edit surface — viewport
+  // doesn't change the authoring shape.
   return (
     <div className="tp-mag-price__details">
       <p className="tp-mag-price__details-heading">{heading}</p>
@@ -579,7 +591,6 @@ function PriceDetails({
           value={source ?? ''}
           placeholder="One item per line"
           rows={4}
-          className="tp-mag-price__details-text"
           onSave={async (v) => {
             if (!onSave) return false
             return onSave(v)
