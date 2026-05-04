@@ -3793,6 +3793,30 @@
   text-underline-offset: 2px;
 }
 
+/* Public icon row — social channels + website. Bare icons (no border)
+   in line with Magazine's "rule, no box" idiom. ink-mute → accent on
+   hover. */
+[data-theme="magazine"] .tp-mag-contacts__icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__icon-link {
+  color: var(--ink-mute);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  margin: -4px;
+  transition: color 0.18s ease;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__icon-link:hover {
+  color: var(--accent);
+}
+
 /* ── Mobile StickyBar ─────────────────────────────────────────────── */
 
 [data-theme="magazine"] .tp-mag-stickybar {

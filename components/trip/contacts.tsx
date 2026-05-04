@@ -523,7 +523,14 @@ function ContactsMagazine({
     return null
   }
 
-  const renderedChannels = editable ? configuredChannels : visibleChannels
+  // Mirror editorial bifurcation:
+  //   - text channels (email/phone)  → <ul> with text rows
+  //   - icon channels (social/web)   → public: compact icon row; owner: a
+  //                                     second editable <ul> so values are
+  //                                     visible while editing
+  const sourceChannels = editable ? configuredChannels : visibleChannels
+  const textChannels = sourceChannels.filter((c) => c.textInPublic)
+  const iconChannels = sourceChannels.filter((c) => !c.textInPublic)
 
   return (
     <section className="tp-mag-section tp-mag-contacts" id="contacts">
@@ -565,8 +572,12 @@ function ContactsMagazine({
 
           <div className="tp-mag-contacts__channels">
             <p className="tp-mag-contacts__channels-eyebrow">CHANNELS</p>
+
+            {/* Email/phone — text rows. Public renders as <a> link via
+                ChannelTextRow's editable=false branch; owner renders the
+                inline editor + eye-toggle. */}
             <ul className="tp-mag-contacts__list">
-              {renderedChannels.map((c) => (
+              {textChannels.map((c) => (
                 <ChannelTextRow
                   key={c.key}
                   channel={c}
@@ -574,7 +585,6 @@ function ContactsMagazine({
                   override={(operatorContact?.[c.key] as string | null | undefined) ?? null}
                   hidden={hidden.has(c.key)}
                   editable={editable}
-                  forceTextDisplay
                   onSaveValue={(v) =>
                     saveValue(c.key, v, operatorContact, saveProjectPatch)
                   }
@@ -584,6 +594,55 @@ function ContactsMagazine({
                 />
               ))}
             </ul>
+
+            {/* Public: social + website as compact icon row. */}
+            {iconChannels.length > 0 && !editable && (
+              <div className="tp-mag-contacts__icons">
+                {iconChannels.map((c) => {
+                  const v = resolved[c.key]!
+                  const Icon = c.Icon
+                  return (
+                    <a
+                      key={c.key}
+                      href={c.href(v)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={c.label}
+                      aria-label={c.label}
+                      className="tp-mag-contacts__icon-link"
+                    >
+                      <Icon size={20} aria-hidden="true" />
+                    </a>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Owner: editable list for social/website channels — value
+                shown for clarity (forceTextDisplay) while editing, even
+                though public sees only an icon. */}
+            {iconChannels.length > 0 && editable && (
+              <ul className="tp-mag-contacts__list tp-mag-contacts__list--social">
+                {iconChannels.map((c) => (
+                  <ChannelTextRow
+                    key={c.key}
+                    channel={c}
+                    value={resolved[c.key]!}
+                    override={(operatorContact?.[c.key] as string | null | undefined) ?? null}
+                    hidden={hidden.has(c.key)}
+                    editable={editable}
+                    forceTextDisplay
+                    onSaveValue={(v) =>
+                      saveValue(c.key, v, operatorContact, saveProjectPatch)
+                    }
+                    onToggleHidden={() =>
+                      toggleHidden(c.key, hidden, operatorContact, saveProjectPatch)
+                    }
+                  />
+                ))}
+              </ul>
+            )}
+
             {editable && missingChannelLabels.length > 0 && (
               <p className="tp-mag-contacts__hint">
                 Add{' '}
