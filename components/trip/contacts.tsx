@@ -482,15 +482,16 @@ function pick(
 /* ── Magazine variant ─────────────────────────────────────────────── */
 
 /**
- * Magazine variant — same channel resolution + inline-edit + EyeOff
- * toggle semantics as the editorial section. Wrapper + identity panel
- * differ; the per-channel ChannelTextRow component is reused so
- * save/hide handlers stay identical.
+ * Magazine variant — single horizontal row of icon links, one per
+ * configured channel. No text rows, no inline editor: channel values
+ * are edited in /dashboard (the operator's profile) or via the AI
+ * editor agent's set_operator_contact tool. The page surface only
+ * exposes per-trip visibility (eye-toggle below each icon in owner
+ * mode), which writes operator_contact.hidden_channels.
  *
  * Heading is the same hardcoded "Questions about this trip?" used by
- * the editorial layout — no AI-generated section subtitle. The right
- * column reads visually like Classic; the left column keeps the
- * Magazine identity stack.
+ * the editorial layout. The right column reads visually like Classic;
+ * the left column keeps the Magazine identity stack.
  */
 function ContactsMagazine({
   owner,
@@ -522,14 +523,12 @@ function ContactsMagazine({
     return null
   }
 
-  // Mirror editorial bifurcation:
-  //   - text channels (email/phone)  → <ul> with text rows
-  //   - icon channels (social/web)   → public: compact icon row; owner: a
-  //                                     second editable <ul> so values are
-  //                                     visible while editing
+  // Single icon row for all channels — no text/icon bifurcation, no
+  // inline editor. Public sees bare icon links; owner sees the same
+  // icons with a small eye-toggle below each one. Channel values are
+  // edited in /dashboard (the operator's profile) or via the AI editor
+  // agent's set_operator_contact tool — never inline on the trip page.
   const sourceChannels = editable ? configuredChannels : visibleChannels
-  const textChannels = sourceChannels.filter((c) => c.textInPublic)
-  const iconChannels = sourceChannels.filter((c) => !c.textInPublic)
 
   return (
     <section className="tp-mag-section tp-mag-contacts" id="contacts">
@@ -560,73 +559,52 @@ function ContactsMagazine({
           <div className="tp-mag-contacts__channels">
             <h2 className="tp-mag-contacts__heading">{UI.contactsHeading}</h2>
 
-            {/* Email/phone — text rows. Public renders as <a> link via
-                ChannelTextRow's editable=false branch; owner renders the
-                inline editor + eye-toggle. */}
-            <ul className="tp-mag-contacts__list">
-              {textChannels.map((c) => (
-                <ChannelTextRow
-                  key={c.key}
-                  channel={c}
-                  value={resolved[c.key]!}
-                  override={(operatorContact?.[c.key] as string | null | undefined) ?? null}
-                  hidden={hidden.has(c.key)}
-                  editable={editable}
-                  onSaveValue={(v) =>
-                    saveValue(c.key, v, operatorContact, saveProjectPatch)
-                  }
-                  onToggleHidden={() =>
-                    toggleHidden(c.key, hidden, operatorContact, saveProjectPatch)
-                  }
-                />
-              ))}
-            </ul>
-
-            {/* Public: social + website as compact icon row. */}
-            {iconChannels.length > 0 && !editable && (
-              <div className="tp-mag-contacts__icons">
-                {iconChannels.map((c) => {
+            {sourceChannels.length > 0 && (
+              <ul className="tp-mag-contacts__icons">
+                {sourceChannels.map((c) => {
                   const v = resolved[c.key]!
                   const Icon = c.Icon
+                  const isHidden = hidden.has(c.key)
                   return (
-                    <a
+                    <li
                       key={c.key}
-                      href={c.href(v)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={c.label}
-                      aria-label={c.label}
-                      className="tp-mag-contacts__icon-link"
+                      className={
+                        isHidden
+                          ? 'tp-mag-contacts__icons-item is-hidden'
+                          : 'tp-mag-contacts__icons-item'
+                      }
                     >
-                      <Icon size={20} aria-hidden="true" />
-                    </a>
+                      <a
+                        href={c.href(v)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={c.label}
+                        aria-label={c.label}
+                        className="tp-mag-contacts__icon-link"
+                      >
+                        <Icon size={28} aria-hidden="true" />
+                      </a>
+                      {editable && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            toggleHidden(
+                              c.key,
+                              hidden,
+                              operatorContact,
+                              saveProjectPatch,
+                            )
+                          }
+                          title={isHidden ? 'Show on this trip' : 'Hide from this trip'}
+                          aria-label={isHidden ? 'Show on this trip' : 'Hide from this trip'}
+                          className="tp-mag-contacts__icon-eye"
+                        >
+                          {isHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      )}
+                    </li>
                   )
                 })}
-              </div>
-            )}
-
-            {/* Owner: editable list for social/website channels — value
-                shown for clarity (forceTextDisplay) while editing, even
-                though public sees only an icon. */}
-            {iconChannels.length > 0 && editable && (
-              <ul className="tp-mag-contacts__list tp-mag-contacts__list--social">
-                {iconChannels.map((c) => (
-                  <ChannelTextRow
-                    key={c.key}
-                    channel={c}
-                    value={resolved[c.key]!}
-                    override={(operatorContact?.[c.key] as string | null | undefined) ?? null}
-                    hidden={hidden.has(c.key)}
-                    editable={editable}
-                    forceTextDisplay
-                    onSaveValue={(v) =>
-                      saveValue(c.key, v, operatorContact, saveProjectPatch)
-                    }
-                    onToggleHidden={() =>
-                      toggleHidden(c.key, hidden, operatorContact, saveProjectPatch)
-                    }
-                  />
-                ))}
               </ul>
             )}
 

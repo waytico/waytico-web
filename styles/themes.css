@@ -3655,97 +3655,54 @@
   min-width: 0;
 }
 
-[data-theme="magazine"] .tp-mag-contacts__list {
+/* Single horizontal row of channel icons. Public sees bare icon links;
+   owner sees the same icons with a small eye-toggle below each one
+   (operator can hide a channel for a specific trip without losing the
+   value in their profile). No text rows, no inline editor — values live
+   in the operator's /dashboard profile. */
+[data-theme="magazine"] .tp-mag-contacts__icons {
   list-style: none;
-  margin: 0;
+  margin: 8px 0 0 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
-}
-
-[data-theme="magazine"] .tp-mag-contacts__list li {
-  border-bottom: 1px solid var(--rule);
-  padding: 12px 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 28px;
 }
 
 @media (min-width: 1024px) {
-  [data-theme="magazine"] .tp-mag-contacts__list li {
-    padding: 14px 0;
+  [data-theme="magazine"] .tp-mag-contacts__icons {
+    gap: 32px;
   }
 }
 
-[data-theme="magazine"] .tp-mag-contacts__list li:last-child {
-  border-bottom: 0;
+[data-theme="magazine"] .tp-mag-contacts__icons-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
-/* Public-mode link rows (editorial ChannelTextRow renders an <a> with
-   class `tp-contacts-link`). Restyle inside Magazine column. */
-[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-link {
-  display: flex;
+[data-theme="magazine"] .tp-mag-contacts__icons-item.is-hidden {
+  opacity: 0.45;
+}
+
+[data-theme="magazine"] .tp-mag-contacts__icon-link {
+  color: var(--ink-mute);
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  font-family: var(--font-body);
-  font-size: 14px;
-  color: var(--ink);
-  text-decoration: none;
+  justify-content: center;
   transition: color 0.18s ease;
 }
 
-[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-link:hover {
+[data-theme="magazine"] .tp-mag-contacts__icon-link:hover {
   color: var(--accent);
 }
 
-/* Owner-mode rows (ChannelTextRow in editable mode renders a
-   tp-contacts-row). Re-style for Magazine — square inputs, terracotta
-   active border, monochrome eye toggle. */
-[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row--hidden {
-  opacity: 0.55;
-}
-
-[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-icon {
-  color: var(--ink-mute);
-  display: inline-flex;
-}
-
-[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-value {
-  font-family: var(--font-body);
-  font-size: 14px;
+[data-theme="magazine"] .tp-mag-contacts__icon-eye {
   background: transparent;
   border: 0;
-  padding: 0;
-  flex: 1;
-  text-align: left;
-  color: var(--ink);
-  cursor: text;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-input {
-  flex: 1;
-  min-width: 0;
-  font-family: var(--font-body);
-  font-size: 14px;
-  color: var(--ink);
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--accent);
-  padding: 4px 0;
-  outline: none;
-}
-
-[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-eye {
-  background: transparent;
-  border: 0;
-  padding: 4px;
+  padding: 2px;
   color: var(--ink-mute);
   cursor: pointer;
   display: inline-flex;
@@ -3754,7 +3711,7 @@
   transition: color 0.18s ease;
 }
 
-[data-theme="magazine"] .tp-mag-contacts__list .tp-contacts-row-eye:hover {
+[data-theme="magazine"] .tp-mag-contacts__icon-eye:hover {
   color: var(--accent);
 }
 
@@ -3770,30 +3727,6 @@
   color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-
-/* Public icon row — social channels + website. Bare icons (no border)
-   in line with Magazine's "rule, no box" idiom. ink-mute → accent on
-   hover. */
-[data-theme="magazine"] .tp-mag-contacts__icons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 8px;
-}
-
-[data-theme="magazine"] .tp-mag-contacts__icon-link {
-  color: var(--ink-mute);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  margin: -4px;
-  transition: color 0.18s ease;
-}
-
-[data-theme="magazine"] .tp-mag-contacts__icon-link:hover {
-  color: var(--accent);
 }
 
 /* ── Mobile StickyBar ─────────────────────────────────────────────── */
