@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { Mail, Phone, MapPin, Globe, Eye, EyeOff } from 'lucide-react'
 import { UI } from '@/lib/ui-strings'
@@ -25,8 +24,6 @@ type Props = {
    *  resolution + EyeOff/inline-edit semantics, restyled wrapper +
    *  identity panel. Other values keep the editorial layout. */
   theme?: ThemeId
-  /** Magazine-only narrative subtitle slot under the eyebrow. */
-  subtitleSlot?: ReactNode
 }
 
 type ChannelKey =
@@ -148,7 +145,7 @@ const CHANNELS: Channel[] = [
  *   - small hint at the bottom linking to /dashboard for adding the
  *     channels not configured on the brand yet.
  */
-export function TripContacts({ owner, operatorContact, editable, saveProjectPatch, theme, subtitleSlot }: Props) {
+export function TripContacts({ owner, operatorContact, editable, saveProjectPatch, theme }: Props) {
   if (theme === 'magazine') {
     return (
       <ContactsMagazine
@@ -156,7 +153,6 @@ export function TripContacts({ owner, operatorContact, editable, saveProjectPatc
         operatorContact={operatorContact}
         editable={editable}
         saveProjectPatch={saveProjectPatch}
-        subtitleSlot={subtitleSlot}
       />
     )
   }
@@ -487,22 +483,25 @@ function pick(
 
 /**
  * Magazine variant — same channel resolution + inline-edit + EyeOff
- * toggle semantics as the editorial section. Only the wrapper, header,
- * and identity panel change; the per-channel ChannelTextRow component
- * is reused so save/hide handlers stay identical.
+ * toggle semantics as the editorial section. Wrapper + identity panel
+ * differ; the per-channel ChannelTextRow component is reused so
+ * save/hide handlers stay identical.
+ *
+ * Heading is the same hardcoded "Questions about this trip?" used by
+ * the editorial layout — no AI-generated section subtitle. The right
+ * column reads visually like Classic; the left column keeps the
+ * Magazine identity stack.
  */
 function ContactsMagazine({
   owner,
   operatorContact,
   editable,
   saveProjectPatch,
-  subtitleSlot,
 }: {
   owner: OwnerBrand
   operatorContact: OperatorContact
   editable: boolean
   saveProjectPatch?: Mutations['saveProjectPatch']
-  subtitleSlot?: ReactNode
 }) {
   const resolved = resolveContacts(owner, operatorContact)
   const hidden = new Set(operatorContact?.hidden_channels || [])
@@ -535,18 +534,6 @@ function ContactsMagazine({
   return (
     <section className="tp-mag-section tp-mag-contacts" id="contacts">
       <div className="tp-mag-container">
-        <header className="tp-mag-contacts__header">
-          <hr className="tp-mag-rule" />
-          <p className="tp-mag-eyebrow tp-mag-contacts__eyebrow">
-            TALK TO US
-          </p>
-          {subtitleSlot && (
-            <h2 className="tp-mag-display tp-mag-section-subtitle">
-              {subtitleSlot}
-            </h2>
-          )}
-        </header>
-
         <div className="tp-mag-contacts__grid">
           <div className="tp-mag-contacts__identity">
             {logoUrl && (
@@ -571,7 +558,7 @@ function ContactsMagazine({
           </div>
 
           <div className="tp-mag-contacts__channels">
-            <p className="tp-mag-contacts__channels-eyebrow">CHANNELS</p>
+            <h2 className="tp-mag-contacts__heading">{UI.contactsHeading}</h2>
 
             {/* Email/phone — text rows. Public renders as <a> link via
                 ChannelTextRow's editable=false branch; owner renders the

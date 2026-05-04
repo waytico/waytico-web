@@ -968,14 +968,12 @@ export default function TripPageClient({ slug, initialData }: Props) {
     | 'accommodations'
     | 'included'
     | 'terms'
-    | 'contacts'
   const currentSubtitles: Record<SubtitleKey, string | null> = {
     overview: p.section_subtitles?.overview ?? null,
     itinerary: p.section_subtitles?.itinerary ?? null,
     accommodations: p.section_subtitles?.accommodations ?? null,
     included: p.section_subtitles?.included ?? null,
     terms: p.section_subtitles?.terms ?? null,
-    contacts: p.section_subtitles?.contacts ?? null,
   }
   const saveSectionSubtitle = (
     key: SubtitleKey,
@@ -1844,7 +1842,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
           operatorContact={operatorContact}
           editable={ed}
           saveProjectPatch={ed ? saveProjectPatch : undefined}
-          subtitleSlot={subtitleSlotFor('contacts')}
         />
 
         {/* Active-trip sections — render as themed sections that reuse the

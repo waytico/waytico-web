@@ -3574,30 +3574,20 @@
 
 /* ── Contacts ─────────────────────────────────────────────────────── */
 
-[data-theme="magazine"] .tp-mag-contacts__header {
-  margin-bottom: 32px;
-}
-
-@media (min-width: 1024px) {
-  [data-theme="magazine"] .tp-mag-contacts__header {
-    margin-bottom: 56px;
-  }
-}
-
-[data-theme="magazine"] .tp-mag-contacts__eyebrow {
-  margin: 32px 0 18px 0;
-}
-
 [data-theme="magazine"] .tp-mag-contacts__heading {
-  font-size: 32px;
-  line-height: 1.05;
-  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  margin: 0 0 16px 0;
 }
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-contacts__heading {
-    font-size: 56px;
-    line-height: 1.02;
+    font-size: 28px;
+    margin: 0 0 20px 0;
   }
 }
 
@@ -3663,17 +3653,6 @@
   flex-direction: column;
   gap: 16px;
   min-width: 0;
-}
-
-[data-theme="magazine"] .tp-mag-contacts__channels-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-mute);
-  margin: 0;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--rule);
 }
 
 [data-theme="magazine"] .tp-mag-contacts__list {
