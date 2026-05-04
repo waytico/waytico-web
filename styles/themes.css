@@ -2293,23 +2293,45 @@
   position: relative;
 }
 
-[data-theme="magazine"] .tp-mag-acc__photo {
+/* ── Photo flow ──────────────────────────────────────────────────────
+   Mirrors the day-photo flow in itinerary (.tp-mag-day__photo-*) so
+   accommodation photos behave identically: <img> instead of background-
+   image, always-visible overlay actions on the filled state, dashed
+   dropzone-button on the empty state. Owner sees pill "Drag or change
+   photo" + trash; viewer sees just the image. */
+
+/* Filled state — wraps the <img> so overlay actions can stack on top. */
+[data-theme="magazine"] .tp-mag-acc__photo-zone {
+  position: relative;
   width: 100%;
   aspect-ratio: 4 / 3;
-  background-size: cover;
-  background-position: center;
-  background-color: var(--rule);
   margin-bottom: 20px;
-  cursor: pointer;
-  position: relative;
+  background: var(--rule);
 }
 
-[data-theme="magazine"] .tp-mag-acc__photo--drag {
+[data-theme="magazine"] .tp-mag-acc__photo-zone.is-dragover {
   outline: 2px solid var(--accent);
   outline-offset: -4px;
 }
 
-[data-theme="magazine"] .tp-mag-acc__photo-hint {
+[data-theme="magazine"] .tp-mag-acc__photo-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+/* Public viewer renders the <img> directly (without the .photo-zone
+   wrapper), so it needs its own aspect-ratio + sizing rules. */
+[data-theme="magazine"] .tp-mag-acc__card > .tp-mag-acc__photo-img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  margin-bottom: 20px;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo-drag-overlay {
   position: absolute;
   inset: 0;
   display: flex;
@@ -2321,23 +2343,75 @@
   font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+  pointer-events: none;
+  z-index: 2;
 }
 
+/* Bottom-left always-visible overlay row holding the "Drag or change
+   photo" pill and the trash button. */
+[data-theme="magazine"] .tp-mag-acc__photo-actions {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 3;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: rgba(26, 24, 23, 0.78);
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 0;
+  border-radius: 999px;
+  cursor: default;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo-pill.is-clickable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo-pill.is-clickable:hover {
+  background: rgba(26, 24, 23, 0.92);
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(26, 24, 23, 0.78);
+  color: var(--accent-ink);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo-action-btn:hover {
+  background: rgba(26, 24, 23, 0.92);
+}
+
+/* Empty state — dropzone-button. */
 [data-theme="magazine"] .tp-mag-acc__photo-empty {
   width: 100%;
   aspect-ratio: 4 / 3;
   border: 1px dashed var(--rule);
   background: transparent;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-mute);
   cursor: pointer;
   margin-bottom: 20px;
   padding: 0;
@@ -2345,9 +2419,25 @@
 }
 
 [data-theme="magazine"] .tp-mag-acc__photo-empty:hover,
-[data-theme="magazine"] .tp-mag-acc__photo-empty--drag {
+[data-theme="magazine"] .tp-mag-acc__photo-empty.is-dragover {
   border-color: var(--accent);
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo-empty:hover .tp-mag-acc__photo-empty-label,
+[data-theme="magazine"] .tp-mag-acc__photo-empty.is-dragover .tp-mag-acc__photo-empty-label {
   color: var(--accent);
+}
+
+[data-theme="magazine"] .tp-mag-acc__photo-empty-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  transition: color 0.18s ease;
 }
 
 [data-theme="magazine"] .tp-mag-acc__body {
@@ -2450,8 +2540,7 @@
 
 [data-theme="magazine"] .tp-mag-acc__date--placeholder,
 [data-theme="magazine"] .tp-mag-acc__location--placeholder,
-[data-theme="magazine"] .tp-mag-acc__nights--placeholder,
-[data-theme="magazine"] .tp-mag-acc__notes--placeholder {
+[data-theme="magazine"] .tp-mag-acc__nights--placeholder {
   color: var(--ink-mute);
   font-style: italic;
   text-transform: none;
@@ -2477,22 +2566,31 @@
   margin: 0;
 }
 
-/* Notes — short marketing call-out under description. Italic accent
-   voice visually separates it from description body and signals it as
-   the operator's editorial pick ("Recommended", "Best deal"). */
-[data-theme="magazine"] .tp-mag-acc__notes {
+/* Block-level operator-written marketing comment shown between the
+   eyebrow and the cards ("We picked these for you", "Recommended in
+   this season"). Italic accent voice — visually separates it from
+   any future section subtitle (which would be display-serif) and
+   signals it as the operator's editorial voice. */
+[data-theme="magazine"] .tp-mag-acc__block-note {
   font-family: var(--font-body);
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 16px;
+  line-height: 1.5;
   font-style: italic;
   color: var(--accent);
-  margin: 8px 0 0 0;
+  margin: 16px 0 32px 0;
+  max-width: 720px;
 }
 
-[data-theme="magazine"] .tp-mag-acc__notes-input {
+[data-theme="magazine"] .tp-mag-acc__block-note--placeholder {
+  color: var(--ink-mute);
+  letter-spacing: 0.04em;
+  cursor: text;
+}
+
+[data-theme="magazine"] .tp-mag-acc__block-note-input {
   font-family: var(--font-body);
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 16px;
+  line-height: 1.5;
   font-style: italic;
   color: var(--ink);
   background: transparent;
@@ -2500,8 +2598,9 @@
   border-bottom: 1px solid var(--accent);
   padding: 0 0 4px 0;
   width: 100%;
+  max-width: 720px;
   outline: none;
-  margin-top: 8px;
+  margin: 16px 0 32px 0;
 }
 
 [data-theme="magazine"] .tp-mag-acc__meta-input {

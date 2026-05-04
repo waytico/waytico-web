@@ -34,6 +34,14 @@ type Props = {
    *  the same way day dates are formatted (Magazine only; other
    *  themes don't surface the field). */
   language?: string | null
+  /** Block-level operator-written marketing comment shown between the
+   *  eyebrow and the cards on Magazine ("We picked these for you").
+   *  Lives on trip_projects.accommodations_note. Pass null to render
+   *  the placeholder pill in owner mode (or nothing in public). */
+  note?: string | null
+  /** Owner-mode save callback for `note`. Returns true on success.
+   *  Trip-page-client wires this to saveProjectPatch. */
+  onNoteChange?: (next: string | null) => Promise<boolean>
 }
 
 /**
@@ -53,9 +61,14 @@ export function TripAccommodations({
   theme,
   subtitleSlot,
   language,
+  note,
+  onNoteChange,
 }: Props) {
   const hasAny = accommodations.length > 0
-  if (!editable && !hasAny) return null
+  // Public mode hides the whole section when empty (no cards AND no
+  // operator-written block note — neither cards nor a freestanding
+  // marketing line, so nothing to show).
+  if (!editable && !hasAny && !note) return null
 
   if (theme === 'magazine') {
     return (
@@ -68,6 +81,8 @@ export function TripAccommodations({
         interceptUpload={interceptUpload}
         subtitleSlot={subtitleSlot}
         language={language}
+        note={note ?? null}
+        onNoteChange={onNoteChange}
       />
     )
   }
@@ -472,6 +487,8 @@ function AccommodationsMagazine({
   interceptUpload,
   subtitleSlot,
   language,
+  note,
+  onNoteChange,
 }: {
   accommodations: Accommodation[]
   editable: boolean
@@ -481,12 +498,14 @@ function AccommodationsMagazine({
   interceptUpload?: () => void
   subtitleSlot?: ReactNode
   language?: string | null
+  note: string | null
+  onNoteChange?: (next: string | null) => Promise<boolean>
 }) {
   const hasAny = accommodations.length > 0
-  // Public mode with no cards — section hidden entirely (subtitle and
-  // eyebrow included). Owner mode below always renders, even with zero
+  // Public mode hides the whole section when empty AND no operator note
+  // (nothing to show). Owner mode below always renders, even with zero
   // cards, so the operator can fill placeholders to seed the block.
-  if (!editable && !hasAny) return null
+  if (!editable && !hasAny && !note) return null
 
   // Placeholder count: always show enough cells to fill at least one
   // 3-up row (so the empty-state reads as an active surface, not a
@@ -517,6 +536,17 @@ function AccommodationsMagazine({
               accommodations key either. */}
         </header>
 
+        {/* Block-level marketing comment ("We picked these for you").
+            Owner-written, sits between eyebrow and grid. Italic accent
+            voice visually separates it from any future section
+            subtitle. Public sees only filled values; owner sees a
+            placeholder pill when empty. */}
+        <BlockNote
+          note={note}
+          editable={editable}
+          onNoteChange={onNoteChange}
+        />
+
         <div className="tp-mag-acc__grid">
           {accommodations.map((a) => (
             <MagazineAccommodationCard
@@ -539,6 +569,100 @@ function AccommodationsMagazine({
         </div>
       </div>
     </section>
+  )
+}
+
+/**
+ * Block-level operator-written marketing comment for the Accommodations
+ * section. Lives on `trip_projects.accommodations_note`. Rendered
+ * between the section eyebrow and the cards on Magazine; sits as a
+ * single italic accent line so it reads as the operator's voice (not
+ * AI-generated narrative). Public sees only filled values; owner sees
+ * a placeholder pill when empty.
+ *
+ * Saving:
+ *   blur / Enter → onNoteChange(trimmed value or null)
+ *   Escape       → revert to canonical value, exit edit
+ *   Empty save   → null (cleared)
+ */
+function BlockNote({
+  note,
+  editable,
+  onNoteChange,
+}: {
+  note: string | null
+  editable: boolean
+  onNoteChange?: (next: string | null) => Promise<boolean>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(note || '')
+  // Keep draft synced with canonical value when not actively editing
+  // (covers AI-edit / server-PATCH updates from elsewhere).
+  if (!editing && draft !== (note || '')) setDraft(note || '')
+
+  // Public viewer — show only filled value, no chrome.
+  if (!editable) {
+    if (!note) return null
+    return <p className="tp-mag-acc__block-note">{note}</p>
+  }
+
+  // Owner — editing input.
+  if (editing) {
+    return (
+      <input
+        className="tp-mag-acc__block-note-input"
+        type="text"
+        value={draft}
+        autoFocus
+        placeholder="We picked these for you / Recommended in this season"
+        maxLength={500}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={async () => {
+          const v = draft.trim()
+          const next = v.length > 0 ? v : null
+          if (next !== (note || null) && onNoteChange) {
+            await onNoteChange(next)
+          }
+          setEditing(false)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+          if (e.key === 'Escape') {
+            setDraft(note || '')
+            setEditing(false)
+          }
+        }}
+      />
+    )
+  }
+
+  // Owner — display with click-to-edit, falls back to placeholder pill
+  // when the value is empty.
+  if (note) {
+    return (
+      <p
+        className="tp-mag-acc__block-note"
+        onClick={() => {
+          setDraft(note || '')
+          setEditing(true)
+        }}
+        style={{ cursor: 'text' }}
+      >
+        {note}
+      </p>
+    )
+  }
+
+  return (
+    <p
+      className="tp-mag-acc__block-note tp-mag-acc__block-note--placeholder"
+      onClick={() => {
+        setDraft('')
+        setEditing(true)
+      }}
+    >
+      Add a comment for the whole block (e.g. We picked these for you)
+    </p>
   )
 }
 
@@ -573,7 +697,6 @@ function MagazineAccommodationCard({
   const [editingDate, setEditingDate] = useState(false)
   const [editingLoc, setEditingLoc] = useState(false)
   const [editingNights, setEditingNights] = useState(false)
-  const [editingNotes, setEditingNotes] = useState(false)
   const [draftName, setDraftName] = useState(item.name)
   const [draftDesc, setDraftDesc] = useState(item.description || '')
   const [draftDate, setDraftDate] = useState(isoDateHead(item.check_in_date))
@@ -583,7 +706,6 @@ function MagazineAccommodationCard({
   const [draftNights, setDraftNights] = useState(
     item.nights != null ? String(item.nights) : '',
   )
-  const [draftNotes, setDraftNotes] = useState(item.notes || '')
   // Sync drafts when the canonical item changes (server PATCH or AI edit).
   if (!editingName && draftName !== item.name) setDraftName(item.name)
   if (!editingDesc && draftDesc !== (item.description || '')) {
@@ -601,9 +723,6 @@ function MagazineAccommodationCard({
   ) {
     setDraftNights(item.nights != null ? String(item.nights) : '')
   }
-  if (!editingNotes && draftNotes !== (item.notes || '')) {
-    setDraftNotes(item.notes || '')
-  }
 
   const dateLabel = fmtDayDate(item.check_in_date, language)
 
@@ -615,6 +734,9 @@ function MagazineAccommodationCard({
         interceptUpload={interceptUpload}
         onChange={async (cdnUrl) => {
           if (onUpdate) await onUpdate(item.id, { imageUrl: cdnUrl })
+        }}
+        onClear={async () => {
+          if (onUpdate) await onUpdate(item.id, { imageUrl: null })
         }}
       />
       <div className="tp-mag-acc__body">
@@ -859,59 +981,6 @@ function MagazineAccommodationCard({
           </p>
         ) : null}
 
-        {/* Operator-facing marketing comment — short call-out shown to
-            the client below the description ("Recommended", "Best
-            deal", "We picked this one for you"). Italic accent voice
-            visually separates it from the description body. */}
-        {editingNotes ? (
-          <input
-            className="tp-mag-acc__notes-input"
-            type="text"
-            value={draftNotes}
-            autoFocus
-            placeholder="e.g. Recommended, Best deal"
-            maxLength={500}
-            onChange={(e) => setDraftNotes(e.target.value)}
-            onBlur={async () => {
-              const v = draftNotes.trim()
-              const next = v.length > 0 ? v : null
-              if (next !== (item.notes || null) && onUpdate) {
-                await onUpdate(item.id, { notes: next })
-              }
-              setEditingNotes(false)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-              if (e.key === 'Escape') {
-                setDraftNotes(item.notes || '')
-                setEditingNotes(false)
-              }
-            }}
-          />
-        ) : item.notes ? (
-          <p
-            className="tp-mag-acc__notes"
-            onClick={() => {
-              if (!editable) return
-              setDraftNotes(item.notes || '')
-              setEditingNotes(true)
-            }}
-            style={editable ? { cursor: 'text' } : undefined}
-          >
-            {item.notes}
-          </p>
-        ) : editable ? (
-          <p
-            className="tp-mag-acc__notes tp-mag-acc__notes--placeholder"
-            onClick={() => {
-              setDraftNotes('')
-              setEditingNotes(true)
-            }}
-          >
-            Add a comment (e.g. recommended, best deal)
-          </p>
-        ) : null}
-
         {editable && onDelete && (
           <button
             type="button"
@@ -996,15 +1065,40 @@ function MagazinePlaceholderCard({
   )
 }
 
+/**
+ * Photo for a single accommodation card. Mirrors `MagazineDayPhoto`'s
+ * paint pattern from itinerary.tsx (the day photo flow Vadim asked us
+ * to match), minus the edit-pencil — accommodation photos can be
+ * added, swapped (drag-or-pick), and removed, but not in-place
+ * cropped. Layout / chrome:
+ *
+ *   public viewer + photo  →  static <img>, no interactivity.
+ *   public viewer empty    →  null (no photo, no chrome).
+ *   owner empty            →  dashed dropzone-button with pill
+ *                             "Drag or add photo".
+ *   owner filled           →  <img> + always-visible overlay row:
+ *                               • pill "Drag or change photo"
+ *                                 (clickable — opens picker)
+ *                               • trash button (clears image_url
+ *                                 to null, keeps the card)
+ *                             plus drag-overlay "Drop photo to replace"
+ *                             when a file is dragged over.
+ *
+ * The card-level trash (top-right of the body) deletes the whole
+ * accommodation row; the photo-level trash here only clears the photo
+ * and is the same affordance day photos already have.
+ */
 function MagazineAccommodationPhoto({
   item,
   editable,
   onChange,
+  onClear,
   interceptUpload,
 }: {
   item: Accommodation
   editable: boolean
   onChange: (cdnUrl: string) => Promise<void>
+  onClear?: () => Promise<void>
   interceptUpload?: () => void
 }) {
   const { getToken } = useAuth()
@@ -1012,17 +1106,20 @@ function MagazineAccommodationPhoto({
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
+  // Public viewer — static image, no interactivity.
   if (!editable) {
     if (!item.image_url) return null
     return (
-      <div
-        className="tp-mag-acc__photo"
-        style={{ backgroundImage: `url(${item.image_url})` }}
-        aria-label={item.name}
+      <img
+        src={item.image_url}
+        alt={item.name}
+        className="tp-mag-acc__photo-img"
+        draggable={false}
       />
     )
   }
 
+  // Owner from here on.
   const handleFile = async (file: File) => {
     if (busy) return
     if (!ALLOWED_MIME.includes(file.type)) {
@@ -1049,7 +1146,7 @@ function MagazineAccommodationPhoto({
     }
   }
 
-  const onClick = () => {
+  const triggerPicker = () => {
     if (interceptUpload) {
       interceptUpload()
       return
@@ -1057,99 +1154,143 @@ function MagazineAccommodationPhoto({
     if (!busy) inputRef.current?.click()
   }
 
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
+  const handleClear = () => {
+    if (!onClear) return
     if (interceptUpload) {
       interceptUpload()
       return
     }
-    const file = e.dataTransfer.files?.[0]
-    if (file) handleFile(file)
+    onClear()
   }
 
-  const hasPhoto = !!item.image_url
+  // Drag handlers used by both empty and filled surfaces.
+  const dropHandlers = {
+    onDragEnter: (e: React.DragEvent) => {
+      e.preventDefault()
+      if (interceptUpload) return
+      if (e.dataTransfer?.types?.includes('Files')) setDragOver(true)
+    },
+    onDragOver: (e: React.DragEvent) => {
+      e.preventDefault()
+      if (interceptUpload) return
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+    },
+    onDragLeave: (e: React.DragEvent) => {
+      if (e.currentTarget === e.target) setDragOver(false)
+    },
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault()
+      setDragOver(false)
+      if (interceptUpload) {
+        interceptUpload()
+        return
+      }
+      const file = e.dataTransfer.files?.[0]
+      if (file) handleFile(file)
+    },
+  }
 
-  if (hasPhoto) {
+  // Hidden file input — shared between empty and filled surfaces.
+  const fileInput = (
+    <input
+      ref={inputRef}
+      type="file"
+      accept="image/jpeg,image/png,image/webp"
+      style={{ display: 'none' }}
+      onChange={(e) => {
+        const f = e.target.files?.[0]
+        if (f) handleFile(f)
+        e.target.value = ''
+      }}
+    />
+  )
+
+  // Empty state — clickable placeholder that doubles as a dropzone.
+  if (!item.image_url) {
     return (
-      <div
-        className={`tp-mag-acc__photo${dragOver ? ' tp-mag-acc__photo--drag' : ''}`}
-        style={{ backgroundImage: `url(${item.image_url})` }}
-        role="button"
-        tabIndex={0}
-        onClick={onClick}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            onClick()
+      <>
+        {fileInput}
+        <button
+          type="button"
+          onClick={triggerPicker}
+          className={
+            'tp-mag-acc__photo-empty' + (dragOver ? ' is-dragover' : '')
           }
-        }}
-        onDragOver={(e) => {
-          e.preventDefault()
-          setDragOver(true)
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={onDrop}
-        aria-label={`Replace photo for ${item.name}`}
-      >
-        {(busy || dragOver) && (
-          <div className="tp-mag-acc__photo-hint">
-            {busy ? 'UPLOADING…' : 'REPLACE PHOTO'}
-          </div>
-        )}
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          style={{ display: 'none' }}
-          onChange={(e) => {
-            const f = e.target.files?.[0]
-            if (f) handleFile(f)
-            e.target.value = ''
-          }}
-        />
-      </div>
+          aria-label={`Add photo for ${item.name}`}
+          {...dropHandlers}
+        >
+          {busy ? (
+            <span className="tp-mag-acc__photo-empty-label">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Uploading…
+            </span>
+          ) : (
+            <span className="tp-mag-acc__photo-empty-label">
+              <ImagePlus className="h-3.5 w-3.5" />
+              Drag or add photo
+            </span>
+          )}
+        </button>
+      </>
     )
   }
 
+  // Filled state — <img> + always-visible overlay actions (mobile has
+  // no hover affordance, so the pill needs to be visible at rest).
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      onDragOver={(e) => {
-        e.preventDefault()
-        setDragOver(true)
-      }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={onDrop}
+    <div
       className={
-        'tp-mag-acc__photo-empty' +
-        (dragOver ? ' tp-mag-acc__photo-empty--drag' : '')
+        'tp-mag-acc__photo-zone' + (dragOver ? ' is-dragover' : '')
       }
-      aria-label={`Add photo for ${item.name}`}
+      {...dropHandlers}
     >
-      {busy ? (
-        <>
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span>UPLOADING…</span>
-        </>
-      ) : (
-        <>
-          <ImagePlus className="h-5 w-5" />
-          <span>+ ADD PHOTO</span>
-        </>
-      )}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) handleFile(f)
-          e.target.value = ''
-        }}
+      {fileInput}
+      <img
+        src={item.image_url}
+        alt={item.name}
+        className="tp-mag-acc__photo-img"
+        draggable={false}
       />
-    </button>
+
+      {dragOver && (
+        <div className="tp-mag-acc__photo-drag-overlay" aria-hidden="true">
+          <span>Drop photo to replace</span>
+        </div>
+      )}
+
+      <div className="tp-mag-acc__photo-actions">
+        {busy ? (
+          <span className="tp-mag-acc__photo-pill">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Uploading…
+          </span>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={triggerPicker}
+              className="tp-mag-acc__photo-pill is-clickable"
+              aria-label={`Change photo for ${item.name}`}
+            >
+              <ImagePlus className="h-3.5 w-3.5" />
+              <span className="tp-mag-acc__photo-pill-label">
+                Drag or change photo
+              </span>
+            </button>
+            {onClear && (
+              <button
+                type="button"
+                onClick={handleClear}
+                className="tp-mag-acc__photo-action-btn"
+                aria-label={`Remove photo for ${item.name}`}
+                title="Remove photo"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   )
 }

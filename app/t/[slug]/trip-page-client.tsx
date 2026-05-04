@@ -1695,6 +1695,12 @@ export default function TripPageClient({ slug, initialData }: Props) {
           }
           subtitleSlot={subtitleSlotFor('accommodations')}
           language={p.language ?? 'en'}
+          note={(p as any).accommodations_note ?? null}
+          onNoteChange={
+            ed
+              ? async (next) => saveProjectPatch({ accommodationsNote: next })
+              : undefined
+          }
         />
 
         <TripPrice
