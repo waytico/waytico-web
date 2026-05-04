@@ -2130,18 +2130,12 @@
 
 /* The section header above already carries the rule; the first day
    would otherwise stack its own border-top directly under it. Drop the
-   duplicate line + its padding so Day 01 sits flush under the
-   ITINERARY eyebrow at both viewports. Subsequent days keep their
-   per-day rule, which is what produces the cadence between spreads. */
+   duplicate line on Day 01 only — keep its padding-top so the absolute
+   drag-handle (top: 12px) still sits in the gutter above the photo,
+   not on top of it. Subsequent days keep their per-day rule, which is
+   what produces the cadence between spreads. */
 [data-theme="magazine"] .tp-mag-itin__days > .tp-mag-day:first-child {
   border-top: 0;
-  padding-top: 0;
-}
-
-@media (min-width: 1024px) {
-  [data-theme="magazine"] .tp-mag-itin__days > .tp-mag-day:first-child {
-    padding-top: 0;
-  }
 }
 
 [data-theme="magazine"] .tp-mag-day {
