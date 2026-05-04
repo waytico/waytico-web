@@ -2347,12 +2347,16 @@
   z-index: 2;
 }
 
-/* Bottom-left always-visible overlay row holding the "Drag or change
-   photo" pill and the trash button. */
+/* Top-right always-visible overlay holding the "Drag or change photo"
+   pill. Right offset (44px) keeps it from overlapping the card-level
+   delete button (.tp-mag-acc__delete, 30×30 at right:8 of the card),
+   so the two sit side-by-side: [pill] [×] reading from left to right.
+   The card-level delete removes the whole card; the pill swaps the
+   photo (drag or click). */
 [data-theme="magazine"] .tp-mag-acc__photo-actions {
   position: absolute;
-  left: 8px;
-  bottom: 8px;
+  top: 8px;
+  right: 44px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2382,24 +2386,6 @@
 }
 
 [data-theme="magazine"] .tp-mag-acc__photo-pill.is-clickable:hover {
-  background: rgba(26, 24, 23, 0.92);
-}
-
-[data-theme="magazine"] .tp-mag-acc__photo-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: rgba(26, 24, 23, 0.78);
-  color: var(--accent-ink);
-  border: 0;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-
-[data-theme="magazine"] .tp-mag-acc__photo-action-btn:hover {
   background: rgba(26, 24, 23, 0.92);
 }
 
@@ -2567,40 +2553,27 @@
 }
 
 /* Block-level operator-written marketing comment shown between the
-   eyebrow and the cards ("We picked these for you", "Recommended in
-   this season"). Italic accent voice — visually separates it from
-   any future section subtitle (which would be display-serif) and
-   signals it as the operator's editorial voice. */
+   eyebrow and the cards. The actual input chrome (pencil icon,
+   placeholder voice, dashed underline on hover) comes from the shared
+   <EditableField> — these rules just give the slot a consistent
+   margin and max-width so it sits comfortably under the eyebrow
+   without filling the whole row.
+   .tp-mag-acc__block-note-slot wraps the owner-mode <EditableField>;
+   .tp-mag-acc__block-note is the public-viewer <p>. Both share the
+   same outer rhythm. */
+[data-theme="magazine"] .tp-mag-acc__block-note-slot,
 [data-theme="magazine"] .tp-mag-acc__block-note {
-  font-family: var(--font-body);
-  font-size: 16px;
-  line-height: 1.5;
-  font-style: italic;
-  color: var(--accent);
   margin: 16px 0 32px 0;
   max-width: 720px;
 }
 
-[data-theme="magazine"] .tp-mag-acc__block-note--placeholder {
-  color: var(--ink-mute);
-  letter-spacing: 0.04em;
-  cursor: text;
-}
-
-[data-theme="magazine"] .tp-mag-acc__block-note-input {
+/* Public-viewer text — no chrome; matches the body voice the rest of
+   the page uses for editorial prose. */
+[data-theme="magazine"] p.tp-mag-acc__block-note {
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.5;
-  font-style: italic;
   color: var(--ink);
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--accent);
-  padding: 0 0 4px 0;
-  width: 100%;
-  max-width: 720px;
-  outline: none;
-  margin: 16px 0 32px 0;
 }
 
 [data-theme="magazine"] .tp-mag-acc__meta-input {

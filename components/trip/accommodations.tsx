@@ -10,6 +10,7 @@ import type { Accommodation, Mutations } from './trip-types'
 import { uploadAccommodationPhoto, ALLOWED_MIME, MAX_FILE_SIZE } from '@/lib/upload-photo'
 import { fmtDayDate } from '@/lib/trip-format'
 import type { ThemeId } from '@/lib/themes'
+import { EditableField } from '@/components/editable/editable-field'
 
 type Props = {
   accommodations: Accommodation[]
@@ -575,15 +576,13 @@ function AccommodationsMagazine({
 /**
  * Block-level operator-written marketing comment for the Accommodations
  * section. Lives on `trip_projects.accommodations_note`. Rendered
- * between the section eyebrow and the cards on Magazine; sits as a
- * single italic accent line so it reads as the operator's voice (not
- * AI-generated narrative). Public sees only filled values; owner sees
- * a placeholder pill when empty.
+ * between the section eyebrow and the cards on Magazine.
  *
- * Saving:
- *   blur / Enter → onNoteChange(trimmed value or null)
- *   Escape       → revert to canonical value, exit edit
- *   Empty save   → null (cleared)
+ * Uses the shared <EditableField> the rest of the page uses for inline
+ * edits — same chrome (subtle pencil icon, dashed-on-hover affordance,
+ * placeholder voice when empty) so it doesn't read as a one-off
+ * widget. Public viewer renders nothing when empty; owner sees the
+ * placeholder hint.
  */
 function BlockNote({
   note,
@@ -594,75 +593,30 @@ function BlockNote({
   editable: boolean
   onNoteChange?: (next: string | null) => Promise<boolean>
 }) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(note || '')
-  // Keep draft synced with canonical value when not actively editing
-  // (covers AI-edit / server-PATCH updates from elsewhere).
-  if (!editing && draft !== (note || '')) setDraft(note || '')
-
-  // Public viewer — show only filled value, no chrome.
+  // Public viewer with no value — render nothing (don't reserve space).
+  if (!editable && !note) return null
+  // Public viewer with value — plain prose, no chrome.
   if (!editable) {
-    if (!note) return null
     return <p className="tp-mag-acc__block-note">{note}</p>
   }
-
-  // Owner — editing input.
-  if (editing) {
-    return (
-      <input
-        className="tp-mag-acc__block-note-input"
-        type="text"
-        value={draft}
-        autoFocus
-        placeholder="We picked these for you / Recommended in this season"
+  // Owner — fall through to EditableField. Empty save (Zod preprocess
+  // converts "" → null on the server) clears the column.
+  return (
+    <div className="tp-mag-acc__block-note-slot">
+      <EditableField
+        as="text"
+        value={note ?? ''}
+        editable
+        placeholder="Add a comment for the whole block (e.g. We picked these for you)"
         maxLength={500}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={async () => {
-          const v = draft.trim()
-          const next = v.length > 0 ? v : null
-          if (next !== (note || null) && onNoteChange) {
-            await onNoteChange(next)
-          }
-          setEditing(false)
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-          if (e.key === 'Escape') {
-            setDraft(note || '')
-            setEditing(false)
-          }
+        className="tp-mag-acc__block-note"
+        onSave={async (v) => {
+          if (!onNoteChange) return false
+          const trimmed = v.trim()
+          return onNoteChange(trimmed.length > 0 ? trimmed : null)
         }}
       />
-    )
-  }
-
-  // Owner — display with click-to-edit, falls back to placeholder pill
-  // when the value is empty.
-  if (note) {
-    return (
-      <p
-        className="tp-mag-acc__block-note"
-        onClick={() => {
-          setDraft(note || '')
-          setEditing(true)
-        }}
-        style={{ cursor: 'text' }}
-      >
-        {note}
-      </p>
-    )
-  }
-
-  return (
-    <p
-      className="tp-mag-acc__block-note tp-mag-acc__block-note--placeholder"
-      onClick={() => {
-        setDraft('')
-        setEditing(true)
-      }}
-    >
-      Add a comment for the whole block (e.g. We picked these for you)
-    </p>
+    </div>
   )
 }
 
@@ -734,9 +688,6 @@ function MagazineAccommodationCard({
         interceptUpload={interceptUpload}
         onChange={async (cdnUrl) => {
           if (onUpdate) await onUpdate(item.id, { imageUrl: cdnUrl })
-        }}
-        onClear={async () => {
-          if (onUpdate) await onUpdate(item.id, { imageUrl: null })
         }}
       />
       <div className="tp-mag-acc__body">
@@ -1092,13 +1043,11 @@ function MagazineAccommodationPhoto({
   item,
   editable,
   onChange,
-  onClear,
   interceptUpload,
 }: {
   item: Accommodation
   editable: boolean
   onChange: (cdnUrl: string) => Promise<void>
-  onClear?: () => Promise<void>
   interceptUpload?: () => void
 }) {
   const { getToken } = useAuth()
@@ -1152,15 +1101,6 @@ function MagazineAccommodationPhoto({
       return
     }
     if (!busy) inputRef.current?.click()
-  }
-
-  const handleClear = () => {
-    if (!onClear) return
-    if (interceptUpload) {
-      interceptUpload()
-      return
-    }
-    onClear()
   }
 
   // Drag handlers used by both empty and filled surfaces.
@@ -1265,30 +1205,17 @@ function MagazineAccommodationPhoto({
             Uploading…
           </span>
         ) : (
-          <>
-            <button
-              type="button"
-              onClick={triggerPicker}
-              className="tp-mag-acc__photo-pill is-clickable"
-              aria-label={`Change photo for ${item.name}`}
-            >
-              <ImagePlus className="h-3.5 w-3.5" />
-              <span className="tp-mag-acc__photo-pill-label">
-                Drag or change photo
-              </span>
-            </button>
-            {onClear && (
-              <button
-                type="button"
-                onClick={handleClear}
-                className="tp-mag-acc__photo-action-btn"
-                aria-label={`Remove photo for ${item.name}`}
-                title="Remove photo"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </>
+          <button
+            type="button"
+            onClick={triggerPicker}
+            className="tp-mag-acc__photo-pill is-clickable"
+            aria-label={`Change photo for ${item.name}`}
+          >
+            <ImagePlus className="h-3.5 w-3.5" />
+            <span className="tp-mag-acc__photo-pill-label">
+              Drag or change photo
+            </span>
+          </button>
         )}
       </div>
     </div>
