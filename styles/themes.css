@@ -3407,6 +3407,23 @@
   padding: 12px 22px calc(12px + env(safe-area-inset-bottom, 0px)) 22px;
   /* Soft shadow lifts the bar off the cream paper. */
   box-shadow: 0 -2px 16px rgba(26, 24, 23, 0.06);
+  /* Slide off-screen + fade when the footer enters the viewport.
+     Mirrors the IntersectionObserver pattern TripCommandBar uses
+     against the same #site-footer target — without this the cream
+     bar sits on top of the dark footer at the bottom of the page
+     and creates a visual artefact (a thin cream cap above the
+     dark slab) when the user scrolls to the end. */
+  transform: translateY(0);
+  opacity: 1;
+  transition:
+    transform 0.22s ease-out,
+    opacity 0.18s ease-out;
+}
+
+[data-theme="magazine"] .tp-mag-stickybar--hidden {
+  transform: translateY(110%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 @media (min-width: 1024px) {
@@ -3501,16 +3518,16 @@
 
 [data-theme="magazine"] .tp-mag-footer {
   /* var(--bg-alt) is the dark Magazine slab (#1A1817) — see
-     :root[data-theme="magazine"] block in this file. */
+     :root[data-theme="magazine"] block in this file. No margin-top:
+     - Owner mode: trip-page-client renders an h-40/h-44 spacer
+       inside the owner-only block ABOVE this footer to give the
+       floating TripCommandBar its scroll runway. Adding margin-top
+       here would stack on top of that and create a 220-260px cream
+       gap (visible in pre-fix screenshots).
+     - Public mode: footer should sit flush with the last themed
+       section so the dark slab reads as "page floor". */
   background: var(--bg-alt);
   color: rgba(245, 240, 230, 0.85);
-  margin-top: 60px;
-}
-
-@media (min-width: 1024px) {
-  [data-theme="magazine"] .tp-mag-footer {
-    margin-top: 80px;
-  }
 }
 
 /* ── Public/traveller variant — minimal centred strip ── */

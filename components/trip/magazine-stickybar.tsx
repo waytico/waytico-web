@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { UI } from '@/lib/ui-strings'
 import { fmtPrice } from '@/lib/trip-format'
 import { ContactAgentMenu } from './contact-agent-menu'
@@ -56,6 +57,25 @@ export function MagazineStickyBar({
   operatorContact,
   visible,
 }: Props) {
+  // IntersectionObserver gate: when the page footer is even partially
+  // in view, the sticky bar slides off-screen so it doesn't sit on
+  // top of the footer's product nav / minimal strip and create the
+  // visual artefact of a cream cap above the dark slab. Mirrors the
+  // pattern TripCommandBar uses against the same #site-footer target.
+  const [footerVisible, setFooterVisible] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const target = document.getElementById('site-footer')
+    if (!target) return
+
+    const io = new IntersectionObserver(
+      ([entry]) => setFooterVisible(entry.isIntersecting),
+      { rootMargin: '0px 0px 0px 0px', threshold: 0 },
+    )
+    io.observe(target)
+    return () => io.disconnect()
+  }, [])
+
   if (!visible) return null
 
   const mode: PricingMode = pricingMode ?? 'per_group'
@@ -73,7 +93,15 @@ export function MagazineStickyBar({
         : UI.forTheGroup
 
   return (
-    <div className="tp-mag-stickybar" role="region" aria-label="Pricing and inquiry">
+    <div
+      className={
+        'tp-mag-stickybar' +
+        (footerVisible ? ' tp-mag-stickybar--hidden' : '')
+      }
+      role="region"
+      aria-label="Pricing and inquiry"
+      aria-hidden={footerVisible || undefined}
+    >
       <div className="tp-mag-stickybar__inner">
         <div className="tp-mag-stickybar__price">
           <span className="tp-mag-stickybar__from">FROM</span>
