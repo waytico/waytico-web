@@ -6,7 +6,6 @@ import { UI } from '@/lib/ui-strings'
 import type { PricingMode, Mutations, OperatorContact, OwnerBrand } from './trip-types'
 import type { ThemeId } from '@/lib/themes'
 import { fmtPrice, currencyGlyph } from '@/lib/trip-format'
-import { ContactAgentMenu } from './contact-agent-menu'
 import { EditableField } from '@/components/editable/editable-field'
 
 type PriceProps = {
@@ -44,6 +43,19 @@ type PriceProps = {
   /** Owner-mode save callback for `note`. Returns true on success.
    *  Trip-page-client wires this to saveProjectPatch({ priceNote: next }). */
   onNoteChange?: (next: string | null) => Promise<boolean>
+  /** Magazine-only — included / not-included copy moves into the right
+   *  column of the Price block (replacing the old "Ready to talk it
+   *  through?" CTA, which now lives only in the page-level Contacts
+   *  section + the in-hero ContactAgentMenu). Owner sees a multi-line
+   *  EditableField (one item per line); public sees the lines joined
+   *  with commas as inline prose. Trip-page-client wires these from
+   *  p.included / p.not_included. Editorial / expedition / compact
+   *  themes ignore these — they keep rendering TripIncluded as a
+   *  separate section. */
+  included?: string | null
+  notIncluded?: string | null
+  onSaveIncluded?: (next: string) => Promise<boolean>
+  onSaveNotIncluded?: (next: string) => Promise<boolean>
 }
 
 /**
@@ -488,28 +500,93 @@ function PriceMagazine(props: PriceProps) {
           </div>
 
           <div className="tp-mag-price__right">
-            <p className="tp-mag-price__copy">
-              All prices in {props.currency?.toUpperCase() || 'USD'}. Final
-              quote depends on dates, group size, and any add-ons. We&rsquo;ll
-              tailor the proposal once you reach out.
-            </p>
-            <div className="tp-mag-price__cta">
-              <p className="tp-mag-price__cta-prompt">
-                Ready to talk it through?
-              </p>
-              <div className="tp-mag-price__cta-btn">
-                <ContactAgentMenu
-                  owner={props.owner ?? null}
-                  operatorContact={props.operatorContact ?? null}
-                  onPhoto={false}
-                  label="Inquire"
-                />
-              </div>
-            </div>
+            <PriceDetails
+              kind="in"
+              source={props.included ?? null}
+              editable={props.editable}
+              onSave={props.onSaveIncluded}
+            />
+            <PriceDetails
+              kind="out"
+              source={props.notIncluded ?? null}
+              editable={props.editable}
+              onSave={props.onSaveNotIncluded}
+            />
           </div>
         </div>
       </div>
     </section>
+  )
+}
+
+/**
+ * Included / Not-included slot inside the Magazine price block's right
+ * column. Replaces the old in-section CTA — the contact CTA already
+ * lives in the page-level Contacts section, the in-hero ContactAgentMenu,
+ * and the mobile MagazineStickyBar; a fourth in the price block was
+ * redundant.
+ *
+ * Public viewer: items joined as inline prose with commas — short
+ * editorial line, not a list. Hidden when empty.
+ * Owner: multi-line EditableField (one item per line) so the operator
+ * can keep the per-line authoring rhythm they're used to in the rest
+ * of the trip page; on save the same newline-separated string round-
+ * trips through saveProjectPatch.
+ */
+function PriceDetails({
+  kind,
+  source,
+  editable,
+  onSave,
+}: {
+  kind: 'in' | 'out'
+  source: string | null
+  editable: boolean
+  onSave?: (next: string) => Promise<boolean>
+}) {
+  const heading = kind === 'in' ? 'Included' : 'Not included'
+
+  // Public viewer: render comma-joined inline prose, drop empty lines
+  // and any leading bullet markers ("- " / "• ") so the operator's
+  // authoring shorthand still renders cleanly. When the source has no
+  // items at all, render nothing — the slot disappears.
+  if (!editable) {
+    if (!source) return null
+    const items = source
+      .split('\n')
+      .map((line) => line.replace(/^[-•·]\s*/, '').trim())
+      .filter(Boolean)
+    if (items.length === 0) return null
+    return (
+      <div className="tp-mag-price__details">
+        <p className="tp-mag-price__details-heading">{heading}</p>
+        <p className="tp-mag-price__details-text">{items.join(', ')}</p>
+      </div>
+    )
+  }
+
+  // Owner mode: always render the slot (even when empty) so the
+  // operator can click into the EditableField placeholder. Multi-line
+  // textarea preserves the per-line input pattern from the old
+  // TripIncluded block.
+  return (
+    <div className="tp-mag-price__details">
+      <p className="tp-mag-price__details-heading">{heading}</p>
+      <div className="tp-mag-price__details-edit">
+        <EditableField
+          as="multiline"
+          editable
+          value={source ?? ''}
+          placeholder="One item per line"
+          rows={4}
+          className="tp-mag-price__details-text"
+          onSave={async (v) => {
+            if (!onSave) return false
+            return onSave(v)
+          }}
+        />
+      </div>
+    </div>
   )
 }
 

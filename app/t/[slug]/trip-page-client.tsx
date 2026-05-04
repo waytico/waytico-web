@@ -1577,7 +1577,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
               overview: overviewVisible,
               itinerary: itineraryVisible,
               accommodations: accommodationsVisible,
-              included: includedVisible,
               price: priceVisible,
               terms: termsVisible,
               contacts: contactsVisible,
@@ -1717,15 +1716,33 @@ export default function TripPageClient({ slug, initialData }: Props) {
               ? async (next) => saveProjectPatch({ priceNote: next })
               : undefined
           }
+          included={p.included ?? null}
+          notIncluded={p.not_included ?? null}
+          onSaveIncluded={
+            ed
+              ? async (next) => saveProjectPatch({ included: next })
+              : undefined
+          }
+          onSaveNotIncluded={
+            ed
+              ? async (next) => saveProjectPatch({ notIncluded: next })
+              : undefined
+          }
         />
 
-        <TripIncluded
-          theme={resolvedTheme}
-          includedBodySlot={includedBodySlot}
-          notIncludedBodySlot={notIncludedBodySlot}
-          visible={includedVisible}
-          subtitleSlot={subtitleSlotFor('included')}
-        />
+        {/* Magazine theme moved Included / Not-included into the right
+            column of the Price block (see TripPrice props above) — no
+            separate Details section there. Other themes still render
+            the standalone Included section. */}
+        {resolvedTheme !== 'magazine' && (
+          <TripIncluded
+            theme={resolvedTheme}
+            includedBodySlot={includedBodySlot}
+            notIncludedBodySlot={notIncludedBodySlot}
+            visible={includedVisible}
+            subtitleSlot={subtitleSlotFor('included')}
+          />
+        )}
 
         <TripTerms
           theme={resolvedTheme}

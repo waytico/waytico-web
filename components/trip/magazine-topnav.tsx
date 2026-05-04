@@ -18,13 +18,17 @@ import { UI } from '@/lib/ui-strings'
  *
  * Order matches the on-page render order in trip-page-client.tsx so anchor
  * scrolling moves the viewport in the natural reading direction.
+ *
+ * "What's included" was removed (2026-05-04): on Magazine the included /
+ * not-included copy now lives inside the right column of the Price block,
+ * so the Price anchor covers both. Other themes still surface "Included"
+ * via the editorial TripNav.
  */
 type Visibility = {
   overview: boolean
   itinerary: boolean
   accommodations: boolean
   price: boolean
-  included: boolean
   terms: boolean
   contacts: boolean
 }
@@ -41,7 +45,6 @@ const ITEMS: Array<{ key: keyof Visibility; href: string; anchor: string; label:
   { key: 'itinerary',      href: '#itinerary',      anchor: 'itinerary',      label: UI.sectionLabels.itinerary },
   { key: 'accommodations', href: '#accommodations', anchor: 'accommodations', label: UI.sectionLabels.accommodations },
   { key: 'price',          href: '#price',          anchor: 'price',          label: UI.sectionLabels.price },
-  { key: 'included',       href: '#included',       anchor: 'included',       label: UI.sectionLabels.included },
   { key: 'terms',          href: '#terms',          anchor: 'terms',          label: UI.sectionLabels.terms },
   { key: 'contacts',       href: '#contacts',       anchor: 'contacts',       label: UI.sectionLabels.contacts },
 ]
@@ -54,7 +57,6 @@ export function MagazineTopNav({ visibility }: Props) {
     itinerary:      visibility?.itinerary      ?? true,
     accommodations: visibility?.accommodations ?? true,
     price:          visibility?.price          ?? true,
-    included:       visibility?.included       ?? true,
     terms:          visibility?.terms          ?? true,
     contacts:       visibility?.contacts       ?? true,
   }
