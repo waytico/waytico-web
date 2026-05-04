@@ -1851,23 +1851,9 @@
    typographic layers, which is the Magazine v2 canon's voice for the
    hero stack. Letter-spacing and uppercase reset to defaults so the
    serif italic gets its native rendering. */
-[data-theme="magazine"] .tp-mag-hero__bottom-eyebrow--dates {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-weight: 400;
-  font-size: 18px;
-  line-height: 1.25;
-  letter-spacing: 0;
-  text-transform: none;
-  opacity: 0.95;
-}
-
-@media (min-width: 1024px) {
-  [data-theme="magazine"] .tp-mag-hero__bottom-eyebrow--dates {
-    font-size: 22px;
-  }
-}
-
+/* Dates eyebrow — inherits mono / 0.16em / uppercase from the parent
+   .tp-mag-hero__bottom-eyebrow rule. Per Magazine v2 brief, dates on
+   the hero strip are mono microcopy, not display italic. */
 [data-theme="magazine"] .tp-mag-hero__bottom-eyebrow-part {
   /* Each "part" is one of COUNTRY / DAYS / DATES. The dot/em-dash
      separator is rendered as a sibling span — keeping it inside this
@@ -1907,7 +1893,7 @@
 [data-theme="magazine"] .tp-mag-hero__title {
   font-family: var(--font-display);
   font-weight: 500;
-  line-height: 0.98;
+  line-height: 1.05;
   letter-spacing: -0.015em;
   color: rgba(245, 240, 230, 1);
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
@@ -1932,7 +1918,7 @@
 
 [data-theme="magazine"] .tp-mag-hero__title-tail {
   font-style: italic;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 [data-theme="magazine"] .tp-mag-hero__tagline {
@@ -2443,7 +2429,7 @@
 [data-theme="magazine"] .tp-mag-day__eyebrow {
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--accent);
   margin: 0;
@@ -2461,8 +2447,9 @@
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-day__title {
-    font-size: 36px;
+    font-size: 52px;
     line-height: 1.05;
+    letter-spacing: -0.01em;
   }
 }
 
@@ -2491,22 +2478,22 @@
 }
 
 [data-theme="magazine"] .tp-mag-day__body {
-  /* Editorial body — same family + reading size as Overview prose so
-     the day spreads read as a continuation of the overview voice. The
-     first paragraph's first sentence is wrapped in <em class="tp-mag-lede">
-     by DescriptionParagraphs (theme="magazine"), inheriting the shared
-     italic-lede rule below. */
-  font-family: var(--font-display);
-  font-size: 18px;
-  line-height: 1.55;
+  /* Editorial body — sans (Inter) per Magazine v2 brief. Day-spread
+     prose is sans body, distinct from Overview prose which is display.
+     The lede italic wrap is suppressed for day variant via the
+     DescriptionParagraphs `disableLede` prop, since italic is
+     reserved for the display family only. */
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.62;
   font-weight: 400;
-  color: var(--ink);
+  color: rgba(26, 24, 23, 0.85);
 }
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-day__body {
-    font-size: 22px;
-    line-height: 1.5;
+    font-size: 16px;
+    line-height: 1.65;
   }
 }
 
@@ -2748,6 +2735,13 @@
   margin: 0;
 }
 
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-acc__name {
+    font-size: 28px;
+    line-height: 1.15;
+  }
+}
+
 [data-theme="magazine"] .tp-mag-acc__name-input {
   font-family: var(--font-display);
   font-weight: 500;
@@ -2760,6 +2754,13 @@
   padding: 0 0 4px 0;
   width: 100%;
   outline: none;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-acc__name-input {
+    font-size: 28px;
+    line-height: 1.15;
+  }
 }
 
 [data-theme="magazine"] .tp-mag-acc__desc {
@@ -2873,13 +2874,21 @@
   max-width: 720px;
 }
 
-/* Public-viewer text — no chrome; matches the body voice the rest of
-   the page uses for editorial prose. */
+/* Public-viewer text — operator marketing voice. Display italic
+   per Magazine v2 brief, mirroring the Overview lede tone. Italic
+   is reserved for the display family only — no italic on body. */
 [data-theme="magazine"] p.tp-mag-acc__block-note {
-  font-family: var(--font-body);
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
   line-height: 1.5;
   color: var(--ink);
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] p.tp-mag-acc__block-note {
+    font-size: 22px;
+  }
 }
 
 [data-theme="magazine"] .tp-mag-acc__meta-input {
@@ -3064,14 +3073,14 @@
   padding: 12px 0;
   border-bottom: 1px solid var(--rule);
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--ink);
 }
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-incl__body li {
-    font-size: 14px;
+    font-size: 15px;
     padding: 14px 0;
   }
 }
@@ -3153,8 +3162,8 @@
 [data-theme="magazine"] .tp-mag-price__headline {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: 36px;
-  line-height: 1.05;
+  font-size: 56px;
+  line-height: 1;
   letter-spacing: -0.005em;
   color: var(--ink);
   font-feature-settings: "lnum", "tnum";
@@ -3163,7 +3172,7 @@
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-price__headline {
-    font-size: 48px;
+    font-size: 96px;
   }
 }
 
@@ -3173,8 +3182,8 @@
 [data-theme="magazine"] .tp-mag-price__headline-row .tp-price-amount {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: 36px;
-  line-height: 1.05;
+  font-size: 56px;
+  line-height: 1;
   letter-spacing: -0.005em;
   color: var(--ink);
   display: inline-flex;
@@ -3186,13 +3195,13 @@
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-price__headline-row .tp-price-amount {
-    font-size: 48px;
+    font-size: 96px;
   }
 }
 
 [data-theme="magazine"] .tp-mag-price__headline-row .tp-price-input {
   font-family: var(--font-display);
-  font-size: 36px;
+  font-size: 56px;
   font-weight: 500;
   color: var(--ink);
   background: transparent;
@@ -3207,7 +3216,7 @@
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-price__headline-row .tp-price-input {
-    font-size: 48px;
+    font-size: 96px;
     width: 200px;
   }
 }
@@ -3456,15 +3465,15 @@
 }
 
 [data-theme="magazine"] .tp-mag-terms__heading {
-  font-size: 28px;
+  font-size: 32px;
   line-height: 1.05;
   margin: 0;
 }
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-terms__heading {
-    font-size: 44px;
-    line-height: 1.02;
+    font-size: 56px;
+    line-height: 1.05;
   }
 }
 
@@ -3474,7 +3483,6 @@
   line-height: 1.5;
   color: var(--ink-mute);
   margin: 12px 0 0 0;
-  font-style: italic;
 }
 
 [data-theme="magazine"] .tp-mag-terms__body {
@@ -3777,7 +3785,6 @@
   line-height: 1.5;
   color: var(--ink-mute);
   margin: 16px 0 0 0;
-  font-style: italic;
 }
 
 [data-theme="magazine"] .tp-mag-contacts__hint-link {
@@ -3858,10 +3865,8 @@
 }
 
 [data-theme="magazine"] .tp-mag-stickybar__suffix {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  font-family: var(--font-body);
+  font-size: 11px;
   color: var(--ink-mute);
   line-height: 1.2;
 }
@@ -4115,12 +4120,18 @@
 [data-theme="magazine"] .tp-mag-footer__brand-mark {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: 20px;
+  font-size: 24px;
   line-height: 1;
   letter-spacing: -0.005em;
   color: rgba(245, 240, 230, 0.95);
   text-decoration: none;
   transition: color 0.18s ease;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-footer__brand-mark {
+    font-size: 32px;
+  }
 }
 
 [data-theme="magazine"] .tp-mag-footer__brand-mark:hover {

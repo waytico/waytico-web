@@ -1300,13 +1300,13 @@ export default function TripPageClient({ slug, initialData }: Props) {
           rows={2}
           className="w-full"
           renderDisplay={(text) => (
-            <DescriptionParagraphs text={text} theme={resolvedTheme} />
+            <DescriptionParagraphs text={text} theme={resolvedTheme} disableLede />
           )}
           onSave={(v) => (day.id ? saveDayPatch(day.id, { description: v }) : Promise.resolve(false))}
         />
       )
     }
-    return <DescriptionParagraphs text={day.description} theme={resolvedTheme} />
+    return <DescriptionParagraphs text={day.description} theme={resolvedTheme} disableLede />
   }
 
   const renderDayExtras = (day: any): ReactNode => {
@@ -1985,9 +1985,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
 function DescriptionParagraphs({
   text,
   theme,
+  disableLede,
 }: {
   text: string | null | undefined
   theme?: ThemeId
+  disableLede?: boolean
 }) {
   if (!text) return null
   const paras = text.split('\n\n').filter(Boolean)
@@ -2000,7 +2002,10 @@ function DescriptionParagraphs({
         // in italic — editorial "lede" treatment matching the design canon.
         // Other themes render plain. Owner-mode editing path bypasses this
         // entirely (it uses EditableField, not DescriptionParagraphs).
-        if (isMagazine && i === 0) {
+        // Day-spreads pass disableLede=true: per Magazine v2 brief their
+        // body is sans (Inter), and italic is reserved for the display
+        // family only — so the lede wrap would mix families.
+        if (isMagazine && i === 0 && !disableLede) {
           const split = splitFirstSentence(para)
           if (split) {
             return (
