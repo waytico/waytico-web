@@ -94,63 +94,75 @@ function FooterMagazine({ editable }: { editable: boolean }) {
   // Public / traveller mode — minimal centred strip.
   if (!editable) {
     return (
-      <footer
-        id="site-footer"
-        className="tp-mag-footer tp-mag-footer--minimal"
-      >
-        <p className="tp-mag-footer__minimal-line">
-          © {year} · Powered by{' '}
-          <Link
-            href="/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="tp-mag-footer__minimal-brand"
-          >
-            Waytico
-          </Link>
-        </p>
-      </footer>
+      // Wrap in data-theme so the [data-theme="magazine"] .tp-mag-footer
+      // selectors in styles/themes.css match. The TripFooter element is
+      // rendered OUTSIDE the page-level <ThemeRoot> in trip-page-client
+      // (it sits below the spacer div + command bar overlays), so it
+      // doesn't inherit the theme attribute from there. Put it directly
+      // on a wrapper here so the dark slab + Cormorant link styling
+      // actually applies.
+      <div data-theme="magazine">
+        <footer
+          id="site-footer"
+          className="tp-mag-footer tp-mag-footer--minimal"
+        >
+          <p className="tp-mag-footer__minimal-line">
+            © {year} · Powered by{' '}
+            <Link
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="tp-mag-footer__minimal-brand"
+            >
+              Waytico
+            </Link>
+          </p>
+        </footer>
+      </div>
     )
   }
 
   // Owner mode — full product navigation in the dark Magazine
   // aesthetic. Content sourced from lib/footer-content.ts to stay in
-  // sync with the Classic site Footer.
+  // sync with the Classic site Footer. Same data-theme wrapper as
+  // the public branch — see comment above.
   return (
-    <footer id="site-footer" className="tp-mag-footer">
-      <div className="tp-mag-footer__inner">
-        <div className="tp-mag-footer__cols">
-          <FooterMagazineColumn
-            eyebrow="PRODUCT"
-            links={FOOTER_PRODUCT_LINKS}
-          />
-          <FooterMagazineColumn
-            eyebrow="RESOURCES"
-            links={FOOTER_RESOURCES_LINKS}
-          />
-          <FooterMagazineColumn
-            eyebrow="LEGAL"
-            links={FOOTER_LEGAL_LINKS}
-          />
-          <div className="tp-mag-footer__col">
-            <p className="tp-mag-footer__col-eyebrow">CONTACT</p>
-            <a
-              href={`mailto:${FOOTER_CONTACT_EMAIL}`}
-              className="tp-mag-footer__link"
-            >
-              {FOOTER_CONTACT_EMAIL}
-            </a>
+    <div data-theme="magazine">
+      <footer id="site-footer" className="tp-mag-footer">
+        <div className="tp-mag-footer__inner">
+          <div className="tp-mag-footer__cols">
+            <FooterMagazineColumn
+              eyebrow="PRODUCT"
+              links={FOOTER_PRODUCT_LINKS}
+            />
+            <FooterMagazineColumn
+              eyebrow="RESOURCES"
+              links={FOOTER_RESOURCES_LINKS}
+            />
+            <FooterMagazineColumn
+              eyebrow="LEGAL"
+              links={FOOTER_LEGAL_LINKS}
+            />
+            <div className="tp-mag-footer__col">
+              <p className="tp-mag-footer__col-eyebrow">CONTACT</p>
+              <a
+                href={`mailto:${FOOTER_CONTACT_EMAIL}`}
+                className="tp-mag-footer__link"
+              >
+                {FOOTER_CONTACT_EMAIL}
+              </a>
+            </div>
+          </div>
+
+          <div className="tp-mag-footer__bottom">
+            <Link href="/" className="tp-mag-footer__brand-mark">
+              {FOOTER_BRAND_WORDMARK}
+            </Link>
+            <p className="tp-mag-footer__copy">{footerCopyLine(year)}</p>
           </div>
         </div>
-
-        <div className="tp-mag-footer__bottom">
-          <Link href="/" className="tp-mag-footer__brand-mark">
-            {FOOTER_BRAND_WORDMARK}
-          </Link>
-          <p className="tp-mag-footer__copy">{footerCopyLine(year)}</p>
-        </div>
-      </div>
-    </footer>
+      </footer>
+    </div>
   )
 }
 
