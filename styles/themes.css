@@ -3606,6 +3606,24 @@
 
 /* ── Contacts ─────────────────────────────────────────────────────── */
 
+/* Section header (rule + CONTACTS eyebrow) — same visual contract as
+   .tp-mag-terms__header / .tp-mag-itin__header / .tp-mag-acc__header.
+   Sits at the top of the contacts section, separating it from the
+   terms block above. */
+[data-theme="magazine"] .tp-mag-contacts__header {
+  margin-bottom: 32px;
+}
+
+@media (min-width: 1024px) {
+  [data-theme="magazine"] .tp-mag-contacts__header {
+    margin-bottom: 48px;
+  }
+}
+
+[data-theme="magazine"] .tp-mag-contacts__eyebrow {
+  margin: 32px 0 0 0;
+}
+
 [data-theme="magazine"] .tp-mag-contacts__heading {
   font-family: var(--font-display);
   font-weight: 500;

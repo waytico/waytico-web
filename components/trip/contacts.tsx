@@ -568,6 +568,10 @@ function ContactsMagazine({
   return (
     <section className="tp-mag-section tp-mag-contacts" id="contacts">
       <div className="tp-mag-container">
+        <header className="tp-mag-contacts__header">
+          <hr className="tp-mag-rule" />
+          <p className="tp-mag-eyebrow tp-mag-contacts__eyebrow">CONTACTS</p>
+        </header>
         <div className="tp-mag-contacts__grid">
           <div className="tp-mag-contacts__identity">
             {logoUrl && (
