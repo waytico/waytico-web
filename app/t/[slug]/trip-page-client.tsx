@@ -282,29 +282,93 @@ export default function TripPageClient({ slug, initialData }: Props) {
    *  handshake, never again on this mount. F5 won't replay it. */
   const [showPostClaimUpsell, setShowPostClaimUpsell] = useState(false)
 
-  // Mark anon-creator for non-dismissible banner + scroll-triggered upsell modal.
-  // Also flip isOwner=true so the page renders with all owner placeholders
-  // (empty hero photo zone, empty per-day photo grids, "Add task" buttons,
-  // accommodation cards add tile, etc.) — without that, an anon who just
-  // created a quote sees the bare public view and has no idea where the
-  // missing pieces live. Edits made before sign-up still hit the public
-  // PATCH endpoints since the project has no user_id yet, so they save fine
-  // and get claimed once the visitor signs up.
+  // Anon-creator detection — three layers (PR 3 / audit C-1):
+  //
+  //   (1) URL hash #claim=<token>. The anon creator's chat-flow appends
+  //       this on first redirect to /t/<slug>. We capture the token,
+  //       persist it under the slug-keyed localStorage record, then
+  //       wipe the hash via replaceState so subsequent share-link
+  //       copies don't carry the secret.
+  //   (2) localStorage[waytico:anon-claim-<slug>] = {id, token, expiresAt}.
+  //       Primary store for fresh PR-3 trips. Survives tab close.
+  //   (3) Legacy sessionStorage[waytico:anon-owns-<id>] = '1'. For
+  //       trips created before PR 3 (no token issued); claim is allowed
+  //       only while ENV.ALLOW_LEGACY_CLAIM=true on backend.
+  //
+  // Detection flips isOwner=true so the page renders the full owner UI
+  // (drag zones, "Add task" buttons, etc.) — without that, an anon who
+  // just created a quote sees the bare public view.
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    const localKey = `waytico:anon-claim-${slug}`
+
+    // Step 1 — capture #claim=<token> from URL hash.
+    try {
+      const m = window.location.hash.match(/#claim=([0-9a-f-]{36})/i)
+      if (m) {
+        const tokenFromHash = m[1]
+        const existing = localStorage.getItem(localKey)
+        const parsed = existing ? (JSON.parse(existing) as any) : null
+        if (!parsed || parsed.token !== tokenFromHash) {
+          // Fresh token (or different from cached): record it. id may
+          // come in later when public data resolves — we re-merge below.
+          const record = {
+            id: (data?.project?.id as string | undefined) ?? null,
+            token: tokenFromHash,
+            expiresAt: Date.now() + 3 * 24 * 60 * 60 * 1000,
+          }
+          localStorage.setItem(localKey, JSON.stringify(record))
+        } else if (parsed && !parsed.id && data?.project?.id) {
+          // Late-binding: hash captured before public data arrived.
+          parsed.id = data.project.id
+          localStorage.setItem(localKey, JSON.stringify(parsed))
+        }
+        // Wipe hash so subsequent share-link copies don't expose it.
+        try {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search)
+        } catch {}
+      }
+    } catch {}
+
+    // Step 2 — primary detection via localStorage.
+    try {
+      const stored = localStorage.getItem(localKey)
+      if (stored) {
+        const rec = JSON.parse(stored) as { id?: string | null; token?: string; expiresAt?: number }
+        if (rec?.expiresAt && rec.expiresAt > Date.now()) {
+          const idForClaim = rec.id ?? (data?.project?.id as string | undefined) ?? null
+          if (idForClaim) {
+            setIsAnonCreator(true)
+            setProjectIdForClaim(idForClaim)
+            setIsOwner(true)
+            return
+          }
+        } else {
+          // Expired — clean up.
+          localStorage.removeItem(localKey)
+        }
+      }
+    } catch {}
+
+    // Step 3 — legacy fallback (sessionStorage by id).
     try {
       if (!data?.project) return
       const pid = data.project.id as string | undefined
       if (!pid) return
-      const anonOwns = sessionStorage.getItem(`waytico:anon-owns-${pid}`)
-      if (anonOwns === '1') {
+      if (sessionStorage.getItem(`waytico:anon-owns-${pid}`) === '1') {
         setIsAnonCreator(true)
         setProjectIdForClaim(pid)
         setIsOwner(true)
       }
     } catch {}
-  }, [data])
+  }, [slug, data])
 
-  // Claim flow: after sign-up, redirect back with ?claim=projectId
+  // Claim flow: after sign-up, redirect back with ?claim=<projectId>.
+  //
+  // Token comes from localStorage[waytico:anon-claim-<slug>].token.
+  // For legacy trips (created before PR 3), localStorage has no record;
+  // the call goes through with no token and succeeds only while
+  // ENV.ALLOW_LEGACY_CLAIM=true on backend (audit C-1).
   useEffect(() => {
     const claimId = searchParams.get('claim')
     if (!claimId || !isLoaded || !isSignedIn) return
@@ -312,13 +376,30 @@ export default function TripPageClient({ slug, initialData }: Props) {
       try {
         const token = await getToken()
         if (!token) return
+        // Read claim_token from localStorage by slug.
+        let claimToken: string | null = null
+        try {
+          const stored = localStorage.getItem(`waytico:anon-claim-${slug}`)
+          if (stored) {
+            const rec = JSON.parse(stored) as { token?: string; expiresAt?: number }
+            if (rec?.token && rec.expiresAt && rec.expiresAt > Date.now()) {
+              claimToken = rec.token
+            }
+          }
+        } catch {}
+        const body = claimToken ? { claim_token: claimToken } : {}
         const res = await fetch(`${API_URL}/api/projects/${claimId}/claim`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(body),
         })
         if (res.ok) {
           toast.success('Saved to your account')
           try {
+            localStorage.removeItem(`waytico:anon-claim-${slug}`)
             sessionStorage.removeItem(`waytico:anon-owns-${claimId}`)
           } catch {}
           setIsAnonCreator(false)

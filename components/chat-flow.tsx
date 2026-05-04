@@ -92,6 +92,10 @@ export default function ChatFlow({ children }: ChatFlowProps) {
   const [phase, setPhase] = useState<Phase>('idle')
   const [slug, setSlug] = useState<string | null>(null)
   const [projectId, setProjectId] = useState<string | null>(null)
+  /** Per-trip claim token (anon creators only). Backed by localStorage
+   *  on the trip page so it survives the sign-up redirect. Set from the
+   *  /api/chat response when briefConfirmed flips true. */
+  const [claimToken, setClaimToken] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   // Fake-progress state for the generating phase
@@ -177,10 +181,40 @@ export default function ChatFlow({ children }: ChatFlowProps) {
       if (cancelled) return
       try {
         if (!isSignedIn && projectId) {
+          const finalSlug = readySlugRef.current || slug
+          // New persistence: localStorage by slug, with explicit TTL.
+          // Survives tab close (sessionStorage doesn't), so an operator
+          // can briefly close the tab and still claim later — within the
+          // anon-trip 3-day expires_at window.
+          if (finalSlug && claimToken) {
+            const record = {
+              id: projectId,
+              token: claimToken,
+              // Match anon-trip server-side TTL (3 days, see tripsService.create).
+              expiresAt: Date.now() + 3 * 24 * 60 * 60 * 1000,
+            }
+            try {
+              localStorage.setItem(
+                `waytico:anon-claim-${finalSlug}`,
+                JSON.stringify(record),
+              )
+            } catch { /* private mode / quota */ }
+          }
+          // Legacy sessionStorage flag — kept so trip-page-client falls
+          // back to it when localStorage is wiped (incognito, cleared)
+          // but the user is still on the same tab. Cheap belt-and-braces.
           sessionStorage.setItem(`waytico:anon-owns-${projectId}`, '1')
         }
       } catch {}
-      router.push(`/t/${readySlugRef.current || slug}`)
+      const finalSlug = readySlugRef.current || slug
+      // URL hash carries the token as a backup channel — survives a
+      // share-link copy in the rare browsers that include the fragment
+      // (most strip it, which is fine; localStorage is the primary).
+      // The trip page reads the hash on mount and immediately clears it
+      // via history.replaceState so it isn't preserved on subsequent
+      // copy / share actions.
+      const hash = !isSignedIn && claimToken ? `#claim=${claimToken}` : ''
+      router.push(`/t/${finalSlug}${hash}`)
     }
     finish()
 
@@ -270,6 +304,7 @@ export default function ChatFlow({ children }: ChatFlowProps) {
       if (data.briefConfirmed && data.projectSlug) {
         setSlug(data.projectSlug)
         setProjectId(data.projectId || null)
+        setClaimToken(data.claimToken || null)
         setPhase('generating')
       } else {
         setPhase('chatting')

@@ -37,13 +37,28 @@ export async function sendChatMessage(
     briefConfirmed: boolean
     projectSlug?: string
     projectId?: string
+    /** Per-trip secret returned to anonymous creators (audit C-1).
+     *  Stored in localStorage on the trip page; required for claim. */
+    claimToken?: string | null
   }>
 }
 
-export async function claimProject(projectId: string, token: string) {
+/**
+ * Claim an anonymous trip after sign-up. The body's `claim_token` is
+ * the secret originally returned to the creator at quote-generation
+ * time. Pass null only for legacy trips (claim_token wasn't issued at
+ * creation time) — backend's ALLOW_LEGACY_CLAIM flag decides whether
+ * the legacy path is still open.
+ */
+export async function claimProject(
+  projectId: string,
+  token: string,
+  claimToken: string | null,
+) {
   const res = await apiFetch(`/api/projects/${projectId}/claim`, {
     method: 'POST',
     token,
+    body: JSON.stringify(claimToken ? { claim_token: claimToken } : {}),
   })
   return { ok: res.ok, status: res.status, data: await res.json() }
 }
