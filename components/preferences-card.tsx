@@ -33,6 +33,7 @@ const VISIBLE_THEMES: ReadonlyArray<ThemeId> = ['magazine', 'editorial']
 type UserProfile = {
   id: string
   default_theme: ThemeId | null
+  brand_terms: string | null
 }
 
 export default function PreferencesCard() {
@@ -90,6 +91,10 @@ export default function PreferencesCard() {
     return patchUser({ defaultTheme: value })
   }
 
+  async function saveTerms(value: string): Promise<boolean> {
+    return patchUser({ brandTerms: value || null })
+  }
+
   // Hide the card while we're fetching so it doesn't briefly flash
   // an empty placeholder above the trip list.
   if (loading || !profile) return null
@@ -97,6 +102,9 @@ export default function PreferencesCard() {
   return (
     <div className="bg-card border border-border rounded-xl p-4 mb-6">
       <DefaultThemeRow value={profile.default_theme} onSave={saveDefaultTheme} />
+      <div className="mt-2 pt-2 border-t border-border/50">
+        <BrandTermsRow value={profile.brand_terms} onSave={saveTerms} />
+      </div>
     </div>
   )
 }
@@ -251,6 +259,120 @@ function DefaultThemeRow({
             </button>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Default Terms row ─────────────────────────────────────
+//
+// Multi-paragraph default Terms paragraph that gets snapshotted onto
+// trip_projects.terms at create time (DEFAULT_BRAND_TERMS seeds it for
+// new accounts; operators can edit here and the change applies to all
+// future trips). Per-trip overrides on the trip page take precedence.
+//
+// Display: single-row strip (truncated value, Edit affordance) — same
+// rhythm as the other preference rows.
+// Edit: full-width textarea + Save / Cancel.
+
+type BrandTermsRowProps = {
+  value: string | null
+  onSave: (v: string) => Promise<boolean>
+}
+
+function BrandTermsRow({ value, onSave }: BrandTermsRowProps) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value || '')
+  const [saving, setSaving] = useState(false)
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (editing) ref.current?.focus()
+  }, [editing])
+
+  useEffect(() => {
+    if (!editing) setDraft(value || '')
+  }, [value, editing])
+
+  async function commit() {
+    if (saving) return
+    const trimmed = draft.trim()
+    if (trimmed === (value || '')) {
+      setEditing(false)
+      return
+    }
+    setSaving(true)
+    const ok = await onSave(trimmed)
+    setSaving(false)
+    if (ok) setEditing(false)
+    else setDraft(value || '')
+  }
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className="w-full flex items-center gap-3 px-2 py-1.5 -mx-2 rounded text-left text-sm hover:bg-secondary/40 border border-transparent hover:border-border transition-colors"
+      >
+        <div className="flex-1 min-w-0 flex flex-col">
+          <span className="text-sm text-foreground">Default trip terms</span>
+          <span
+            className={`text-xs truncate ${
+              value ? 'text-foreground/55' : 'text-foreground/40 italic'
+            }`}
+          >
+            {value || 'Auto-applied to every new trip. Cancellation, deposit, etc.'}
+          </span>
+        </div>
+        <span className="text-xs text-foreground/50 shrink-0">Edit</span>
+      </button>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-3 px-2">
+        <span className="text-xs uppercase tracking-wider text-foreground/50">
+          Default trip terms
+        </span>
+      </div>
+      <textarea
+        ref={ref}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.preventDefault()
+            setDraft(value || '')
+            setEditing(false)
+          }
+        }}
+        disabled={saving}
+        rows={10}
+        placeholder="Cancellation policy, deposit, force majeure, etc."
+        className="w-full bg-background border border-accent/40 rounded px-3 py-2 text-sm outline-none focus:border-accent resize-y"
+      />
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setDraft(value || '')
+            setEditing(false)
+          }}
+          disabled={saving}
+          className="text-xs text-foreground/60 hover:text-foreground px-2 py-1"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={commit}
+          disabled={saving}
+          className="text-xs bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50 px-3 py-1 rounded transition-colors"
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
       </div>
     </div>
   )

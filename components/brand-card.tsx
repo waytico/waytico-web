@@ -155,10 +155,6 @@ export default function BrandCard() {
     return patchUser({ brandTagline: value || null })
   }
 
-  async function saveTerms(value: string): Promise<boolean> {
-    return patchUser({ brandTerms: value || null })
-  }
-
   async function saveContactEmail(value: string): Promise<boolean> {
     const trimmed = value.trim()
     if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
@@ -392,12 +388,6 @@ export default function BrandCard() {
             )
           })}
         </div>
-      </div>
-
-      {/* Default trip terms — single strip, no heading. Empty state
-          carries the explanation in the placeholder. */}
-      <div className="mt-2 pt-2 border-t border-border/50">
-        <BrandTermsRow value={profile.brand_terms} onSave={saveTerms} />
       </div>
     </div>
   )
@@ -656,117 +646,6 @@ function ContactRow({
       {hint && (
         <p className="text-[10px] text-foreground/40 ml-6 -mt-0.5">{hint}</p>
       )}
-    </div>
-  )
-}
-
-
-// ─── Default Terms row ─────────────────────────────────────
-//
-// Mirrors the ContactRow strip rhythm but uses a textarea in edit mode
-// so multi-paragraph terms (cancellation policy, deposit terms, force
-// majeure, etc.) fit. Display mode is a one-line truncation with a
-// right-aligned Edit affordance.
-
-type BrandTermsRowProps = {
-  value: string | null
-  onSave: (v: string) => Promise<boolean>
-}
-
-function BrandTermsRow({ value, onSave }: BrandTermsRowProps) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(value || '')
-  const [saving, setSaving] = useState(false)
-  const ref = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    if (editing) ref.current?.focus()
-  }, [editing])
-
-  useEffect(() => {
-    if (!editing) setDraft(value || '')
-  }, [value, editing])
-
-  async function commit() {
-    if (saving) return
-    const trimmed = draft.trim()
-    if (trimmed === (value || '')) {
-      setEditing(false)
-      return
-    }
-    setSaving(true)
-    const ok = await onSave(trimmed)
-    setSaving(false)
-    if (ok) setEditing(false)
-    else setDraft(value || '')
-  }
-
-  // Display: single-row strip, value (truncated) left, Edit right.
-  // Section heading already says "Default trip terms" — no need to repeat it.
-  if (!editing) {
-    return (
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        className="w-full flex items-center gap-3 px-2 py-1.5 -mx-2 rounded text-left text-sm hover:bg-secondary/40 border border-transparent hover:border-border transition-colors"
-      >
-        <span
-          className={`flex-1 min-w-0 truncate ${
-            value ? 'text-foreground' : 'text-foreground/40 italic'
-          }`}
-        >
-          {value || 'Default terms — auto-applied to every new trip. Cancellation, deposit, etc.'}
-        </span>
-        <span className="text-xs text-foreground/50 shrink-0">Edit</span>
-      </button>
-    )
-  }
-
-  // Edit: full-width textarea + Save / Cancel actions.
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-3 px-2">
-        <span className="text-xs uppercase tracking-wider text-foreground/50">
-          Default terms
-        </span>
-      </div>
-      <textarea
-        ref={ref}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            e.preventDefault()
-            setDraft(value || '')
-            setEditing(false)
-          }
-        }}
-        disabled={saving}
-        rows={6}
-        placeholder="Cancellation policy, deposit, force majeure, etc."
-        className="w-full bg-background border border-accent/40 rounded px-3 py-2 text-sm outline-none focus:border-accent resize-y"
-      />
-      <div className="flex items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setDraft(value || '')
-            setEditing(false)
-          }}
-          disabled={saving}
-          className="text-xs text-foreground/60 hover:text-foreground px-2 py-1"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={commit}
-          disabled={saving}
-          className="text-xs bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50 px-3 py-1 rounded transition-colors"
-        >
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-      </div>
     </div>
   )
 }

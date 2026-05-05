@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
 import { Trash2, Eye, EyeOff, FileText, Upload, X, Edit3 } from 'lucide-react'
@@ -1197,7 +1198,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
       // clicked, seeds the override field with the current brand text so
       // the operator can tweak it instead of starting from a blank slate.
       <>
-        <DescriptionParagraphs text={effectiveTerms} />
+        <DescriptionParagraphs text={effectiveTerms} preserveLineBreaks />
         <p
           style={{
             fontSize: 12,
@@ -1238,7 +1239,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
       />
     )
   ) : (
-    <DescriptionParagraphs text={effectiveTerms} />
+    <DescriptionParagraphs text={effectiveTerms} preserveLineBreaks />
   )
 
   const termsVisible = ed || !!effectiveTerms
@@ -1832,10 +1833,30 @@ export default function TripPageClient({ slug, initialData }: Props) {
             ed ? (
               <>
                 <span style={{ display: 'block', marginBottom: 10 }}>
-                  These terms were AI-generated from your profile defaults. AI can make mistakes — please review every rule to make sure it matches your actual conditions.
+                  These terms were AI-generated as a starter template for your convenience and live by default in your{' '}
+                  <Link
+                    href="/dashboard"
+                    style={{
+                      color: 'var(--accent)',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    dashboard
+                  </Link>
+                  {' '}under Preferences. AI can make mistakes — please review every rule to make sure it matches your actual conditions.
                 </span>
                 <span style={{ display: 'block' }}>
-                  Edits here apply to this trip only. Update your profile terms to change the default terms for future quotes.
+                  Edits here apply to this trip only. Update your default terms in the{' '}
+                  <Link
+                    href="/dashboard"
+                    style={{
+                      color: 'var(--accent)',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    dashboard
+                  </Link>
+                  {' '}for future quotes.
                 </span>
               </>
             ) : undefined
@@ -1989,10 +2010,18 @@ function DescriptionParagraphs({
   text,
   theme,
   disableLede,
+  preserveLineBreaks,
 }: {
   text: string | null | undefined
   theme?: ThemeId
   disableLede?: boolean
+  /** When true, single \n inside a paragraph render as visible line
+   *  breaks (white-space: pre-line). Used by terms — operator-written
+   *  multi-line policies (Booking & Deposit / Cancellation / …) keep
+   *  one \n between heading and body within each section. Off by
+   *  default — overview / day descriptions are flowing prose where
+   *  any stray \n must collapse to whitespace. */
+  preserveLineBreaks?: boolean
 }) {
   if (!text) return null
   const paras = text.split('\n\n').filter(Boolean)
@@ -2012,7 +2041,13 @@ function DescriptionParagraphs({
           const split = splitFirstSentence(para)
           if (split) {
             return (
-              <p key={i} style={{ marginTop: 0 }}>
+              <p
+                key={i}
+                style={{
+                  marginTop: 0,
+                  whiteSpace: preserveLineBreaks ? 'pre-line' : undefined,
+                }}
+              >
                 <em className="tp-mag-lede">{split.lede}</em>
                 {split.rest ? ' ' : null}
                 {split.rest}
@@ -2021,7 +2056,13 @@ function DescriptionParagraphs({
           }
         }
         return (
-          <p key={i} style={{ marginTop: i === 0 ? 0 : '1em' }}>
+          <p
+            key={i}
+            style={{
+              marginTop: i === 0 ? 0 : '1em',
+              whiteSpace: preserveLineBreaks ? 'pre-line' : undefined,
+            }}
+          >
             {para}
           </p>
         )
