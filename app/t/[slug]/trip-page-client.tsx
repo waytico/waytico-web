@@ -1671,26 +1671,48 @@ export default function TripPageClient({ slug, initialData }: Props) {
           only fields (booking ref, notes, special requests) go through
           saveProjectPatch directly. Hidden in showcase mode — there's
           no real client behind a demo trip and the block would be a
-          distraction. On Magazine, gated behind the action-bar toggle:
-          starts closed, opens via Client info button, closes via toggle
-          or × in the block header. */}
+          distraction. Other themes render it unconditionally in DOM
+          flow. On Magazine, gated behind the action-bar Client toggle:
+          starts closed, opens via the toggle, closes via the toggle
+          or × in the block header.
+
+          Magazine open: pin under the Header instead of letting it sit
+          in DOM flow above Hero — without the pin, an operator who has
+          scrolled below Hero would see nothing happen visually when
+          they toggle, because the rendered block lands far above the
+          viewport. Coordinates mirror the preview-banner's (top-[84px]
+          mobile / sm:top-11 desktop) so the two strips would line up
+          if they ever rendered together (in practice they don't:
+          preview-as-client clears showOwnerUI which gates ClientInfo
+          out entirely). bg-background gives an opaque underlay so Hero
+          doesn't bleed through ClientInfo's bg-highlight/70 tint, and
+          max-h + overflow-y-auto keeps a tall ClientInfo from covering
+          the whole viewport on mobile. */}
       {showOwnerUI &&
         p.id &&
         !isShowcase &&
         !isAnonCreator &&
         (resolvedTheme !== 'magazine' || clientInfoOpen) && (
-          <ClientInfo
-            projectId={p.id}
-            client={(data as any).client ?? null}
-            bookingRef={p.booking_ref ?? null}
-            internalNotes={p.internal_notes ?? null}
-            specialRequests={p.special_requests ?? null}
-            saveProjectPatch={saveProjectPatch}
-            onClientChanged={() => setOwnerRefreshKey((k) => k + 1)}
-            onClose={
-              resolvedTheme === 'magazine' ? () => setClientInfoOpen(false) : undefined
+          <div
+            className={
+              resolvedTheme === 'magazine' && clientInfoOpen
+                ? 'fixed top-[84px] sm:top-11 inset-x-0 z-20 max-h-[calc(100vh-84px)] sm:max-h-[calc(100vh-2.75rem)] overflow-y-auto bg-background shadow-md'
+                : undefined
             }
-          />
+          >
+            <ClientInfo
+              projectId={p.id}
+              client={(data as any).client ?? null}
+              bookingRef={p.booking_ref ?? null}
+              internalNotes={p.internal_notes ?? null}
+              specialRequests={p.special_requests ?? null}
+              saveProjectPatch={saveProjectPatch}
+              onClientChanged={() => setOwnerRefreshKey((k) => k + 1)}
+              onClose={
+                resolvedTheme === 'magazine' ? () => setClientInfoOpen(false) : undefined
+              }
+            />
+          </div>
         )}
 
       {showOwnerUI && p.id && !isShowcase && !isAnonCreator && (
