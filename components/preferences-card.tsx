@@ -14,7 +14,7 @@ import { THEME_LABELS, type ThemeId } from '@/lib/themes'
  * choice list is filtered. Trip-page Pass C hides editorial / expedition
  * / compact and surfaces Magazine as the single default.
  */
-const VISIBLE_THEMES: ReadonlyArray<ThemeId> = ['magazine', 'editorial']
+const VISIBLE_THEMES: ReadonlyArray<ThemeId> = ['magazine']
 
 /**
  * PreferencesCard — operator-level settings that aren't part of the
@@ -242,6 +242,37 @@ function DefaultThemeRow({
                 </button>
               )
             })}
+
+            {/* Two more SOON placeholders for upcoming themes — kept
+                in sync with theme-switcher.tsx. Static UI hints with
+                no handler; when the themes ship they'll be added to
+                THEMES and become real options. */}
+            <button
+              type="button"
+              role="option"
+              aria-disabled="true"
+              disabled
+              className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm cursor-not-allowed opacity-50"
+            >
+              <Check className="w-4 h-4 flex-shrink-0 text-transparent" />
+              <span>Serene</span>
+              <span className="ml-auto text-[10px] uppercase tracking-wider text-foreground/50">
+                Soon
+              </span>
+            </button>
+            <button
+              type="button"
+              role="option"
+              aria-disabled="true"
+              disabled
+              className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm cursor-not-allowed opacity-50"
+            >
+              <Check className="w-4 h-4 flex-shrink-0 text-transparent" />
+              <span>Frontier</span>
+              <span className="ml-auto text-[10px] uppercase tracking-wider text-foreground/50">
+                Soon
+              </span>
+            </button>
 
             {/* Custom — disabled placeholder for the future custom-theme builder. */}
             <button

@@ -18,7 +18,7 @@ import { THEME_LABELS, resolveTheme, type ThemeId } from '@/lib/themes'
  * THEMES is intentionally unchanged so a legacy trip's saved value still
  * resolves and renders.
  */
-const VISIBLE_THEMES: ReadonlyArray<ThemeId> = ['magazine', 'editorial']
+const VISIBLE_THEMES: ReadonlyArray<ThemeId> = ['magazine']
 
 type Props = {
   projectId: string
@@ -179,6 +179,38 @@ export function ThemeSwitcher({ projectId, value, isShowcase, onLocalChange }: P
               </button>
             )
           })}
+
+          {/* Two more SOON placeholders for upcoming themes. They don't
+              exist in the THEMES tuple yet — these buttons are static
+              UI hints with no click handler. When backend / styling
+              ships them, they'll be added to THEMES and surface as
+              real selectable options here. */}
+          <button
+            type="button"
+            role="option"
+            aria-disabled="true"
+            disabled
+            className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm cursor-not-allowed opacity-50"
+          >
+            <Check className="w-4 h-4 flex-shrink-0 text-transparent" />
+            <span>Serene</span>
+            <span className="ml-auto text-[10px] uppercase tracking-wider text-foreground/50">
+              Soon
+            </span>
+          </button>
+          <button
+            type="button"
+            role="option"
+            aria-disabled="true"
+            disabled
+            className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm cursor-not-allowed opacity-50"
+          >
+            <Check className="w-4 h-4 flex-shrink-0 text-transparent" />
+            <span>Frontier</span>
+            <span className="ml-auto text-[10px] uppercase tracking-wider text-foreground/50">
+              Soon
+            </span>
+          </button>
 
           {/* Custom — disabled placeholder for the future custom-theme builder. */}
           <button
