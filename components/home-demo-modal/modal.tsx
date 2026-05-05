@@ -347,43 +347,33 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
           {/* Phase 1+2: home mockup. Image renders at its natural fit;
               JS measures its bounding rect (homeImgRect) so the typed-
               text overlay, cursor, and ripple can be positioned in
-              absolute pixels relative to the actual rendered image. */}
+              absolute pixels relative to the actual rendered image.
+              Coordinates were measured from /demo-modal/home-page.jpg
+              (1999×1524 source):
+                placeholder text   ≈ 26% / 30%   (top-left of overlay)
+                placeholder area   ≈ 48% / 14%   (width / height)
+                pill click centre  ≈ 69% / 54%   (Create-quote button)
+                cursor idle        ≈ 50% / 75%   (below textarea, in body)
+              These differ from the trip-page coords because home is a
+              different layout — the textarea sits lower and the pill is
+              on the right side. */}
           <div ref={homeMockupRef} className={styles.homeMockup}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={homeImgRef}
               src="/demo-modal/home-page.jpg"
               className={styles.homeBase}
-              width={1303}
-              height={993}
+              width={1999}
+              height={1524}
               alt=""
             />
-            {/* DIAGNOSTIC — temporary, to confirm JS measurement runs */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 4,
-                right: 4,
-                padding: '4px 6px',
-                background: 'rgba(255,0,0,0.85)',
-                color: '#fff',
-                fontSize: 10,
-                fontFamily: 'monospace',
-                zIndex: 99,
-                pointerEvents: 'none',
-              }}
-            >
-              rect: l={Math.round(homeImgRect.left)} t={Math.round(homeImgRect.top)}{' '}
-              w={Math.round(homeImgRect.width)} h={Math.round(homeImgRect.height)}
-            </div>
             <span
               className={styles.typedText}
               style={{
-                left: `${homeImgRect.left + homeImgRect.width * 0.147}px`,
-                top: `${homeImgRect.top + homeImgRect.height * 0.166}px`,
-                width: `${homeImgRect.width * 0.249}px`,
-                height: `${homeImgRect.height * 0.118}px`,
-                outline: '2px solid lime', // DIAGNOSTIC
+                left: `${homeImgRect.left + homeImgRect.width * 0.263}px`,
+                top: `${homeImgRect.top + homeImgRect.height * 0.297}px`,
+                width: `${homeImgRect.width * 0.477}px`,
+                height: `${homeImgRect.height * 0.14}px`,
               }}
             >
               {typedHome}
@@ -392,18 +382,22 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
               className={styles.cursorPhase1}
               style={
                 {
+                  // Idle: lower body of the page (between textarea and
+                  // footer) — neutral resting position before the click.
                   '--cursor-start-x': `${homeImgRect.left + homeImgRect.width * 0.5}px`,
-                  '--cursor-start-y': `${homeImgRect.top + homeImgRect.height * 0.6}px`,
-                  '--cursor-target-x': `${homeImgRect.left + homeImgRect.width * 0.374}px`,
-                  '--cursor-target-y': `${homeImgRect.top + homeImgRect.height * 0.294}px`,
+                  '--cursor-start-y': `${homeImgRect.top + homeImgRect.height * 0.75}px`,
+                  // Target: centre of the Create-quote pill in the
+                  // screenshot (right side of the textarea card).
+                  '--cursor-target-x': `${homeImgRect.left + homeImgRect.width * 0.69}px`,
+                  '--cursor-target-y': `${homeImgRect.top + homeImgRect.height * 0.54}px`,
                 } as React.CSSProperties
               }
             />
             <span
               className={styles.clickRipplePhase1}
               style={{
-                left: `${homeImgRect.left + homeImgRect.width * 0.374}px`,
-                top: `${homeImgRect.top + homeImgRect.height * 0.294}px`,
+                left: `${homeImgRect.left + homeImgRect.width * 0.69}px`,
+                top: `${homeImgRect.top + homeImgRect.height * 0.54}px`,
               }}
             />
           </div>
