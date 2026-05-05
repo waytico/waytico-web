@@ -96,7 +96,7 @@ export default function PreferencesCard() {
     return patchUser({ brandTerms: value || null })
   }
 
-  async function saveQuoteValidity(days: number | null): Promise<boolean> {
+  async function saveQuoteValidity(days: number): Promise<boolean> {
     return patchUser({ defaultQuoteValidityDays: days })
   }
 
@@ -108,13 +108,13 @@ export default function PreferencesCard() {
     <div className="bg-card border border-border rounded-xl p-4 mb-6">
       <DefaultThemeRow value={profile.default_theme} onSave={saveDefaultTheme} />
       <div className="mt-2 pt-2 border-t border-border/50">
-        <BrandTermsRow value={profile.brand_terms} onSave={saveTerms} />
-      </div>
-      <div className="mt-2 pt-2 border-t border-border/50">
         <QuoteValidityRow
           value={profile.default_quote_validity_days}
           onSave={saveQuoteValidity}
         />
+      </div>
+      <div className="mt-2 pt-2 border-t border-border/50">
+        <BrandTermsRow value={profile.brand_terms} onSave={saveTerms} />
       </div>
     </div>
   )
@@ -424,141 +424,88 @@ function BrandTermsRow({ value, onSave }: BrandTermsRowProps) {
 //
 // Per-user override for how many days a freshly-created quote stays
 // valid. Snapshotted into trip_projects.valid_until at create time.
-// Empty / unset = program default (5 days). Bounded 1..365 by backend.
 //
-// Display: single-row strip. Edit: inline numeric input + Save / Cancel,
-// matching the rhythm of other preference rows but with the smaller
-// surface area a single integer warrants.
+// Display contract follows DefaultThemeRow: title + caption on the
+// left, an always-visible compact control on the right — no Edit
+// button, no two-step open/close. The numeric input is the control.
+//
+// The input always shows a number (program default 5 if backend
+// returned NULL) — operators see "5" rather than empty placeholder
+// noise. Saves on blur or Enter when the value actually changed and
+// is in [1, 365]. Out-of-range or non-integer input is rejected with
+// a toast and the input snaps back to the previous saved value.
 
 const QUOTE_VALIDITY_PROGRAM_DEFAULT = 5
 
 type QuoteValidityRowProps = {
   value: number | null
-  onSave: (v: number | null) => Promise<boolean>
+  onSave: (v: number) => Promise<boolean>
 }
 
 function QuoteValidityRow({ value, onSave }: QuoteValidityRowProps) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState<string>(value == null ? '' : String(value))
+  // Resolve NULL → program default for both display and the persisted
+  // save target. The backend column stays nullable; we just hide that
+  // distinction from the operator since they always see a concrete
+  // number on screen.
+  const effective = value ?? QUOTE_VALIDITY_PROGRAM_DEFAULT
+  const [draft, setDraft] = useState<string>(String(effective))
   const [saving, setSaving] = useState(false)
-  const ref = useRef<HTMLInputElement>(null)
 
+  // Re-sync local draft when the parent profile reloads (post-save or
+  // initial fetch). Without this, a stale draft could persist after
+  // the parent state catches up.
   useEffect(() => {
-    if (editing) ref.current?.focus()
-  }, [editing])
-
-  useEffect(() => {
-    if (!editing) setDraft(value == null ? '' : String(value))
-  }, [value, editing])
+    setDraft(String(value ?? QUOTE_VALIDITY_PROGRAM_DEFAULT))
+  }, [value])
 
   async function commit() {
     if (saving) return
     const trimmed = draft.trim()
-    // Empty input → null (= program default). Otherwise must be a valid
-    // integer in [1, 365]. On invalid input, refuse to save and keep
-    // the field open so operator can correct.
-    let next: number | null
-    if (trimmed === '') {
-      next = null
-    } else {
-      const n = Number(trimmed)
-      if (!Number.isInteger(n) || n < 1 || n > 365) {
-        toast.error('Enter a whole number between 1 and 365')
-        return
-      }
-      next = n
-    }
-    if (next === value) {
-      setEditing(false)
+    const n = Number(trimmed)
+    if (trimmed === '' || !Number.isInteger(n) || n < 1 || n > 365) {
+      toast.error('Enter a whole number between 1 and 365')
+      setDraft(String(effective))
       return
     }
+    if (n === effective) return // no-op when value unchanged
     setSaving(true)
-    const ok = await onSave(next)
+    const ok = await onSave(n)
     setSaving(false)
-    if (ok) setEditing(false)
-    else setDraft(value == null ? '' : String(value))
-  }
-
-  if (!editing) {
-    const display =
-      value == null
-        ? `Default (${QUOTE_VALIDITY_PROGRAM_DEFAULT} days)`
-        : `${value} ${value === 1 ? 'day' : 'days'}`
-    return (
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        className="w-full flex items-center gap-3 px-2 py-1.5 -mx-2 rounded text-left text-sm hover:bg-secondary/40 border border-transparent hover:border-border transition-colors"
-      >
-        <div className="flex-1 min-w-0 flex flex-col">
-          <span className="text-sm text-foreground">Quote validity</span>
-          <span
-            className={`text-xs truncate ${
-              value == null ? 'text-foreground/40 italic' : 'text-foreground/55'
-            }`}
-          >
-            {display}
-          </span>
-        </div>
-        <span className="text-xs text-foreground/50 shrink-0">Edit</span>
-      </button>
-    )
+    if (!ok) setDraft(String(effective))
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-3 px-2">
-        <span className="text-xs uppercase tracking-wider text-foreground/50">
-          Quote validity
+    <div className="flex items-center justify-between gap-3 px-1 py-1">
+      <div className="flex flex-col">
+        <span className="text-sm text-foreground">Quote validity</span>
+        <span className="text-xs text-foreground/55">
+          How long a new quote stays open before it expires
         </span>
       </div>
-      <div className="flex items-center gap-2 px-2">
+      <div className="flex items-center gap-2">
         <input
-          ref={ref}
           type="number"
           inputMode="numeric"
           min={1}
           max={365}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault()
-              commit()
+              ;(e.currentTarget as HTMLInputElement).blur()
             } else if (e.key === 'Escape') {
               e.preventDefault()
-              setDraft(value == null ? '' : String(value))
-              setEditing(false)
+              setDraft(String(effective))
+              ;(e.currentTarget as HTMLInputElement).blur()
             }
           }}
           disabled={saving}
-          placeholder={String(QUOTE_VALIDITY_PROGRAM_DEFAULT)}
-          className="w-24 bg-background border border-accent/40 rounded px-3 py-1.5 text-sm outline-none focus:border-accent"
+          aria-label="Quote validity in days"
+          className="w-16 bg-background border border-border rounded-full px-3 py-1.5 text-sm text-foreground/80 text-center outline-none focus:border-accent disabled:opacity-60"
         />
-        <span className="text-xs text-foreground/55">
-          days (leave empty for default of {QUOTE_VALIDITY_PROGRAM_DEFAULT})
-        </span>
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setDraft(value == null ? '' : String(value))
-              setEditing(false)
-            }}
-            disabled={saving}
-            className="text-xs text-foreground/60 hover:text-foreground px-2 py-1"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={commit}
-            disabled={saving}
-            className="text-xs bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50 px-3 py-1 rounded transition-colors"
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
+        <span className="text-sm text-foreground/60">days</span>
       </div>
     </div>
   )
