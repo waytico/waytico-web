@@ -218,12 +218,12 @@
   position: absolute;
   z-index: 4;
   font-family: var(--font-sans), system-ui, sans-serif;
-  font-size: 11px;
+  font-size: 13px;
   font-style: italic;
   line-height: 1.5;
   color: rgba(44, 36, 32, 0.85);
   background: #FFFFFE;
-  padding: 1px 6px 0 0;
+  padding: 0 6px 0 4px;
   white-space: pre-wrap;
   overflow: hidden;
   pointer-events: none;

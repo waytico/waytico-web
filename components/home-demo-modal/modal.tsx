@@ -19,10 +19,11 @@ interface DemoModalProps {
 type Phase = 'closed' | 'opening' | 'playing' | 'ended' | 'closing'
 
 const HOME_TEXT_LINES = [
-  '3 days in Paris, late June. Hôtel des Deux Pavillons.',
+  '3 days in Paris, late June.',
   'Day 1 Marais and Seine,',
   'Day 2 Louvre and Saint-Germain,',
   'Day 3 Montmartre, farewell brunch.',
+  'Hôtel des Deux Pavillons.',
 ]
 const HOME_TEXT_FULL = HOME_TEXT_LINES.join('\n')
 const PRICE_FINAL = '1,800'
@@ -370,10 +371,10 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
             <span
               className={styles.typedText}
               style={{
-                left: `${homeImgRect.left + homeImgRect.width * 0.263}px`,
+                left: `${homeImgRect.left + homeImgRect.width * 0.245}px`,
                 top: `${homeImgRect.top + homeImgRect.height * 0.297}px`,
-                width: `${homeImgRect.width * 0.477}px`,
-                height: `${homeImgRect.height * 0.14}px`,
+                width: `${homeImgRect.width * 0.495}px`,
+                height: `${homeImgRect.height * 0.18}px`,
               }}
             >
               {typedHome}
