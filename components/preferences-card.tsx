@@ -34,6 +34,7 @@ type UserProfile = {
   id: string
   default_theme: ThemeId | null
   brand_terms: string | null
+  default_quote_validity_days: number | null
 }
 
 export default function PreferencesCard() {
@@ -95,6 +96,10 @@ export default function PreferencesCard() {
     return patchUser({ brandTerms: value || null })
   }
 
+  async function saveQuoteValidity(days: number | null): Promise<boolean> {
+    return patchUser({ defaultQuoteValidityDays: days })
+  }
+
   // Hide the card while we're fetching so it doesn't briefly flash
   // an empty placeholder above the trip list.
   if (loading || !profile) return null
@@ -104,6 +109,12 @@ export default function PreferencesCard() {
       <DefaultThemeRow value={profile.default_theme} onSave={saveDefaultTheme} />
       <div className="mt-2 pt-2 border-t border-border/50">
         <BrandTermsRow value={profile.brand_terms} onSave={saveTerms} />
+      </div>
+      <div className="mt-2 pt-2 border-t border-border/50">
+        <QuoteValidityRow
+          value={profile.default_quote_validity_days}
+          onSave={saveQuoteValidity}
+        />
       </div>
     </div>
   )
@@ -404,6 +415,150 @@ function BrandTermsRow({ value, onSave }: BrandTermsRowProps) {
         >
           {saving ? 'Saving…' : 'Save'}
         </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Quote validity (days) row ─────────────────────────────────────
+//
+// Per-user override for how many days a freshly-created quote stays
+// valid. Snapshotted into trip_projects.valid_until at create time.
+// Empty / unset = program default (5 days). Bounded 1..365 by backend.
+//
+// Display: single-row strip. Edit: inline numeric input + Save / Cancel,
+// matching the rhythm of other preference rows but with the smaller
+// surface area a single integer warrants.
+
+const QUOTE_VALIDITY_PROGRAM_DEFAULT = 5
+
+type QuoteValidityRowProps = {
+  value: number | null
+  onSave: (v: number | null) => Promise<boolean>
+}
+
+function QuoteValidityRow({ value, onSave }: QuoteValidityRowProps) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<string>(value == null ? '' : String(value))
+  const [saving, setSaving] = useState(false)
+  const ref = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editing) ref.current?.focus()
+  }, [editing])
+
+  useEffect(() => {
+    if (!editing) setDraft(value == null ? '' : String(value))
+  }, [value, editing])
+
+  async function commit() {
+    if (saving) return
+    const trimmed = draft.trim()
+    // Empty input → null (= program default). Otherwise must be a valid
+    // integer in [1, 365]. On invalid input, refuse to save and keep
+    // the field open so operator can correct.
+    let next: number | null
+    if (trimmed === '') {
+      next = null
+    } else {
+      const n = Number(trimmed)
+      if (!Number.isInteger(n) || n < 1 || n > 365) {
+        toast.error('Enter a whole number between 1 and 365')
+        return
+      }
+      next = n
+    }
+    if (next === value) {
+      setEditing(false)
+      return
+    }
+    setSaving(true)
+    const ok = await onSave(next)
+    setSaving(false)
+    if (ok) setEditing(false)
+    else setDraft(value == null ? '' : String(value))
+  }
+
+  if (!editing) {
+    const display =
+      value == null
+        ? `Default (${QUOTE_VALIDITY_PROGRAM_DEFAULT} days)`
+        : `${value} ${value === 1 ? 'day' : 'days'}`
+    return (
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className="w-full flex items-center gap-3 px-2 py-1.5 -mx-2 rounded text-left text-sm hover:bg-secondary/40 border border-transparent hover:border-border transition-colors"
+      >
+        <div className="flex-1 min-w-0 flex flex-col">
+          <span className="text-sm text-foreground">Quote validity</span>
+          <span
+            className={`text-xs truncate ${
+              value == null ? 'text-foreground/40 italic' : 'text-foreground/55'
+            }`}
+          >
+            {display}
+          </span>
+        </div>
+        <span className="text-xs text-foreground/50 shrink-0">Edit</span>
+      </button>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-3 px-2">
+        <span className="text-xs uppercase tracking-wider text-foreground/50">
+          Quote validity
+        </span>
+      </div>
+      <div className="flex items-center gap-2 px-2">
+        <input
+          ref={ref}
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={365}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              commit()
+            } else if (e.key === 'Escape') {
+              e.preventDefault()
+              setDraft(value == null ? '' : String(value))
+              setEditing(false)
+            }
+          }}
+          disabled={saving}
+          placeholder={String(QUOTE_VALIDITY_PROGRAM_DEFAULT)}
+          className="w-24 bg-background border border-accent/40 rounded px-3 py-1.5 text-sm outline-none focus:border-accent"
+        />
+        <span className="text-xs text-foreground/55">
+          days (leave empty for default of {QUOTE_VALIDITY_PROGRAM_DEFAULT})
+        </span>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(value == null ? '' : String(value))
+              setEditing(false)
+            }}
+            disabled={saving}
+            className="text-xs text-foreground/60 hover:text-foreground px-2 py-1"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={commit}
+            disabled={saving}
+            className="text-xs bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50 px-3 py-1 rounded transition-colors"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
       </div>
     </div>
   )
