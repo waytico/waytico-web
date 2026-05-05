@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
-import { ArrowDown, ArrowUp, ChevronDown, Search } from 'lucide-react'
+import { ArrowDown, ArrowUp, Search } from 'lucide-react'
 import BrandCard from '@/components/brand-card'
 import PreferencesCard from '@/components/preferences-card'
 import ChatFlow from '@/components/chat-flow'
@@ -12,7 +12,7 @@ import TripRow from '@/components/trip-row'
 import type { Project, ProjectStatus } from '@/components/project-card'
 import { apiFetch } from '@/lib/api'
 
-type SortMode = 'state' | 'created' | 'issued' | 'expires'
+type SortMode = 'state' | 'client' | 'issued' | 'expires'
 type SortDir = 'asc' | 'desc'
 type StatusFilter = 'all' | ProjectStatus
 type PerPage = 10 | 25 | 50 | 100
@@ -34,103 +34,45 @@ const STATUS_FILTER_OPTIONS: { key: StatusFilter; label: string }[] = [
   { key: 'archived', label: 'Archived' },
 ]
 
-const SORT_OPTIONS: { key: SortMode; label: string }[] = [
-  { key: 'state', label: 'By state' },
-  { key: 'created', label: 'By date created' },
-  { key: 'issued', label: 'By issued date' },
-  { key: 'expires', label: 'By expiry date' },
-]
-
 const PER_PAGE_OPTIONS: PerPage[] = [10, 25, 50, 100]
 
 function SkeletonRow() {
   return <div className="animate-pulse bg-secondary/50 rounded-md h-14 mb-2" />
 }
 
-function SortDropdown({
+/** Sortable column-header button. Renders the column label with an arrow
+ *  that's only visible when the column is the active sort target. The
+ *  arrow direction reflects sortDir; clicking the active column toggles
+ *  it, and picking a different column resets to 'asc' so each column's
+ *  natural ordering (encoded in the comparator) shows first. */
+function SortHeader({
+  label,
   mode,
+  active,
   dir,
-  onChange,
+  align = 'left',
+  onPick,
 }: {
+  label: string
   mode: SortMode
+  active: boolean
   dir: SortDir
-  onChange: (mode: SortMode, dir: SortDir) => void
+  align?: 'left' | 'right'
+  onPick: (next: SortMode) => void
 }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    function onClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onClickOutside)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onClickOutside)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
-
-  function pick(next: SortMode) {
-    if (next === mode) {
-      onChange(mode, dir === 'asc' ? 'desc' : 'asc')
-    } else {
-      onChange(next, 'asc')
-    }
-    setOpen(false)
-  }
-
-  const current = SORT_OPTIONS.find((o) => o.key === mode)?.label ?? ''
-  const ArrowIcon = dir === 'asc' ? ArrowDown : ArrowUp
-
+  const Arrow = dir === 'asc' ? ArrowDown : ArrowUp
   return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        className="h-8 px-2 text-xs bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent inline-flex items-center gap-1.5 hover:bg-secondary/40 transition-colors"
-      >
-        <span>{current}</span>
-        <ArrowIcon className="w-3 h-3" />
-        <ChevronDown className="w-3 h-3 opacity-50" />
-      </button>
-      {open && (
-        <div
-          role="listbox"
-          className="absolute right-0 top-full mt-1 z-20 min-w-[180px] bg-card border border-border rounded-md shadow-lg p-1"
-        >
-          {SORT_OPTIONS.map((opt) => {
-            const isActive = opt.key === mode
-            return (
-              <button
-                key={opt.key}
-                type="button"
-                role="option"
-                aria-selected={isActive}
-                onClick={() => pick(opt.key)}
-                className={`w-full flex items-center justify-between gap-3 px-2.5 py-1.5 rounded text-xs transition-colors ${
-                  isActive ? 'bg-secondary/60' : 'hover:bg-secondary/40'
-                }`}
-              >
-                <span>{opt.label}</span>
-                {isActive && (
-                  <span className="inline-flex items-center gap-1 text-foreground/60">
-                    {dir}
-                    <ArrowIcon className="w-3 h-3" />
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
+    <button
+      type="button"
+      onClick={() => onPick(mode)}
+      aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold transition-colors ${
+        align === 'right' ? 'flex-row-reverse' : ''
+      } ${active ? 'text-foreground/80' : 'text-foreground/40 hover:text-foreground/70'}`}
+    >
+      <span>{label}</span>
+      <Arrow className={`w-3 h-3 ${active ? 'opacity-100' : 'opacity-0'}`} />
+    </button>
   )
 }
 
@@ -184,6 +126,15 @@ export default function DashboardPage() {
     setProjects((prev) => (prev ? prev.filter((p) => p.id !== id) : prev))
   }
 
+  function pickSort(next: SortMode) {
+    if (next === sortMode) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortMode(next)
+      setSortDir('asc')
+    }
+  }
+
   // Search → filter → sort.
   const visible = useMemo(() => {
     if (!projects) return null
@@ -219,6 +170,17 @@ export default function DashboardPage() {
         if (sa !== sb) return sa - sb
         return +new Date(b.created_at) - +new Date(a.created_at)
       })
+    } else if (sortMode === 'client') {
+      // Alphabetical by the dashboard's primary heading: nickname →
+      // title fallback. Empty values sink to the bottom regardless of dir.
+      sorted.sort((a, b) => {
+        const ka = (a.client?.nickname || a.title || '').toLowerCase().trim()
+        const kb = (b.client?.nickname || b.title || '').toLowerCase().trim()
+        if (!ka && !kb) return 0
+        if (!ka) return 1
+        if (!kb) return -1
+        return ka.localeCompare(kb)
+      })
     } else if (sortMode === 'issued') {
       // Sort by proposal_date (when the quote was issued). Trips
       // without a proposal_date sink to the bottom regardless of dir.
@@ -241,8 +203,6 @@ export default function DashboardPage() {
         if (bd) return 1
         return 0
       })
-    } else {
-      sorted.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
     }
 
     if (sortDir === 'desc') sorted.reverse()
@@ -302,113 +262,171 @@ export default function DashboardPage() {
                 Trips
               </h3>
               <div className="rounded-lg border border-border bg-card mb-6">
-              <div className="border-b border-border/70 px-4 py-3 flex flex-wrap items-center gap-3">
-                <div className="relative flex-1 min-w-[180px] max-w-sm">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
-                  <input
-                    type="search"
-                    placeholder="Search trips, clients…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-8 pr-3 h-8 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent"
-                  />
-                </div>
-
-                <div className="flex items-center gap-1.5 text-xs text-foreground/60">
-                  Sort
-                  <SortDropdown
-                    mode={sortMode}
-                    dir={sortDir}
-                    onChange={(nextMode, nextDir) => {
-                      setSortMode(nextMode)
-                      setSortDir(nextDir)
-                    }}
-                  />
-                </div>
-
-                <label className="flex items-center gap-1.5 text-xs text-foreground/60">
-                  Show
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                    className="h-8 px-2 text-xs bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent"
-                  >
-                    {STATUS_FILTER_OPTIONS.map((opt) => (
-                      <option key={opt.key} value={opt.key}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              {totalCount === 0 ? (
-                <div className="px-4 py-8 text-sm text-foreground/50 text-center">
-                  {search.trim() ? `No matches for “${search}”.` : 'Nothing to show with these filters.'}
-                </div>
-              ) : (
-                <div className="py-1">
-                  {pagedList?.map((p) => (
-                    <TripRow
-                      key={p.id}
-                      project={p}
-                      dimmed={p.status === 'completed' || p.status === 'archived'}
-                      onUpdate={handleUpdate}
-                      onDelete={handleDelete}
+                {/* Toolbar: search + status filter. Sorting moved to
+                    column headers below — there is no separate Sort
+                    control. */}
+                <div className="border-b border-border/70 px-4 py-3 flex flex-wrap items-center gap-3">
+                  <div className="relative flex-1 min-w-[180px] max-w-sm">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
+                    <input
+                      type="search"
+                      placeholder="Search trips, clients…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="w-full pl-8 pr-3 h-8 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent"
                     />
-                  ))}
-                </div>
-              )}
-
-              {totalCount > 0 && (
-                <div className="border-t border-border/70 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-foreground/60">
-                  <div>
-                    {((currentPage - 1) * perPage + 1).toLocaleString()}–
-                    {Math.min(currentPage * perPage, totalCount).toLocaleString()}{' '}
-                    of {totalCount.toLocaleString()}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-1.5">
-                      Per page
-                      <select
-                        value={perPage}
-                        onChange={(e) => setPerPage(Number(e.target.value) as PerPage)}
-                        className="h-7 px-1.5 text-xs bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent"
-                      >
-                        {PER_PAGE_OPTIONS.map((n) => (
-                          <option key={n} value={n}>
-                            {n}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        disabled={currentPage <= 1}
-                        onClick={() => setPage((n) => Math.max(1, n - 1))}
-                        className="px-2 py-1 rounded hover:bg-secondary/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        aria-label="Previous page"
-                      >
-                        ‹
-                      </button>
-                      <span className="px-1">
-                        {currentPage} / {totalPages}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={currentPage >= totalPages}
-                        onClick={() => setPage((n) => Math.min(totalPages, n + 1))}
-                        className="px-2 py-1 rounded hover:bg-secondary/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        aria-label="Next page"
-                      >
-                        ›
-                      </button>
+
+                  <label className="flex items-center gap-1.5 text-xs text-foreground/60">
+                    Show
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                      className="h-8 px-2 text-xs bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent"
+                    >
+                      {STATUS_FILTER_OPTIONS.map((opt) => (
+                        <option key={opt.key} value={opt.key}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                {/* Column headers — desktop. Widths mirror trip-row.tsx
+                    exactly: 12 (avatar) / flex-1 (client) / 20 (issued) /
+                    20 (expires) / 24 (state pill). Click a header to
+                    sort by that column; click again to flip direction.
+                    Headers only render when there are rows to sort. */}
+                {totalCount > 0 && (
+                  <div className="hidden md:flex items-center gap-3 px-4 py-2 border-b border-border/70">
+                    <div className="w-12 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <SortHeader
+                        label="Client"
+                        mode="client"
+                        active={sortMode === 'client'}
+                        dir={sortDir}
+                        onPick={pickSort}
+                      />
+                    </div>
+                    <div className="w-20 flex-shrink-0 flex justify-end">
+                      <SortHeader
+                        label="Issued"
+                        mode="issued"
+                        active={sortMode === 'issued'}
+                        dir={sortDir}
+                        align="right"
+                        onPick={pickSort}
+                      />
+                    </div>
+                    <div className="w-20 flex-shrink-0 flex justify-end">
+                      <SortHeader
+                        label="Expires"
+                        mode="expires"
+                        active={sortMode === 'expires'}
+                        dir={sortDir}
+                        align="right"
+                        onPick={pickSort}
+                      />
+                    </div>
+                    <div className="w-24 flex-shrink-0 flex justify-end">
+                      <SortHeader
+                        label="State"
+                        mode="state"
+                        active={sortMode === 'state'}
+                        dir={sortDir}
+                        align="right"
+                        onPick={pickSort}
+                      />
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+
+                {/* Column headers — mobile. The Issued / Expires columns
+                    in trip-row are hidden below md, so strict alignment
+                    is impossible; instead we render a compact sort
+                    chip-row so all four sort axes stay reachable on
+                    phones. */}
+                {totalCount > 0 && (
+                  <div className="md:hidden flex items-center gap-2 flex-wrap px-4 py-2 border-b border-border/70">
+                    <span className="text-[10px] uppercase tracking-wider text-foreground/40 font-semibold">
+                      Sort
+                    </span>
+                    <SortHeader label="Client" mode="client" active={sortMode === 'client'} dir={sortDir} onPick={pickSort} />
+                    <SortHeader label="Issued" mode="issued" active={sortMode === 'issued'} dir={sortDir} onPick={pickSort} />
+                    <SortHeader label="Expires" mode="expires" active={sortMode === 'expires'} dir={sortDir} onPick={pickSort} />
+                    <SortHeader label="State" mode="state" active={sortMode === 'state'} dir={sortDir} onPick={pickSort} />
+                  </div>
+                )}
+
+                {totalCount === 0 ? (
+                  <div className="px-4 py-8 text-sm text-foreground/50 text-center">
+                    {search.trim() ? `No matches for “${search}”.` : 'Nothing to show with these filters.'}
+                  </div>
+                ) : (
+                  <div className="py-1">
+                    {pagedList?.map((p) => (
+                      <TripRow
+                        key={p.id}
+                        project={p}
+                        dimmed={p.status === 'completed' || p.status === 'archived'}
+                        onUpdate={handleUpdate}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {totalCount > 0 && (
+                  <div className="border-t border-border/70 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-foreground/60">
+                    <div>
+                      {((currentPage - 1) * perPage + 1).toLocaleString()}–
+                      {Math.min(currentPage * perPage, totalCount).toLocaleString()}{' '}
+                      of {totalCount.toLocaleString()}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-1.5">
+                        Per page
+                        <select
+                          value={perPage}
+                          onChange={(e) => setPerPage(Number(e.target.value) as PerPage)}
+                          className="h-7 px-1.5 text-xs bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent"
+                        >
+                          {PER_PAGE_OPTIONS.map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={currentPage <= 1}
+                          onClick={() => setPage((n) => Math.max(1, n - 1))}
+                          className="px-2 py-1 rounded hover:bg-secondary/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          aria-label="Previous page"
+                        >
+                          ‹
+                        </button>
+                        <span className="px-1">
+                          {currentPage} / {totalPages}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={currentPage >= totalPages}
+                          onClick={() => setPage((n) => Math.min(totalPages, n + 1))}
+                          className="px-2 py-1 rounded hover:bg-secondary/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          aria-label="Next page"
+                        >
+                          ›
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </main>

@@ -230,39 +230,29 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
           </div>
         </Link>
 
-        {/* Issued / Expires — compact two-line column. Issued surfaces
-            proposal_date (when this quote was prepared); Expires shows
-            valid_until, swapping the label to "Expired" once that date
-            has passed. Hidden on small screens — the dashboard meta
-            line above already carries the date range and status pill is
-            adjacent. Quoted is the only status where these values are
-            actionable, but we render for any status that has them set
-            so the columns don't pop in/out as the operator sorts. */}
-        <div className="hidden md:flex flex-col items-end text-[11px] leading-tight text-foreground/55 flex-shrink-0 w-32">
-          {project.proposal_date ? (
-            <div>
-              <span className="text-foreground/40 uppercase tracking-wider mr-1">
-                Issued
-              </span>
-              <span className="text-foreground/70">
-                {fmtMonDay(project.proposal_date)}
-              </span>
-            </div>
-          ) : (
-            <div>&nbsp;</div>
-          )}
-          {project.valid_until ? (
-            <div className="mt-0.5">
-              <span className="text-foreground/40 uppercase tracking-wider mr-1">
-                {isDateInPast(project.valid_until) ? 'Expired' : 'Expires'}
-              </span>
-              <span className="text-foreground/70">
-                {fmtMonDay(project.valid_until)}
-              </span>
-            </div>
-          ) : (
-            <div className="mt-0.5">&nbsp;</div>
-          )}
+        {/* Issued — own column, vertically stacked label/date so it
+            aligns under the dashboard's "Issued" SortHeader. Hidden
+            below md (the dashboard meta line above already carries the
+            trip date range on phones, and the column-header row is
+            replaced by a compact sort chip-row at that breakpoint). */}
+        <div className="hidden md:flex flex-col items-end text-[11px] leading-tight w-20 flex-shrink-0">
+          <span className="text-foreground/40 uppercase tracking-wider text-[10px]">
+            Issued
+          </span>
+          <span className="text-foreground/70">
+            {project.proposal_date ? fmtMonDay(project.proposal_date) : '\u00A0'}
+          </span>
+        </div>
+
+        {/* Expires — own column. Label swaps to "Expired" once the
+            valid_until date has passed; date itself is the same field. */}
+        <div className="hidden md:flex flex-col items-end text-[11px] leading-tight w-20 flex-shrink-0">
+          <span className="text-foreground/40 uppercase tracking-wider text-[10px]">
+            {project.valid_until && isDateInPast(project.valid_until) ? 'Expired' : 'Expires'}
+          </span>
+          <span className="text-foreground/70">
+            {project.valid_until ? fmtMonDay(project.valid_until) : '\u00A0'}
+          </span>
         </div>
 
         {/* Status pill = dropdown trigger (matches trip-action-bar). */}
