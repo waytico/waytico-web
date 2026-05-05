@@ -3400,7 +3400,7 @@
   font-family: var(--font-body);
   font-size: 14px;
   line-height: 1.55;
-  color: var(--ink-soft);
+  color: var(--ink);
   margin: 0;
 }
 
@@ -3414,14 +3414,15 @@
 /* Owner-mode multiline EditableField inside the details slot. The
    shared <EditableField> renders a <textarea> on edit and a clickable
    div on rest; both get the body-prose typography so it matches the
-   public-side rendering byte-for-byte. */
+   public-side rendering byte-for-byte (same font, same size, same
+   line-height, same ink). */
 [data-theme="magazine"] .tp-mag-price__details-edit textarea,
 [data-theme="magazine"] .tp-mag-price__details-edit > div[role="button"],
 [data-theme="magazine"] .tp-mag-price__details-edit .editable-field-display {
   font-family: var(--font-body);
   font-size: 14px;
   line-height: 1.55;
-  color: var(--ink-soft);
+  color: var(--ink);
 }
 
 @media (min-width: 1024px) {
