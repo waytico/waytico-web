@@ -1,0 +1,365 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { ArrowRight, RotateCcw, Share2, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import styles from './demo-modal.module.css'
+
+interface DemoModalProps {
+  isOpen: boolean
+  onClose: () => void
+  /**
+   * Called when user clicks "Make my own quote" — host page can use this
+   * to focus the chat textarea so the visitor lands ready to type.
+   */
+  onMakeMyOwn?: () => void
+}
+
+type Phase = 'closed' | 'opening' | 'playing' | 'ended' | 'closing'
+
+const HOME_TEXT_LINES = [
+  'Paris, 2 people, from June 28',
+  'Day 1 — Marais and Seine',
+  'Day 2 — Louvre and Saint-Germain',
+  'Day 3 — Montmartre and farewell brunch',
+  'Hôtel des Deux Pavillons',
+]
+const HOME_TEXT_FULL = HOME_TEXT_LINES.join('\n')
+const PRICE_FINAL = '1,800'
+
+/**
+ * Home demo modal — single-flow product walkthrough.
+ *
+ * 21.5s animation timeline (phases 1-5) then end-state with controls.
+ * Most timing is CSS @keyframes with `animation-delay` measured from when
+ * `.playing` is added; JS only drives state machine, JS-typing for the two
+ * typewriter blocks (home textarea, price overlay), and Skip/Replay/close.
+ */
+export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalProps) {
+  const [mounted, setMounted] = useState(false)
+  const [phase, setPhase] = useState<Phase>('closed')
+  const [playKey, setPlayKey] = useState(0)
+  const [typedHome, setTypedHome] = useState('')
+  const [typedPrice, setTypedPrice] = useState('')
+
+  // Track whether we already opened to avoid re-running open animation if
+  // parent re-renders with the same isOpen=true.
+  const openedRef = useRef(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Open coordination
+  useEffect(() => {
+    if (isOpen && !openedRef.current) {
+      openedRef.current = true
+      setPhase('opening')
+      const t = setTimeout(() => setPhase('playing'), 220)
+      return () => clearTimeout(t)
+    }
+    if (!isOpen && openedRef.current) {
+      openedRef.current = false
+      setPhase('closed')
+      setPlayKey(0)
+      setTypedHome('')
+      setTypedPrice('')
+    }
+  }, [isOpen])
+
+  // 21.5s playing → ended timer
+  useEffect(() => {
+    if (phase !== 'playing') return
+    const t = setTimeout(() => setPhase('ended'), 21500)
+    return () => clearTimeout(t)
+  }, [phase, playKey])
+
+  // Escape key
+  useEffect(() => {
+    if (!isOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        handleClose()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
+
+  // Body scroll lock while open
+  useEffect(() => {
+    if (!isOpen) return
+    const orig = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = orig
+    }
+  }, [isOpen])
+
+  // Phase-1 typewriter (home textarea). Starts ~200ms into playing.
+  useEffect(() => {
+    if (phase !== 'playing') {
+      setTypedHome('')
+      return
+    }
+    let cancelled = false
+    let chars = 0
+    const tick = () => {
+      if (cancelled || chars >= HOME_TEXT_FULL.length) return
+      chars++
+      setTypedHome(HOME_TEXT_FULL.slice(0, chars))
+      // Slight pause after newlines for natural rhythm
+      const next = HOME_TEXT_FULL[chars - 1] === '\n' ? 200 : 32
+      setTimeout(tick, next)
+    }
+    const start = setTimeout(tick, 200)
+    return () => {
+      cancelled = true
+      clearTimeout(start)
+    }
+  }, [phase, playKey])
+
+  // Phase-4 typewriter (price). Fires at 16.05s mark relative to playing.
+  useEffect(() => {
+    if (phase !== 'playing') {
+      setTypedPrice('')
+      return
+    }
+    const base = 16050
+    const timers = [
+      setTimeout(() => setTypedPrice('1'), base),
+      setTimeout(() => setTypedPrice('18'), base + 350),
+      setTimeout(() => setTypedPrice('180'), base + 700),
+      setTimeout(() => setTypedPrice(PRICE_FINAL), base + 1050),
+    ]
+    return () => timers.forEach(clearTimeout)
+  }, [phase, playKey])
+
+  function handleClose() {
+    setPhase('closing')
+    setTimeout(() => {
+      setPhase('closed')
+      setPlayKey(0)
+      setTypedHome('')
+      setTypedPrice('')
+      openedRef.current = false
+      onClose()
+    }, 200)
+  }
+
+  function handleSkip() {
+    // Snap all final-state values, jump to ended
+    setTypedHome(HOME_TEXT_FULL)
+    setTypedPrice(PRICE_FINAL)
+    setPhase('ended')
+  }
+
+  function handleReplay() {
+    setTypedHome('')
+    setTypedPrice('')
+    setPlayKey((k) => k + 1)
+    setPhase('playing')
+  }
+
+  function handleMakeMyOwn() {
+    onMakeMyOwn?.()
+    handleClose()
+  }
+
+  function handleBackdropClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (e.target === e.currentTarget) handleClose()
+  }
+
+  if (!mounted || (!isOpen && phase === 'closed')) return null
+
+  const stageClass = cn(
+    styles.stage,
+    phase === 'playing' && styles.playing,
+    phase === 'ended' && styles.ended,
+  )
+
+  return createPortal(
+    <div
+      className={cn(styles.overlay, phase === 'closing' && styles.closing)}
+      onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Product demo"
+    >
+      <div className={styles.modalBox}>
+        <button
+          type="button"
+          onClick={handleClose}
+          className={styles.closeBtn}
+          aria-label="Close demo"
+        >
+          <X className="w-5 h-5" strokeWidth={2} />
+        </button>
+        <button type="button" onClick={handleSkip} className={styles.skipBtn}>
+          Skip →
+        </button>
+
+        {/* Stage — keyed on playKey so a Replay re-mounts and CSS animations restart */}
+        <div key={playKey} className={stageClass}>
+          {/* ----- Browser chrome (phases 1-4 desktop) ----- */}
+          <div className={styles.browserChrome}>
+            <div className={styles.dots}>
+              <span className={styles.dot} />
+              <span className={styles.dot} />
+              <span className={styles.dot} />
+            </div>
+            <div className={styles.urlBar}>
+              <span className={cn(styles.urlText, styles.urlTextHome)}>
+                waytico.com
+              </span>
+              <span className={cn(styles.urlText, styles.urlTextTrip)}>
+                waytico.com/t/paris-weekend-getaway
+              </span>
+            </div>
+          </div>
+
+          {/* ----- Phase 1+2: home mockup ----- */}
+          <div className={styles.homeMockup}>
+            <h2 className={styles.homeTitle}>The quote tool for travel pros.</h2>
+            <div className={styles.textareaMock}>
+              <span className={styles.typedText}>{typedHome}</span>
+              <span className={styles.createBtn}>
+                Create quote
+                <ArrowRight className="w-3 h-3" />
+              </span>
+            </div>
+          </div>
+
+          {/* Cursor for phase 1 (moves to Create quote button) */}
+          <CursorIcon className={styles.cursorPhase1} />
+
+          {/* ----- Phase 2: spinner ----- */}
+          <div className={styles.spinner}>
+            <div className={styles.spinnerRing} />
+            <div className={styles.spinnerLabel}>Generating…</div>
+          </div>
+
+          {/* ----- Phase 3-4: trip page ----- */}
+          <div className={styles.tripPage}>
+            {/* Sticky overlay (does not scroll with content) */}
+            <div className={styles.tripStickyHeader}>
+              <span className={styles.brandWordmark}>Waytico</span>
+              <span className={styles.sharePill}>
+                <Share2 className="w-3 h-3" /> Share
+              </span>
+            </div>
+            <div className={styles.tripScrollWrap}>
+              <div className={styles.tripScroll}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/demo-modal/desktop-page.jpg"
+                  className={styles.tripBase}
+                  alt=""
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/demo-modal/day-1-photo.jpg"
+                  className={cn(styles.dayPhoto, styles.day1Photo)}
+                  alt=""
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/demo-modal/day-2-photo.jpg"
+                  className={cn(styles.dayPhoto, styles.day2Photo)}
+                  alt=""
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/demo-modal/day-3-photo.jpg"
+                  className={cn(styles.dayPhoto, styles.day3Photo)}
+                  alt=""
+                />
+                {/* Price typewriter overlay — covers €0 in screenshot */}
+                <span className={styles.priceOverlay}>
+                  <span className={styles.priceText}>{typedPrice}</span>
+                </span>
+              </div>
+            </div>
+            {/* Phase-4 cursor — positioned over .tripPage so it does not scroll */}
+            <CursorIcon className={styles.cursorPhase4} />
+          </div>
+
+          {/* ----- Phase 5: phone ----- */}
+          <div className={styles.phoneFrame}>
+            <div className={styles.phoneScreen}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/demo-modal/phone-page-screenshot.jpg"
+                className={styles.phoneScreenshot}
+                alt=""
+              />
+            </div>
+          </div>
+
+          {/* ----- Captions (CSS shows the right one per phase) ----- */}
+          <div className={cn(styles.caption, styles.captionDescribe)}>
+            Describe the trip
+          </div>
+          <div className={cn(styles.caption, styles.captionMagic)}>
+            Magic! A quote webpage!
+          </div>
+          <div className={cn(styles.caption, styles.captionDetails)}>
+            Add the details
+          </div>
+          <div className={cn(styles.caption, styles.captionClient)}>
+            Minutes later — your client opens it
+          </div>
+
+          {/* ----- End-state controls ----- */}
+          <div className={styles.endControls}>
+            <button
+              type="button"
+              onClick={handleReplay}
+              className={styles.watchAgainBtn}
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Watch again
+            </button>
+            <button
+              type="button"
+              onClick={handleMakeMyOwn}
+              className={styles.ctaBtn}
+            >
+              Make my own quote
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* ----- Progress bar ----- */}
+          <div className={styles.progressBar}>
+            <div className={styles.progressFill} />
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+/* ----- Inline cursor SVG (used for phase-1 and phase-4 cursors) ----- */
+function CursorIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 18 22"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path
+        d="M2 2L2 17L6 13L9 19L11.5 18L8.5 12L14 12L2 2Z"
+        fill="#FFFFFE"
+        stroke="#2C2420"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}

@@ -1,0 +1,678 @@
+/* =========================================================================
+   Demo Modal — single-flow product walkthrough (22 sec total animated)
+   Phase timeline (animation-delay measured from .stage.playing class apply):
+     1. Describe          0.0 - 5.0s
+     2. Magic              5.0 - 7.0s
+     3. Page appears       7.0 - 9.0s
+     4. Add the details    9.0 - 17.5s
+     5. Client receives   17.5 - 21.5s
+     6. End state         21.5+
+   ========================================================================= */
+
+/* ----- Overlay + box ----- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: overlayIn 200ms ease-out;
+}
+.overlay.closing { animation: overlayOut 180ms ease-in forwards; }
+@keyframes overlayIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes overlayOut { to   { opacity: 0; } }
+
+.modalBox {
+  position: relative;
+  width: 92vw;
+  max-width: 1024px;
+  aspect-ratio: 16 / 9;
+  background: #FAF8F5;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: boxIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.overlay.closing .modalBox { animation: boxOut 160ms ease-in forwards; }
+@keyframes boxIn  { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes boxOut { to   { transform: scale(0.97); opacity: 0; } }
+
+/* ----- Top controls ----- */
+.closeBtn {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 20;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.85);
+  color: rgba(44, 36, 32, 0.7);
+  transition: background 150ms, color 150ms;
+}
+.closeBtn:hover { background: rgba(255, 255, 255, 1); color: #2C2420; }
+
+.skipBtn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 20;
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
+  transition: color 150ms;
+}
+.skipBtn:hover { color: #fff; }
+
+/* ----- Stage (aspect-video region where animation lives) ----- */
+.stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* ----- Browser chrome (phases 1-4 desktop) ----- */
+.browserChrome {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 32px;
+  background: #EDE6DD;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 14px;
+  z-index: 10;
+}
+.dots { display: flex; gap: 6px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(0,0,0,0.18); }
+.urlBar {
+  flex: 1;
+  position: relative;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: rgba(44,36,32,0.55);
+  background: rgba(255,255,255,0.7);
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  height: 22px;
+}
+.urlText {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+.urlTextHome { opacity: 1; }
+.urlTextTrip { opacity: 0; }
+.stage.playing .urlTextHome {
+  animation: urlHide 0.4s linear 7s forwards;
+}
+.stage.playing .urlTextTrip {
+  animation: urlShow 0.4s linear 7s forwards;
+}
+@keyframes urlHide { to { opacity: 0; } }
+@keyframes urlShow { to { opacity: 1; } }
+.stage.ended .urlTextHome { opacity: 0; }
+.stage.ended .urlTextTrip { opacity: 1; }
+
+/* ----- Phase 1+2: home mockup ----- */
+.homeMockup {
+  position: absolute;
+  top: 32px; left: 0; right: 0; bottom: 0;
+  background: #FAF8F5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 60px;
+  text-align: center;
+}
+.stage.playing .homeMockup {
+  animation: phase12Visible 7s steps(1, end) forwards;
+}
+@keyframes phase12Visible {
+  0%   { opacity: 1; }
+  98.5% { opacity: 1; } /* visible until 6.9s */
+  100% { opacity: 0; pointer-events: none; }
+}
+
+.homeTitle {
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(20px, 2.4vw, 28px);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  color: #2C2420;
+  margin-bottom: 24px;
+}
+
+.textareaMock {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  background: #FFFFFE;
+  border: 1px solid #E8DFD5;
+  border-radius: 12px;
+  padding: 16px 18px;
+  text-align: left;
+  min-height: 140px;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(44,36,32,0.85);
+}
+.typedText {
+  white-space: pre-wrap;
+  display: inline;
+}
+.typedText::after {
+  content: '';
+  display: inline-block;
+  width: 1px;
+  height: 1em;
+  background: currentColor;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink 1s steps(2, start) infinite;
+}
+@keyframes blink { to { opacity: 0; } }
+.stage.playing .typedText {
+  /* Reveal characters via clip — text is fully written but visually trimmed */
+  animation: typewriter 4.5s steps(125, end) forwards;
+  display: block;
+  overflow: hidden;
+  width: 0;
+  white-space: pre;
+}
+@keyframes typewriter {
+  0%  { width: 0; }
+  /* line 1: 32 chars by 1.0s; line 2: 25c by 1.8s; line 3: 35c by 2.6s;
+     line 4: 39c by 3.6s; line 5: 24c by 4.5s. Steps approximate. */
+  100% { width: 100%; }
+}
+
+.createBtn {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  background: #C4622D;
+  color: #FFFFFE;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.stage.playing .createBtn {
+  animation: btnPress 0.3s ease-in-out 4.7s;
+}
+@keyframes btnPress {
+  0%, 100% { background: #C4622D; transform: scale(1); }
+  50%      { background: #A55224; transform: scale(0.97); }
+}
+
+/* Cursor hand that moves to button at end of phase 1 */
+.cursorPhase1 {
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  width: 18px;
+  height: 22px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+}
+.stage.playing .cursorPhase1 {
+  animation: cursor1 0.7s cubic-bezier(0.45, 0, 0.55, 1) 4.3s forwards;
+}
+@keyframes cursor1 {
+  0%   { opacity: 0; left: 50%;  top: 65%; }
+  20%  { opacity: 1; left: 50%;  top: 65%; }
+  100% { opacity: 1; left: 75%;  top: 78%; }
+}
+
+/* ----- Phase 2: spinner ----- */
+.spinner {
+  position: absolute;
+  top: 32px; left: 0; right: 0; bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #FAF8F5;
+  opacity: 0;
+  pointer-events: none;
+}
+.stage.playing .spinner {
+  animation: spinnerVisible 2.4s ease-in-out 4.9s forwards;
+}
+@keyframes spinnerVisible {
+  0%   { opacity: 0; }
+  10%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+.spinnerRing {
+  width: 44px;
+  height: 44px;
+  border: 2.5px solid rgba(196, 98, 45, 0.18);
+  border-top-color: #C4622D;
+  border-radius: 50%;
+  animation: spin 0.85s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinnerLabel {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 12px;
+  color: rgba(44,36,32,0.55);
+  letter-spacing: 0.02em;
+}
+
+/* ----- Phase 3-4: trip page ----- */
+.tripPage {
+  position: absolute;
+  top: 32px; left: 0; right: 0; bottom: 0;
+  background: #FAF8F5;
+  overflow: hidden;
+  opacity: 0;
+}
+.stage.playing .tripPage {
+  animation: tripPageIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 7s forwards;
+}
+@keyframes tripPageIn {
+  0%   { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Sticky header overlay (Waytico logo + Share pill) */
+.tripStickyHeader {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 44px;
+  background: rgba(250, 248, 245, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(232, 223, 213, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  z-index: 5;
+}
+.brandWordmark {
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  color: #2C2420;
+}
+.sharePill {
+  background: #C4622D;
+  color: #FFFFFE;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Scrollable content layer (the screenshot) */
+.tripScrollWrap {
+  position: absolute;
+  top: 44px; left: 0; right: 0; bottom: 0;
+  overflow: hidden;
+}
+.tripScroll {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+}
+.tripBase {
+  width: 100%;
+  display: block;
+}
+.stage.playing .tripScroll {
+  /* Scrolls during phase 4 (9s - 17.5s = 8.5s).
+     Translates from y=0 down to y=-3650 (price block visible).
+     Sub-phases per TZ section 4 phase 4. */
+  animation: pageScroll 8.5s cubic-bezier(0.45, 0, 0.55, 1) 9s forwards;
+}
+@keyframes pageScroll {
+  0%    { transform: translateY(0); }
+  /* 0 → 1.5s: scroll to Day 1 placeholder */
+  17.6% { transform: translateY(-1100px); }
+  /* hold while Day 1 photo lands */
+  29.4% { transform: translateY(-1100px); }
+  /* 2.5 → 3.3s: scroll to Day 2 */
+  38.8% { transform: translateY(-1900px); }
+  /* hold for Day 2 photo */
+  45.9% { transform: translateY(-1900px); }
+  /* to Day 3 */
+  54.1% { transform: translateY(-2700px); }
+  /* hold for Day 3 photo */
+  61.2% { transform: translateY(-2700px); }
+  /* through accommodations to price */
+  74.1% { transform: translateY(-3650px); }
+  /* hold during price typing + cursor to share */
+  100%  { transform: translateY(-3650px); }
+}
+
+/* Day photo overlays — absolute over .tripScroll, in screenshot coordinates */
+.dayPhoto {
+  position: absolute;
+  display: block;
+  opacity: 0;
+  border-radius: 2px;
+}
+.day1Photo { left: 48px;  top: 1380px;  width: 480px;  height: 320px; }
+.day2Photo { left: 496px; top: 2150px;  width: 480px;  height: 320px; }
+.day3Photo { left: 48px;  top: 2920px;  width: 480px;  height: 320px; }
+
+.stage.playing .day1Photo {
+  animation: photoIn 1.0s cubic-bezier(0.4, 0, 0.2, 1) 10.5s forwards;
+}
+.stage.playing .day2Photo {
+  animation: photoIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 12.3s forwards;
+}
+.stage.playing .day3Photo {
+  animation: photoIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 13.6s forwards;
+}
+@keyframes photoIn {
+  0%   { opacity: 0; transform: translateY(-24px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* Price overlay — covers €0 in screenshot, types €1800 */
+.priceOverlay {
+  position: absolute;
+  left: 48px;
+  top: 3920px;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 64px;
+  font-weight: 400;
+  color: #2C2420;
+  line-height: 1;
+  background: #FAF8F5;
+  padding: 4px 12px 4px 0;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+.priceOverlay::before {
+  content: '€ ';
+}
+.priceOverlay::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 0.85em;
+  background: currentColor;
+  margin-left: 2px;
+  vertical-align: baseline;
+  animation: blink 1s steps(2, start) infinite;
+  opacity: 0;
+}
+.stage.playing .priceOverlay::after {
+  animation: blink 1s steps(2, start) 16.05s infinite, cursorShow 0.01s 16s forwards;
+}
+@keyframes cursorShow { to { opacity: 1; } }
+
+.priceText {
+  display: inline-block;
+  width: 0ch;
+  overflow: hidden;
+  vertical-align: baseline;
+}
+.stage.playing .priceText {
+  animation: priceType 1.4s steps(4, end) 16.05s forwards;
+}
+@keyframes priceType {
+  0%   { width: 0ch; }
+  100% { width: 4ch; }
+}
+
+/* Cursor hand for phase 4 — appears at price, then moves up to Share */
+.cursorPhase4 {
+  position: absolute;
+  width: 18px;
+  height: 22px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 6;
+  /* Initial position relative to .tripPage (not .tripScroll, so it does not scroll) */
+  left: 12%;
+  top: 75%;
+}
+.stage.playing .cursorPhase4 {
+  animation: cursor4 1.5s cubic-bezier(0.45, 0, 0.55, 1) 16s forwards;
+}
+@keyframes cursor4 {
+  0%   { opacity: 0; left: 12%;  top: 75%; }
+  10%  { opacity: 1; left: 12%;  top: 75%; }
+  /* tiny click on price to trigger typing */
+  15%  { transform: scale(0.85); }
+  20%  { transform: scale(1); }
+  /* hold while price types ~1s */
+  47%  { left: 12%;  top: 75%; }
+  /* travel up to Share pill in sticky header */
+  90%  { left: 92%;  top: 5%; }
+  /* press Share */
+  95%  { transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1); left: 92%; top: 5%; }
+}
+
+/* ----- Phase 5: phone ----- */
+.phoneFrame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: clamp(180px, 26vw, 260px);
+  aspect-ratio: 393 / 800;
+  background: #1A1714;
+  border-radius: 28px;
+  padding: 8px;
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  opacity: 0;
+}
+.stage.playing .phoneFrame {
+  animation: phoneIn 1s cubic-bezier(0.16, 1, 0.3, 1) 17s forwards;
+}
+@keyframes phoneIn {
+  0%   { opacity: 0; transform: translate(-50%, -50%) translateX(60px); }
+  100% { opacity: 1; transform: translate(-50%, -50%) translateX(0); }
+}
+.phoneScreen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #FAF8F5;
+  border-radius: 22px;
+  overflow: hidden;
+}
+.phoneScreenshot {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  display: block;
+}
+.stage.playing .phoneScreenshot {
+  animation: phoneScroll 3s cubic-bezier(0.45, 0, 0.55, 1) 18s forwards;
+}
+@keyframes phoneScroll {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-86%); }
+}
+
+/* Desktop frame fades out when phone arrives */
+.stage.playing .tripPage {
+  animation:
+    tripPageIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 7s forwards,
+    tripPageOut 1s ease-in-out 17s forwards;
+}
+@keyframes tripPageOut {
+  0%   { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-40px); }
+}
+
+/* ----- Caption ----- */
+.caption {
+  position: absolute;
+  bottom: 56px;
+  left: 0; right: 0;
+  text-align: center;
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 17px;
+  color: rgba(44, 36, 32, 0.75);
+  pointer-events: none;
+  z-index: 8;
+  text-shadow: 0 1px 8px rgba(250, 248, 245, 0.7);
+  opacity: 0;
+}
+.stage.playing .captionDescribe {
+  animation: captionShow 5s linear 0.2s forwards;
+}
+.stage.playing .captionMagic {
+  animation: captionShow 2s linear 5s forwards;
+}
+.stage.playing .captionDetails {
+  animation: captionShow 7.7s linear 9s forwards;
+}
+.stage.playing .captionClient {
+  animation: captionShow 4s linear 17.5s forwards;
+}
+@keyframes captionShow {
+  0%   { opacity: 0; transform: translateY(4px); }
+  8%   { opacity: 1; transform: translateY(0); }
+  92%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ----- End-state controls ----- */
+.endControls {
+  position: absolute;
+  bottom: 28px;
+  left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9;
+  transition: opacity 300ms;
+}
+.stage.ended .endControls {
+  opacity: 1;
+  pointer-events: auto;
+}
+.watchAgainBtn {
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  color: rgba(44, 36, 32, 0.7);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 150ms;
+}
+.watchAgainBtn:hover { color: #2C2420; }
+.ctaBtn {
+  background: #C4622D;
+  color: #FFFFFE;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 22px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 150ms;
+}
+.ctaBtn:hover { background: #A55224; }
+
+/* When ended, hide caption to avoid stale label under end-state buttons */
+.stage.ended .caption { animation: none !important; opacity: 0 !important; }
+
+/* ----- Progress bar ----- */
+.progressBar {
+  position: absolute;
+  bottom: 0;
+  left: 0; right: 0;
+  height: 3px;
+  background: rgba(44, 36, 32, 0.08);
+  z-index: 9;
+}
+.progressFill {
+  width: 0%;
+  height: 100%;
+  background: #C4622D;
+}
+.stage.playing .progressFill {
+  animation: progress 21.5s linear forwards;
+}
+.stage.ended .progressFill {
+  width: 100%;
+}
+@keyframes progress {
+  to { width: 100%; }
+}
+
+/* ----- End-state freeze: keep all final-state visuals snapped ----- */
+.stage.ended .day1Photo,
+.stage.ended .day2Photo,
+.stage.ended .day3Photo {
+  opacity: 1;
+  transform: translateY(0);
+}
+.stage.ended .tripPage      { opacity: 0; }
+.stage.ended .phoneFrame    { opacity: 1; transform: translate(-50%, -50%); }
+.stage.ended .phoneScreenshot { transform: translateY(-86%); }
+.stage.ended .priceText     { width: 4ch; }
+.stage.ended .priceOverlay::after { opacity: 0; animation: none; }
+.stage.ended .homeMockup    { opacity: 0; pointer-events: none; }
+.stage.ended .spinner       { opacity: 0; }
+.stage.ended .cursorPhase1,
+.stage.ended .cursorPhase4  { opacity: 0; }
+.stage.ended .tripScroll    { transform: translateY(-3650px); }
+
+/* ----- Reduced motion: jump straight to ended state, no animations ----- */
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .modalBox { animation: none !important; }
+  .stage *,
+  .stage *::before,
+  .stage *::after { animation: none !important; transition: none !important; }
+  .stage.playing { /* treat as ended visually */ }
+  .stage.playing .progressFill { width: 100%; }
+  .stage.playing .day1Photo,
+  .stage.playing .day2Photo,
+  .stage.playing .day3Photo { opacity: 1; transform: translateY(0); }
+  .stage.playing .tripPage  { opacity: 0; }
+  .stage.playing .phoneFrame { opacity: 1; }
+  .stage.playing .phoneScreenshot { transform: translateY(-86%); }
+  .stage.playing .priceText { width: 4ch; }
+  .stage.playing .endControls { opacity: 1; pointer-events: auto; }
+}
