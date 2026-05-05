@@ -3522,7 +3522,6 @@
   font-size: 14px;
   line-height: 1.65;
   color: var(--ink-soft);
-  max-width: 72ch;
 }
 
 @media (min-width: 1024px) {
