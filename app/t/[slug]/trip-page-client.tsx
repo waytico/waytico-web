@@ -157,6 +157,141 @@ function DateStartEditor({
   )
 }
 
+/**
+ * MagazineDayTitleEditor — owner editor for a single day's title on the
+ * Magazine theme.
+ *
+ * Mirrors MagazineTitleEditor (the hero variant) so the two-line "head + italic
+ * tail" contract (a single string with one embedded \n) renders identically in
+ * both places. Uses the same split-render in display mode and a transparent
+ * textarea in edit mode.
+ *
+ * Why not EditableField as="text"?
+ * EditableField wraps the displayed value in `<span class="inline-flex
+ * items-center gap-1">` together with a flex-child pencil icon. With a long
+ * head + tail at desktop ≥1024 (52px Cormorant) inside a 1fr text-col, the
+ * inline-flex container forces head and tail to occupy two side-by-side
+ * flex-children, each wrapping internally — visually producing two columns
+ * instead of two stacked lines. The hero owner editor avoided this by
+ * rendering its own <h1> wrapper with an absolute-positioned pencil; we apply
+ * the same pattern here, except the outer <h3> is provided by itinerary.tsx
+ * (so this component renders a <span class="block">, not an <h3>, to avoid
+ * h3 nesting).
+ */
+function MagazineDayTitleEditor({
+  title,
+  onSave,
+}: {
+  title: string
+  onSave: (v: string) => Promise<boolean>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const taRef = useRef<HTMLTextAreaElement>(null)
+
+  const autosize = () => {
+    const el = taRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }
+
+  useEffect(() => {
+    if (!editing) return
+    setDraft(title)
+    const id = setTimeout(() => {
+      taRef.current?.focus()
+      const len = title.length
+      taRef.current?.setSelectionRange(len, len)
+      autosize()
+    }, 0)
+    return () => clearTimeout(id)
+  }, [editing, title])
+
+  const commit = async () => {
+    setEditing(false)
+    const next = draft.trim()
+    if (next && next !== title.trim()) {
+      await onSave(next)
+    }
+  }
+  const cancel = () => setEditing(false)
+
+  // EDIT mode — transparent textarea sized to fit; no card surface so the
+  // editor stays in the editorial rhythm. Outer wrapper is a <span> (block,
+  // not <h3>) because itinerary.tsx already provides
+  // `<h3 class="tp-mag-day__title">` around the whole renderDayTitle slot.
+  if (editing) {
+    return (
+      <span className="block w-full">
+        <textarea
+          ref={taRef}
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value)
+            autosize()
+          }}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              commit()
+            }
+            if (e.key === 'Escape') {
+              e.preventDefault()
+              cancel()
+            }
+          }}
+          rows={2}
+          className="block w-full bg-transparent border border-black/20 focus:border-black/50 focus:outline-none rounded px-2 py-1 resize-none"
+          style={{
+            font: 'inherit',
+            color: 'inherit',
+            lineHeight: 'inherit',
+            letterSpacing: 'inherit',
+          }}
+          aria-label="Edit day title"
+        />
+      </span>
+    )
+  }
+
+  // DISPLAY mode — same split-render as <MagazineDayTitle> in itinerary.tsx.
+  // Empty title falls back to a placeholder; a missing tail (no \n) renders
+  // plain so legacy single-fragment titles keep working.
+  const newlineIdx = title.indexOf('\n')
+  const head = newlineIdx === -1 ? title : title.slice(0, newlineIdx).trimEnd()
+  const tail = newlineIdx === -1 ? '' : title.slice(newlineIdx + 1).trimStart()
+  return (
+    <span
+      className="block group cursor-pointer relative"
+      role="button"
+      tabIndex={0}
+      onClick={() => setEditing(true)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          setEditing(true)
+        }
+      }}
+      aria-label="Click to edit day title"
+    >
+      {newlineIdx === -1 ? (
+        <span>{head || 'Untitled day'}</span>
+      ) : (
+        <>
+          <span className="tp-mag-day__title-head">{head || 'Untitled day'}</span>
+          {tail && <em className="tp-mag-day__title-tail">{tail}</em>}
+        </>
+      )}
+      <Edit3
+        className="absolute top-1 right-1 w-3.5 h-3.5 opacity-0 group-hover:opacity-50 transition-opacity"
+        aria-hidden="true"
+      />
+    </span>
+  )
+}
+
 function MagazineTitleEditor({
   title,
   onSave,
@@ -1266,6 +1401,22 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const renderDayTitle = (day: any): ReactNode => {
     const isMagazine = resolvedTheme === 'magazine'
     if (ed) {
+      // Magazine path: dedicated editor that mirrors the hero owner editor —
+      // split-render in display mode, transparent textarea in edit mode,
+      // absolute-positioned pencil. EditableField's `inline-flex` wrapper
+      // around the value plus a flex-child pencil forces head + tail into
+      // two side-by-side flex columns at desktop text-col widths, which we
+      // explicitly avoid here.
+      if (isMagazine) {
+        return (
+          <MagazineDayTitleEditor
+            title={day.title || ''}
+            onSave={(v) =>
+              day.id ? saveDayPatch(day.id, { title: v }) : Promise.resolve(false)
+            }
+          />
+        )
+      }
       return (
         <EditableField
           as="text"
@@ -1273,11 +1424,6 @@ export default function TripPageClient({ slug, initialData }: Props) {
           value={day.title}
           required
           className="w-full"
-          renderDisplay={
-            isMagazine
-              ? (text) => <MagazineDayTitle text={text} />
-              : undefined
-          }
           onSave={(v) => (day.id ? saveDayPatch(day.id, { title: v }) : Promise.resolve(false))}
         />
       )
@@ -2024,7 +2170,14 @@ function DescriptionParagraphs({
   preserveLineBreaks?: boolean
 }) {
   if (!text) return null
-  const paras = text.split('\n\n').filter(Boolean)
+  // Defensive sanitizer — strip markdown emphasis markers that the AI
+  // pipeline / trip editor agent may have emitted by mistake (the agent
+  // sometimes wraps the lede in *asterisks* trying to signal italic, but
+  // the renderer treats the text as plain — so the stars appear literally
+  // on the page). The Magazine theme italicizes the lede on its own via
+  // <em class="tp-mag-lede">; the operator never needs to type markdown.
+  const cleanText = stripMarkdownEmphasis(text)
+  const paras = cleanText.split('\n\n').filter(Boolean)
   const isMagazine = theme === 'magazine'
 
   return (
@@ -2069,6 +2222,26 @@ function DescriptionParagraphs({
       })}
     </>
   )
+}
+
+/**
+ * Strip paired markdown emphasis markers that occasionally leak through from
+ * the AI pipeline / editor agent. We only remove markers that look like real
+ * emphasis wraps:
+ *   *text* / **text** / _text_ / __text__
+ * where the inner content begins and ends with non-whitespace and the run
+ * contains no newlines. Standalone or unbalanced asterisks / underscores
+ * inside prose are preserved. The replacement is idempotent — running it on
+ * already-clean text is a no-op.
+ */
+function stripMarkdownEmphasis(text: string): string {
+  return text
+    // **bold** and __bold__
+    .replace(/\*\*(\S(?:[^*\n]*\S)?)\*\*/g, '$1')
+    .replace(/__(\S(?:[^_\n]*\S)?)__/g, '$1')
+    // *italic* and _italic_
+    .replace(/\*(\S(?:[^*\n]*\S)?)\*/g, '$1')
+    .replace(/_(\S(?:[^_\n]*\S)?)_/g, '$1')
 }
 
 /**
