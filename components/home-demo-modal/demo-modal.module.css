@@ -1,0 +1,739 @@
+/* =========================================================================
+   Demo Modal — single-flow product walkthrough.
+   Phase timeline (animation-delay measured from when .stage gains .playing):
+     1. Describe          0.0 -  5.5s   typewriter + cursor click + ripple
+     2. Magic              5.5 -  7.5s  spinner crossfade
+     3. Page appears       7.5 -  9.5s  trip page slide-up, URL bar updates
+     4. Add the details    9.5 - 18.0s  page scroll + 3 photo drops + price
+                                           typing + cursor up to Share + click
+     5. Client receives   18.0 - 22.0s  desktop-to-phone crossfade + scroll
+     6. End state         22.0+
+
+   Modal aspect 1024 / 853 — sized so the desktop screenshot's hero (720 px
+   tall in the asset) fits fully inside the scrollable viewport without
+   compressing or cropping the sticky top row.
+   ========================================================================= */
+
+/* ----- Overlay + box ----- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: overlayIn 200ms ease-out;
+}
+.overlay.closing { animation: overlayOut 180ms ease-in forwards; }
+@keyframes overlayIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes overlayOut { to   { opacity: 0; } }
+
+.modalBox {
+  position: relative;
+  width: 92vw;
+  max-width: 1024px;
+  aspect-ratio: 1024 / 853;
+  background: #FAF8F5;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: boxIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.overlay.closing .modalBox { animation: boxOut 160ms ease-in forwards; }
+@keyframes boxIn  { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes boxOut { to   { transform: scale(0.97); opacity: 0; } }
+
+/* ----- Top controls ----- */
+.closeBtn {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 20;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.85);
+  color: rgba(44, 36, 32, 0.7);
+  transition: background 150ms, color 150ms;
+}
+.closeBtn:hover { background: rgba(255, 255, 255, 1); color: #2C2420; }
+
+.skipBtn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 20;
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
+  transition: color 150ms;
+}
+.skipBtn:hover { color: #fff; }
+
+.pauseBtn {
+  position: absolute;
+  top: 14px;
+  right: 78px;
+  z-index: 20;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.85);
+  color: rgba(44, 36, 32, 0.7);
+  transition: background 150ms, color 150ms, opacity 150ms;
+}
+.pauseBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 1);
+  color: #2C2420;
+}
+.pauseBtn:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ----- Stage (top portion of modal — chrome + content viewport) -----
+   Captions now live INSIDE the stage as editorial overlays, so the stage
+   only reserves room for the bottom progress bar (3px). */
+.stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 3px;
+  overflow: hidden;
+  background: #FAF8F5;
+}
+
+/* Paused state — freeze every CSS animation in the stage */
+.stage.paused,
+.stage.paused *,
+.stage.paused *::before,
+.stage.paused *::after {
+  animation-play-state: paused !important;
+}
+
+/* ----- Browser chrome (phases 1-4 desktop) ----- */
+.browserChrome {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 32px;
+  background: #EDE6DD;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 14px;
+  z-index: 10;
+}
+.dots { display: flex; gap: 6px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(0, 0, 0, 0.18); }
+.urlBar {
+  flex: 1;
+  position: relative;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: rgba(44, 36, 32, 0.55);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  height: 22px;
+}
+.urlText {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+.urlTextHome { opacity: 1; }
+.urlTextTrip { opacity: 0; }
+.stage.playing .urlTextHome { animation: urlHide 0.4s linear 7.5s forwards; }
+.stage.playing .urlTextTrip { animation: urlShow 0.4s linear 7.5s forwards; }
+@keyframes urlHide { to { opacity: 0; } }
+@keyframes urlShow { to { opacity: 1; } }
+.stage.ended .urlTextHome { opacity: 0; }
+.stage.ended .urlTextTrip { opacity: 1; }
+
+/* ----- Phase 1+2: home mockup (real home screenshot + overlays) ----- */
+.homeMockup {
+  position: absolute;
+  top: 32px; left: 0; right: 0; bottom: 0;
+  background: #FAF8F5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stage.playing .homeMockup {
+  animation: homeFadeOut 0.3s ease-in-out 5.5s forwards;
+}
+@keyframes homeFadeOut {
+  0%   { opacity: 1; }
+  100% { opacity: 0; pointer-events: none; }
+}
+
+/* ----- Phase 1+2: home mockup (real home screenshot + overlays) -----
+   Image renders at its natural fit (max-width / max-height 100%, browser
+   centres via flex). Overlay positions are computed in JS from the
+   image's actual rendered bounding rect — see useEffect for homeImgRect
+   in modal.tsx. CSS here just defines visual style; positions come in
+   via inline style or CSS variables. */
+.homeMockup {
+  position: absolute;
+  top: 32px; left: 0; right: 0; bottom: 0;
+  background: #FAF8F5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stage.playing .homeMockup {
+  animation: homeFadeOut 0.3s ease-in-out 5.5s forwards;
+}
+@keyframes homeFadeOut {
+  0%   { opacity: 1; }
+  100% { opacity: 0; pointer-events: none; }
+}
+.homeBase {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  /* HTML width/height attrs (1303×993) give browser the intrinsic ratio
+     so it scales correctly with the max-* constraints. */
+}
+
+/* Typed text — styled here, positioned via inline style from JS */
+.typedText {
+  position: absolute;
+  z-index: 4;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.5;
+  /* Muted warm gray to match the textarea's own placeholder style.
+     The placeholder is now painted out of home-page.jpg so the typed
+     text reads as user input on an empty textarea. */
+  color: rgba(44, 36, 32, 0.5);
+  background: transparent;
+  padding: 0;
+  white-space: pre-wrap;
+  overflow: hidden;
+  pointer-events: none;
+}
+.typedText::after {
+  content: '';
+  display: inline-block;
+  width: 1px;
+  height: 1em;
+  background: currentColor;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink 1s steps(2, start) infinite;
+}
+@keyframes blink { to { opacity: 0; } }
+
+/* Cursor for phase 1 — keyframe interpolates via CSS variables set
+   inline by JS (--cursor-start-x/y, --cursor-target-x/y in px). */
+.cursorPhase1 {
+  position: absolute;
+  width: 18px;
+  height: 22px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 6;
+  /* Defaults — overridden by inline style with px values when image rect
+     has been measured. */
+  left: var(--cursor-start-x, 50%);
+  top: var(--cursor-start-y, 60%);
+}
+.stage.playing .cursorPhase1 {
+  animation:
+    cursor1 0.9s cubic-bezier(0.45, 0, 0.55, 1) 4.4s forwards,
+    cursor1Hide 0.3s ease-out 5.5s forwards;
+}
+@keyframes cursor1 {
+  0%   { opacity: 0; left: var(--cursor-start-x);  top: var(--cursor-start-y);  transform: scale(1); }
+  18%  { opacity: 1; left: var(--cursor-start-x);  top: var(--cursor-start-y);  transform: scale(1); }
+  /* travel to pill */
+  78%  { left: var(--cursor-target-x); top: var(--cursor-target-y); transform: scale(1); }
+  /* press — hold ~120ms so the click reads */
+  86%  { transform: scale(0.72); }
+  92%  { transform: scale(0.72); }
+  /* release */
+  100% { opacity: 1; left: var(--cursor-target-x); top: var(--cursor-target-y); transform: scale(1); }
+}
+@keyframes cursor1Hide { to { opacity: 0; } }
+
+/* Click ripple — positioned via inline style at the click target */
+.clickRipplePhase1 {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  border: 2.5px solid #C4622D;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.3);
+}
+.stage.playing .clickRipplePhase1 {
+  animation: ripple 0.7s ease-out 4.95s forwards;
+}
+@keyframes ripple {
+  0%   { opacity: 0.85; transform: translate(-50%, -50%) scale(0.3); }
+  100% { opacity: 0;    transform: translate(-50%, -50%) scale(2.4); }
+}
+
+/* ----- Phase 2: spinner ----- */
+.spinner {
+  position: absolute;
+  top: 32px; left: 0; right: 0; bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #FAF8F5;
+  opacity: 0;
+  pointer-events: none;
+}
+.stage.playing .spinner {
+  animation: spinnerVisible 2s ease-in-out 5.5s forwards;
+}
+@keyframes spinnerVisible {
+  0%   { opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+.spinnerRing {
+  width: 44px;
+  height: 44px;
+  border: 2.5px solid rgba(196, 98, 45, 0.18);
+  border-top-color: #C4622D;
+  border-radius: 50%;
+  animation: spin 0.85s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinnerLabel {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 12px;
+  color: rgba(44, 36, 32, 0.55);
+  letter-spacing: 0.02em;
+}
+
+/* ----- Phase 3-4: trip page ----- */
+.tripPage {
+  position: absolute;
+  top: 32px; left: 0; right: 0; bottom: 0;
+  background: #FAF8F5;
+  overflow: hidden;
+  opacity: 0;
+}
+.stage.playing .tripPage {
+  animation:
+    tripPageIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 7.5s forwards,
+    tripPageOut 1s ease-in-out 17.5s forwards;
+}
+@keyframes tripPageIn {
+  0%   { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes tripPageOut {
+  0%   { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-40px); }
+}
+
+/* Sticky strip — first 42px of the desktop screenshot, fixed on top while
+   the rest of the page scrolls underneath. Gives the QUOTE / Design /
+   Preview / Share row that "always-on-top" feel from the real product. */
+.tripStickyStrip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 42px;
+  z-index: 5;
+  background-image: url('/demo-modal/desktop-sticky.jpg');
+  background-position: top left;
+  background-repeat: no-repeat;
+  background-size: 100% auto;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+/* Scrollable content layer (the full screenshot, including the row that
+   sits under the sticky strip — they overlay each other at top, then the
+   underlying layer scrolls away) */
+.tripScrollWrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+.tripScroll {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+.tripBase {
+  width: 100%;
+  display: block;
+}
+.stage.playing .tripScroll {
+  /* Phase 4 scroll: 9.5s - 17.5s = 8s. Accelerating (ease-in) — slow start
+     so the eye settles on the new page, then accelerates through the
+     content. End offset takes the viewport all the way to the bottom of
+     the screenshot (footer + accommodations + price all rolled past). */
+  animation: pageScroll 8s cubic-bezier(0.45, 0, 1, 1) 9.5s forwards;
+}
+@keyframes pageScroll {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-4355px); }
+}
+
+/* Hero photo overlay — slides in from the right at phase 3 start to
+   cover the trip page's empty (black) hero. */
+.heroPhoto {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 720px;
+  display: block;
+  opacity: 0;
+  z-index: 2;
+}
+.stage.playing .heroPhoto {
+  animation: photoSlideRight 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) 7.7s forwards;
+}
+
+/* Day photo overlays — absolute over .tripScroll. Coordinates measured
+   against the new desktop-page.jpg (1024 × 5173). Each placeholder
+   rectangle in the screenshot:
+     Day 1 — left side,  ~y=1430..1820, ~510×390
+     Day 2 — right side, ~y=1925..2300, ~510×375
+     Day 3 — left side,  ~y=2400..2800, ~510×390
+   Photo files are 800×500 (1.6:1); displayed at 510×320 vertically
+   centred inside each placeholder. */
+.dayPhoto {
+  position: absolute;
+  display: block;
+  opacity: 0;
+  border-radius: 2px;
+  width: 510px;
+  height: 320px;
+  z-index: 3;
+}
+.day1Photo { left: 50px;  top: 1465px; }
+.day2Photo { left: 460px; top: 1965px; }
+.day3Photo { left: 50px;  top: 2440px; }
+
+.stage.playing .day1Photo {
+  animation: photoSlideLeft 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) 11.3s forwards;
+}
+.stage.playing .day2Photo {
+  animation: photoSlideRight 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) 12.6s forwards;
+}
+.stage.playing .day3Photo {
+  animation: photoSlideLeft 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) 14.6s forwards;
+}
+
+/* Slide-from-side keyframes — photo flies in from off-screen edge to
+   its placeholder position. Reads as "dragged from a folder" without
+   the cost of a per-photo cursor track. */
+@keyframes photoSlideLeft {
+  0%   { opacity: 0; transform: translateX(-120%) scale(0.96); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes photoSlideRight {
+  0%   { opacity: 0; transform: translateX(120%) scale(0.96); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+/* Cursor for phase 4 — appears in mid-page, travels to Share pill in
+   the sticky strip and presses. (Was previously a two-click sequence
+   visiting price first; price overlay is removed.) */
+.cursorPhase4 {
+  position: absolute;
+  width: 18px;
+  height: 22px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 6;
+  left: 50%;
+  top: 70%;
+}
+.stage.playing .cursorPhase4 {
+  animation: cursor4 1.7s cubic-bezier(0.45, 0, 0.55, 1) 16s forwards;
+}
+@keyframes cursor4 {
+  0%   { opacity: 0; left: 50%; top: 70%; transform: scale(1); }
+  10%  { opacity: 1; left: 50%; top: 70%; transform: scale(1); }
+  /* travel up to Share pill in sticky strip */
+  78%  { left: 91%; top: 4.5%; transform: scale(1); }
+  /* press Share */
+  88%  { transform: scale(0.78); }
+  100% { opacity: 1; left: 91%; top: 4.5%; transform: scale(1); }
+}
+
+/* Phase 4 ripple — over Share pill */
+.clickRipplePhase4Share {
+  position: absolute;
+  left: 91%;
+  top: 4.5%;
+  width: 40px;
+  height: 40px;
+  border: 2.5px solid #C4622D;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 7;            /* above sticky strip */
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.3);
+}
+.stage.playing .clickRipplePhase4Share {
+  animation: ripple 0.6s ease-out 17.55s forwards;
+}
+
+/* ----- Phase 5: phone ----- */
+.phoneFrame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: clamp(180px, 24vw, 240px);
+  aspect-ratio: 393 / 800;
+  background: #1A1714;
+  border-radius: 28px;
+  padding: 8px;
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  opacity: 0;
+}
+.stage.playing .phoneFrame {
+  animation: phoneIn 1s cubic-bezier(0.16, 1, 0.3, 1) 17.5s forwards;
+}
+@keyframes phoneIn {
+  0%   { opacity: 0; transform: translate(-50%, -50%) translateX(60px); }
+  100% { opacity: 1; transform: translate(-50%, -50%) translateX(0); }
+}
+.phoneScreen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #FAF8F5;
+  border-radius: 22px;
+  overflow: hidden;
+}
+.phoneScreenshot {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  display: block;
+}
+.stage.playing .phoneScreenshot {
+  animation: phoneScroll 3.5s cubic-bezier(0.45, 0, 0.55, 1) 18.5s forwards;
+}
+@keyframes phoneScroll {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-86%); }
+}
+
+/* ----- Editorial captions (live INSIDE stage) -----
+   Same typography across all phases — Cormorant numerals + thin rule +
+   italic title. Only position and colour change per phase, so the eye
+   tracks the caption as the demo progresses. Numerals are large and
+   light-weight; the title is small italic. No badges, no pills, no
+   backdrop. Visibility is driven by `capShow` keyframe at each phase's
+   own start/end window — same timing window the captionRow used. */
+.cap {
+  position: absolute;
+  z-index: 8;
+  pointer-events: none;
+  opacity: 0;
+  font-family: var(--font-serif), Georgia, serif;
+  color: #2C2420;
+}
+.capNum {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 56px;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.capRule {
+  width: 28px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+  margin: 14px 0 12px;
+}
+.capTitle {
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 22px;
+  line-height: 1.15;
+  font-weight: 400;
+}
+
+/* Per-phase positions. Phase 1: home page is centered with cream margins
+   on either side, so the caption sits in the left margin (Vadim's chosen
+   spot). Phase 2: above the spinner, centred. Phase 3: bottom-right of
+   the trip page hero photo, light text on dark image. Phase 4: top-right
+   of the scrolled trip page, dark on cream. Phase 5: top-left next to
+   the phone preview that slides in from the right. */
+.capPh1 { left: 36px; top: 130px; }
+.capPh2 { left: 50%; top: 18%; transform: translateX(-50%); text-align: center; }
+.capPh2 .capRule { margin-left: auto; margin-right: auto; }
+.capPh3 { right: 36px; bottom: 60px; color: #FAF8F5; text-align: right; }
+.capPh3 .capRule { margin-left: auto; }
+.capPh4 { right: 36px; top: 50px; text-align: right; }
+.capPh4 .capRule { margin-left: auto; }
+.capPh5 { left: 36px; top: 130px; }
+
+/* Visibility — re-uses the same time windows the original captionRow had */
+.modalBox.playing .capPh1 { animation: capShow 5.5s linear 0.2s forwards; }
+.modalBox.playing .capPh2 { animation: capShow 2.0s linear 5.5s forwards; }
+.modalBox.playing .capPh3 { animation: capShow 2.0s linear 7.5s forwards; }
+.modalBox.playing .capPh4 { animation: capShow 8.0s linear 9.5s forwards; }
+.modalBox.playing .capPh5 { animation: capShow 4.0s linear 18.0s forwards; }
+
+@keyframes capShow {
+  0%   { opacity: 0; transform: translateY(4px); }
+  /* Phase 2 has additional translateX(-50%); preserve via per-keyframe */
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* The translateY animation conflicts with capPh2's translateX. Override
+   for that phase — fade only, no movement. */
+.modalBox.playing .capPh2 { animation-name: capShowCenter; }
+@keyframes capShowCenter {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  10%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  90%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(0); }
+}
+
+/* Hide all captions in ended/closing state */
+.modalBox.ended .cap,
+.modalBox.closing .cap { opacity: 0; }
+
+/* ----- End-state controls (lives in modalBox, replaces caption when ended) ----- */
+.endControls {
+  position: absolute;
+  bottom: 14px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9;
+  transition: opacity 300ms;
+}
+.modalBox.ended .endControls {
+  opacity: 1;
+  pointer-events: auto;
+}
+.watchAgainBtn {
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  color: rgba(44, 36, 32, 0.7);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 150ms;
+}
+.watchAgainBtn:hover { color: #2C2420; }
+.ctaBtn {
+  background: #C4622D;
+  color: #FFFFFE;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 22px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 150ms;
+}
+.ctaBtn:hover { background: #A55224; }
+
+/* ----- Progress bar ----- */
+.progressBar {
+  position: absolute;
+  bottom: 0;
+  left: 0; right: 0;
+  height: 3px;
+  background: rgba(44, 36, 32, 0.08);
+  z-index: 9;
+}
+.progressFill {
+  width: 0%;
+  height: 100%;
+  background: #C4622D;
+}
+.modalBox.playing .progressFill {
+  animation: progress 22s linear forwards;
+}
+.modalBox.ended .progressFill {
+  width: 100%;
+}
+@keyframes progress {
+  to { width: 100%; }
+}
+
+/* ----- End-state freeze: snap final state of every animated element ----- */
+.stage.ended .day1Photo,
+.stage.ended .day2Photo,
+.stage.ended .day3Photo {
+  opacity: 1;
+  transform: translateY(0);
+}
+.stage.ended .tripPage      { opacity: 0; }
+.stage.ended .phoneFrame    { opacity: 1; transform: translate(-50%, -50%); }
+.stage.ended .phoneScreenshot { transform: translateY(-86%); }
+.stage.ended .homeMockup    { opacity: 0; pointer-events: none; }
+.stage.ended .spinner       { opacity: 0; }
+.stage.ended .cursorPhase1,
+.stage.ended .cursorPhase4  { opacity: 0; }
+.stage.ended .tripScroll    { transform: translateY(-3850px); }
+
+/* ----- Reduced motion: jump straight to end state, no animations ----- */
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .modalBox { animation: none !important; }
+  .stage *,
+  .stage *::before,
+  .stage *::after { animation: none !important; transition: none !important; }
+  .modalBox.playing .progressFill { width: 100%; }
+  .modalBox.playing .day1Photo,
+  .modalBox.playing .day2Photo,
+  .modalBox.playing .day3Photo { opacity: 1; transform: translateY(0); }
+  .modalBox.playing .tripPage  { opacity: 0; }
+  .modalBox.playing .phoneFrame { opacity: 1; }
+  .modalBox.playing .phoneScreenshot { transform: translateY(-86%); }
+  .modalBox.playing .endControls { opacity: 1; pointer-events: auto; }
+  .modalBox.playing .cap { opacity: 0; }
+}
