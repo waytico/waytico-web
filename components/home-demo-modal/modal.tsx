@@ -425,6 +425,12 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
                 />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
+                  src="/demo-modal/hero-photo.jpg"
+                  className={styles.heroPhoto}
+                  alt=""
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src="/demo-modal/day-1-photo.jpg"
                   className={cn(styles.dayPhoto, styles.day1Photo)}
                   alt=""

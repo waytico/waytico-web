@@ -396,54 +396,76 @@
   display: block;
 }
 .stage.playing .tripScroll {
-  /* Scrolls during phase 4 (9.5s - 17.5s = 8s). Translate values calibrated
-     so each Day's photo placeholder lands near the centre of the
-     720-px viewport (stage 794 - chrome 32 - sticky 42). */
-  animation: pageScroll 8s cubic-bezier(0.45, 0, 0.55, 1) 9.5s forwards;
+  /* Phase 4 scroll: 9.5s - 17.5s = 8s. Accelerating (ease-in) — slow start
+     so the eye settles on the new page, then accelerates through the
+     content. End offset takes the viewport all the way to the bottom of
+     the screenshot (footer + accommodations + price all rolled past). */
+  animation: pageScroll 8s cubic-bezier(0.45, 0, 1, 1) 9.5s forwards;
 }
 @keyframes pageScroll {
-  0%    { transform: translateY(0); }
-  /* 0 → 1.5s: scroll to Day 1 placeholder */
-  18.7% { transform: translateY(-1180px); }
-  /* hold while Day 1 photo lands */
-  31.2% { transform: translateY(-1180px); }
-  /* 2.5 → 3.3s: scroll to Day 2 */
-  41.2% { transform: translateY(-1950px); }
-  /* hold for Day 2 photo */
-  48.7% { transform: translateY(-1950px); }
-  /* to Day 3 */
-  57.5% { transform: translateY(-2720px); }
-  /* hold for Day 3 photo */
-  65.0% { transform: translateY(-2720px); }
-  /* through accommodations to price */
-  78.7% { transform: translateY(-3850px); }
-  /* hold during price typing + cursor to share */
-  100%  { transform: translateY(-3850px); }
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-4355px); }
 }
 
-/* Day photo overlays — absolute over .tripScroll, in screenshot coordinates */
+/* Hero photo overlay — slides in from the right at phase 3 start to
+   cover the trip page's empty (black) hero. */
+.heroPhoto {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 720px;
+  display: block;
+  opacity: 0;
+  z-index: 2;
+}
+.stage.playing .heroPhoto {
+  animation: photoSlideRight 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) 7.7s forwards;
+}
+
+/* Day photo overlays — absolute over .tripScroll. Coordinates measured
+   against the new desktop-page.jpg (1024 × 5173). Each placeholder
+   rectangle in the screenshot:
+     Day 1 — left side,  ~y=1430..1820, ~510×390
+     Day 2 — right side, ~y=1925..2300, ~510×375
+     Day 3 — left side,  ~y=2400..2800, ~510×390
+   Photo files are 800×500 (1.6:1); displayed at 510×320 vertically
+   centred inside each placeholder. */
 .dayPhoto {
   position: absolute;
   display: block;
   opacity: 0;
   border-radius: 2px;
+  width: 510px;
+  height: 320px;
+  z-index: 3;
 }
-.day1Photo { left: 48px;  top: 1380px; width: 480px; height: 320px; }
-.day2Photo { left: 496px; top: 2150px; width: 480px; height: 320px; }
-.day3Photo { left: 48px;  top: 2920px; width: 480px; height: 320px; }
+.day1Photo { left: 50px;  top: 1465px; }
+.day2Photo { left: 460px; top: 1965px; }
+.day3Photo { left: 50px;  top: 2440px; }
 
 .stage.playing .day1Photo {
-  animation: photoIn 1s cubic-bezier(0.4, 0, 0.2, 1) 11.0s forwards;
+  animation: photoSlideLeft 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) 11.3s forwards;
 }
 .stage.playing .day2Photo {
-  animation: photoIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 12.8s forwards;
+  animation: photoSlideRight 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) 12.6s forwards;
 }
 .stage.playing .day3Photo {
-  animation: photoIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 14.1s forwards;
+  animation: photoSlideLeft 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) 14.6s forwards;
 }
-@keyframes photoIn {
-  0%   { opacity: 0; transform: translateY(-24px) scale(0.96); }
-  100% { opacity: 1; transform: translateY(0)    scale(1); }
+
+/* Slide-from-side keyframes — photo flies in from off-screen edge to
+   its placeholder position. Reads as "dragged from a folder" without
+   the cost of a per-photo cursor track. */
+@keyframes photoSlideLeft {
+  0%   { opacity: 0; transform: translateX(-120%) scale(0.96); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes photoSlideRight {
+  0%   { opacity: 0; transform: translateX(120%) scale(0.96); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
 }
 
 /* Cursor for phase 4 — appears in mid-page, travels to Share pill in
