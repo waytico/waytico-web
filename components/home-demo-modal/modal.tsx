@@ -19,11 +19,10 @@ interface DemoModalProps {
 type Phase = 'closed' | 'opening' | 'playing' | 'ended' | 'closing'
 
 const HOME_TEXT_LINES = [
-  'Paris, 2 people, from June 28',
-  'Day 1 — Marais and Seine',
-  'Day 2 — Louvre and Saint-Germain',
-  'Day 3 — Montmartre and farewell brunch',
-  'Hôtel des Deux Pavillons',
+  '3 days in Paris, late June. Hôtel des Deux Pavillons.',
+  'Day 1 Marais and Seine,',
+  'Day 2 Louvre and Saint-Germain,',
+  'Day 3 Montmartre, farewell brunch.',
 ]
 const HOME_TEXT_FULL = HOME_TEXT_LINES.join('\n')
 const PRICE_FINAL = '1,800'

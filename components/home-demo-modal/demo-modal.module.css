@@ -193,21 +193,28 @@
      standard and retina displays; no upscaling. */
 }
 
-/* Typed text overlay positioned over the screenshot's textarea card.
-   Coordinates are % of stage. Image centred in stage; textarea at:
-   - left ~34.5%, right ~65.5% (inner padding inside white card)
-   - top ~39%  (where the placeholder line sits) */
+/* Typed text overlay — sits inside the textarea card of the screenshot.
+   Coordinates calibrated for image rendered at 999×762 in stage:
+   - textarea content x: 16% .. 40% (width 24%)
+   - textarea content y: 21% .. 32%
+   White background covers the screenshot's placeholder text, so as the
+   typewriter fills the area the textarea reads as 'user is typing'. */
 .typedText {
   position: absolute;
-  top: 39%;
-  left: 34.5%;
-  width: 31%;
+  top: 21%;
+  left: 16%;
+  width: 24%;
+  height: 11.5%;
   z-index: 4;
   font-family: var(--font-sans), system-ui, sans-serif;
   font-size: 11px;
+  font-style: italic;
   line-height: 1.5;
   color: rgba(44, 36, 32, 0.85);
+  background: #FFFFFE;
+  padding: 1px 6px 0 0;
   white-space: pre-wrap;
+  overflow: hidden;
   pointer-events: none;
 }
 .typedText::after {
@@ -223,7 +230,8 @@
 @keyframes blink { to { opacity: 0; } }
 
 /* Cursor for phase 1 — moves to the disabled Create-quote pill in the
-   screenshot and presses. Click target measured at 62.8% / 54.5%. */
+   screenshot and presses. Pill centre at 37.7% / 32.2% (image rendered
+   at 999×762 in stage; pill at source x=487, y=292). */
 .cursorPhase1 {
   position: absolute;
   width: 18px;
@@ -232,7 +240,7 @@
   opacity: 0;
   z-index: 6;
   left: 50%;
-  top: 70%;
+  top: 55%;
 }
 .stage.playing .cursorPhase1 {
   animation:
@@ -240,23 +248,23 @@
     cursor1Hide 0.3s ease-out 5.5s forwards;
 }
 @keyframes cursor1 {
-  0%   { opacity: 0; left: 50%; top: 70%; transform: scale(1); }
-  18%  { opacity: 1; left: 50%; top: 70%; transform: scale(1); }
+  0%   { opacity: 0; left: 50%; top: 55%; transform: scale(1); }
+  18%  { opacity: 1; left: 50%; top: 55%; transform: scale(1); }
   /* travel to pill */
-  78%  { left: 62.8%; top: 54.5%; transform: scale(1); }
-  /* press — hold the shrunk scale for ~120ms so the click reads */
+  78%  { left: 37.7%; top: 32.2%; transform: scale(1); }
+  /* press — hold the shrunk scale ~120ms so the click reads */
   86%  { transform: scale(0.72); }
   92%  { transform: scale(0.72); }
   /* release */
-  100% { opacity: 1; left: 62.8%; top: 54.5%; transform: scale(1); }
+  100% { opacity: 1; left: 37.7%; top: 32.2%; transform: scale(1); }
 }
 @keyframes cursor1Hide { to { opacity: 0; } }
 
 /* Click ripple — single expanding ring from the click point */
 .clickRipplePhase1 {
   position: absolute;
-  left: 62.8%;
-  top: 54.5%;
+  left: 37.7%;
+  top: 32.2%;
   width: 50px;
   height: 50px;
   border: 2.5px solid #C4622D;
