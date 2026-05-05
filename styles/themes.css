@@ -3575,20 +3575,19 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   background: transparent;
-  border: 1px solid var(--accent);
+  border: 0;
   color: var(--accent);
-  padding: 10px 18px;
+  padding: 4px 0;
   border-radius: 0;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: background 0.18s ease, color 0.18s ease;
+  transition: opacity 0.18s ease;
 }
 
 [data-theme="magazine"] .tp-mag-terms__toggle:hover {
-  background: var(--accent);
-  color: var(--accent-ink);
+  opacity: 0.7;
 }
 
 [data-theme="magazine"] .tp-mag-terms__toggle-caret {

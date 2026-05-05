@@ -1829,9 +1829,16 @@ export default function TripPageClient({ slug, initialData }: Props) {
           visible={termsVisible}
           collapsible={!ed}
           ownerHint={
-            ed
-              ? "These terms were AI-generated from your profile defaults. AI can make mistakes — please review every rule to make sure it matches your actual conditions. Edits here apply to this trip only. Update your profile terms to change them across this and future trips."
-              : undefined
+            ed ? (
+              <>
+                <span style={{ display: 'block', marginBottom: 10 }}>
+                  These terms were AI-generated from your profile defaults. AI can make mistakes — please review every rule to make sure it matches your actual conditions.
+                </span>
+                <span style={{ display: 'block' }}>
+                  Edits here apply to this trip only. Update your profile terms to change the default terms for future quotes.
+                </span>
+              </>
+            ) : undefined
           }
         />
 
