@@ -38,6 +38,11 @@ export type Project = {
   price_per_person?: number | null
   price_total?: number | null
   currency?: string | null
+  // Quote lifecycle dates — surfaced in the dashboard's Issued / Expires
+  // columns and used by the issued/expires sort modes. Both come from
+  // tripsService listByUser which selects them on every project row.
+  proposal_date?: string | null
+  valid_until?: string | null
 }
 
 type Props = {

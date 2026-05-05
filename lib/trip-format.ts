@@ -229,3 +229,26 @@ export function numberToWords(n: number | null | undefined): string | null {
   if (ones === 0) return TENS_WORDS[tens]
   return `${TENS_WORDS[tens]}-${ONES_WORDS[ones]}`
 }
+
+/**
+ * True iff the given ISO date (or full timestamp) is strictly before
+ * today's local-date midnight. Used to decide when to swap "Valid until"
+ * → "Expired" labels and to flag rows in the dashboard list.
+ *
+ * Day-precision comparison: a quote whose valid_until is "today" is
+ * still valid right up to end-of-day. Comparing on date-strings only
+ * (YYYY-MM-DD) avoids the local-time zone foot-gun where a midnight-
+ * timestamp parsed in UTC would slip into the previous calendar day.
+ */
+export function isDateInPast(dateStr: string | null | undefined): boolean {
+  if (!dateStr) return false
+  // Trim a trailing "Tnn:nn:nn..." if backend returned a full ISO
+  // timestamp (the DATE column does that under some pg drivers).
+  const ymd = String(dateStr).slice(0, 10)
+  const today = new Date()
+  const yyyy = today.getFullYear()
+  const mm = String(today.getMonth() + 1).padStart(2, '0')
+  const dd = String(today.getDate()).padStart(2, '0')
+  const todayStr = `${yyyy}-${mm}-${dd}`
+  return ymd < todayStr
+}

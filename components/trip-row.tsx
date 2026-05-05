@@ -9,6 +9,7 @@ import { apiFetch } from '@/lib/api'
 import { ArchiveDialog } from './trip/archive-dialog'
 import { ActivateStubModal } from './activate-stub-modal'
 import { buildTripMenu, getStatusMeta } from '@/lib/trip-status'
+import { isDateInPast } from '@/lib/trip-format'
 import { attentionReason } from '@/lib/trip-grouping'
 import type { Project } from './project-card'
 
@@ -38,6 +39,18 @@ function fmtDateRange(start: string | null | undefined, end: string | null | und
     return `${sStr} – ${eStr}`
   } catch {
     return null
+  }
+}
+
+/** Compact "Mar 5" formatter for the Issued/Expires column. Renders
+ *  empty string on a parse failure (callers fall back to a non-breaking
+ *  space so the row's vertical rhythm doesn't jump). */
+function fmtMonDay(d: string | null | undefined): string {
+  if (!d) return ''
+  try {
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  } catch {
+    return ''
   }
 }
 
@@ -216,6 +229,41 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
             )}
           </div>
         </Link>
+
+        {/* Issued / Expires — compact two-line column. Issued surfaces
+            proposal_date (when this quote was prepared); Expires shows
+            valid_until, swapping the label to "Expired" once that date
+            has passed. Hidden on small screens — the dashboard meta
+            line above already carries the date range and status pill is
+            adjacent. Quoted is the only status where these values are
+            actionable, but we render for any status that has them set
+            so the columns don't pop in/out as the operator sorts. */}
+        <div className="hidden md:flex flex-col items-end text-[11px] leading-tight text-foreground/55 flex-shrink-0 w-32">
+          {project.proposal_date ? (
+            <div>
+              <span className="text-foreground/40 uppercase tracking-wider mr-1">
+                Issued
+              </span>
+              <span className="text-foreground/70">
+                {fmtMonDay(project.proposal_date)}
+              </span>
+            </div>
+          ) : (
+            <div>&nbsp;</div>
+          )}
+          {project.valid_until ? (
+            <div className="mt-0.5">
+              <span className="text-foreground/40 uppercase tracking-wider mr-1">
+                {isDateInPast(project.valid_until) ? 'Expired' : 'Expires'}
+              </span>
+              <span className="text-foreground/70">
+                {fmtMonDay(project.valid_until)}
+              </span>
+            </div>
+          ) : (
+            <div className="mt-0.5">&nbsp;</div>
+          )}
+        </div>
 
         {/* Status pill = dropdown trigger (matches trip-action-bar). */}
         <div ref={triggerWrapRef} className="relative inline-block flex-shrink-0">

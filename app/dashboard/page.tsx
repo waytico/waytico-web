@@ -12,7 +12,7 @@ import TripRow from '@/components/trip-row'
 import type { Project, ProjectStatus } from '@/components/project-card'
 import { apiFetch } from '@/lib/api'
 
-type SortMode = 'state' | 'created'
+type SortMode = 'state' | 'created' | 'issued' | 'expires'
 type SortDir = 'asc' | 'desc'
 type StatusFilter = 'all' | ProjectStatus
 type PerPage = 10 | 25 | 50 | 100
@@ -37,6 +37,8 @@ const STATUS_FILTER_OPTIONS: { key: StatusFilter; label: string }[] = [
 const SORT_OPTIONS: { key: SortMode; label: string }[] = [
   { key: 'state', label: 'By state' },
   { key: 'created', label: 'By date created' },
+  { key: 'issued', label: 'By issued date' },
+  { key: 'expires', label: 'By expiry date' },
 ]
 
 const PER_PAGE_OPTIONS: PerPage[] = [10, 25, 50, 100]
@@ -216,6 +218,28 @@ export default function DashboardPage() {
         const sb = STATUS_ORDER[b.status as ProjectStatus] ?? 99
         if (sa !== sb) return sa - sb
         return +new Date(b.created_at) - +new Date(a.created_at)
+      })
+    } else if (sortMode === 'issued') {
+      // Sort by proposal_date (when the quote was issued). Trips
+      // without a proposal_date sink to the bottom regardless of dir.
+      sorted.sort((a, b) => {
+        const ad = (a as any).proposal_date as string | null
+        const bd = (b as any).proposal_date as string | null
+        if (ad && bd) return +new Date(bd) - +new Date(ad) // newest first
+        if (ad) return -1
+        if (bd) return 1
+        return 0
+      })
+    } else if (sortMode === 'expires') {
+      // Sort by valid_until (when the quote expires). Soonest-expiring
+      // first by default; trips without a valid_until sink to bottom.
+      sorted.sort((a, b) => {
+        const ad = (a as any).valid_until as string | null
+        const bd = (b as any).valid_until as string | null
+        if (ad && bd) return +new Date(ad) - +new Date(bd) // soonest first
+        if (ad) return -1
+        if (bd) return 1
+        return 0
       })
     } else {
       sorted.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))

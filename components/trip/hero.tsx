@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
 import type { ThemeId } from '@/lib/themes'
 import { HERO_STYLE } from '@/lib/themes'
-import { fmtDate, numberToWords } from '@/lib/trip-format'
+import { fmtDate, isDateInPast, numberToWords } from '@/lib/trip-format'
 import { PublicStatusPill } from './public-status-pill'
 
 export type HeroOperatorContact = {
@@ -260,7 +260,11 @@ function HeroTopStrip({
             )}
             {hasValidUntil && (
               <>
-                <span>{UI.validUntil}</span>
+                <span>
+                  {validUntil && isDateInPast(validUntil)
+                    ? UI.expired
+                    : UI.validUntil}
+                </span>
                 <span>{validUntilSlot ?? (validUntil ? fmtDate(validUntil) : null)}</span>
               </>
             )}

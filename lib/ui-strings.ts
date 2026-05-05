@@ -28,6 +28,7 @@ export const UI = {
   included: 'Included',
   proposal: 'Issued',
   validUntil: 'Valid until',
+  expired: 'Expired',
   totalPrice: 'Total',
   bookCta: 'Reserve dates',
   contactsHeading: 'Questions about this trip?',
