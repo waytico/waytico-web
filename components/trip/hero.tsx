@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
 import type { ThemeId } from '@/lib/themes'
 import { HERO_STYLE } from '@/lib/themes'
-import { fmtDate, isDateInPast, numberToWords } from '@/lib/trip-format'
+import { fmtDate, isDateInPast, numberToWords, normalizeMagazineTitle } from '@/lib/trip-format'
 import { PublicStatusPill } from './public-status-pill'
 
 export type HeroOperatorContact = {
@@ -726,7 +726,13 @@ function MagazineHeroTitle({ titleSlot }: { titleSlot: ReactNode }) {
     // Owner editor brings its own <h1.tp-mag-hero__title> wrapper.
     return <>{titleSlot}</>
   }
-  const raw = titleSlot
+  // Render-time safety net for legacy rows that still carry markdown
+  // emphasis (`*tail*`) instead of the canonical `\n` separator. The
+  // backend write-time normaliser canonicalises new writes; this
+  // ensures public viewers never see literal asterisks regardless of
+  // when the row was last saved. See `normalizeMagazineTitle` for the
+  // full behaviour contract — idempotent on already-clean values.
+  const raw = normalizeMagazineTitle(titleSlot)
   const newlineIdx = raw.indexOf('\n')
   if (newlineIdx === -1) {
     // Legacy single-line title — render as before, no italic tail.

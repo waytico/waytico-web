@@ -252,3 +252,57 @@ export function isDateInPast(dateStr: string | null | undefined): boolean {
   const todayStr = `${yyyy}-${mm}-${dd}`
   return ymd < todayStr
 }
+
+/* ── Magazine title-shape normalizer ──────────────────────────────────
+ *
+ * The Magazine theme contract for trip and day titles is a single
+ * string with one embedded `\n` separating a regular-weight head from
+ * an italic tail (one line on the page for day titles, two lines for
+ * the hero title). Pipeline prompts and the trip-editor agent prompt
+ * forbid markdown emphasis in titles, but the LLM regularly regresses
+ * to `*tail*` or `_tail_` markers instead of `\n`. This is the
+ * render-time safety net for any DB rows that haven't been re-saved
+ * since the backend write-time fix shipped, and for any future LLM
+ * regression that slips past the prompt.
+ *
+ * Behaviour:
+ *  - Already-canonical (`Head\nTail`) input → strip stray emphasis
+ *    markers from each side, preserve the `\n`.
+ *  - Tail-anchored markdown italic with no `\n` (e.g.
+ *    "Marais, *and the Seine's flow.*") → convert to `Head\nTail` by
+ *    promoting the wrapped tail to the canonical position.
+ *  - Anything else (mid-string emphasis, **bold**, orphan markers,
+ *    plain text) → strip all `*` / `_` markers; no `\n` is invented.
+ *
+ * Pure, idempotent. The backend ships an identical implementation in
+ * `src/services/title-normalize.ts:normalizeMagazineTitle` — the two
+ * must stay behaviour-equivalent.
+ */
+function stripEmphasis(s: string): string {
+  return s
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/_([^_]+)_/g, '$1')
+    .replace(/[*_]+/g, '')
+    .trim()
+}
+
+export function normalizeMagazineTitle(raw: string | null | undefined): string {
+  if (!raw) return ''
+  if (raw.includes('\n')) {
+    const idx = raw.indexOf('\n')
+    const head = stripEmphasis(raw.slice(0, idx))
+    const tail = stripEmphasis(raw.slice(idx + 1))
+    if (!tail) return head
+    if (!head) return tail
+    return `${head}\n${tail}`
+  }
+  const m = raw.match(/^(.+?)\s*(\*+|_+)([^*_\n]+)\2\s*$/)
+  if (m) {
+    const head = stripEmphasis(m[1])
+    const tail = stripEmphasis(m[3])
+    if (head && tail) return `${head}\n${tail}`
+  }
+  return stripEmphasis(raw)
+}

@@ -50,6 +50,7 @@ import {
   coercePrice,
   addDaysISO,
   extractQuoteCode,
+  normalizeMagazineTitle,
 } from '@/lib/trip-format'
 import { useTripMutations } from '@/hooks/use-trip-mutations'
 import { usePhotoUpload, type MediaRecord } from '@/hooks/use-photo-upload'
@@ -258,10 +259,13 @@ function MagazineDayTitleEditor({
 
   // DISPLAY mode — same split-render as <MagazineDayTitle> in itinerary.tsx.
   // Empty title falls back to a placeholder; a missing tail (no \n) renders
-  // plain so legacy single-fragment titles keep working.
-  const newlineIdx = title.indexOf('\n')
-  const head = newlineIdx === -1 ? title : title.slice(0, newlineIdx).trimEnd()
-  const tail = newlineIdx === -1 ? '' : title.slice(newlineIdx + 1).trimStart()
+  // plain so legacy single-fragment titles keep working. The normalizer
+  // sweeps any markdown emphasis from legacy rows; textarea-mode (above)
+  // still opens with the raw stored value.
+  const clean = normalizeMagazineTitle(title)
+  const newlineIdx = clean.indexOf('\n')
+  const head = newlineIdx === -1 ? clean : clean.slice(0, newlineIdx).trimEnd()
+  const tail = newlineIdx === -1 ? '' : clean.slice(newlineIdx + 1).trimStart()
   return (
     <span
       className="block group cursor-pointer relative"
@@ -375,10 +379,15 @@ function MagazineTitleEditor({
 
   // DISPLAY mode — same split-render as the public viewer (see
   // <MagazineHeroTitle> in components/trip/hero.tsx) plus a click target
-  // and a subtle pencil affordance on hover.
-  const newlineIdx = title.indexOf('\n')
-  const head = newlineIdx === -1 ? title : title.slice(0, newlineIdx).trimEnd()
-  const tail = newlineIdx === -1 ? '' : title.slice(newlineIdx + 1).trimStart()
+  // and a subtle pencil affordance on hover. The normalizer handles
+  // legacy rows where the LLM regressed to markdown emphasis instead
+  // of the contractual `\n` separator; on click the textarea opens
+  // with the raw stored value so the operator sees what's actually in
+  // the DB and can decide whether to keep, rewrite, or canonicalise.
+  const clean = normalizeMagazineTitle(title)
+  const newlineIdx = clean.indexOf('\n')
+  const head = newlineIdx === -1 ? clean : clean.slice(0, newlineIdx).trimEnd()
+  const tail = newlineIdx === -1 ? '' : clean.slice(newlineIdx + 1).trimStart()
   return (
     <h1
       className="tp-mag-hero__title group cursor-pointer relative"

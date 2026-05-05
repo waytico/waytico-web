@@ -5,7 +5,7 @@ import { UI } from '@/lib/ui-strings'
 import type { ThemeId } from '@/lib/themes'
 import { ITINERARY_STYLE } from '@/lib/themes'
 import type { Day, MediaLite } from './trip-types'
-import { pad2, fmtDayDate, addDaysISO } from '@/lib/trip-format'
+import { pad2, fmtDayDate, addDaysISO, normalizeMagazineTitle } from '@/lib/trip-format'
 import {
   DndContext,
   closestCenter,
@@ -1236,13 +1236,19 @@ function MagazineDayPhoto(props: {
  */
 export function MagazineDayTitle({ text }: { text: string }) {
   if (!text) return null
-  const idx = text.indexOf('\n')
+  // Render-time safety net: same reason as MagazineHeroTitle. Legacy
+  // rows or LLM regressions can still contain markdown emphasis; the
+  // normalizer converts tail-anchored `*tail*` to `Head\nTail` and
+  // strips stray markers. Idempotent on already-clean values.
+  const clean = normalizeMagazineTitle(text)
+  if (!clean) return null
+  const idx = clean.indexOf('\n')
   if (idx === -1) {
     // Legacy single-fragment title — render plain.
-    return <span>{text}</span>
+    return <span>{clean}</span>
   }
-  const head = text.slice(0, idx).trimEnd()
-  const tail = text.slice(idx + 1).trimStart()
+  const head = clean.slice(0, idx).trimEnd()
+  const tail = clean.slice(idx + 1).trimStart()
   if (!tail) {
     // Stray trailing \n — degrade gracefully to plain head.
     return <span>{head}</span>
