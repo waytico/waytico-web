@@ -371,10 +371,13 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
             <span
               className={styles.typedText}
               style={{
-                left: `${homeImgRect.left + homeImgRect.width * 0.245}px`,
-                top: `${homeImgRect.top + homeImgRect.height * 0.297}px`,
-                width: `${homeImgRect.width * 0.495}px`,
-                height: `${homeImgRect.height * 0.18}px`,
+                // Placeholder area in home-page.jpg (now painted out):
+                // x=517/1999=25.86%, y=445/1524=29.2%, plus generous
+                // height for the 5 typed lines.
+                left: `${homeImgRect.left + homeImgRect.width * 0.259}px`,
+                top: `${homeImgRect.top + homeImgRect.height * 0.292}px`,
+                width: `${homeImgRect.width * 0.49}px`,
+                height: `${homeImgRect.height * 0.20}px`,
               }}
             >
               {typedHome}

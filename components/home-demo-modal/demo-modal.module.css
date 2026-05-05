@@ -218,12 +218,15 @@
   position: absolute;
   z-index: 4;
   font-family: var(--font-sans), system-ui, sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   font-style: italic;
   line-height: 1.5;
-  color: rgba(44, 36, 32, 0.85);
-  background: #FFFFFE;
-  padding: 0 6px 0 4px;
+  /* Muted warm gray to match the textarea's own placeholder style.
+     The placeholder is now painted out of home-page.jpg so the typed
+     text reads as user input on an empty textarea. */
+  color: rgba(44, 36, 32, 0.5);
+  background: transparent;
+  padding: 0;
   white-space: pre-wrap;
   overflow: hidden;
   pointer-events: none;
