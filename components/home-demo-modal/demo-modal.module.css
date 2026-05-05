@@ -175,20 +175,22 @@
   justify-content: center;
 }
 .stage.playing .homeMockup {
-  animation: phase12Visible 7.5s steps(1, end) forwards;
+  animation: homeFadeOut 0.3s ease-in-out 5.5s forwards;
 }
-@keyframes phase12Visible {
+@keyframes homeFadeOut {
   0%   { opacity: 1; }
-  98.5% { opacity: 1; } /* visible until ~7.4s */
   100% { opacity: 0; pointer-events: none; }
 }
 
 .homeBase {
-  height: 100%;
-  width: auto;
-  max-width: 100%;
   display: block;
-  /* Image 713×544; centred horizontally with cream gutters in 1024-wide stage. */
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  /* 2x source (1999×1524) downsamples to ~999×762 in stage — sharp on
+     standard and retina displays; no upscaling. */
 }
 
 /* Typed text overlay positioned over the screenshot's textarea card.
@@ -233,7 +235,9 @@
   top: 70%;
 }
 .stage.playing .cursorPhase1 {
-  animation: cursor1 0.9s cubic-bezier(0.45, 0, 0.55, 1) 4.4s forwards;
+  animation:
+    cursor1 0.9s cubic-bezier(0.45, 0, 0.55, 1) 4.4s forwards,
+    cursor1Hide 0.3s ease-out 5.5s forwards;
 }
 @keyframes cursor1 {
   0%   { opacity: 0; left: 50%; top: 70%; transform: scale(1); }
@@ -246,6 +250,7 @@
   /* release */
   100% { opacity: 1; left: 62.8%; top: 54.5%; transform: scale(1); }
 }
+@keyframes cursor1Hide { to { opacity: 0; } }
 
 /* Click ripple — single expanding ring from the click point */
 .clickRipplePhase1 {
@@ -283,12 +288,12 @@
   pointer-events: none;
 }
 .stage.playing .spinner {
-  animation: spinnerVisible 2.4s ease-in-out 5.4s forwards;
+  animation: spinnerVisible 2s ease-in-out 5.5s forwards;
 }
 @keyframes spinnerVisible {
   0%   { opacity: 0; }
   10%  { opacity: 1; }
-  85%  { opacity: 1; }
+  90%  { opacity: 1; }
   100% { opacity: 0; }
 }
 .spinnerRing {
