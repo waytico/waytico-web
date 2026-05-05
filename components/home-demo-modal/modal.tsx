@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowRight, RotateCcw, Share2, X } from 'lucide-react'
+import { ArrowRight, Pause, Play, RotateCcw, Share2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import styles from './demo-modal.module.css'
 
@@ -39,6 +39,7 @@ const PRICE_FINAL = '1,800'
 export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalProps) {
   const [mounted, setMounted] = useState(false)
   const [phase, setPhase] = useState<Phase>('closed')
+  const [paused, setPaused] = useState(false)
   const [playKey, setPlayKey] = useState(0)
   const [typedHome, setTypedHome] = useState('')
   const [typedPrice, setTypedPrice] = useState('')
@@ -46,6 +47,14 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
   // Track whether we already opened to avoid re-running open animation if
   // parent re-renders with the same isOpen=true.
   const openedRef = useRef(false)
+
+  // Wall-clock timestamps used to make all JS timers pause-aware. CSS
+  // animations are paused via `animation-play-state` on the .paused class;
+  // JS timers (overall 21.5s, price typewriter, home typewriter) recompute
+  // their `setTimeout` delays from `playStartRef` so a pause/resume slides
+  // the whole timeline forward by the pause duration.
+  const playStartRef = useRef<number | null>(null)
+  const pausedAtRef = useRef<number | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -68,11 +77,24 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
     }
   }, [isOpen])
 
-  // 21.5s playing → ended timer
+  // 21.5s playing → ended timer (pause-aware via playStartRef)
   useEffect(() => {
-    if (phase !== 'playing') return
-    const t = setTimeout(() => setPhase('ended'), 21500)
+    if (phase !== 'playing' || paused) return
+    if (playStartRef.current === null) {
+      playStartRef.current = Date.now()
+    }
+    const elapsed = Date.now() - playStartRef.current
+    const remaining = Math.max(0, 21500 - elapsed)
+    const t = setTimeout(() => setPhase('ended'), remaining)
     return () => clearTimeout(t)
+  }, [phase, paused, playKey])
+
+  // Reset playStart whenever we leave playing (close, ended, replay re-mount)
+  useEffect(() => {
+    if (phase !== 'playing') {
+      playStartRef.current = null
+      pausedAtRef.current = null
+    }
   }, [phase, playKey])
 
   // Escape key
@@ -99,44 +121,57 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
     }
   }, [isOpen])
 
-  // Phase-1 typewriter (home textarea). Starts ~200ms into playing.
+  // Phase-1 typewriter (home textarea). Resumes from current `typedHome`
+  // length on unpause — JS-driven so pause is just a clean cancel.
   useEffect(() => {
-    if (phase !== 'playing') {
-      setTypedHome('')
+    if (phase !== 'playing' || paused) {
+      if (phase !== 'playing') setTypedHome('')
       return
     }
     let cancelled = false
-    let chars = 0
+    let chars = typedHome.length
     const tick = () => {
       if (cancelled || chars >= HOME_TEXT_FULL.length) return
       chars++
       setTypedHome(HOME_TEXT_FULL.slice(0, chars))
-      // Slight pause after newlines for natural rhythm
       const next = HOME_TEXT_FULL[chars - 1] === '\n' ? 200 : 32
       setTimeout(tick, next)
     }
-    const start = setTimeout(tick, 200)
+    // 200ms initial pause only on first start (typedHome empty), zero on resume
+    const initialDelay = chars === 0 ? 200 : 0
+    const start = setTimeout(tick, initialDelay)
     return () => {
       cancelled = true
       clearTimeout(start)
     }
-  }, [phase, playKey])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, paused, playKey])
 
-  // Phase-4 typewriter (price). Fires at 16.05s mark relative to playing.
+  // Phase-4 price typewriter — fires at absolute offsets from `playStartRef`.
+  // Pause/resume recomputes offsets so price types at the right moment
+  // relative to the rest of the (also-paused) animation.
   useEffect(() => {
-    if (phase !== 'playing') {
-      setTypedPrice('')
+    if (phase !== 'playing' || paused) {
+      if (phase !== 'playing') setTypedPrice('')
       return
     }
-    const base = 16050
-    const timers = [
-      setTimeout(() => setTypedPrice('1'), base),
-      setTimeout(() => setTypedPrice('18'), base + 350),
-      setTimeout(() => setTypedPrice('180'), base + 700),
-      setTimeout(() => setTypedPrice(PRICE_FINAL), base + 1050),
+    if (playStartRef.current === null) return
+    const targets: Array<[number, string]> = [
+      [16050, '1'],
+      [16400, '18'],
+      [16750, '180'],
+      [17100, PRICE_FINAL],
     ]
+    const elapsed = Date.now() - playStartRef.current
+    // Snap any past targets immediately (handles late resume)
+    const passed = targets.filter(([t]) => t <= elapsed)
+    if (passed.length) setTypedPrice(passed[passed.length - 1][1])
+    const future = targets.filter(([t]) => t > elapsed)
+    const timers = future.map(([t, val]) =>
+      setTimeout(() => setTypedPrice(val), t - elapsed),
+    )
     return () => timers.forEach(clearTimeout)
-  }, [phase, playKey])
+  }, [phase, paused, playKey])
 
   function handleClose() {
     setPhase('closing')
@@ -145,6 +180,7 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
       setPlayKey(0)
       setTypedHome('')
       setTypedPrice('')
+      setPaused(false)
       openedRef.current = false
       onClose()
     }, 200)
@@ -154,14 +190,38 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
     // Snap all final-state values, jump to ended
     setTypedHome(HOME_TEXT_FULL)
     setTypedPrice(PRICE_FINAL)
+    setPaused(false)
     setPhase('ended')
   }
 
   function handleReplay() {
     setTypedHome('')
     setTypedPrice('')
+    setPaused(false)
+    pausedAtRef.current = null
+    playStartRef.current = null
     setPlayKey((k) => k + 1)
     setPhase('playing')
+  }
+
+  function togglePause() {
+    if (phase !== 'playing') return
+    setPaused((prev) => {
+      const next = !prev
+      if (next) {
+        // Pausing — record when, so resume can shift the timeline forward
+        pausedAtRef.current = Date.now()
+      } else if (
+        pausedAtRef.current !== null &&
+        playStartRef.current !== null
+      ) {
+        // Resuming — slide playStart by the pause duration so all elapsed
+        // calculations remain accurate.
+        playStartRef.current += Date.now() - pausedAtRef.current
+        pausedAtRef.current = null
+      }
+      return next
+    })
   }
 
   function handleMakeMyOwn() {
@@ -179,6 +239,7 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
     styles.stage,
     phase === 'playing' && styles.playing,
     phase === 'ended' && styles.ended,
+    paused && styles.paused,
   )
 
   return createPortal(
@@ -197,6 +258,19 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
           aria-label="Close demo"
         >
           <X className="w-5 h-5" strokeWidth={2} />
+        </button>
+        <button
+          type="button"
+          onClick={togglePause}
+          disabled={phase !== 'playing'}
+          className={styles.pauseBtn}
+          aria-label={paused ? 'Resume demo' : 'Pause demo'}
+        >
+          {paused ? (
+            <Play className="w-4 h-4 fill-current" strokeWidth={0} />
+          ) : (
+            <Pause className="w-4 h-4 fill-current" strokeWidth={0} />
+          )}
         </button>
         <button type="button" onClick={handleSkip} className={styles.skipBtn}>
           Skip →

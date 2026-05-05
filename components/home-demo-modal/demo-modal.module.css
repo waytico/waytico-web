@@ -73,6 +73,38 @@
 }
 .skipBtn:hover { color: #fff; }
 
+.pauseBtn {
+  position: absolute;
+  top: 14px;
+  right: 78px;
+  z-index: 20;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.85);
+  color: rgba(44, 36, 32, 0.7);
+  transition: background 150ms, color 150ms, opacity 150ms;
+}
+.pauseBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 1);
+  color: #2C2420;
+}
+.pauseBtn:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Paused state — freeze every CSS animation in the stage */
+.stage.paused,
+.stage.paused *,
+.stage.paused *::before,
+.stage.paused *::after {
+  animation-play-state: paused !important;
+}
+
 /* ----- Stage (aspect-video region where animation lives) ----- */
 .stage {
   position: absolute;
