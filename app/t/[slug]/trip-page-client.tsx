@@ -631,6 +631,102 @@ export default function TripPageClient({ slug, initialData }: Props) {
   }, [_handleDeleteProject, data?.project?.title])
 
   /**
+   * Owner action: insert a fresh empty day at `atIndex` (0-based).
+   *
+   * Mirrors the showcase add_day handler below, but routed through the
+   * real saveProjectPatch path (which short-circuits to local-state in
+   * showcase mode anyway, so a single handler covers both).
+   *
+   * What happens on the wire: PATCH /api/projects/:id with a fresh
+   * itinerary array. Backend reconcileDates() recomputes dates_end /
+   * duration_days / per-day dates from dates_start — we deliberately
+   * strip every day's date here so the backend repaints them all
+   * without us having to compute the +1d shift on client. mergeItineraryIds
+   * preserves photo↔day links via stable id for every existing day; the
+   * brand-new day arrives without an id and gets a fresh one assigned.
+   *
+   * Hero updates automatically: dates_end and duration_days arrive in
+   * the PATCH response, setData replaces project, hero re-renders.
+   */
+  const handleDayInsertAbove = useCallback(
+    async (atIdx: number): Promise<boolean> => {
+      const cur = (data?.project?.itinerary as any[]) || []
+      const newDay = {
+        id:
+          typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? (crypto as any).randomUUID()
+            : `tmp-${Math.random().toString(36).slice(2, 10)}`,
+        dayNumber: atIdx + 1,
+        date: null,
+        title: '',
+        description: '',
+        segments: [],
+      }
+      const next = [...cur]
+      const clamped = Math.max(0, Math.min(cur.length, atIdx))
+      next.splice(clamped, 0, newDay)
+      // Renumber from 1; strip per-day date so reconcileDates() re-stamps
+      // every day from dates_start. (Same shape as DndSortable.handleDragEnd.)
+      const renumbered = next.map((d, i) => ({
+        ...d,
+        dayNumber: i + 1,
+        date: null,
+      }))
+      const ok = await saveProjectPatch({ itinerary: renumbered })
+      return !!ok
+    },
+    [data?.project?.itinerary, saveProjectPatch],
+  )
+
+  /**
+   * Owner action: remove a day from the itinerary.
+   *
+   * Confirms before deletion when the day has any user-authored content
+   * (title, description, or attached photos) — empty days are removed
+   * silently. Photos that had day_id pointing at the removed day stay
+   * in the trip's media collection with a stale day_id reference; the
+   * backend never auto-cleans them (matches the existing reorder /
+   * agent-driven behaviour). The operator can delete those photos
+   * separately if desired.
+   *
+   * Refuses to remove the last remaining day — backend reconcileDates()
+   * throws ItineraryShrinkError on empty arrays anyway, but catching
+   * it on client gives a friendlier toast.
+   */
+  const handleDayRemove = useCallback(
+    async (day: any): Promise<boolean> => {
+      const cur = (data?.project?.itinerary as any[]) || []
+      if (cur.length <= 1) {
+        toast.error('Cannot remove the last day')
+        return false
+      }
+      const hasTitle = typeof day.title === 'string' && day.title.trim().length > 0
+      const hasDesc =
+        typeof day.description === 'string' && day.description.trim().length > 0
+      const hasPhotos =
+        !!day.id &&
+        media.some((m) => (m as any).day_id === day.id && (m as any).type !== 'document')
+      if (hasTitle || hasDesc || hasPhotos) {
+        const num = day.dayNumber || ''
+        const ok = window.confirm(
+          `Delete day ${num}? Photos will be unlinked from this day.`,
+        )
+        if (!ok) return false
+      }
+      const next = cur.filter((d) => (day.id ? d.id !== day.id : d.dayNumber !== day.dayNumber))
+      if (next.length === cur.length) return false // no match — refuse silently
+      const renumbered = next.map((d, i) => ({
+        ...d,
+        dayNumber: i + 1,
+        date: null,
+      }))
+      const okRes = await saveProjectPatch({ itinerary: renumbered })
+      return !!okRes
+    },
+    [data?.project?.itinerary, media, saveProjectPatch],
+  )
+
+  /**
    * Apply structured AI actions returned by the public showcase chat
    * endpoint. We translate each action into the same local-state edit
    * a click-to-edit interaction would produce (saveProjectPatch /
@@ -1877,6 +1973,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 }
               : undefined
           }
+          onDayInsertAbove={ed ? handleDayInsertAbove : undefined}
+          onDayRemove={ed ? handleDayRemove : undefined}
           /* Magazine-only photo handlers. Other variants ignore these.
              Empty day → onDayUpload appends a new media row.
              Filled day → onDayPhotoReplace patches the existing media in

@@ -24,7 +24,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, ImagePlus, Loader2, Pencil, Trash2 } from 'lucide-react'
+import { GripVertical, ImagePlus, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
 
 type ItineraryProps = {
   theme: ThemeId
@@ -49,6 +49,16 @@ type ItineraryProps = {
    *  is expected to PATCH /api/projects/:id with the new itinerary
    *  (including refreshed dayNumber values). */
   onReorder?: (next: Day[]) => Promise<boolean> | void
+  /** Owner action: insert a fresh empty day at `atIndex` (0-based). The
+   *  handler builds the new day, splices, renumbers, and PATCHes the
+   *  full itinerary array; backend reconcileDates() recomputes
+   *  dates_end / duration_days / per-day dates from dates_start. */
+  onDayInsertAbove?: (atIndex: number) => Promise<boolean> | void
+  /** Owner action: remove a day from the itinerary. Receives the full
+   *  Day so the caller can decide whether to confirm based on day
+   *  content (title / description / attached photos). The handler
+   *  filters, renumbers, and PATCHes the full itinerary array. */
+  onDayRemove?: (day: Day) => Promise<boolean> | void
   /* ── Magazine-only owner photo handlers (additive). Other variants use
    *     PhotosBlock via renderDayExtras and ignore these props.
    *
@@ -115,7 +125,7 @@ function resolveDayDate(day: Day, datesStart?: string | null): string | null {
  * recomputes per-day dates from dates_start.
  */
 export function TripItinerary(props: ItineraryProps) {
-  const { theme, itinerary, datesStart, language, editable, onReorder } = props
+  const { theme, itinerary, datesStart, language, editable, onReorder, onDayInsertAbove, onDayRemove } = props
   if (!Array.isArray(itinerary) || itinerary.length === 0) return null
   const itineraryStyle = ITINERARY_STYLE[theme]
 
@@ -137,6 +147,8 @@ export function TripItinerary(props: ItineraryProps) {
         language={language}
         editable={!!editable}
         onReorder={onReorder}
+        onDayInsertAbove={onDayInsertAbove}
+        onDayRemove={onDayRemove}
         renderDayTitle={props.renderDayTitle}
         renderDayDescription={props.renderDayDescription}
         onDayUpload={props.onDayUpload}
@@ -170,6 +182,8 @@ export function TripItinerary(props: ItineraryProps) {
     <DndSortable
       itinerary={itinerary}
       onReorder={onReorder}
+      onDayInsertAbove={onDayInsertAbove}
+      onDayRemove={onDayRemove}
       head={head}
       layout={itineraryStyle}
       datesStart={datesStart}
@@ -323,6 +337,8 @@ function PlainDayShell({
 function DndSortable(props: {
   itinerary: Day[]
   onReorder?: (next: Day[]) => Promise<boolean> | void
+  onDayInsertAbove?: (atIndex: number) => Promise<boolean> | void
+  onDayRemove?: (day: Day) => Promise<boolean> | void
   head: ReactNode
   layout: string
   datesStart?: string | null
@@ -335,6 +351,8 @@ function DndSortable(props: {
   const {
     itinerary,
     onReorder,
+    onDayInsertAbove,
+    onDayRemove,
     head,
     layout,
     datesStart,
@@ -412,6 +430,8 @@ function DndSortable(props: {
           renderDayTitle={renderDayTitle}
           renderDayDescription={renderDayDescription}
           renderDayExtras={renderDayExtras}
+          onDayInsertAbove={onDayInsertAbove}
+          onDayRemove={onDayRemove}
         />
       ))}
     </SortableContext>
@@ -452,6 +472,8 @@ function SortableDay({
   renderDayTitle,
   renderDayDescription,
   renderDayExtras,
+  onDayInsertAbove,
+  onDayRemove,
 }: {
   day: Day
   layout: string
@@ -461,6 +483,8 @@ function SortableDay({
   renderDayTitle: (day: Day) => ReactNode
   renderDayDescription: (day: Day) => ReactNode
   renderDayExtras?: (day: Day) => ReactNode
+  onDayInsertAbove?: (atIndex: number) => Promise<boolean> | void
+  onDayRemove?: (day: Day) => Promise<boolean> | void
 }) {
   const id = day.id || `day-${day.dayNumber}`
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -475,16 +499,14 @@ function SortableDay({
   }
 
   const handle = (
-    <button
-      type="button"
-      className="tp-itin-handle"
-      aria-label="Drag to reorder day"
-      title="Drag to reorder"
-      {...attributes}
-      {...listeners}
-    >
-      <GripVertical className="w-4 h-4" />
-    </button>
+    <DayHandleGroup
+      day={day}
+      layout={layout}
+      dragAttributes={attributes}
+      dragListeners={listeners}
+      onInsertAbove={onDayInsertAbove}
+      onRemove={onDayRemove}
+    />
   )
 
   const photo = getDayPhoto(media, day.id)
@@ -557,6 +579,91 @@ function DayDescription({ children }: { children: ReactNode }) {
   return <p className="day-desc">{children}</p>
 }
 
+/* ── Day handle group (drag + insert above + remove) ───────────────────
+ *
+ * Owner-only cluster of three icon-buttons rendered at the day's
+ * top-left corner. Visible on .day:hover (timeline / photo-cards / grid)
+ * or .tp-mag-day:hover (Magazine). Each button surfaces an instant
+ * CSS-tooltip via `data-tip`; the native browser `title` attribute is
+ * deliberately not used because its show-delay (~1-2s) is platform-
+ * controlled and cannot be tuned.
+ *
+ *   [ + ]   insert empty day above this one
+ *   [ ⋮⋮ ]  drag handle (the dnd-kit attributes/listeners attach here
+ *           ONLY — clicking + or 🗑 must not initiate a drag, so they
+ *           stay outside the listener spread).
+ *   [ 🗑 ]   remove day
+ *
+ * Styling lives in styles/themes.css under .tp-itin-handle-group with
+ * layout-specific variants (--magazine, --timeline, --photo-cards,
+ * --grid) — see those rules for positioning details.
+ */
+function DayHandleGroup({
+  day,
+  layout,
+  dragAttributes,
+  dragListeners,
+  onInsertAbove,
+  onRemove,
+}: {
+  day: Day
+  layout: string
+  dragAttributes: any
+  dragListeners: any
+  onInsertAbove?: (atIndex: number) => Promise<boolean> | void
+  onRemove?: (day: Day) => Promise<boolean> | void
+}) {
+  // dayNumber is 1-based on the trip page; insert-above means splice
+  // at the day's 0-based index (so the new day becomes its predecessor).
+  const insertIdx = Math.max(0, (day.dayNumber || 1) - 1)
+  return (
+    <div
+      className={`tp-itin-handle-group tp-itin-handle-group--${layout}`}
+      role="group"
+      aria-label="Day actions"
+    >
+      {onInsertAbove && (
+        <button
+          type="button"
+          className="tp-itin-handle-btn tp-itin-tip"
+          onClick={(e) => {
+            e.stopPropagation()
+            onInsertAbove(insertIdx)
+          }}
+          data-tip="Insert day above"
+          aria-label="Insert day above"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      )}
+      <button
+        type="button"
+        className="tp-itin-handle-btn tp-itin-tip tp-itin-handle-btn--drag"
+        data-tip="Drag to reorder"
+        aria-label="Drag to reorder day"
+        {...dragAttributes}
+        {...dragListeners}
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+      {onRemove && (
+        <button
+          type="button"
+          className="tp-itin-handle-btn tp-itin-tip"
+          onClick={(e) => {
+            e.stopPropagation()
+            onRemove(day)
+          }}
+          data-tip="Delete day"
+          aria-label="Delete day"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  )
+}
+
 /* ── Magazine variant ─────────────────────────────────────────────── */
 
 /** Pick the day's primary photo: the lowest sort_order media row that is
@@ -582,6 +689,8 @@ type ItineraryMagazineProps = {
   language?: string | null
   editable: boolean
   onReorder?: (next: Day[]) => Promise<boolean> | void
+  onDayInsertAbove?: (atIndex: number) => Promise<boolean> | void
+  onDayRemove?: (day: Day) => Promise<boolean> | void
   renderDayTitle: (day: Day) => ReactNode
   renderDayDescription: (day: Day) => ReactNode
   /** Owner-mode photo handlers — see ItineraryProps for the contract. */
@@ -601,6 +710,8 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
     language,
     editable,
     onReorder,
+    onDayInsertAbove,
+    onDayRemove,
     renderDayTitle,
     renderDayDescription,
     onDayUpload,
@@ -685,6 +796,8 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
       onDayPhotoEdit={onDayPhotoEdit}
       uploading={day.id ? (uploadingByDay?.[day.id] ?? 0) : 0}
       interceptUpload={interceptUpload}
+      onDayInsertAbove={onDayInsertAbove}
+      onDayRemove={onDayRemove}
     />
   ))
 
@@ -746,6 +859,8 @@ function MagazineDay(props: {
   onDayPhotoEdit?: (m: MediaLite) => void
   uploading: number
   interceptUpload?: () => void
+  onDayInsertAbove?: (atIndex: number) => Promise<boolean> | void
+  onDayRemove?: (day: Day) => Promise<boolean> | void
 }) {
   const {
     day,
@@ -762,6 +877,8 @@ function MagazineDay(props: {
     onDayPhotoEdit,
     uploading,
     interceptUpload,
+    onDayInsertAbove,
+    onDayRemove,
   } = props
   const id = day.id || `day-${day.dayNumber}`
   const sortable = useSortable({ id })
@@ -801,16 +918,14 @@ function MagazineDay(props: {
       style={dragStyle}
     >
       {editable && (
-        <button
-          type="button"
-          className="tp-itin-handle tp-mag-day__handle"
-          aria-label="Drag to reorder day"
-          title="Drag to reorder"
-          {...sortable.attributes}
-          {...sortable.listeners}
-        >
-          <GripVertical className="w-4 h-4" />
-        </button>
+        <DayHandleGroup
+          day={day}
+          layout="magazine"
+          dragAttributes={sortable.attributes}
+          dragListeners={sortable.listeners}
+          onInsertAbove={onDayInsertAbove}
+          onRemove={onDayRemove}
+        />
       )}
 
       {/* Two siblings of <article>: a text column (header + body) and a

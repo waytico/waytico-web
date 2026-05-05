@@ -1498,46 +1498,171 @@
 }
 .tp-chat-help-link:hover { color: var(--bar-ink); }
 
-.tp-itin-handle {
+/* =====================================================================
+ * Day handle group (owner-only)
+ *
+ * Three icon-buttons rendered on each day in editable mode:
+ *   [+]  insert empty day above
+ *   [⋮⋮] drag to reorder (dnd-kit listeners attach here ONLY)
+ *   [🗑] delete day
+ *
+ * Hidden until the day is hovered (or always-visible on touch devices).
+ * Each button surfaces an instant CSS-tooltip via [data-tip] — the
+ * native `title` attribute is deliberately NOT used because its
+ * show-delay (~1-2s) is platform-controlled and feels broken in this
+ * UI. The CSS pseudo-element below appears on icon-hover at 80ms.
+ *
+ * Default position (timeline): in the gutter to the LEFT of the day.
+ * Photo-cards / grid / magazine: top-LEFT corner of the day, white
+ * tinted background so it stays legible on photo / textured fills.
+ * ================================================================= */
+.tp-itin-handle-group {
   position: absolute;
   top: 8px;
-  left: -28px;
-  width: 24px;
-  height: 24px;
+  left: -88px;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: transparent;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 80ms ease;
+  z-index: 5;
+}
+
+.day:hover .tp-itin-handle-group,
+.tp-mag-day:hover .tp-itin-handle-group {
+  opacity: 1;
+}
+
+/* Touch devices have no hover state — keep the handles visible at low
+   opacity so the operator still has access. Drop into the gutter edge
+   on timeline so they don't crowd the day. */
+@media (hover: none) {
+  .tp-itin-handle-group { opacity: 0.6; }
+  .tp-itin-handle-group--timeline { left: -64px; }
+}
+
+/* Photo-cards / grid: handle group sits inside the card top-left, with
+   a tinted white background so icons stay legible over photos and
+   textured fills. */
+.tp-itin-handle-group--photo-cards,
+.tp-itin-handle-group--grid {
+  left: 8px;
+  top: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 4px rgba(20, 14, 10, 0.08);
+}
+
+/* Magazine: same in-card pattern as photo-cards / grid; keeps the
+   group reachable on top of the day spread regardless of viewport
+   width and survives .tp-mag-section's overflow-x clip. Mobile fallback
+   handled below. */
+[data-theme="magazine"] .tp-itin-handle-group--magazine {
+  left: 4px;
+  top: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 4px rgba(20, 14, 10, 0.08);
+}
+
+@media (max-width: 1023.98px) {
+  /* Mobile: take the magazine handle group out of absolute positioning
+     so it sits inline with the day and stays reachable without hover. */
+  [data-theme="magazine"] .tp-itin-handle-group--magazine {
+    position: static;
+    margin-bottom: 8px;
+    opacity: 0.85;
+  }
+}
+
+/* Individual button. Fills 24×24 with the lucide icon centred. */
+.tp-itin-handle-btn {
+  position: relative;          /* tooltip pseudo-element anchors here */
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 24px;
   border: 0;
   background: transparent;
   color: var(--ink-mute);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+  transition: color 100ms ease, background 100ms ease;
+}
+.tp-itin-handle-btn:hover {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+.tp-itin-handle-btn--drag {
   cursor: grab;
-  border-radius: 6px;
-  opacity: 0;
-  transition: opacity 120ms ease, color 120ms ease, background 120ms ease;
-  touch-action: none;       /* required for TouchSensor */
-  z-index: 5;
+  touch-action: none;          /* required for TouchSensor */
 }
-.tp-itin-handle:active { cursor: grabbing; }
-.tp-itin-handle:hover { color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, transparent); }
-.day:hover .tp-itin-handle { opacity: 1; }
+.tp-itin-handle-btn--drag:active { cursor: grabbing; }
 
-/* Touch devices: keep the handle visible (no hover state). */
+/* =====================================================================
+ * Instant CSS tooltip — replaces the native browser `title` attribute.
+ * Triggered by [data-tip="..."] on any element with class .tp-itin-tip.
+ * Appears 80ms after pointer enters the element (vs. ~1-2s for the
+ * native tooltip). Sits BELOW the icon so it doesn't get clipped by
+ * the section's overflow-x:hidden on Magazine.
+ * ================================================================= */
+.tp-itin-tip { position: relative; }
+
+.tp-itin-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-2px);
+  background: rgba(20, 14, 10, 0.94);
+  color: #fdfaf4;
+  padding: 5px 9px;
+  border-radius: 4px;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 80ms ease, transform 80ms ease;
+  z-index: 20;
+  box-shadow: 0 2px 8px rgba(20, 14, 10, 0.18);
+}
+
+.tp-itin-tip::before {
+  content: '';
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid rgba(20, 14, 10, 0.94);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 80ms ease;
+  z-index: 20;
+}
+
+.tp-itin-tip:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.tp-itin-tip:hover::before { opacity: 1; }
+
+/* Tooltip is a hover-only affordance — no point on touch devices. */
 @media (hover: none) {
-  .tp-itin-handle { opacity: 0.6; left: -4px; }
+  .tp-itin-tip::after,
+  .tp-itin-tip::before { display: none; }
 }
-
-/* Photo-cards lay the article full-bleed → handle goes inside the card,
-   not in the gutter. Compact grid: same. Only timeline keeps the gutter
-   handle since each day has a left-side numeral with breathing room. */
-.tp-itin--photo-cards .tp-itin-handle,
-.tp-itin--grid .tp-itin-handle {
-  left: 8px;
-  top: 8px;
-  background: rgba(255, 255, 255, 0.85);
-  opacity: 0;
-}
-.tp-itin--photo-cards .day:hover .tp-itin-handle,
-.tp-itin--grid .day:hover .tp-itin-handle { opacity: 1; }
 
 .day.is-dragging { box-shadow: 0 14px 40px rgba(20, 14, 10, 0.18); }
 
@@ -2205,42 +2330,12 @@
   }
 }
 
-/* Drag-reorder handle for Magazine days. The base .tp-itin-handle rule
-   (above) ships with `left: -28px` (gutter pattern) and visibility that
-   triggers on `.day:hover`. Magazine's article carries `.tp-mag-day`,
-   not `.day`, so:
-     1) the hover trigger never fires — handle stays opacity:0 on desktop
-        even when reachable;
-     2) `left: -28px` lands inside .tp-mag-container's padding-inline
-        (clamp(24px, 5vw, 48px)) — fine on ≥1280px where the container
-        is centered, but on most laptops <1280px the math goes negative
-        relative to the viewport edge and `.tp-mag-section`'s
-        `overflow-x: hidden` (kept for full-bleed mobile photos) clips
-        the handle off-screen.
-   Anchor the handle inside the article and give it a tinted background
-   so it stays legible on top of the day photo (mirrors the pattern used
-   by .tp-itin--photo-cards / .tp-itin--grid). */
-[data-theme="magazine"] .tp-mag-day__handle {
-  position: absolute;
-  top: 12px;
-  left: 4px;
-  z-index: 5;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 6px;
-}
-
-[data-theme="magazine"] .tp-mag-day:hover .tp-mag-day__handle {
-  opacity: 1;
-}
-
-@media (max-width: 1023.98px) {
-  /* Mobile keeps the handle inline with the day so it stays reachable. */
-  [data-theme="magazine"] .tp-mag-day__handle {
-    position: static;
-    margin-bottom: 8px;
-  }
-}
-
+/* Magazine's day handle is the unified .tp-itin-handle-group with the
+   `--magazine` modifier — see the shared "Day handle group" block near
+   the top of this stylesheet. The legacy .tp-mag-day__handle rule used
+   to live here as a Magazine-specific override; it was rolled into the
+   shared block when the single drag button became a 3-button group
+   (insert / drag / delete). */
 [data-theme="magazine"] .tp-mag-day__photo {
   margin: 0;
 }
