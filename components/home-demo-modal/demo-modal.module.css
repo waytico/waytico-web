@@ -102,13 +102,15 @@
   pointer-events: none;
 }
 
-/* ----- Stage (top portion of modal — chrome + content viewport) ----- */
+/* ----- Stage (top portion of modal — chrome + content viewport) -----
+   Captions now live INSIDE the stage as editorial overlays, so the stage
+   only reserves room for the bottom progress bar (3px). */
 .stage {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 59px;          /* leave room for caption row (56px) + progress (3px) */
+  bottom: 3px;
   overflow: hidden;
   background: #FAF8F5;
 }
@@ -573,49 +575,85 @@
   100% { transform: translateY(-86%); }
 }
 
-/* ----- Caption row (lives in modalBox, OUTSIDE .stage so it never
-       overlaps screenshot content) ----- */
-.captionRow {
+/* ----- Editorial captions (live INSIDE stage) -----
+   Same typography across all phases — Cormorant numerals + thin rule +
+   italic title. Only position and colour change per phase, so the eye
+   tracks the caption as the demo progresses. Numerals are large and
+   light-weight; the title is small italic. No badges, no pills, no
+   backdrop. Visibility is driven by `capShow` keyframe at each phase's
+   own start/end window — same timing window the captionRow used. */
+.cap {
   position: absolute;
-  bottom: 3px;
-  left: 0;
-  right: 0;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #FAF8F5;
-  pointer-events: none;
   z-index: 8;
+  pointer-events: none;
+  opacity: 0;
+  font-family: var(--font-serif), Georgia, serif;
+  color: #2C2420;
 }
-.caption {
+.capNum {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 56px;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.capRule {
+  width: 28px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+  margin: 14px 0 12px;
+}
+.capTitle {
   font-family: var(--font-serif), Georgia, serif;
   font-style: italic;
   font-size: 22px;
-  line-height: 1.2;
-  color: #2C2420;
-  text-align: center;
-  position: absolute;
-  opacity: 0;
+  line-height: 1.15;
+  font-weight: 400;
 }
-.modalBox.playing .captionDescribe {
-  animation: captionShow 5.5s linear 0.2s forwards;
-}
-.modalBox.playing .captionMagic {
-  animation: captionShow 2s linear 5.5s forwards;
-}
-.modalBox.playing .captionDetails {
-  animation: captionShow 8s linear 9.5s forwards;
-}
-.modalBox.playing .captionClient {
-  animation: captionShow 4s linear 18s forwards;
-}
-@keyframes captionShow {
+
+/* Per-phase positions. Phase 1: home page is centered with cream margins
+   on either side, so the caption sits in the left margin (Vadim's chosen
+   spot). Phase 2: above the spinner, centred. Phase 3: bottom-right of
+   the trip page hero photo, light text on dark image. Phase 4: top-right
+   of the scrolled trip page, dark on cream. Phase 5: top-left next to
+   the phone preview that slides in from the right. */
+.capPh1 { left: 36px; top: 130px; }
+.capPh2 { left: 50%; top: 18%; transform: translateX(-50%); text-align: center; }
+.capPh2 .capRule { margin-left: auto; margin-right: auto; }
+.capPh3 { right: 36px; bottom: 60px; color: #FAF8F5; text-align: right; }
+.capPh3 .capRule { margin-left: auto; }
+.capPh4 { right: 36px; top: 50px; text-align: right; }
+.capPh4 .capRule { margin-left: auto; }
+.capPh5 { left: 36px; top: 130px; }
+
+/* Visibility — re-uses the same time windows the original captionRow had */
+.modalBox.playing .capPh1 { animation: capShow 5.5s linear 0.2s forwards; }
+.modalBox.playing .capPh2 { animation: capShow 2.0s linear 5.5s forwards; }
+.modalBox.playing .capPh3 { animation: capShow 2.0s linear 7.5s forwards; }
+.modalBox.playing .capPh4 { animation: capShow 8.0s linear 9.5s forwards; }
+.modalBox.playing .capPh5 { animation: capShow 4.0s linear 18.0s forwards; }
+
+@keyframes capShow {
   0%   { opacity: 0; transform: translateY(4px); }
-  8%   { opacity: 1; transform: translateY(0); }
-  92%  { opacity: 1; }
+  /* Phase 2 has additional translateX(-50%); preserve via per-keyframe */
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
   100% { opacity: 0; }
 }
+/* The translateY animation conflicts with capPh2's translateX. Override
+   for that phase — fade only, no movement. */
+.modalBox.playing .capPh2 { animation-name: capShowCenter; }
+@keyframes capShowCenter {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  10%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  90%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(0); }
+}
+
+/* Hide all captions in ended/closing state */
+.modalBox.ended .cap,
+.modalBox.closing .cap { opacity: 0; }
 
 /* ----- End-state controls (lives in modalBox, replaces caption when ended) ----- */
 .endControls {
@@ -636,7 +674,6 @@
   opacity: 1;
   pointer-events: auto;
 }
-.modalBox.ended .captionRow { opacity: 0; }
 .watchAgainBtn {
   font-family: var(--font-serif), Georgia, serif;
   font-style: italic;
@@ -718,5 +755,5 @@
   .modalBox.playing .phoneFrame { opacity: 1; }
   .modalBox.playing .phoneScreenshot { transform: translateY(-86%); }
   .modalBox.playing .endControls { opacity: 1; pointer-events: auto; }
-  .modalBox.playing .captionRow { opacity: 0; }
+  .modalBox.playing .cap { opacity: 0; }
 }

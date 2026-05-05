@@ -328,6 +328,36 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
             end controls, and progress bar live OUTSIDE so they never overlap
             screenshot content. */}
         <div className={stageClass}>
+          {/* Editorial captions — narrator's указка. Each caption sits NEAR
+              the action of its phase, not in a fixed corner. Same typography
+              throughout (Cormorant numerals + thin rule + italic title);
+              only position and colour change. */}
+          <div className={cn(styles.cap, styles.capPh1)}>
+            <div className={styles.capNum}>01</div>
+            <div className={styles.capRule} />
+            <div className={styles.capTitle}>Describe<br />the trip</div>
+          </div>
+          <div className={cn(styles.cap, styles.capPh2)}>
+            <div className={styles.capNum}>02</div>
+            <div className={styles.capRule} />
+            <div className={styles.capTitle}>Magic happens</div>
+          </div>
+          <div className={cn(styles.cap, styles.capPh3)}>
+            <div className={styles.capNum}>03</div>
+            <div className={styles.capRule} />
+            <div className={styles.capTitle}>Page appears</div>
+          </div>
+          <div className={cn(styles.cap, styles.capPh4)}>
+            <div className={styles.capNum}>04</div>
+            <div className={styles.capRule} />
+            <div className={styles.capTitle}>Add<br />the details</div>
+          </div>
+          <div className={cn(styles.cap, styles.capPh5)}>
+            <div className={styles.capNum}>05</div>
+            <div className={styles.capRule} />
+            <div className={styles.capTitle}>Client<br />opens it</div>
+          </div>
+
           {/* Browser chrome (phases 1-4 desktop) */}
           <div className={styles.browserChrome}>
             <div className={styles.dots}>
@@ -463,22 +493,6 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
                 alt=""
               />
             </div>
-          </div>
-        </div>
-
-        {/* Caption row — outside stage so it never overlaps screenshot footer */}
-        <div className={styles.captionRow}>
-          <div className={cn(styles.caption, styles.captionDescribe)}>
-            Describe the trip
-          </div>
-          <div className={cn(styles.caption, styles.captionMagic)}>
-            Magic! A quote webpage!
-          </div>
-          <div className={cn(styles.caption, styles.captionDetails)}>
-            Add the details
-          </div>
-          <div className={cn(styles.caption, styles.captionClient)}>
-            Minutes later — your client opens it
           </div>
         </div>
 
