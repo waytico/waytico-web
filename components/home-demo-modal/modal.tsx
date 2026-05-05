@@ -26,7 +26,6 @@ const HOME_TEXT_LINES = [
   'Hôtel des Deux Pavillons.',
 ]
 const HOME_TEXT_FULL = HOME_TEXT_LINES.join('\n')
-const PRICE_FINAL = '1,800'
 
 /**
  * Home demo modal — single-flow product walkthrough.
@@ -42,7 +41,6 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
   const [paused, setPaused] = useState(false)
   const [playKey, setPlayKey] = useState(0)
   const [typedHome, setTypedHome] = useState('')
-  const [typedPrice, setTypedPrice] = useState('')
 
   // Track whether we already opened to avoid re-running open animation if
   // parent re-renders with the same isOpen=true.
@@ -115,7 +113,6 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
       setPhase('closed')
       setPlayKey(0)
       setTypedHome('')
-      setTypedPrice('')
     }
   }, [isOpen])
 
@@ -192,36 +189,12 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
   // Phase-4 price typewriter — fires at absolute offsets from `playStartRef`.
   // Pause/resume recomputes offsets so price types at the right moment
   // relative to the rest of the (also-paused) animation.
-  useEffect(() => {
-    if (phase !== 'playing' || paused) {
-      if (phase !== 'playing') setTypedPrice('')
-      return
-    }
-    if (playStartRef.current === null) return
-    const targets: Array<[number, string]> = [
-      [16500, '1'],
-      [16850, '18'],
-      [17200, '180'],
-      [17550, PRICE_FINAL],
-    ]
-    const elapsed = Date.now() - playStartRef.current
-    // Snap any past targets immediately (handles late resume)
-    const passed = targets.filter(([t]) => t <= elapsed)
-    if (passed.length) setTypedPrice(passed[passed.length - 1][1])
-    const future = targets.filter(([t]) => t > elapsed)
-    const timers = future.map(([t, val]) =>
-      setTimeout(() => setTypedPrice(val), t - elapsed),
-    )
-    return () => timers.forEach(clearTimeout)
-  }, [phase, paused, playKey])
-
   function handleClose() {
     setPhase('closing')
     setTimeout(() => {
       setPhase('closed')
       setPlayKey(0)
       setTypedHome('')
-      setTypedPrice('')
       setPaused(false)
       openedRef.current = false
       onClose()
@@ -231,14 +204,12 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
   function handleSkip() {
     // Snap all final-state values, jump to ended
     setTypedHome(HOME_TEXT_FULL)
-    setTypedPrice(PRICE_FINAL)
     setPaused(false)
     setPhase('ended')
   }
 
   function handleReplay() {
     setTypedHome('')
-    setTypedPrice('')
     setPaused(false)
     pausedAtRef.current = null
     playStartRef.current = null
@@ -340,7 +311,7 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
           <div className={cn(styles.cap, styles.capPh2)}>
             <div className={styles.capNum}>02</div>
             <div className={styles.capRule} />
-            <div className={styles.capTitle}>Magic happens</div>
+            <div className={styles.capTitle}>Building<br />the page</div>
           </div>
           <div className={cn(styles.cap, styles.capPh3)}>
             <div className={styles.capNum}>03</div>
@@ -470,16 +441,12 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
                   className={cn(styles.dayPhoto, styles.day3Photo)}
                   alt=""
                 />
-                <span className={styles.priceOverlay}>
-                  <span className={styles.priceText}>{typedPrice}</span>
-                </span>
               </div>
             </div>
             {/* Sticky strip — first 42px of the screenshot fixed on top */}
             <div className={styles.tripStickyStrip} />
-            {/* Phase-4 cursor + ripples (over .tripPage so they don't scroll) */}
+            {/* Phase-4 cursor — travels to Share pill in sticky strip */}
             <CursorIcon className={styles.cursorPhase4} />
-            <span className={styles.clickRipplePhase4Price} />
             <span className={styles.clickRipplePhase4Share} />
           </div>
 
