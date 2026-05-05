@@ -526,12 +526,13 @@ function PriceMagazine(props: PriceProps) {
  * and the mobile MagazineStickyBar; a fourth in the price block was
  * redundant.
  *
- * Public viewer: items joined as inline prose with commas — short
- * editorial line, not a list. Hidden when empty.
- * Owner: multi-line EditableField (one item per line) so the operator
- * can keep the per-line authoring rhythm they're used to in the rest
- * of the trip page; on save the same newline-separated string round-
- * trips through saveProjectPatch.
+ * Single rendering for both viewports and both roles:
+ *   Public viewer: <ul> of <li>, one operator-authored line per row,
+ *     preserving any "-" / "•" prefixes the operator typed. Hidden
+ *     when source is empty (sparse-by-design).
+ *   Owner: multi-line EditableField, one item per line. The visible
+ *     text on rest matches the public render byte-for-byte so toggling
+ *     between owner and preview-as-client is jump-free.
  */
 function PriceDetails({
   kind,
@@ -546,27 +547,24 @@ function PriceDetails({
 }) {
   const heading = kind === 'in' ? 'Included' : 'Not included'
 
-  // Public viewer: render BOTH variants in the DOM and toggle by viewport
-  // — desktop ≥1024px shows the hairline-divided list (sca­nnable
-  // checklist register), <1024px shows comma-joined inline prose
-  // (compact, no vertical sprawl on phones). Sharing source data avoids
-  // any drift between the two renders.
-  // Drop empty lines and leading bullet markers ("- " / "• ") from the
-  // operator's authoring shorthand; if the parsed list is empty, the
-  // slot disappears entirely.
+  // Public viewer: single rendering — same structure mobile and desktop
+  // — to match the owner-side authoring surface byte-for-byte. Each
+  // non-empty source line becomes one <li>; leading "-" / "•" / "·"
+  // bullets the operator typed are preserved verbatim because that's
+  // exactly what the operator sees in the editor and on the agent
+  // screenshot Vadim flagged. We only strip lines that are visually
+  // empty (whitespace only) so an accidental blank row doesn't render
+  // as a phantom list item.
   if (!editable) {
     if (!source) return null
     const items = source
       .split('\n')
-      .map((line) => line.replace(/^[-•·]\s*/, '').trim())
-      .filter(Boolean)
+      .map((line) => line.trimEnd())
+      .filter((line) => line.trim().length > 0)
     if (items.length === 0) return null
     return (
       <div className="tp-mag-price__details">
         <p className="tp-mag-price__details-heading">{heading}</p>
-        {/* Mobile prose — joined with commas. CSS hides this ≥1024px. */}
-        <p className="tp-mag-price__details-prose">{items.join(', ')}</p>
-        {/* Desktop list — hairline-divided rows. CSS hides this <1024px. */}
         <ul className="tp-mag-price__details-list">
           {items.map((item, i) => (
             <li key={i}>{item}</li>

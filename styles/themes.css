@@ -3384,68 +3384,45 @@
   }
 }
 
-/* Mobile prose — comma-joined items as inline body copy. Visible
-   <1024px; hidden ≥1024px in favour of the hairline-divided list. */
-[data-theme="magazine"] .tp-mag-price__details-prose {
+/* Items list — same structure mobile and desktop, same typography as
+   the owner EditableField surface so toggling preview-as-client keeps
+   line-for-line visual parity. No bullet markers (any "-" the operator
+   typed is rendered verbatim as part of the line text), no row
+   dividers — vertical rhythm comes from line-height alone, matching
+   the way a multiline textarea renders the same string. */
+[data-theme="magazine"] .tp-mag-price__details-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+[data-theme="magazine"] .tp-mag-price__details-list li {
   font-family: var(--font-body);
   font-size: 14px;
   line-height: 1.55;
-  color: var(--ink-soft);
+  color: var(--ink);
   margin: 0;
 }
 
 @media (min-width: 1024px) {
-  [data-theme="magazine"] .tp-mag-price__details-prose {
-    display: none;
-  }
-}
-
-/* Desktop list — hairline-divided rows. Hidden <1024px. The list is
-   a scannable checklist for the typical "what do I get for the price"
-   reading mode; comma-prose works on a phone where vertical space is
-   precious but breaks down on desktop with 6+ items. */
-[data-theme="magazine"] .tp-mag-price__details-list {
-  display: none;
-}
-
-@media (min-width: 1024px) {
-  [data-theme="magazine"] .tp-mag-price__details-list {
-    display: block;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
   [data-theme="magazine"] .tp-mag-price__details-list li {
-    font-family: var(--font-body);
     font-size: 15px;
-    line-height: 1.5;
-    color: var(--ink-soft);
-    padding: 7px 0;
-    border-bottom: 1px solid var(--rule);
-  }
-
-  [data-theme="magazine"] .tp-mag-price__details-list li:first-child {
-    padding-top: 0;
-  }
-
-  [data-theme="magazine"] .tp-mag-price__details-list li:last-child {
-    border-bottom: 0;
-    padding-bottom: 0;
+    line-height: 1.6;
   }
 }
 
 /* Owner-mode multiline EditableField inside the details slot. The
    shared <EditableField> renders a <textarea> on edit and a clickable
    div on rest; both get the body-prose typography so it matches the
-   public-side rendering byte-for-byte. */
+   public-side rendering byte-for-byte (same font, same size, same
+   line-height, same ink). */
 [data-theme="magazine"] .tp-mag-price__details-edit textarea,
 [data-theme="magazine"] .tp-mag-price__details-edit > div[role="button"],
 [data-theme="magazine"] .tp-mag-price__details-edit .editable-field-display {
   font-family: var(--font-body);
   font-size: 14px;
   line-height: 1.55;
-  color: var(--ink-soft);
+  color: var(--ink);
 }
 
 @media (min-width: 1024px) {
