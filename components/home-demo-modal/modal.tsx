@@ -358,6 +358,24 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
               height={993}
               alt=""
             />
+            {/* DIAGNOSTIC — temporary, to confirm JS measurement runs */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 4,
+                right: 4,
+                padding: '4px 6px',
+                background: 'rgba(255,0,0,0.85)',
+                color: '#fff',
+                fontSize: 10,
+                fontFamily: 'monospace',
+                zIndex: 99,
+                pointerEvents: 'none',
+              }}
+            >
+              rect: l={Math.round(homeImgRect.left)} t={Math.round(homeImgRect.top)}{' '}
+              w={Math.round(homeImgRect.width)} h={Math.round(homeImgRect.height)}
+            </div>
             <span
               className={styles.typedText}
               style={{
@@ -365,6 +383,7 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
                 top: `${homeImgRect.top + homeImgRect.height * 0.166}px`,
                 width: `${homeImgRect.width * 0.249}px`,
                 height: `${homeImgRect.height * 0.118}px`,
+                outline: '2px solid lime', // DIAGNOSTIC
               }}
             >
               {typedHome}
@@ -373,12 +392,8 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
               className={styles.cursorPhase1}
               style={
                 {
-                  // Idle: lower-centre of the home page (visible spot
-                  // before the cursor "comes to life" and clicks).
                   '--cursor-start-x': `${homeImgRect.left + homeImgRect.width * 0.5}px`,
                   '--cursor-start-y': `${homeImgRect.top + homeImgRect.height * 0.6}px`,
-                  // Target: centre of the disabled Create-quote pill in
-                  // the screenshot (source x=487/y=292 of 1303×993).
                   '--cursor-target-x': `${homeImgRect.left + homeImgRect.width * 0.374}px`,
                   '--cursor-target-y': `${homeImgRect.top + homeImgRect.height * 0.294}px`,
                 } as React.CSSProperties
