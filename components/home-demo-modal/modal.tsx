@@ -55,9 +55,51 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
   const playStartRef = useRef<number | null>(null)
   const pausedAtRef = useRef<number | null>(null)
 
+  // Phase-1 overlays (typed text, cursor, ripple) are positioned in JS
+  // from the home image's actual rendered rect. CSS-only attempts at
+  // aspect-fit + percentages were brittle across viewports (collapsed
+  // to 0×0 or shifted with gutters). ResizeObserver gives us the truth.
+  const homeMockupRef = useRef<HTMLDivElement>(null)
+  const homeImgRef = useRef<HTMLImageElement>(null)
+  const [homeImgRect, setHomeImgRect] = useState({
+    left: 0, top: 0, width: 0, height: 0,
+  })
+
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Measure home image rect inside the mockup so phase-1 overlays
+  // (typed text, cursor, ripple) can be positioned in absolute pixels.
+  // Re-measures on viewport resize and on image load.
+  useEffect(() => {
+    if (!isOpen) return
+    const img = homeImgRef.current
+    const mockup = homeMockupRef.current
+    if (!img || !mockup) return
+
+    const update = () => {
+      const ir = img.getBoundingClientRect()
+      const mr = mockup.getBoundingClientRect()
+      if (ir.width === 0 || ir.height === 0) return
+      setHomeImgRect({
+        left: ir.left - mr.left,
+        top: ir.top - mr.top,
+        width: ir.width,
+        height: ir.height,
+      })
+    }
+
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(img)
+    ro.observe(mockup)
+    img.addEventListener('load', update)
+    return () => {
+      ro.disconnect()
+      img.removeEventListener('load', update)
+    }
+  }, [isOpen, mounted])
 
   // Open coordination
   useEffect(() => {
@@ -302,25 +344,53 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
             </div>
           </div>
 
-          {/* Phase 1+2: home mockup (real screenshot + typed-text overlay).
-              The Create-quote pill in the screenshot stays as is (greyed
-              disabled state) — the cursor lands on it and a ripple sells
-              the click. No HTML pill overlay.
-              Image + overlays wrapped in .imageWrapper which has the same
-              aspect ratio as the screenshot, so % coordinates of overlays
-              track the image regardless of viewport size. */}
-          <div className={styles.homeMockup}>
-            <div className={styles.imageWrapper}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/demo-modal/home-page.jpg"
-                className={styles.homeBase}
-                alt=""
-              />
-              <span className={styles.typedText}>{typedHome}</span>
-              <CursorIcon className={styles.cursorPhase1} />
-              <span className={styles.clickRipplePhase1} />
-            </div>
+          {/* Phase 1+2: home mockup. Image renders at its natural fit;
+              JS measures its bounding rect (homeImgRect) so the typed-
+              text overlay, cursor, and ripple can be positioned in
+              absolute pixels relative to the actual rendered image. */}
+          <div ref={homeMockupRef} className={styles.homeMockup}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={homeImgRef}
+              src="/demo-modal/home-page.jpg"
+              className={styles.homeBase}
+              width={1303}
+              height={993}
+              alt=""
+            />
+            <span
+              className={styles.typedText}
+              style={{
+                left: `${homeImgRect.left + homeImgRect.width * 0.147}px`,
+                top: `${homeImgRect.top + homeImgRect.height * 0.166}px`,
+                width: `${homeImgRect.width * 0.249}px`,
+                height: `${homeImgRect.height * 0.118}px`,
+              }}
+            >
+              {typedHome}
+            </span>
+            <CursorIcon
+              className={styles.cursorPhase1}
+              style={
+                {
+                  // Idle: lower-centre of the home page (visible spot
+                  // before the cursor "comes to life" and clicks).
+                  '--cursor-start-x': `${homeImgRect.left + homeImgRect.width * 0.5}px`,
+                  '--cursor-start-y': `${homeImgRect.top + homeImgRect.height * 0.6}px`,
+                  // Target: centre of the disabled Create-quote pill in
+                  // the screenshot (source x=487/y=292 of 1303×993).
+                  '--cursor-target-x': `${homeImgRect.left + homeImgRect.width * 0.374}px`,
+                  '--cursor-target-y': `${homeImgRect.top + homeImgRect.height * 0.294}px`,
+                } as React.CSSProperties
+              }
+            />
+            <span
+              className={styles.clickRipplePhase1}
+              style={{
+                left: `${homeImgRect.left + homeImgRect.width * 0.374}px`,
+                top: `${homeImgRect.top + homeImgRect.height * 0.294}px`,
+              }}
+            />
           </div>
 
           {/* Phase 2: spinner */}
@@ -429,10 +499,17 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
 }
 
 /* ----- Inline cursor SVG (used for phase-1 and phase-4 cursors) ----- */
-function CursorIcon({ className }: { className?: string }) {
+function CursorIcon({
+  className,
+  style,
+}: {
+  className?: string
+  style?: React.CSSProperties
+}) {
   return (
     <svg
       className={className}
+      style={style}
       viewBox="0 0 18 22"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"

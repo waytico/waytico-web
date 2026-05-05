@@ -182,37 +182,40 @@
   100% { opacity: 0; pointer-events: none; }
 }
 
-/* Image wrapper has the same aspect ratio as the screenshot itself.
-   Critical: explicit `height: 100%` breaks the circular sizing problem
-   where imageWrapper had no base dimension (image inside = width:100%
-   height:100% = circular = collapsed to 0×0).
-   With height fixed to mockup height, aspect-ratio derives width:
-     width = mockup_height × 1303/993
-   max-width: 100% clamps if mockup is unusually narrow. */
-.imageWrapper {
-  position: relative;
-  height: 100%;
-  aspect-ratio: 1303 / 993;
-  max-width: 100%;
+/* ----- Phase 1+2: home mockup (real home screenshot + overlays) -----
+   Image renders at its natural fit (max-width / max-height 100%, browser
+   centres via flex). Overlay positions are computed in JS from the
+   image's actual rendered bounding rect — see useEffect for homeImgRect
+   in modal.tsx. CSS here just defines visual style; positions come in
+   via inline style or CSS variables. */
+.homeMockup {
+  position: absolute;
+  top: 32px; left: 0; right: 0; bottom: 0;
+  background: #FAF8F5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stage.playing .homeMockup {
+  animation: homeFadeOut 0.3s ease-in-out 5.5s forwards;
+}
+@keyframes homeFadeOut {
+  0%   { opacity: 1; }
+  100% { opacity: 0; pointer-events: none; }
 }
 .homeBase {
   display: block;
-  width: 100%;
-  height: 100%;
-  /* 2x source (1999×1524) — browser downsamples → sharp on retina too */
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  /* HTML width/height attrs (1303×993) give browser the intrinsic ratio
+     so it scales correctly with the max-* constraints. */
 }
 
-/* Typed text overlay — covers the placeholder line in the textarea card.
-   % values now relative to .imageWrapper (= image natural aspect):
-   - textarea card source x=174..540 / 1303 = 13.4..41.4%
-   - inner padding ~24px → content x=14.7..39.6%
-   - placeholder line y starts at source y=165 → 16.6% */
+/* Typed text — styled here, positioned via inline style from JS */
 .typedText {
   position: absolute;
-  top: 16.6%;
-  left: 14.7%;
-  width: 24.9%;
-  height: 11.8%;
   z-index: 4;
   font-family: var(--font-sans), system-ui, sans-serif;
   font-size: 11px;
@@ -237,8 +240,8 @@
 }
 @keyframes blink { to { opacity: 0; } }
 
-/* Cursor for phase 1 — moves to the disabled Create-quote pill in the
-   screenshot. Pill centre at source x=487, y=292 → image % 37.4 / 29.4. */
+/* Cursor for phase 1 — keyframe interpolates via CSS variables set
+   inline by JS (--cursor-start-x/y, --cursor-target-x/y in px). */
 .cursorPhase1 {
   position: absolute;
   width: 18px;
@@ -246,8 +249,10 @@
   pointer-events: none;
   opacity: 0;
   z-index: 6;
-  left: 50%;
-  top: 55%;
+  /* Defaults — overridden by inline style with px values when image rect
+     has been measured. */
+  left: var(--cursor-start-x, 50%);
+  top: var(--cursor-start-y, 60%);
 }
 .stage.playing .cursorPhase1 {
   animation:
@@ -255,23 +260,21 @@
     cursor1Hide 0.3s ease-out 5.5s forwards;
 }
 @keyframes cursor1 {
-  0%   { opacity: 0; left: 50%;  top: 55%; transform: scale(1); }
-  18%  { opacity: 1; left: 50%;  top: 55%; transform: scale(1); }
+  0%   { opacity: 0; left: var(--cursor-start-x);  top: var(--cursor-start-y);  transform: scale(1); }
+  18%  { opacity: 1; left: var(--cursor-start-x);  top: var(--cursor-start-y);  transform: scale(1); }
   /* travel to pill */
-  78%  { left: 37.4%; top: 29.4%; transform: scale(1); }
-  /* press — hold the shrunk scale ~120ms so the click reads */
+  78%  { left: var(--cursor-target-x); top: var(--cursor-target-y); transform: scale(1); }
+  /* press — hold ~120ms so the click reads */
   86%  { transform: scale(0.72); }
   92%  { transform: scale(0.72); }
   /* release */
-  100% { opacity: 1; left: 37.4%; top: 29.4%; transform: scale(1); }
+  100% { opacity: 1; left: var(--cursor-target-x); top: var(--cursor-target-y); transform: scale(1); }
 }
 @keyframes cursor1Hide { to { opacity: 0; } }
 
-/* Click ripple at the pill */
+/* Click ripple — positioned via inline style at the click target */
 .clickRipplePhase1 {
   position: absolute;
-  left: 37.4%;
-  top: 29.4%;
   width: 50px;
   height: 50px;
   border: 2.5px solid #C4622D;
