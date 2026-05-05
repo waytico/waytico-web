@@ -1704,7 +1704,7 @@
 }
 
 [data-theme="magazine"] .tp-mag-section {
-  padding-block: clamp(56px, 10vw, 120px);
+  padding-block: clamp(48px, 7vw, 80px);
   background: var(--bg);
   overflow-x: hidden;
 }
