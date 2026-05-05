@@ -1579,6 +1579,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
       className="min-h-screen bg-background"
       data-owner-view={showOwnerUI ? 'true' : 'false'}
       data-showcase={isShowcase ? 'true' : 'false'}
+      data-preview={previewAsClient ? 'true' : 'false'}
     >
       {/* Owner chrome — outside ThemeRoot so it uses shadcn semantic tokens
           (per TZ-6 §11 — owner UI must work even on a dark Expedition theme).

@@ -325,6 +325,21 @@
 [data-showcase="true"] .tp-nav {
   top: 92px;
 }
+/* Preview-as-client: same chrome as a real owner (Header + tripActions)
+   PLUS the accent preview-banner pinned under the Header. The in-theme
+   nav has to clear both. previewAsClient clears showOwnerUI, which
+   would otherwise drop the [data-owner-view="true"] rule's top offset
+   and let the nav slide under the Header. The preview-banner adds
+   ~28px (py-1 + text-xs content) on top of whatever the Header already
+   takes. */
+[data-preview="true"] .tp-nav {
+  top: 106px;
+}
+@media (min-width: 640px) {
+  [data-preview="true"] .tp-nav {
+    top: 68px;
+  }
+}
 .tp-nav-inner {
   max-width: 1120px; margin: 0 auto; padding: 14px 32px;
   display: flex; align-items: center; justify-content: center;
@@ -1795,6 +1810,14 @@
 
   [data-showcase="true"] [data-theme="magazine"] .tp-mag-topnav {
     top: 92px;
+  }
+
+  /* Preview-as-client: Header (~40px desktop) + accent preview-banner
+     (~28px) stacked. The nav drops below both. Mobile rule omitted —
+     Magazine topnav is display:none below 1024px (the binary breakpoint
+     contract from TZ-MAGAZINE §2). */
+  [data-preview="true"] [data-theme="magazine"] .tp-mag-topnav {
+    top: 68px;
   }
 }
 
