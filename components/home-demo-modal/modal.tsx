@@ -134,7 +134,7 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
       if (cancelled || chars >= HOME_TEXT_FULL.length) return
       chars++
       setTypedHome(HOME_TEXT_FULL.slice(0, chars))
-      const next = HOME_TEXT_FULL[chars - 1] === '\n' ? 200 : 32
+      const next = HOME_TEXT_FULL[chars - 1] === '\n' ? 150 : 24
       setTimeout(tick, next)
     }
     // 200ms initial pause only on first start (typedHome empty), zero on resume
@@ -295,16 +295,19 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
             </div>
           </div>
 
-          {/* ----- Phase 1+2: home mockup ----- */}
+          {/* ----- Phase 1+2: home mockup (real home screenshot + overlays) ----- */}
           <div className={styles.homeMockup}>
-            <h2 className={styles.homeTitle}>The quote tool for travel pros.</h2>
-            <div className={styles.textareaMock}>
-              <span className={styles.typedText}>{typedHome}</span>
-              <span className={styles.createBtn}>
-                Create quote
-                <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/demo-modal/home-page.jpg"
+              className={styles.homeBase}
+              alt=""
+            />
+            <span className={styles.typedText}>{typedHome}</span>
+            <span className={styles.createBtn}>
+              Create quote
+              <ArrowRight className="w-2.5 h-2.5" />
+            </span>
           </div>
 
           {/* Cursor for phase 1 (moves to Create quote button) */}

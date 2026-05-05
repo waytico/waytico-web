@@ -161,55 +161,45 @@
 .stage.ended .urlTextHome { opacity: 0; }
 .stage.ended .urlTextTrip { opacity: 1; }
 
-/* ----- Phase 1+2: home mockup ----- */
+/* ----- Phase 1+2: home mockup (screenshot of real home page) ----- */
 .homeMockup {
   position: absolute;
   top: 32px; left: 0; right: 0; bottom: 0;
   background: #FAF8F5;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  padding: 40px 60px;
-  text-align: center;
 }
 .stage.playing .homeMockup {
   animation: phase12Visible 7s steps(1, end) forwards;
 }
 @keyframes phase12Visible {
   0%   { opacity: 1; }
-  98.5% { opacity: 1; } /* visible until 6.9s */
+  98.5% { opacity: 1; }
   100% { opacity: 0; pointer-events: none; }
 }
 
-.homeTitle {
-  font-family: var(--font-serif), Georgia, serif;
-  font-weight: 700;
-  font-size: clamp(20px, 2.4vw, 28px);
-  letter-spacing: -0.01em;
-  line-height: 1.1;
-  color: #2C2420;
-  margin-bottom: 24px;
+.homeBase {
+  height: 100%;
+  width: auto;
+  display: block;
+  /* Image is 713×544; centred horizontally in 1024-wide stage. */
 }
 
-.textareaMock {
-  position: relative;
-  width: 100%;
-  max-width: 520px;
-  background: #FFFFFE;
-  border: 1px solid #E8DFD5;
-  border-radius: 12px;
-  padding: 16px 18px;
-  text-align: left;
-  min-height: 140px;
-  font-family: var(--font-sans), system-ui, sans-serif;
-  font-size: 13px;
-  line-height: 1.55;
-  color: rgba(44,36,32,0.85);
-}
+/* Typed-text overlay — sits inside the textarea region of the screenshot.
+   Coordinates are % of the stage (browser chrome + content). */
 .typedText {
+  position: absolute;
+  top: 38%;            /* just inside top edge of textarea card */
+  left: 34%;
+  width: 32%;
+  z-index: 4;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 11px;
+  line-height: 1.6;
+  color: rgba(44, 36, 32, 0.85);
   white-space: pre-wrap;
-  display: inline;
+  pointer-events: none;
 }
 .typedText::after {
   content: '';
@@ -221,63 +211,60 @@
   vertical-align: text-bottom;
   animation: blink 1s steps(2, start) infinite;
 }
-@keyframes blink { to { opacity: 0; } }
-.stage.playing .typedText {
-  /* Reveal characters via clip — text is fully written but visually trimmed */
-  animation: typewriter 4.5s steps(125, end) forwards;
-  display: block;
-  overflow: hidden;
-  width: 0;
-  white-space: pre;
-}
-@keyframes typewriter {
-  0%  { width: 0; }
-  /* line 1: 32 chars by 1.0s; line 2: 25c by 1.8s; line 3: 35c by 2.6s;
-     line 4: 39c by 3.6s; line 5: 24c by 4.5s. Steps approximate. */
-  100% { width: 100%; }
-}
 
+/* Create-quote pill drawn on top of the screenshot's grey placeholder.
+   Hard-coded to where the disabled button sits in home-page.jpg. */
 .createBtn {
   position: absolute;
-  right: 12px;
-  bottom: 12px;
+  /* Position inside the textarea, right-bottom corner */
+  right: 33%;
+  top: 49%;
   background: #C4622D;
   color: #FFFFFE;
   font-family: var(--font-sans), system-ui, sans-serif;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
-  padding: 7px 14px;
+  padding: 4px 10px;
   border-radius: 9999px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  z-index: 4;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px -2px rgba(196, 98, 45, 0.4);
 }
 .stage.playing .createBtn {
-  animation: btnPress 0.3s ease-in-out 4.7s;
+  animation: btnPress 0.25s ease-in-out 4.85s;
 }
 @keyframes btnPress {
   0%, 100% { background: #C4622D; transform: scale(1); }
   50%      { background: #A55224; transform: scale(0.97); }
 }
 
-/* Cursor hand that moves to button at end of phase 1 */
+/* Cursor for phase 1 — moves from idle position to the Create quote pill
+   and presses. Coordinates in % of stage. */
 .cursorPhase1 {
   position: absolute;
-  left: 50%;
-  top: 60%;
   width: 18px;
   height: 22px;
   pointer-events: none;
   opacity: 0;
   z-index: 5;
+  left: 50%;
+  top: 65%;
 }
 .stage.playing .cursorPhase1 {
-  animation: cursor1 0.7s cubic-bezier(0.45, 0, 0.55, 1) 4.3s forwards;
+  animation: cursor1 0.8s cubic-bezier(0.45, 0, 0.55, 1) 4.2s forwards;
 }
 @keyframes cursor1 {
-  0%   { opacity: 0; left: 50%;  top: 65%; }
-  20%  { opacity: 1; left: 50%;  top: 65%; }
-  100% { opacity: 1; left: 75%;  top: 78%; }
+  0%   { opacity: 0; left: 50%; top: 65%; transform: scale(1); }
+  20%  { opacity: 1; left: 50%; top: 65%; transform: scale(1); }
+  /* travel to Create quote pill — center of orange pill in screenshot */
+  82%  { left: 60%; top: 51%; transform: scale(1); }
+  /* press */
+  90%  { transform: scale(0.78); }
+  /* release, hold position so user sees the click landed */
+  100% { opacity: 1; left: 60%; top: 51%; transform: scale(1); }
 }
 
 /* ----- Phase 2: spinner ----- */
@@ -568,7 +555,9 @@
   100% { opacity: 0; transform: translateX(-40px); }
 }
 
-/* ----- Caption ----- */
+@keyframes blink { to { opacity: 0; } }
+
+/* ----- Caption — italic Cormorant, prominent on cream surface ----- */
 .caption {
   position: absolute;
   bottom: 56px;
@@ -576,11 +565,11 @@
   text-align: center;
   font-family: var(--font-serif), Georgia, serif;
   font-style: italic;
-  font-size: 17px;
-  color: rgba(44, 36, 32, 0.75);
+  font-size: 22px;
+  line-height: 1.2;
+  color: #2C2420;
   pointer-events: none;
   z-index: 8;
-  text-shadow: 0 1px 8px rgba(250, 248, 245, 0.7);
   opacity: 0;
 }
 .stage.playing .captionDescribe {
