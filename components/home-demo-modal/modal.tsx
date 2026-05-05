@@ -305,18 +305,23 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
           {/* Phase 1+2: home mockup (real screenshot + typed-text overlay).
               The Create-quote pill in the screenshot stays as is (greyed
               disabled state) — the cursor lands on it and a ripple sells
-              the click. No HTML pill overlay. */}
+              the click. No HTML pill overlay.
+              Image + overlays wrapped in .imageWrapper which has the same
+              aspect ratio as the screenshot, so % coordinates of overlays
+              track the image regardless of viewport size. */}
           <div className={styles.homeMockup}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/demo-modal/home-page.jpg"
-              className={styles.homeBase}
-              alt=""
-            />
-            <span className={styles.typedText}>{typedHome}</span>
+            <div className={styles.imageWrapper}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/demo-modal/home-page.jpg"
+                className={styles.homeBase}
+                alt=""
+              />
+              <span className={styles.typedText}>{typedHome}</span>
+              <CursorIcon className={styles.cursorPhase1} />
+              <span className={styles.clickRipplePhase1} />
+            </div>
           </div>
-          <CursorIcon className={styles.cursorPhase1} />
-          <span className={styles.clickRipplePhase1} />
 
           {/* Phase 2: spinner */}
           <div className={styles.spinner}>
