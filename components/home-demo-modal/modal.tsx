@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowRight, Pause, Play, RotateCcw, Share2, X } from 'lucide-react'
+import { ArrowRight, Pause, Play, RotateCcw, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import styles from './demo-modal.module.css'
 
@@ -84,7 +84,7 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
       playStartRef.current = Date.now()
     }
     const elapsed = Date.now() - playStartRef.current
-    const remaining = Math.max(0, 21500 - elapsed)
+    const remaining = Math.max(0, 22000 - elapsed)
     const t = setTimeout(() => setPhase('ended'), remaining)
     return () => clearTimeout(t)
   }, [phase, paused, playKey])
@@ -157,10 +157,10 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
     }
     if (playStartRef.current === null) return
     const targets: Array<[number, string]> = [
-      [16050, '1'],
-      [16400, '18'],
-      [16750, '180'],
-      [17100, PRICE_FINAL],
+      [16500, '1'],
+      [16850, '18'],
+      [17200, '180'],
+      [17550, PRICE_FINAL],
     ]
     const elapsed = Date.now() - playStartRef.current
     // Snap any past targets immediately (handles late resume)
@@ -241,6 +241,11 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
     phase === 'ended' && styles.ended,
     paused && styles.paused,
   )
+  const modalBoxClass = cn(
+    styles.modalBox,
+    phase === 'playing' && styles.playing,
+    phase === 'ended' && styles.ended,
+  )
 
   return createPortal(
     <div
@@ -250,7 +255,8 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
       aria-modal="true"
       aria-label="Product demo"
     >
-      <div className={styles.modalBox}>
+      {/* Re-mount the box on Replay so all CSS animations restart together */}
+      <div key={playKey} className={modalBoxClass}>
         <button
           type="button"
           onClick={handleClose}
@@ -276,9 +282,11 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
           Skip →
         </button>
 
-        {/* Stage — keyed on playKey so a Replay re-mounts and CSS animations restart */}
-        <div key={playKey} className={stageClass}>
-          {/* ----- Browser chrome (phases 1-4 desktop) ----- */}
+        {/* Stage = top region of modal (chrome + content viewport). Caption,
+            end controls, and progress bar live OUTSIDE so they never overlap
+            screenshot content. */}
+        <div className={stageClass}>
+          {/* Browser chrome (phases 1-4 desktop) */}
           <div className={styles.browserChrome}>
             <div className={styles.dots}>
               <span className={styles.dot} />
@@ -295,7 +303,10 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
             </div>
           </div>
 
-          {/* ----- Phase 1+2: home mockup (real home screenshot + overlays) ----- */}
+          {/* Phase 1+2: home mockup (real screenshot + typed-text overlay).
+              The Create-quote pill in the screenshot stays as is (greyed
+              disabled state) — the cursor lands on it and a ripple sells
+              the click. No HTML pill overlay. */}
           <div className={styles.homeMockup}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -304,30 +315,18 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
               alt=""
             />
             <span className={styles.typedText}>{typedHome}</span>
-            <span className={styles.createBtn}>
-              Create quote
-              <ArrowRight className="w-2.5 h-2.5" />
-            </span>
           </div>
-
-          {/* Cursor for phase 1 (moves to Create quote button) */}
           <CursorIcon className={styles.cursorPhase1} />
+          <span className={styles.clickRipplePhase1} />
 
-          {/* ----- Phase 2: spinner ----- */}
+          {/* Phase 2: spinner */}
           <div className={styles.spinner}>
             <div className={styles.spinnerRing} />
             <div className={styles.spinnerLabel}>Generating…</div>
           </div>
 
-          {/* ----- Phase 3-4: trip page ----- */}
+          {/* Phase 3-4: trip page */}
           <div className={styles.tripPage}>
-            {/* Sticky overlay (does not scroll with content) */}
-            <div className={styles.tripStickyHeader}>
-              <span className={styles.brandWordmark}>Waytico</span>
-              <span className={styles.sharePill}>
-                <Share2 className="w-3 h-3" /> Share
-              </span>
-            </div>
             <div className={styles.tripScrollWrap}>
               <div className={styles.tripScroll}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -354,17 +353,20 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
                   className={cn(styles.dayPhoto, styles.day3Photo)}
                   alt=""
                 />
-                {/* Price typewriter overlay — covers €0 in screenshot */}
                 <span className={styles.priceOverlay}>
                   <span className={styles.priceText}>{typedPrice}</span>
                 </span>
               </div>
             </div>
-            {/* Phase-4 cursor — positioned over .tripPage so it does not scroll */}
+            {/* Sticky strip — first 42px of the screenshot fixed on top */}
+            <div className={styles.tripStickyStrip} />
+            {/* Phase-4 cursor + ripples (over .tripPage so they don't scroll) */}
             <CursorIcon className={styles.cursorPhase4} />
+            <span className={styles.clickRipplePhase4Price} />
+            <span className={styles.clickRipplePhase4Share} />
           </div>
 
-          {/* ----- Phase 5: phone ----- */}
+          {/* Phase 5: phone */}
           <div className={styles.phoneFrame}>
             <div className={styles.phoneScreen}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -375,8 +377,10 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
               />
             </div>
           </div>
+        </div>
 
-          {/* ----- Captions (CSS shows the right one per phase) ----- */}
+        {/* Caption row — outside stage so it never overlaps screenshot footer */}
+        <div className={styles.captionRow}>
           <div className={cn(styles.caption, styles.captionDescribe)}>
             Describe the trip
           </div>
@@ -389,30 +393,30 @@ export default function DemoModal({ isOpen, onClose, onMakeMyOwn }: DemoModalPro
           <div className={cn(styles.caption, styles.captionClient)}>
             Minutes later — your client opens it
           </div>
+        </div>
 
-          {/* ----- End-state controls ----- */}
-          <div className={styles.endControls}>
-            <button
-              type="button"
-              onClick={handleReplay}
-              className={styles.watchAgainBtn}
-            >
-              <RotateCcw className="w-3.5 h-3.5" /> Watch again
-            </button>
-            <button
-              type="button"
-              onClick={handleMakeMyOwn}
-              className={styles.ctaBtn}
-            >
-              Make my own quote
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+        {/* End-state controls — replace the caption row when ended */}
+        <div className={styles.endControls}>
+          <button
+            type="button"
+            onClick={handleReplay}
+            className={styles.watchAgainBtn}
+          >
+            <RotateCcw className="w-3.5 h-3.5" /> Watch again
+          </button>
+          <button
+            type="button"
+            onClick={handleMakeMyOwn}
+            className={styles.ctaBtn}
+          >
+            Make my own quote
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
-          {/* ----- Progress bar ----- */}
-          <div className={styles.progressBar}>
-            <div className={styles.progressFill} />
-          </div>
+        {/* Progress bar at the very bottom of the modal */}
+        <div className={styles.progressBar}>
+          <div className={styles.progressFill} />
         </div>
       </div>
     </div>,
