@@ -1728,11 +1728,47 @@
 }
 
 [data-theme="magazine"] .tp-mag-rule {
-  height: 1px;
-  background: var(--rule);
-  width: 100%;
-  border: 0;
-  margin: 0;
+  /* Suppressed on Magazine. Section-to-section dividers are now drawn
+     edge-to-edge by the border-top rules below, which sit on the
+     full-bleed .tp-mag-section / .tp-section element rather than on
+     this <hr> nested inside .tp-mag-container (the latter clamps the
+     rule to the container's max-width and its inline padding,
+     producing a too-narrow line that doesn't align with the
+     full-bleed photos and edge-to-edge day separators). The <hr>
+     stays in the DOM as an accessibility-friendly section divider
+     but contributes no visual at this theme. */
+  display: none;
+}
+
+/* Section-to-section dividers — Magazine. The full-bleed
+   <section.tp-mag-section> already extends to viewport edges (it has
+   no max-width and no inline padding of its own; only its inner
+   .tp-mag-container is constrained). A border-top on the section
+   itself therefore renders edge-to-edge automatically. We cover all
+   three adjacency cases that occur on a Magazine trip page:
+
+   - magazine ↔ magazine — quote-phase section transitions
+     (overview→itinerary→accommodations→price→included→terms→contacts)
+   - magazine → classic — Magazine quote-phase tail flows into the
+     active-phase Tasks / Documents / What-to-bring sections, which
+     are rendered as plain <section.tp-section>
+   - classic ↔ classic — between the active-phase sections themselves
+     on a Magazine trip (the global .tp-section + .tp-section rule
+     also matches, but we restate it inside this scope so the visual
+     contract for "Magazine page section dividers are full-width" is
+     readable as one block).
+
+   We don't put a rule above the very first Magazine section because
+   the Hero immediately precedes it (full-bleed photo with its own
+   visual weight; a hairline between hero and overview reads as
+   scaffolding, not editorial). The :first-child case is implicit:
+   the adjacent-sibling combinator only matches a section that has a
+   section before it. */
+[data-theme="magazine"] .tp-mag-section + .tp-mag-section,
+[data-theme="magazine"] .tp-mag-section + .tp-section,
+[data-theme="magazine"] .tp-section + .tp-mag-section,
+[data-theme="magazine"] .tp-section + .tp-section {
+  border-top: 1px solid var(--rule);
 }
 
 /* ── Section subtitle (narrative phrase under each section eyebrow) ─
@@ -2764,7 +2800,16 @@
    on each card means there's no border under the last card by
    construction). Scoped to the single-column mobile layout — at
    md+/lg+ the grid becomes 2-up/3-up and a horizontal rule no longer
-   reads as a divider, so we suppress it via the media query gate. */
+   reads as a divider, so we suppress it via the media query gate.
+
+   Padding rhythm: each card gets symmetric padding-block: --gap-block
+   (32px on Magazine) so the rule sits an equal distance from the
+   text above it and the photo below it. This matches the editorial
+   cadence Magazine uses elsewhere — section eyebrows, hero, day
+   spreads all key off the same --gap-block token. The first card
+   collapses padding-top (would create dead space above the first
+   photo) and the last card collapses padding-bottom (would push the
+   final card away from the section's own bottom rule). */
 @media (max-width: 767px) {
   [data-theme="magazine"] .tp-mag-acc__grid {
     /* Replace the inter-card flex gap with internal padding on each
@@ -2774,12 +2819,15 @@
     gap: 0;
   }
   [data-theme="magazine"] .tp-mag-acc__card {
-    padding-top: 32px;
+    padding-block: var(--gap-block);
     border-top: 1px solid var(--rule);
   }
   [data-theme="magazine"] .tp-mag-acc__grid > .tp-mag-acc__card:first-child {
     padding-top: 0;
     border-top: 0;
+  }
+  [data-theme="magazine"] .tp-mag-acc__grid > .tp-mag-acc__card:last-child {
+    padding-bottom: 0;
   }
 }
 
