@@ -498,30 +498,28 @@ function QuoteValidityRow({ value, onSave }: QuoteValidityRowProps) {
         </span>
       </div>
       <div className="grid grid-cols-[10rem_2.5rem] gap-2 items-center sm:justify-self-end">
-        <div className="flex justify-end">
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={365}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commit}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                ;(e.currentTarget as HTMLInputElement).blur()
-              } else if (e.key === 'Escape') {
-                e.preventDefault()
-                setDraft(String(effective))
-                ;(e.currentTarget as HTMLInputElement).blur()
-              }
-            }}
-            disabled={saving}
-            aria-label="Quote validity in days"
-            className="w-16 bg-background border border-border rounded-full px-3 py-1.5 text-sm text-foreground/80 text-center outline-none focus:border-accent disabled:opacity-60"
-          />
-        </div>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={365}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              ;(e.currentTarget as HTMLInputElement).blur()
+            } else if (e.key === 'Escape') {
+              e.preventDefault()
+              setDraft(String(effective))
+              ;(e.currentTarget as HTMLInputElement).blur()
+            }
+          }}
+          disabled={saving}
+          aria-label="Quote validity in days"
+          className="w-full bg-background border border-border rounded-full px-3 py-1.5 text-sm text-foreground/80 text-center outline-none focus:border-accent disabled:opacity-60"
+        />
         <span className="text-sm text-foreground/60">days</span>
       </div>
     </div>
