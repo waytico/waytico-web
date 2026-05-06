@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { ArrowDown, ArrowUp, Search } from 'lucide-react'
 import BrandCard from '@/components/brand-card'
@@ -76,17 +76,94 @@ function SortHeader({
   )
 }
 
+// Status tabs shown above the list. Drafts are intentionally omitted —
+// drafts are rare (only generation failures land there) and stay
+// reachable through the search box if needed.
+const TAB_FILTERS: { key: StatusFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'quoted', label: 'Quoted' },
+  { key: 'active', label: 'Active' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'archived', label: 'Archived' },
+]
+
+const VALID_SORT_MODES: SortMode[] = ['state', 'client', 'issued', 'expires']
+const VALID_PER_PAGE: PerPage[] = [10, 25, 50, 100]
+
+function parseStatusFilter(raw: string | null): StatusFilter {
+  if (!raw) return 'all'
+  if (
+    raw === 'all' ||
+    raw === 'draft' ||
+    raw === 'quoted' ||
+    raw === 'active' ||
+    raw === 'completed' ||
+    raw === 'archived'
+  ) return raw
+  return 'all'
+}
+
+function parseSortMode(raw: string | null): SortMode {
+  if (raw && (VALID_SORT_MODES as string[]).includes(raw)) return raw as SortMode
+  return 'state'
+}
+
+function parseSortDir(raw: string | null): SortDir {
+  return raw === 'desc' ? 'desc' : 'asc'
+}
+
+function parsePerPage(raw: string | null): PerPage {
+  const n = raw ? Number(raw) : NaN
+  if ((VALID_PER_PAGE as number[]).includes(n)) return n as PerPage
+  return 25
+}
+
+function parsePage(raw: string | null): number {
+  const n = raw ? Number(raw) : NaN
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1
+}
+
 export default function DashboardPage() {
   const { isLoaded, isSignedIn, getToken } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [projects, setProjects] = useState<Project[] | null>(null)
-  const [search, setSearch] = useState('')
-  const [sortMode, setSortMode] = useState<SortMode>('state')
-  const [sortDir, setSortDir] = useState<SortDir>('asc')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [perPage, setPerPage] = useState<PerPage>(25)
-  const [page, setPage] = useState(1)
+  // Initial values come from URL so back/forward and shared links survive.
+  // After first render the URL is the single source of truth; setters below
+  // patch the query string and React state mirrors what the URL says.
+  const [search, setSearch] = useState(() => searchParams.get('q') ?? '')
+  const [sortMode, setSortMode] = useState<SortMode>(() =>
+    parseSortMode(searchParams.get('sort')),
+  )
+  const [sortDir, setSortDir] = useState<SortDir>(() =>
+    parseSortDir(searchParams.get('dir')),
+  )
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() =>
+    parseStatusFilter(searchParams.get('tab')),
+  )
+  const [perPage, setPerPage] = useState<PerPage>(() =>
+    parsePerPage(searchParams.get('per')),
+  )
+  const [page, setPage] = useState(() => parsePage(searchParams.get('page')))
 
+  // Push current state back into the URL whenever a knob changes. We use
+  // replace (not push) so the browser history doesn't fill up with one
+  // entry per keystroke in the search box.
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (search.trim()) params.set('q', search.trim())
+    if (statusFilter !== 'all') params.set('tab', statusFilter)
+    if (sortMode !== 'state') params.set('sort', sortMode)
+    if (sortDir !== 'asc') params.set('dir', sortDir)
+    if (page !== 1) params.set('page', String(page))
+    if (perPage !== 25) params.set('per', String(perPage))
+    const qs = params.toString()
+    router.replace(qs ? `/dashboard?${qs}` : '/dashboard', { scroll: false })
+  }, [search, statusFilter, sortMode, sortDir, page, perPage, router])
+
+  // Reset to page 1 whenever something that would change row counts moves.
+  // Combined with the URL sync above: filter/sort changes both reset page
+  // AND drop it from the URL.
   useEffect(() => {
     setPage(1)
   }, [search, sortMode, sortDir, statusFilter, perPage])
@@ -262,9 +339,51 @@ export default function DashboardPage() {
                 Trips
               </h3>
               <div className="rounded-lg border border-border bg-card mb-6">
-                {/* Toolbar: search + status filter. Sorting moved to
-                    column headers below — there is no separate Sort
-                    control. */}
+                {/* Status tabs — primary filter knob. Counts are computed
+                    against the unfiltered project set so users see
+                    distribution at a glance. Active tab styled with
+                    accent underline. */}
+                <div
+                  className="border-b border-border/70 px-2 sm:px-4 flex items-center gap-1 overflow-x-auto"
+                  role="tablist"
+                  aria-label="Filter trips by status"
+                >
+                  {TAB_FILTERS.map((tab) => {
+                    const count =
+                      tab.key === 'all'
+                        ? projects?.length ?? 0
+                        : projects?.filter((p) => p.status === tab.key).length ?? 0
+                    const active = statusFilter === tab.key
+                    return (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setStatusFilter(tab.key)}
+                        className={`relative py-2.5 px-3 text-sm whitespace-nowrap transition-colors ${
+                          active
+                            ? 'text-foreground font-medium'
+                            : 'text-foreground/55 hover:text-foreground/85'
+                        }`}
+                      >
+                        {tab.label}
+                        <span
+                          className={`ml-1.5 text-xs ${
+                            active ? 'text-foreground/55' : 'text-foreground/35'
+                          }`}
+                        >
+                          {count}
+                        </span>
+                        {active && (
+                          <span className="absolute left-2 right-2 -bottom-px h-0.5 bg-foreground rounded-full" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Toolbar: search only. Sort lives on column headers. */}
                 <div className="border-b border-border/70 px-4 py-3 flex flex-wrap items-center gap-3">
                   <div className="relative flex-1 min-w-[180px] max-w-sm">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
@@ -276,21 +395,6 @@ export default function DashboardPage() {
                       className="w-full pl-8 pr-3 h-8 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent"
                     />
                   </div>
-
-                  <label className="flex items-center gap-1.5 text-xs text-foreground/60">
-                    Show
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                      className="h-8 px-2 text-xs bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent"
-                    >
-                      {STATUS_FILTER_OPTIONS.map((opt) => (
-                        <option key={opt.key} value={opt.key}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
                 </div>
 
                 {/* Column headers — desktop. Widths mirror trip-row.tsx
