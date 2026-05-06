@@ -73,7 +73,7 @@ export default function PostClaimUpsellModal({ show, onClose }: Props) {
             },
             {
               t: 'Pick a visual style',
-              d: 'Classic, Cinematic, or Clean',
+              d: 'Magazine, Serene, or Frontier',
             },
             {
               t: 'Make it yours',
