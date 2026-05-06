@@ -1707,7 +1707,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           <div
             className={
               resolvedTheme === 'magazine' && clientInfoOpen
-                ? 'fixed top-[84px] sm:top-11 inset-x-0 z-20 max-h-[calc(100vh-84px)] sm:max-h-[calc(100vh-2.75rem)] overflow-y-auto bg-background shadow-md'
+                ? 'fixed top-[84px] sm:top-11 inset-x-0 z-20 max-h-[calc(100vh-84px)] sm:max-h-[calc(100vh-2.75rem)] overflow-y-auto'
                 : undefined
             }
           >
