@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import TripPageClient from './trip-page-client'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
@@ -42,5 +43,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function TripPage({ params }: Props) {
   const data = await getProject(params.slug)
+  if (!data) notFound()
   return <TripPageClient slug={params.slug} initialData={data} />
 }
