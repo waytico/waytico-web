@@ -2301,6 +2301,26 @@
 }
 
 @media (max-width: 1023px) {
+  /* Edge-to-edge separator. The day's photo already breaks out of the
+     section padding via `margin-inline: calc(-1 * clamp(24px, 5vw,
+     48px))` so the photo itself is full-bleed. Without expanding the
+     day's own bounding box to match, the border-top stops at the
+     section padding and reads as narrower than the photo it sits
+     above — visually inconsistent with the magazine canon (Smith,
+     CNT, Tablet all run rules edge-to-edge). Expand the day with the
+     same negative margin-inline as the photo, then re-pad the
+     non-photo children (header, body) back to the original gutter via
+     padding-inline on .tp-mag-day so text alignment is unaffected.
+     The border-top now spans the same width as the photo. */
+  [data-theme="magazine"] .tp-mag-day {
+    margin-inline: calc(-1 * clamp(24px, 5vw, 48px));
+    padding-inline: clamp(24px, 5vw, 48px);
+  }
+  /* Photo cancels the inherited padding-inline so it stays full-bleed
+     within the now-wider .tp-mag-day. */
+  [data-theme="magazine"] .tp-mag-day__photo {
+    margin-inline: calc(-1 * clamp(24px, 5vw, 48px));
+  }
   /* Promote header + body up to .tp-mag-day's flex container. */
   [data-theme="magazine"] .tp-mag-day__text-col {
     display: contents;
@@ -2734,6 +2754,33 @@
   flex-direction: column;
   background: var(--bg);
   position: relative;
+}
+
+/* Mobile separator between accommodation cards. Width = card width =
+   photo width (photos run flush with the card edges, so border-top on
+   the card itself naturally matches photo width without any extra
+   geometry). The first card has no top border so the rule only sits
+   BETWEEN cards, never above the first or below the last (border-top
+   on each card means there's no border under the last card by
+   construction). Scoped to the single-column mobile layout — at
+   md+/lg+ the grid becomes 2-up/3-up and a horizontal rule no longer
+   reads as a divider, so we suppress it via the media query gate. */
+@media (max-width: 767px) {
+  [data-theme="magazine"] .tp-mag-acc__grid {
+    /* Replace the inter-card flex gap with internal padding on each
+       card. Without this, border-top + a 40px gap would sandwich the
+       line in dead air — putting the padding inside the card pulls
+       the rule snug against the photo above it. */
+    gap: 0;
+  }
+  [data-theme="magazine"] .tp-mag-acc__card {
+    padding-top: 32px;
+    border-top: 1px solid var(--rule);
+  }
+  [data-theme="magazine"] .tp-mag-acc__grid > .tp-mag-acc__card:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
 }
 
 /* ── Photo flow ──────────────────────────────────────────────────────
