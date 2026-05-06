@@ -2180,13 +2180,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       {resolvedTheme === 'magazine' && (
         <MagazineStickyBar
-          pricingMode={pricingMode}
-          pricingLabel={p.pricing_label ?? null}
-          pricePerPerson={pricePerPersonNum}
-          priceTotal={priceTotalNum}
-          currency={p.currency}
           owner={owner}
           operatorContact={operatorContact}
+          title={p.title || 'Trip'}
+          url={shareUrl}
+          status={p.status || ''}
           visible={!(showOwnerUI && !isShowcase && !isAnonCreator)}
         />
       )}

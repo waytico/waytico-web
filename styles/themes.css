@@ -3919,7 +3919,10 @@
   z-index: 30;
   background: var(--bg);
   border-top: 1px solid var(--rule);
-  padding: 12px 22px calc(12px + env(safe-area-inset-bottom, 0px)) 22px;
+  /* Horizontal padding kept narrow (12px) so 5x 44px tap targets fit
+     comfortably on a 320px viewport: 5*44 + 4*4 (gap) + 24 (padding)
+     = 260px, leaving room for the device's safe-area gutters. */
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)) 12px;
   /* Soft shadow lifts the bar off the cream paper. */
   box-shadow: 0 -2px 16px rgba(26, 24, 23, 0.06);
   /* Slide off-screen + fade when the footer enters the viewport.
@@ -3951,80 +3954,95 @@
 [data-theme="magazine"] .tp-mag-stickybar__inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  /* Equal-spaced row of icon buttons. justify-content: space-around
+     gives each tap target proportional breathing room without manual
+     gap tuning across viewport widths. */
+  justify-content: space-around;
+  gap: 4px;
 }
 
-[data-theme="magazine"] .tp-mag-stickybar__price {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+/* Each item is the wrapper for an icon button — for share, also
+   anchors the dropdown menu via position: relative. Other items
+   could be plain links but we wrap them too so flex sizing stays
+   uniform across all icons (matching widths regardless of whether
+   the button is a <button> or an <a>). */
+[data-theme="magazine"] .tp-mag-stickybar__item {
+  position: relative;
+  display: inline-flex;
 }
 
-[data-theme="magazine"] .tp-mag-stickybar__from {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--ink-mute);
-  line-height: 1;
-}
-
-[data-theme="magazine"] .tp-mag-stickybar__amount {
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 22px;
-  line-height: 1.05;
-  letter-spacing: -0.005em;
-  color: var(--ink);
-}
-
-[data-theme="magazine"] .tp-mag-stickybar__suffix {
-  font-family: var(--font-body);
-  font-size: 11px;
-  color: var(--ink-mute);
-  line-height: 1.2;
-}
-
-[data-theme="magazine"] .tp-mag-stickybar__inquire button[aria-haspopup="menu"] {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  background: var(--accent);
-  color: var(--accent-ink);
-  padding: 12px 20px;
+/* Icon button — the actual tap target. 44x44 minimum (iOS HIG floor)
+   ensures comfortable tapping with thumb on phones. Icon centered,
+   no chrome/border so the bar reads as an icon strip rather than a
+   row of buttons. Uses --ink-mute by default, fades to --accent on
+   hover/focus to signal interactivity without overpowering content. */
+[data-theme="magazine"] .tp-mag-stickybar__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   border: 0;
-  border-radius: 0;
+  background: transparent;
+  color: var(--ink-mute);
   cursor: pointer;
-  text-shadow: none;
-  white-space: nowrap;
-  transition: background 0.18s ease;
+  border-radius: 8px;
+  transition: color 0.18s ease, background 0.18s ease;
+  /* Reset link-style underlines on the <a> variant. */
+  text-decoration: none;
 }
 
-[data-theme="magazine"] .tp-mag-stickybar__inquire button[aria-haspopup="menu"]:hover {
-  background: color-mix(in oklab, var(--accent) 88%, var(--ink));
+[data-theme="magazine"] .tp-mag-stickybar__btn:hover,
+[data-theme="magazine"] .tp-mag-stickybar__btn:focus-visible {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+  outline: none;
 }
 
-[data-theme="magazine"] .tp-mag-stickybar__inquire button[aria-haspopup="menu"] > span {
-  border-bottom: 0;
-  color: inherit;
+[data-theme="magazine"] .tp-mag-stickybar__btn:active {
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
 }
 
-[data-theme="magazine"] .tp-mag-stickybar__inquire button[aria-haspopup="menu"] > svg {
-  display: none;
-}
-
-/* The dropdown menu opens below the sticky bar by default; reposition
-   to drop _up_ so it stays on-screen (default would clip below viewport).
-   ContactAgentMenu's portal-less menu uses `mt-2` and `right-0` from
-   shadcn semantic tokens — override the top-anchor inside StickyBar. */
-[data-theme="magazine"] .tp-mag-stickybar__inquire .relative > [role="menu"] {
-  top: auto;
+/* Share dropdown menu — opens UPWARD from the share button so it
+   stays on-screen (downward would clip below viewport since the bar
+   is fixed at the bottom). Anchored to the share __item via its
+   position: relative. */
+[data-theme="magazine"] .tp-mag-stickybar__menu {
+  position: absolute;
   bottom: calc(100% + 8px);
-  margin-top: 0;
-  margin-bottom: 0;
+  left: 0;
+  width: 14rem;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(26, 24, 23, 0.14);
+  padding: 4px 0;
+  z-index: 31;
+}
+
+[data-theme="magazine"] .tp-mag-stickybar__menuitem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 16px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s ease;
+}
+
+[data-theme="magazine"] .tp-mag-stickybar__menuitem:hover,
+[data-theme="magazine"] .tp-mag-stickybar__menuitem:focus-visible {
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  outline: none;
+}
+
+[data-theme="magazine"] .tp-mag-stickybar__menuitem--button {
+  font: inherit;
 }
 
 /* ── Footer ───────────────────────────────────────────────────────── */
