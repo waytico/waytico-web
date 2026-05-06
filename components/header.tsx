@@ -119,6 +119,12 @@ function GlobalRight() {
         >
           Dashboard
         </Link>
+        <Link
+          href="/settings"
+          className="text-foreground/70 hover:text-foreground transition-colors font-medium"
+        >
+          Settings
+        </Link>
         <UserButton afterSignOutUrl="/" />
       </SignedIn>
     </div>
