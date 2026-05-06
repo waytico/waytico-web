@@ -135,9 +135,9 @@ export function ClientInfo({
   return (
     <section
       aria-label="Client info — operator only"
-      className="w-full bg-highlight/70 border-y border-accent/20"
+      className="w-full"
     >
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-4 sm:mx-auto my-3 bg-highlight/70 border border-accent/20 rounded-xl overflow-hidden">
         <OnboardingTip>
           Your client&apos;s record. Edit it here or from your client list in the
           dashboard — same card, both places.
