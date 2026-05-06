@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
 
@@ -78,9 +79,17 @@ function GlobalLeft() {
     <div className="flex items-center gap-2">
       <Link
         href="/"
-        className="text-xl font-semibold font-serif tracking-tight hover:opacity-80 transition-opacity"
+        aria-label="Waytico — home"
+        className="inline-block hover:opacity-80 transition-opacity"
       >
-        Waytico
+        <Image
+          src="/waytico-wordmark.svg"
+          alt="Waytico"
+          width={103}
+          height={22}
+          priority
+          unoptimized
+        />
       </Link>
     </div>
   )
@@ -124,3 +133,4 @@ function GlobalRight() {
     </div>
   )
 }
+
