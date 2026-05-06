@@ -172,31 +172,6 @@ export default function DashboardPage() {
     if (isLoaded && !isSignedIn) router.replace('/sign-in')
   }, [isLoaded, isSignedIn, router])
 
-  // Brand-new operators get nudged into the onboarding form once. After
-  // they finish (or hit "Skip"), users.onboarded flips true and this
-  // effect becomes a no-op. Failures here are silent — better to land on
-  // an empty dashboard than to wedge a user behind a broken redirect.
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn) return
-    let active = true
-    ;(async () => {
-      try {
-        const token = await getToken()
-        const res = await apiFetch('/api/users/me', { token, cache: 'no-store' })
-        if (!res.ok || !active) return
-        const data = await res.json()
-        if (data?.user?.onboarded === false) {
-          router.replace('/onboarding')
-        }
-      } catch {
-        // ignore
-      }
-    })()
-    return () => {
-      active = false
-    }
-  }, [isLoaded, isSignedIn, getToken, router])
-
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
     let active = true
