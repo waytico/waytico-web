@@ -7,11 +7,16 @@ const nextConfig = {
   },
 }
 
-// Sentry build-time wrapper. Source-map upload is disabled until a
-// SENTRY_AUTH_TOKEN env var is provisioned — runtime error capture works
-// either way; without source maps stack traces just stay minified.
+// Sentry build-time wrapper. With SENTRY_AUTH_TOKEN env set, source maps
+// upload to Sentry so stack traces show original file names and line
+// numbers instead of minified bundle locations.
 export default withSentryConfig(nextConfig, {
+  org: "waytico",
+  project: "waytico-web",
   silent: true,
+  // Auth token is read from SENTRY_AUTH_TOKEN env automatically.
+  // Without the token (e.g. local dev) source-map upload is skipped so
+  // the build doesn't fail.
   sourcemaps: {
     disable: !process.env.SENTRY_AUTH_TOKEN,
   },
