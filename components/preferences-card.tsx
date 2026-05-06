@@ -527,7 +527,7 @@ function QuoteValidityRow({ value, onSave }: QuoteValidityRowProps) {
 // "Contact {label}" (or fallback "Contact agent" when blank).
 
 const CONTACT_LABEL_MAX = 40
-const CONTACT_LABEL_PLACEHOLDER = 'Camille · Maison Voyage · your guide'
+const CONTACT_LABEL_PLACEHOLDER = 'e.g. Camille'
 
 type ContactLabelRowProps = {
   value: string | null
@@ -561,7 +561,7 @@ function ContactLabelRow({ value, onSave }: ContactLabelRowProps) {
       <div className="flex flex-col min-w-0 flex-1">
         <span className="text-sm text-foreground">How clients address you</span>
         <span className="text-xs text-foreground/55">
-          Shown on every trip's Contact pill. Leave blank for the default.
+          Leave blank for the default &ldquo;agent&rdquo;.
         </span>
         <span className="mt-1 text-xs text-foreground/45 font-mono uppercase tracking-wider truncate">
           Preview: {preview}

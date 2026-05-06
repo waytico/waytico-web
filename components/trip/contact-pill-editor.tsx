@@ -22,7 +22,7 @@ import type { OperatorContact, OwnerBrand } from './trip-types'
  */
 
 const MAX = 40
-const PLACEHOLDER = 'Camille · Maison Voyage · your guide'
+const PLACEHOLDER = 'e.g. Camille'
 
 type Props = {
   owner: OwnerBrand
@@ -137,7 +137,7 @@ export function ContactPillEditor({ owner, operatorContact, onPhoto = false, onS
         <div
           role="dialog"
           aria-label="Edit contact label"
-          className="absolute right-0 top-full mt-2 w-72 rounded-xl bg-background border border-border shadow-lg p-3 z-40"
+          className="fixed sm:absolute left-1/2 sm:left-auto top-1/2 sm:top-full right-auto sm:right-0 -translate-x-1/2 sm:translate-x-0 -translate-y-1/2 sm:translate-y-0 mt-0 sm:mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-xl bg-background border border-border shadow-lg p-3 z-50"
         >
           <label className="block text-xs uppercase tracking-wider text-foreground/55 mb-1.5">
             How clients address you
@@ -158,7 +158,7 @@ export function ContactPillEditor({ owner, operatorContact, onPhoto = false, onS
             className="w-full px-3 py-2 text-sm bg-secondary/40 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground/20"
           />
           <p className="mt-2 text-xs text-foreground/50">
-            Used on every trip's Contact pill. Leave blank for the default.
+            Leave blank for the default &ldquo;agent&rdquo;.
           </p>
           <div className="mt-3 flex items-center justify-end gap-2">
             <button

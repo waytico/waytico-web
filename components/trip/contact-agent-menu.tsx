@@ -44,8 +44,12 @@ const ICON: Record<ChannelKey, React.ComponentType<any>> = {
 
 /**
  * Contact-agent dropdown rendered in the hero top strip on public-side
- * trip pages. Mirrors the agent's "Share with client" dropdown pattern:
- * pill trigger, click-outside / Esc to close, channel rows as menu items.
+ * trip pages. Mirrors the agent's "Share with client" dropdown pattern
+ * but keeps the menu compact: pill trigger opens a single-row strip of
+ * channel icons (mail / phone / WhatsApp / Telegram / Web / socials).
+ * Click-outside / Esc to close. Each icon is a real <a> with the right
+ * deeplink (mailto:/tel:/wa.me/etc) so the operator's address book
+ * data isn't surfaced inline — it opens in the user's app of choice.
  *
  * Channel list = getVisibleChannels(owner, operatorContact) — already
  * applies the same source order (override > brand) and hidden_channels
@@ -112,7 +116,8 @@ export function ContactAgentMenu({ owner, operatorContact, onPhoto = false, labe
       {open && (
         <div
           role="menu"
-          className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-30"
+          aria-label="Contact channels"
+          className="absolute left-0 sm:left-auto sm:right-0 mt-2 rounded-full bg-background border border-border shadow-lg px-2 py-1.5 z-30 flex items-center gap-1"
         >
           {channels.map(({ key, value }) => {
             const Icon = ICON[key]
@@ -124,19 +129,11 @@ export function ContactAgentMenu({ owner, operatorContact, onPhoto = false, labe
                 target={key === 'email' || key === 'phone' ? undefined : '_blank'}
                 rel={key === 'email' || key === 'phone' ? undefined : 'noopener noreferrer'}
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-secondary transition-colors"
+                aria-label={CHANNEL_LABEL[key]}
+                title={CHANNEL_LABEL[key]}
+                className="flex items-center justify-center w-9 h-9 rounded-full text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
               >
-                <Icon size={16} className="text-foreground/60 shrink-0" />
-                <span className="flex-1 min-w-0">
-                  <span className="block text-xs uppercase tracking-wider text-foreground/50">
-                    {CHANNEL_LABEL[key]}
-                  </span>
-                  <span className="block truncate text-foreground/90">
-                    {key === 'website'
-                      ? value.replace(/^https?:\/\//, '').replace(/\/$/, '')
-                      : value}
-                  </span>
-                </span>
+                <Icon size={16} aria-hidden="true" />
               </a>
             )
           })}
