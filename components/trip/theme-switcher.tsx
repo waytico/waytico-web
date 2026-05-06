@@ -138,7 +138,7 @@ export function ThemeSwitcher({ projectId, value, isShowcase, onLocalChange }: P
         <div
           role="listbox"
           aria-label="Trip page design"
-          className="absolute right-0 mt-2 w-[min(14rem,calc(100vw-2rem))] rounded-xl bg-background border border-border shadow-lg py-1 z-30"
+          className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[min(14rem,calc(100vw-2rem))] rounded-xl bg-background border border-border shadow-lg py-1 z-30"
         >
           {/* Legacy theme row: when the trip's saved theme isn't in
               VISIBLE_THEMES (e.g. an old quote on Classic / Cinematic /
