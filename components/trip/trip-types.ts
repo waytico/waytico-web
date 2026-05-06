@@ -87,6 +87,10 @@ export type OwnerBrand = {
   brand_logo_url?: string | null
   brand_tagline?: string | null
   brand_terms?: string | null
+  /** Personalised label for the Contact pill in the hero top strip.
+   *  When set, the pill reads "Contact {contact_label}" (e.g.
+   *  "Contact Camille"). NULL → fallback "Contact agent". */
+  contact_label?: string | null
 } | null
 
 export type ProjectLite = {

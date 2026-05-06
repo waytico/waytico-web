@@ -28,6 +28,7 @@ import { MagazineTopNav } from '@/components/trip/magazine-topnav'
 import { MagazineStickyBar } from '@/components/trip/magazine-stickybar'
 import { TripHero } from '@/components/trip/hero'
 import { ContactAgentMenu } from '@/components/trip/contact-agent-menu'
+import { ContactPillEditor } from '@/components/trip/contact-pill-editor'
 import { TripOverview, MagazineSectionSubtitleLines } from '@/components/trip/overview'
 import { TripItinerary, MagazineDayTitle } from '@/components/trip/itinerary'
 import { TripIncluded, IncludedList } from '@/components/trip/included'
@@ -1895,15 +1896,36 @@ export default function TripPageClient({ slug, initialData }: Props) {
             }
             operatorContact={operatorContact}
             contactAgentSlot={
-              !showOwnerUI
-                ? ({ onPhoto }) => (
-                    <ContactAgentMenu
-                      owner={owner}
-                      operatorContact={operatorContact}
-                      onPhoto={onPhoto}
-                    />
-                  )
-                : undefined
+              isShowcase || isAnonCreator
+                ? !showOwnerUI
+                  ? ({ onPhoto }) => (
+                      <ContactAgentMenu
+                        owner={owner}
+                        operatorContact={operatorContact}
+                        onPhoto={onPhoto}
+                      />
+                    )
+                  : undefined
+                : ({ onPhoto }) =>
+                    showOwnerUI ? (
+                      <ContactPillEditor
+                        owner={owner}
+                        operatorContact={operatorContact}
+                        onPhoto={onPhoto}
+                        onSaved={refreshOwnerData}
+                      />
+                    ) : (
+                      <ContactAgentMenu
+                        owner={owner}
+                        operatorContact={operatorContact}
+                        onPhoto={onPhoto}
+                        label={
+                          owner?.contact_label
+                            ? `Contact ${owner.contact_label}`
+                            : undefined
+                        }
+                      />
+                    )
             }
             ownerOverlay={
               showOwnerUI ? (

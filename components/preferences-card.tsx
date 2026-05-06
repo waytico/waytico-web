@@ -35,6 +35,7 @@ type UserProfile = {
   default_theme: ThemeId | null
   brand_terms: string | null
   default_quote_validity_days: number | null
+  contact_label: string | null
 }
 
 export default function PreferencesCard() {
@@ -100,6 +101,11 @@ export default function PreferencesCard() {
     return patchUser({ defaultQuoteValidityDays: days })
   }
 
+  async function saveContactLabel(value: string): Promise<boolean> {
+    const trimmed = value.trim()
+    return patchUser({ contactLabel: trimmed === '' ? null : trimmed })
+  }
+
   // Hide the card while we're fetching so it doesn't briefly flash
   // an empty placeholder above the trip list.
   if (loading || !profile) return null
@@ -107,6 +113,9 @@ export default function PreferencesCard() {
   return (
     <div className="bg-card border border-border rounded-xl p-4 mb-6">
       <DefaultThemeRow value={profile.default_theme} onSave={saveDefaultTheme} />
+      <div className="mt-2 pt-2 border-t border-border/50">
+        <ContactLabelRow value={profile.contact_label} onSave={saveContactLabel} />
+      </div>
       <div className="mt-2 pt-2 border-t border-border/50">
         <QuoteValidityRow
           value={profile.default_quote_validity_days}
@@ -507,6 +516,78 @@ function QuoteValidityRow({ value, onSave }: QuoteValidityRowProps) {
         />
         <span className="text-sm text-foreground/60">days</span>
       </div>
+    </div>
+  )
+}
+
+// ─── Contact-pill label row ───────────────────────────────────────
+//
+// Mirrors the inline editor on the trip-page Contact pill. Persists to
+// users.contact_label; trip pages read it via getOwnerBrand and display
+// "Contact {label}" (or fallback "Contact agent" when blank).
+
+const CONTACT_LABEL_MAX = 40
+const CONTACT_LABEL_PLACEHOLDER = 'Camille · Maison Voyage · your guide'
+
+type ContactLabelRowProps = {
+  value: string | null
+  onSave: (v: string) => Promise<boolean>
+}
+
+function ContactLabelRow({ value, onSave }: ContactLabelRowProps) {
+  const [draft, setDraft] = useState<string>(value ?? '')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    setDraft(value ?? '')
+  }, [value])
+
+  async function commit() {
+    if (saving) return
+    const trimmed = draft.trim().slice(0, CONTACT_LABEL_MAX)
+    if (trimmed === (value ?? '')) return // no-op when unchanged
+    setSaving(true)
+    const ok = await onSave(trimmed)
+    setSaving(false)
+    if (!ok) setDraft(value ?? '')
+  }
+
+  // Live preview shows the operator exactly what their clients will see
+  // — keeps copy parity with the rendered Contact pill on the trip page.
+  const preview = draft.trim() ? `Contact ${draft.trim()}` : 'Contact agent'
+
+  return (
+    <div className="flex items-start justify-between gap-3 px-1 py-1">
+      <div className="flex flex-col min-w-0 flex-1">
+        <span className="text-sm text-foreground">How clients address you</span>
+        <span className="text-xs text-foreground/55">
+          Shown on every trip's Contact pill. Leave blank for the default.
+        </span>
+        <span className="mt-1 text-xs text-foreground/45 font-mono uppercase tracking-wider truncate">
+          Preview: {preview}
+        </span>
+      </div>
+      <input
+        type="text"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value.slice(0, CONTACT_LABEL_MAX))}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            ;(e.currentTarget as HTMLInputElement).blur()
+          } else if (e.key === 'Escape') {
+            e.preventDefault()
+            setDraft(value ?? '')
+            ;(e.currentTarget as HTMLInputElement).blur()
+          }
+        }}
+        placeholder={CONTACT_LABEL_PLACEHOLDER}
+        maxLength={CONTACT_LABEL_MAX}
+        disabled={saving}
+        aria-label="Contact pill label"
+        className="w-56 bg-background border border-border rounded-full px-3 py-1.5 text-sm text-foreground/80 outline-none focus:border-accent disabled:opacity-60"
+      />
     </div>
   )
 }
