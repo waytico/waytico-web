@@ -137,10 +137,12 @@ export function ClientInfo({
       aria-label="Client info — operator only"
       className="w-full bg-highlight/70 border-y border-accent/20"
     >
-      <OnboardingTip>
-        The client this quote is for. Saved here, shown on the trip page.
-      </OnboardingTip>
-      <div className="max-w-4xl mx-auto px-5 py-3">
+      <div className="max-w-4xl mx-auto">
+        <OnboardingTip>
+          Your client&apos;s record. Edit it here or from your client list in the
+          dashboard — same card, both places.
+        </OnboardingTip>
+        <div className="px-5 py-3">
         {/* Header */}
         <div className="flex items-center justify-between mb-2 gap-3">
           <div className="flex items-center gap-2 min-w-0">
@@ -302,6 +304,7 @@ export function ClientInfo({
             multiline
             wide
           />
+        </div>
         </div>
       </div>
     </section>
