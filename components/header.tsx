@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
 
 type Props = {
@@ -85,13 +86,27 @@ function GlobalLeft() {
   )
 }
 
-/** Right global slot: Log-in link (signed-out) or Dashboard + avatar (signed-in). */
+/** Right global slot: Log-in link (signed-out) or Dashboard + avatar (signed-in).
+ *
+ *  Trip-page Log-in carries a redirect_url back to the page the visitor
+ *  was on, so an operator who lands on their own trip-page as a
+ *  guest (or any signed-out viewer who clicks Log-in) returns to the
+ *  same trip after authenticating, instead of being dumped at /
+ *  (Clerk's default). On non-trip pages the link stays plain — the
+ *  default fallback (/) is the right destination from / about /
+ *  pricing / etc., where the user is most likely heading to /dashboard
+ *  next anyway. Clerk's redirect_url query-param is the documented
+ *  mechanism for this and is honoured by <SignIn /> out of the box. */
 function GlobalRight() {
+  const pathname = usePathname() || '/'
+  const signInHref = pathname.startsWith('/t/')
+    ? `/sign-in?redirect_url=${encodeURIComponent(pathname)}`
+    : '/sign-in'
   return (
     <div className="flex items-center gap-3">
       <SignedOut>
         <Link
-          href="/sign-in"
+          href={signInHref}
           className="text-foreground/70 hover:text-foreground transition-colors font-medium"
         >
           Log in

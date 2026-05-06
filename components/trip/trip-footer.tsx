@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import Footer from '@/components/footer'
 import type { ThemeId } from '@/lib/themes'
 import {
@@ -45,7 +48,14 @@ export function TripFooter({ editable, theme }: Props) {
   }
 
   // Public mode on non-Magazine themes: minimal strip, light palette.
+  // Sign-in link carries a redirect_url so that after login the user
+  // returns to the trip-page they were viewing instead of being
+  // dumped at /. usePathname() is a client-only hook, which is why
+  // this whole module is now 'use client' (it has no other client-
+  // only behaviour).
   const year = new Date().getFullYear()
+  const pathname = usePathname() || '/'
+  const signInHref = `/sign-in?redirect_url=${encodeURIComponent(pathname)}`
   return (
     <footer
       id="site-footer"
@@ -68,7 +78,7 @@ export function TripFooter({ editable, theme }: Props) {
             read as one fused phrase. */}
         <span aria-hidden="true" className="mx-2 text-muted-foreground/60">·</span>
         <Link
-          href="/sign-in"
+          href={signInHref}
           className="hover:text-foreground transition-colors"
         >
           Agent login
@@ -102,6 +112,12 @@ export function TripFooter({ editable, theme }: Props) {
  */
 function FooterMagazine({ editable }: { editable: boolean }) {
   const year = new Date().getFullYear()
+  // Sign-in redirect-back: same rationale as the non-Magazine
+  // variant above. usePathname() drives both branches; on the owner
+  // path below the value is unused but the hook still has to be
+  // called unconditionally to satisfy React rules-of-hooks.
+  const pathname = usePathname() || '/'
+  const signInHref = `/sign-in?redirect_url=${encodeURIComponent(pathname)}`
 
   // Public / traveller mode — minimal centred strip.
   if (!editable) {
@@ -139,7 +155,7 @@ function FooterMagazine({ editable }: { editable: boolean }) {
                 line above. */}
             <span className="tp-mag-footer__minimal-sep" aria-hidden="true">·</span>
             <Link
-              href="/sign-in"
+              href={signInHref}
               className="tp-mag-footer__minimal-login"
             >
               Agent login
