@@ -195,25 +195,26 @@ function DefaultThemeRow({
     : DEFAULT_THEME_FALLBACK_LABEL
 
   return (
-    <div className="flex items-center justify-between gap-3 px-1 py-1">
-      <div className="flex flex-col">
+    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 sm:gap-4 px-1 py-1.5 items-start sm:items-center">
+      <div className="flex flex-col min-w-0">
         <span className="text-sm text-foreground">Default trip design</span>
         <span className="text-xs text-foreground/55">
           Applied to every new quote you create
         </span>
       </div>
-      <div ref={ref} className="relative">
+      <div ref={ref} className="relative grid grid-cols-[10rem_2.5rem] gap-2 items-center sm:justify-self-end">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/80 border border-border hover:bg-secondary transition-colors disabled:opacity-60"
+          className="w-full inline-flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/80 border border-border hover:bg-secondary transition-colors disabled:opacity-60"
           aria-haspopup="listbox"
           aria-expanded={open}
         >
-          <span>{triggerLabel}</span>
-          <ChevronDown className="w-3.5 h-3.5" />
+          <span className="truncate">{triggerLabel}</span>
+          <ChevronDown className="w-3.5 h-3.5 shrink-0" />
         </button>
+        <span aria-hidden="true" />
 
         {open && (
           <div
@@ -361,12 +362,8 @@ function BrandTermsRow({ value, onSave }: BrandTermsRowProps) {
 
   if (!editing) {
     return (
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        className="w-full flex items-center gap-3 px-2 py-1.5 -mx-2 rounded text-left text-sm hover:bg-secondary/40 border border-transparent hover:border-border transition-colors"
-      >
-        <div className="flex-1 min-w-0 flex flex-col">
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 sm:gap-4 px-1 py-1.5 items-start sm:items-center">
+        <div className="flex flex-col min-w-0">
           <span className="text-sm text-foreground">Default trip terms</span>
           <span
             className={`text-xs truncate ${
@@ -376,8 +373,17 @@ function BrandTermsRow({ value, onSave }: BrandTermsRowProps) {
             {value || 'Auto-applied to every new trip. Cancellation, deposit, etc.'}
           </span>
         </div>
-        <span className="text-xs text-foreground/50 shrink-0">Edit</span>
-      </button>
+        <div className="grid grid-cols-[10rem_2.5rem] gap-2 items-center sm:justify-self-end">
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-foreground/80 border border-border hover:bg-secondary transition-colors"
+          >
+            Edit
+          </button>
+          <span aria-hidden="true" />
+        </div>
+      </div>
     )
   }
 
@@ -484,36 +490,38 @@ function QuoteValidityRow({ value, onSave }: QuoteValidityRowProps) {
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 px-1 py-1">
-      <div className="flex flex-col">
+    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 sm:gap-4 px-1 py-1.5 items-start sm:items-center">
+      <div className="flex flex-col min-w-0">
         <span className="text-sm text-foreground">Quote validity</span>
         <span className="text-xs text-foreground/55">
           How long a new quote stays open before it expires
         </span>
       </div>
-      <div className="flex items-center gap-2">
-        <input
-          type="number"
-          inputMode="numeric"
-          min={1}
-          max={365}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              ;(e.currentTarget as HTMLInputElement).blur()
-            } else if (e.key === 'Escape') {
-              e.preventDefault()
-              setDraft(String(effective))
-              ;(e.currentTarget as HTMLInputElement).blur()
-            }
-          }}
-          disabled={saving}
-          aria-label="Quote validity in days"
-          className="w-16 bg-background border border-border rounded-full px-3 py-1.5 text-sm text-foreground/80 text-center outline-none focus:border-accent disabled:opacity-60"
-        />
+      <div className="grid grid-cols-[10rem_2.5rem] gap-2 items-center sm:justify-self-end">
+        <div className="flex justify-end">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={365}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                ;(e.currentTarget as HTMLInputElement).blur()
+              } else if (e.key === 'Escape') {
+                e.preventDefault()
+                setDraft(String(effective))
+                ;(e.currentTarget as HTMLInputElement).blur()
+              }
+            }}
+            disabled={saving}
+            aria-label="Quote validity in days"
+            className="w-16 bg-background border border-border rounded-full px-3 py-1.5 text-sm text-foreground/80 text-center outline-none focus:border-accent disabled:opacity-60"
+          />
+        </div>
         <span className="text-sm text-foreground/60">days</span>
       </div>
     </div>
@@ -552,42 +560,38 @@ function ContactLabelRow({ value, onSave }: ContactLabelRowProps) {
     if (!ok) setDraft(value ?? '')
   }
 
-  // Live preview shows the operator exactly what their clients will see
-  // — keeps copy parity with the rendered Contact pill on the trip page.
-  const preview = draft.trim() ? `Contact ${draft.trim()}` : 'Contact agent'
-
   return (
-    <div className="flex items-start justify-between gap-3 px-1 py-1">
-      <div className="flex flex-col min-w-0 flex-1">
+    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 sm:gap-4 px-1 py-1.5 items-start sm:items-center">
+      <div className="flex flex-col min-w-0">
         <span className="text-sm text-foreground">How clients address you</span>
         <span className="text-xs text-foreground/55">
           Leave blank for the default &ldquo;agent&rdquo;.
         </span>
-        <span className="mt-1 text-xs text-foreground/45 font-mono uppercase tracking-wider truncate">
-          Preview: {preview}
-        </span>
       </div>
-      <input
-        type="text"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value.slice(0, CONTACT_LABEL_MAX))}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault()
-            ;(e.currentTarget as HTMLInputElement).blur()
-          } else if (e.key === 'Escape') {
-            e.preventDefault()
-            setDraft(value ?? '')
-            ;(e.currentTarget as HTMLInputElement).blur()
-          }
-        }}
-        placeholder={CONTACT_LABEL_PLACEHOLDER}
-        maxLength={CONTACT_LABEL_MAX}
-        disabled={saving}
-        aria-label="Contact pill label"
-        className="w-56 bg-background border border-border rounded-full px-3 py-1.5 text-sm text-foreground/80 outline-none focus:border-accent disabled:opacity-60"
-      />
+      <div className="grid grid-cols-[10rem_2.5rem] gap-2 items-center sm:justify-self-end">
+        <input
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value.slice(0, CONTACT_LABEL_MAX))}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              ;(e.currentTarget as HTMLInputElement).blur()
+            } else if (e.key === 'Escape') {
+              e.preventDefault()
+              setDraft(value ?? '')
+              ;(e.currentTarget as HTMLInputElement).blur()
+            }
+          }}
+          placeholder={CONTACT_LABEL_PLACEHOLDER}
+          maxLength={CONTACT_LABEL_MAX}
+          disabled={saving}
+          aria-label="Contact pill label"
+          className="w-full bg-background border border-border rounded-full px-3 py-1.5 text-sm text-foreground/80 outline-none focus:border-accent disabled:opacity-60"
+        />
+        <span aria-hidden="true" />
+      </div>
     </div>
   )
 }
