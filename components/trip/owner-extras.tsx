@@ -64,19 +64,6 @@ export function HeroOwnerOverlay({
           </span>
         )}
 
-        {/* Empty + idle — invite the operator to add a photo. */}
-        {!isUploading && emptyState && (
-          <button
-            type="button"
-            onClick={onPickFile}
-            className={pillClickable}
-            aria-label="Add hero photo"
-          >
-            <ImagePlus className="h-3.5 w-3.5" />
-            Drag or add photo
-          </button>
-        )}
-
         {/* Photo set + idle — change pill plus standalone trash. */}
         {!isUploading && hasBg && heroPhotoId && (
           <>
@@ -103,6 +90,23 @@ export function HeroOwnerOverlay({
           </>
         )}
       </div>
+
+      {/* Empty + idle — own centered slot so the invitation reads as the
+          primary action on a brand-new hero (oversized pill, dead-center).
+          Uploading and filled states stay in the top-right cluster above. */}
+      {!isUploading && emptyState && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <button
+            type="button"
+            onClick={onPickFile}
+            className="pointer-events-auto inline-flex items-center gap-2.5 rounded-full bg-black/60 px-6 py-3.5 text-base font-medium text-white transition-colors hover:bg-black/80"
+            aria-label="Add hero photo"
+          >
+            <ImagePlus className="h-5 w-5" />
+            Drag or add photo
+          </button>
+        </div>
+      )}
     </>
   )
 }
