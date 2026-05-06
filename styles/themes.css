@@ -3919,10 +3919,7 @@
   z-index: 30;
   background: var(--bg);
   border-top: 1px solid var(--rule);
-  /* Horizontal padding kept narrow (12px) so 5x 44px tap targets fit
-     comfortably on a 320px viewport: 5*44 + 4*4 (gap) + 24 (padding)
-     = 260px, leaving room for the device's safe-area gutters. */
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)) 12px;
+  padding: 12px 22px calc(12px + env(safe-area-inset-bottom, 0px)) 22px;
   /* Soft shadow lifts the bar off the cream paper. */
   box-shadow: 0 -2px 16px rgba(26, 24, 23, 0.06);
   /* Slide off-screen + fade when the footer enters the viewport.
@@ -3952,30 +3949,30 @@
 }
 
 [data-theme="magazine"] .tp-mag-stickybar__inner {
+  /* Centred group rather than space-around. With 2-3 channels
+     space-around scattered icons at the edges of a 390px viewport;
+     centring with a fixed gap keeps them reading as a coherent
+     icon strip regardless of how many channels the operator has
+     configured. The whole strip sits centred on the cream slab. */
   display: flex;
   align-items: center;
-  /* Equal-spaced row of icon buttons. justify-content: space-around
-     gives each tap target proportional breathing room without manual
-     gap tuning across viewport widths. */
-  justify-content: space-around;
-  gap: 4px;
+  justify-content: center;
+  gap: 8px;
 }
 
-/* Each item is the wrapper for an icon button — for share, also
-   anchors the dropdown menu via position: relative. Other items
-   could be plain links but we wrap them too so flex sizing stays
-   uniform across all icons (matching widths regardless of whether
-   the button is a <button> or an <a>). */
+/* Each item wraps an icon button. For Share, also anchors the
+   dropdown menu via position: relative. */
 [data-theme="magazine"] .tp-mag-stickybar__item {
   position: relative;
   display: inline-flex;
 }
 
-/* Icon button — the actual tap target. 44x44 minimum (iOS HIG floor)
-   ensures comfortable tapping with thumb on phones. Icon centered,
-   no chrome/border so the bar reads as an icon strip rather than a
-   row of buttons. Uses --ink-mute by default, fades to --accent on
-   hover/focus to signal interactivity without overpowering content. */
+/* Icon button — tap target. 44x44 tap area (iOS HIG floor) but no
+   visible background or border at rest. The icon itself reads in
+   --ink-mute on cream paper; hover/focus/active fade the icon to
+   --ink (full ink) so interaction is signalled by the icon coming
+   forward, not by a button-tile lighting up. Mirrors the way native
+   iOS toolbars handle icon controls. */
 [data-theme="magazine"] .tp-mag-stickybar__btn {
   display: inline-flex;
   align-items: center;
@@ -3987,20 +3984,18 @@
   color: var(--ink-mute);
   cursor: pointer;
   border-radius: 8px;
-  transition: color 0.18s ease, background 0.18s ease;
-  /* Reset link-style underlines on the <a> variant. */
+  transition: color 0.18s ease;
   text-decoration: none;
 }
 
 [data-theme="magazine"] .tp-mag-stickybar__btn:hover,
 [data-theme="magazine"] .tp-mag-stickybar__btn:focus-visible {
-  color: var(--accent);
-  background: color-mix(in oklab, var(--accent) 8%, transparent);
+  color: var(--ink);
   outline: none;
 }
 
 [data-theme="magazine"] .tp-mag-stickybar__btn:active {
-  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  color: var(--accent);
 }
 
 /* Share dropdown menu — opens UPWARD from the share button so it

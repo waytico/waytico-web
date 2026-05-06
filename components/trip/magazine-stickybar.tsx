@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Mail, Phone, Send } from 'lucide-react'
+import { Mail, Phone, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { WhatsAppIcon, TelegramIcon } from '@/lib/contact-icons'
 import {
@@ -186,7 +186,7 @@ export function MagazineStickyBar({
                 aria-haspopup="menu"
                 aria-expanded={shareOpen}
               >
-                <Send size={20} aria-hidden="true" />
+                <Share2 size={22} aria-hidden="true" />
               </button>
               {shareOpen && (
                 <div
@@ -250,7 +250,7 @@ export function MagazineStickyBar({
                 className="tp-mag-stickybar__btn tp-mag-stickybar__btn--link"
                 aria-label={CHANNEL_LABEL[key]}
               >
-                <Icon size={20} aria-hidden="true" />
+                <Icon size={22} aria-hidden="true" />
               </a>
             )
           })}
