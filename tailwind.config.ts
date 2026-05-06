@@ -29,6 +29,7 @@ export default {
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
         serif: ["var(--font-serif)", "ui-serif", "Georgia", "serif"],
+        syne: ["var(--font-syne)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       borderRadius: {
         lg: "0.625rem",
@@ -39,3 +40,4 @@ export default {
   },
   plugins: [tailwindcssAnimate],
 } satisfies Config
+

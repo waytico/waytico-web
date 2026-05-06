@@ -4170,7 +4170,8 @@
 }
 
 [data-theme="magazine"] .tp-mag-footer__minimal-line {
-  font-family: var(--font-mono);
+  font-family: var(--font-syne);
+  font-weight: 500;
   font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -4178,6 +4179,9 @@
   text-align: center;
   margin: 0;
   padding-inline: 24px;
+  display: inline-block;
+  transform: scaleX(1.35);
+  transform-origin: center;
   /* Inline-flex so the brand-credit stays glued to "Powered by" while
      the agent-login utility link (after the second separator) is
      allowed to drop to a second visual row on narrow phones without
@@ -4228,15 +4232,15 @@
 }
 
 [data-theme="magazine"] .tp-mag-footer__minimal-brand {
-  /* Cormorant serif wordmark inside the mono line — mirrors the
-     Classic public-mode strip's "Powered by Waytico" treatment with
-     a font swap on the brand. */
-  font-family: var(--font-display);
+  /* Syne wordmark inside the line — same family as the SVG logo,
+     uppercase + tracked to read as a brand stamp. Inherits the
+     parent line's scaleX(1.35) since it's a child inline element. */
+  font-family: var(--font-syne);
   font-weight: 500;
   font-style: normal;
-  font-size: 13px;
-  letter-spacing: 0;
-  text-transform: none;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
   color: rgba(245, 240, 230, 0.85);
   text-decoration: none;
   margin-left: 4px;
@@ -4354,11 +4358,12 @@
 }
 
 [data-theme="magazine"] .tp-mag-footer__brand-mark {
-  font-family: var(--font-display);
+  font-family: var(--font-syne);
   font-weight: 500;
-  font-size: 24px;
+  font-size: 18px;
   line-height: 1;
-  letter-spacing: -0.005em;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
   color: rgba(245, 240, 230, 0.95);
   text-decoration: none;
   transition: color 0.18s ease;
@@ -4366,7 +4371,7 @@
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-footer__brand-mark {
-    font-size: 32px;
+    font-size: 22px;
   }
 }
 
@@ -4375,10 +4380,15 @@
 }
 
 [data-theme="magazine"] .tp-mag-footer__copy {
-  font-family: var(--font-mono);
+  font-family: var(--font-syne);
+  font-weight: 500;
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: rgba(245, 240, 230, 0.45);
   margin: 0;
+  display: inline-block;
+  transform: scaleX(1.35);
+  transform-origin: center;
 }
+

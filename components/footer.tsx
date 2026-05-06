@@ -36,11 +36,11 @@ export default function Footer() {
           <div className="flex flex-col md:flex-row items-center md:justify-between gap-2 pt-6 border-t border-border/50 text-sm text-muted-foreground">
             <Link
               href="/"
-              className="font-serif font-semibold text-foreground/70 hover:text-foreground transition-colors"
+              className="font-syne font-medium uppercase tracking-[0.18em] text-[13px] text-foreground/70 hover:text-foreground transition-colors"
             >
               {FOOTER_BRAND_WORDMARK}
             </Link>
-            <span>{footerCopyLine(new Date().getFullYear())}</span>
+            <span className="font-syne font-medium uppercase tracking-[0.18em] text-[11px]">{footerCopyLine(new Date().getFullYear())}</span>
           </div>
         </div>
       </footer>
@@ -76,3 +76,4 @@ function FooterColumn({
     </div>
   )
 }
+

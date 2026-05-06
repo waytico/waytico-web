@@ -7,6 +7,7 @@ import {
   Inter,
   Inter_Tight,
   JetBrains_Mono,
+  Syne,
 } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 import { Toaster } from 'sonner'
@@ -69,6 +70,14 @@ const interTight = Inter_Tight({
   preload: false,
 })
 
+const syne = Syne({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  variable: '--font-syne',
+  display: 'swap',
+  preload: false,
+})
+
 export const metadata: Metadata = {
   title: 'Waytico — AI Trip Proposal Pages',
   description: 'Create beautiful trip proposal pages in seconds.',
@@ -83,6 +92,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     inter.variable,
     interTight.variable,
     jetbrainsMono.variable,
+    syne.variable,
   ].join(' ')
 
   return (
@@ -130,3 +140,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </ClerkProvider>
   )
 }
+
