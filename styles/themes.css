@@ -3919,7 +3919,12 @@
   z-index: 30;
   background: var(--bg);
   border-top: 1px solid var(--rule);
-  padding: 12px 22px calc(12px + env(safe-area-inset-bottom, 0px)) 22px;
+  /* Slim profile: 6px vertical pad + 36px buttons = 48px chrome
+     (plus iOS safe-area inset). Keeps the bar from competing with
+     trip content for vertical real estate while still meeting
+     accessible tap-target guidance via the negative-margin
+     extension on .tp-mag-stickybar__btn below. */
+  padding: 6px 22px calc(6px + env(safe-area-inset-bottom, 0px)) 22px;
   /* Soft shadow lifts the bar off the cream paper. */
   box-shadow: 0 -2px 16px rgba(26, 24, 23, 0.06);
   /* Slide off-screen + fade when the footer enters the viewport.
@@ -3967,18 +3972,18 @@
   display: inline-flex;
 }
 
-/* Icon button — tap target. 44x44 tap area (iOS HIG floor) but no
-   visible background or border at rest. The icon itself reads in
-   --ink-mute on cream paper; hover/focus/active fade the icon to
-   --ink (full ink) so interaction is signalled by the icon coming
-   forward, not by a button-tile lighting up. Mirrors the way native
-   iOS toolbars handle icon controls. */
+/* Icon button — slimmer visual chrome, accessible tap area.
+   The visible button is 36x36 (matches the slim bar height); the
+   ::before pseudo-element extends the hit-test area to a full
+   44x44 (iOS HIG minimum) without bloating the layout. Tap on or
+   near the icon registers without forcing the bar taller. */
 [data-theme="magazine"] .tp-mag-stickybar__btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border: 0;
   background: transparent;
   color: var(--ink-mute);
@@ -3986,6 +3991,13 @@
   border-radius: 8px;
   transition: color 0.18s ease;
   text-decoration: none;
+}
+
+[data-theme="magazine"] .tp-mag-stickybar__btn::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  /* Extend hit area to 44x44 without affecting layout. */
 }
 
 [data-theme="magazine"] .tp-mag-stickybar__btn:hover,
