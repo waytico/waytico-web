@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Check, ChevronDown, ChevronUp, Palette } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { THEME_LABELS, resolveTheme, type ThemeId } from '@/lib/themes'
+import { OnboardingTip } from '@/components/onboarding-tip'
 
 /**
  * Themes shown in the user-facing menu. The full THEMES enum keeps all
@@ -138,8 +139,12 @@ export function ThemeSwitcher({ projectId, value, isShowcase, onLocalChange }: P
         <div
           role="listbox"
           aria-label="Trip page design"
-          className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[min(14rem,calc(100vw-2rem))] rounded-xl bg-background border border-border shadow-lg py-1 z-30"
+          className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[min(14rem,calc(100vw-2rem))] rounded-xl bg-background border border-border shadow-lg z-30 overflow-hidden"
         >
+          <OnboardingTip>
+            Pick how this trip page looks. Affects this quote only.
+          </OnboardingTip>
+          <div className="py-1">
           {/* Legacy theme row: when the trip's saved theme isn't in
               VISIBLE_THEMES (e.g. an old quote on Classic / Cinematic /
               Clean), show it as a disabled row so the operator sees why
@@ -226,6 +231,7 @@ export function ThemeSwitcher({ projectId, value, isShowcase, onLocalChange }: P
               Soon
             </span>
           </button>
+          </div>
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Send } from 'lucide-react'
 import { toast } from 'sonner'
+import { OnboardingTip } from '@/components/onboarding-tip'
 
 type Props = {
   title: string
@@ -80,8 +81,12 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
       {isOpen && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-20"
+          className="absolute right-0 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg z-20 overflow-hidden"
         >
+          <OnboardingTip>
+            Send the trip page link to your client.
+          </OnboardingTip>
+          <div className="py-1">
           <a
             role="menuitem"
             href={mailto}
@@ -118,6 +123,7 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
           >
             Copy link
           </button>
+          </div>
         </div>
       )}
     </div>

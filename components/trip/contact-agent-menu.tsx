@@ -16,6 +16,7 @@ import {
   getVisibleChannels,
   type ChannelKey,
 } from '@/lib/contact-resolution'
+import { OnboardingTip } from '@/components/onboarding-tip'
 import type { OperatorContact, OwnerBrand } from './trip-types'
 
 type Props = {
@@ -117,26 +118,31 @@ export function ContactAgentMenu({ owner, operatorContact, onPhoto = false, labe
         <div
           role="menu"
           aria-label="Contact channels"
-          className="absolute left-0 sm:left-auto sm:right-0 mt-2 rounded-full bg-background border border-border shadow-lg px-2 py-1.5 z-30 flex items-center gap-1"
+          className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-xl bg-background border border-border shadow-lg z-30 overflow-hidden"
         >
-          {channels.map(({ key, value }) => {
-            const Icon = ICON[key]
-            return (
-              <a
-                key={key}
-                role="menuitem"
-                href={channelHref(key, value)}
-                target={key === 'email' || key === 'phone' ? undefined : '_blank'}
-                rel={key === 'email' || key === 'phone' ? undefined : 'noopener noreferrer'}
-                onClick={() => setOpen(false)}
-                aria-label={CHANNEL_LABEL[key]}
-                title={CHANNEL_LABEL[key]}
-                className="flex items-center justify-center w-9 h-9 rounded-full text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
-              >
-                <Icon size={16} aria-hidden="true" />
-              </a>
-            )
-          })}
+          <OnboardingTip>
+            Your client sees these on the quote — fill them in your dashboard.
+          </OnboardingTip>
+          <div className="px-2 py-1.5 flex items-center gap-1 flex-wrap">
+            {channels.map(({ key, value }) => {
+              const Icon = ICON[key]
+              return (
+                <a
+                  key={key}
+                  role="menuitem"
+                  href={channelHref(key, value)}
+                  target={key === 'email' || key === 'phone' ? undefined : '_blank'}
+                  rel={key === 'email' || key === 'phone' ? undefined : 'noopener noreferrer'}
+                  onClick={() => setOpen(false)}
+                  aria-label={CHANNEL_LABEL[key]}
+                  title={CHANNEL_LABEL[key]}
+                  className="flex items-center justify-center w-9 h-9 rounded-full text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
+                >
+                  <Icon size={16} aria-hidden="true" />
+                </a>
+              )
+            })}
+          </div>
         </div>
       )}
     </div>
