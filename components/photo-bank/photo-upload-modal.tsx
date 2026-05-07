@@ -14,7 +14,7 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
 import { PhotoAttestationStep } from './photo-attestation-step'
-import { usePhotoBankUpload } from '@/hooks/use-photo-upload'
+import { usePhotoBankUpload } from '@/hooks/use-photo-bank-upload'
 import type { AuthedFetch } from '@/lib/photo-bank-api'
 
 export interface PhotoUploadModalProps {

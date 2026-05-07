@@ -1,79 +1,243 @@
 'use client'
 
+import { useCallback, useState } from 'react'
+import { useAuth } from '@clerk/nextjs'
+import { toast } from 'sonner'
+import { uploadPhoto, deletePhoto, replacePhoto, type MediaRecord } from '@/lib/upload-photo'
+
+export type { MediaRecord }
+
 /**
- * use-photo-upload — Photo Bank upload queue hook (TZ Photo Bank Stage 4 §7.3).
+ * usePhotoUpload
  *
- * NOTE: this file is the new dashboard-level upload hook for the Photo
- * Bank. It is DIFFERENT from `hooks/use-photo-upload.ts`-named hook
- * referenced by trip-page-client (which lives at `@/hooks/use-photo-upload`
- * and handles per-trip media). To avoid a name collision the Photo
- * Bank hook is exported from this file under a fully-qualified name —
- * we DON'T overwrite the trip-page hook.
+ * All photo S3 upload / delete logic for the trip page:
+ *   - handleUpload:     bulk upload to a specific day (or null for tour-level)
+ *   - handleDelete:     remove a photo (optimistic + rollback on error)
+ *   - handleHeroUpload: single-photo replace for placement='hero'
+ *   - uploadingByDay:   counter of in-flight uploads per day/key, for spinners
  *
- * Stub-level. Paid path code-only; queue/resize/EXIF wiring lives here
- * for future end-to-end run when billing is enabled.
+ * State (media) is owned by the caller; we only mutate via setMedia.
  */
 
-import { useCallback, useState } from 'react'
-import { resizeForUpload } from '@/lib/image-resize'
-import { readExif } from '@/lib/exif-extract'
-
-export interface PhotoBankUploadItem {
-  file: File
-  resized?: Blob
-  width?: number
-  height?: number
-  takenAt?: string | null
-  status: 'queued' | 'resizing' | 'uploading' | 'registering' | 'done' | 'error'
-  progress: number
-  error?: string
+type Options = {
+  projectId: string | undefined
+  media: MediaRecord[]
+  setMedia: React.Dispatch<React.SetStateAction<MediaRecord[]>>
+  /**
+   * Showcase / demo — never POST to S3. Instead, we mint a `blob:` URL from
+   * the local File so the operator sees their photo appear immediately. F5
+   * disposes the blob (intentional — the showcase is a shared demo and
+   * uploads must never persist to the system showcase user).
+   */
+  isShowcase?: boolean
+  /**
+   * Anonymous trip creator (created the quote without signing up). They
+   * see the full owner UI — including drag-and-drop zones and "Add
+   * photo" buttons — but every actual upload attempt is short-circuited
+   * with the same "Sign up to edit" toast every other anon edit gets.
+   * Consistent UX: any edit attempt → same nudge → same path to sign up.
+   */
+  isAnon?: boolean
 }
 
-export function usePhotoBankUpload() {
-  const [queue, setQueue] = useState<PhotoBankUploadItem[]>([])
+export function usePhotoUpload({ projectId, media, setMedia, isShowcase, isAnon }: Options) {
+  const { getToken } = useAuth()
+  const [uploadingByDay, setUploadingByDay] = useState<Record<string, number>>({})
 
-  const enqueue = useCallback(async (files: File[]) => {
-    const items: PhotoBankUploadItem[] = files.map((f) => ({
-      file: f,
-      status: 'queued',
-      progress: 0,
-    }))
-    setQueue((q) => [...q, ...items])
-    // Resize + EXIF in parallel to give the user immediate feedback.
-    for (const it of items) {
-      try {
-        const [resize, exif] = await Promise.all([
-          resizeForUpload(it.file),
-          readExif(it.file),
-        ])
-        // Mutate the queue entry in place; setQueue re-renders the
-        // progress card. Lazy-evaluated; full upload pipeline ships
-        // when billing flow lands.
-        setQueue((q) =>
-          q.map((qi) =>
-            qi.file === it.file
-              ? {
-                  ...qi,
-                  resized: resize.blob,
-                  width: resize.width || undefined,
-                  height: resize.height || undefined,
-                  takenAt: exif.takenAt,
-                  status: 'queued',
-                }
-              : qi,
-          ),
-        )
-      } catch (err: any) {
-        setQueue((q) =>
-          q.map((qi) =>
-            qi.file === it.file
-              ? { ...qi, status: 'error', error: err?.message ?? 'pipeline error' }
-              : qi,
-          ),
-        )
-      }
-    }
+  const bumpUploading = useCallback((key: string, delta: number) => {
+    setUploadingByDay((prev) => {
+      const next = { ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }
+      if (next[key] === 0) delete next[key]
+      return next
+    })
   }, [])
 
-  return { queue, enqueue }
+  const fakePhotoRecord = useCallback(
+    (file: File, dayId: string | null, placement: 'hero' | null = null): MediaRecord => {
+      const id = 'showcase-photo-' + Math.random().toString(36).slice(2, 10)
+      return {
+        id,
+        project_id: projectId || '',
+        user_id: '',
+        type: 'photo',
+        url: URL.createObjectURL(file),
+        day_id: dayId,
+        placement,
+        sort_order: 0,
+        visible_to_client: true,
+        file_name: file.name,
+        file_size: file.size,
+        mime_type: file.type,
+      } as any
+    },
+    [projectId],
+  )
+
+  const handleUpload = useCallback(
+    async (files: File[], dayId: string | null) => {
+      if (!projectId) return
+      if (isAnon) {
+        toast.error('Sign up to edit')
+        return
+      }
+      if (isShowcase) {
+        for (const f of files) {
+          setMedia((prev) => [...prev, fakePhotoRecord(f, dayId)])
+        }
+        return
+      }
+      const key = dayId || 'tour'
+      const token = await getToken()
+      if (!token) {
+        toast.error('Sign up to edit')
+        return
+      }
+      bumpUploading(key, files.length)
+      await Promise.all(
+        files.map(async (file) => {
+          try {
+            const rec = await uploadPhoto(projectId, file, dayId, token)
+            setMedia((prev) => [...prev, rec])
+          } catch (e: any) {
+            toast.error(e?.message || 'Upload failed')
+          } finally {
+            bumpUploading(key, -1)
+          }
+        }),
+      )
+    },
+    [projectId, getToken, setMedia, bumpUploading, isShowcase, isAnon, fakePhotoRecord],
+  )
+
+  const handleDelete = useCallback(
+    async (mediaId: string) => {
+      if (isAnon) {
+        toast.error('Sign up to edit')
+        return
+      }
+      const snapshot = media
+      setMedia((cur) => cur.filter((m) => m.id !== mediaId))
+      if (isShowcase) return
+      try {
+        const token = await getToken()
+        if (!token) throw new Error('No token')
+        await deletePhoto(mediaId, token)
+      } catch (e: any) {
+        setMedia(snapshot)
+        toast.error(e?.message || 'Could not delete photo')
+      }
+    },
+    [media, getToken, setMedia, isShowcase, isAnon],
+  )
+
+  // Hero upload: always placement='hero', single photo. If a hero already exists,
+  // it's replaced — old record deleted after the new one lands.
+  const handleHeroUpload = useCallback(
+    async (files: File[]) => {
+      if (!projectId || files.length === 0) return
+      if (isAnon) {
+        toast.error('Sign up to edit')
+        return
+      }
+      const file = files[0]
+      if (files.length > 1) {
+        toast.message('Hero uses the first photo — drop more in the gallery below')
+      }
+      if (isShowcase) {
+        const prevHero = media.find((m) => m.placement === 'hero')
+        const rec = fakePhotoRecord(file, null, 'hero')
+        setMedia((prev) => [rec, ...prev.filter((m) => m.id !== prevHero?.id)])
+        return
+      }
+      const token = await getToken()
+      if (!token) {
+        toast.error('Sign up to edit')
+        return
+      }
+      const prevHero = media.find((m) => m.placement === 'hero')
+      bumpUploading('hero', 1)
+      try {
+        const rec = await uploadPhoto(projectId, file, null, token, 'hero')
+        // Prepend so .find() picks the new hero even if the old one sticks around on failure.
+        setMedia((prev) => [rec, ...prev])
+        if (prevHero) {
+          setMedia((prev) => prev.filter((m) => m.id !== prevHero.id))
+          try {
+            await deletePhoto(prevHero.id, token)
+          } catch {
+            setMedia((prev) =>
+              prev.some((m) => m.id === prevHero.id) ? prev : [...prev, prevHero],
+            )
+          }
+        }
+      } catch (e: any) {
+        toast.error(e?.message || 'Upload failed')
+      } finally {
+        bumpUploading('hero', -1)
+      }
+    },
+    [projectId, media, getToken, setMedia, bumpUploading, isShowcase, isAnon, fakePhotoRecord],
+  )
+
+  // Day-photo replace: in-place swap of an existing per-day photo's
+  // file, keeping the same media.id, day_id and sort_order. Used by the
+  // Magazine theme, where each day surfaces a single primary photo —
+  // appending another row would leave the old photo as primary until the
+  // delete lands (because getMagazineDayPhoto sorts by sort_order, so
+  // prepend-into-array doesn't help). replacePhoto goes through PATCH
+  // /api/media/:id which is bound to the existing record, so there is
+  // no race between upload and delete; the server best-effort cleans up
+  // the old S3 object.
+  const handleDayPhotoReplace = useCallback(
+    async (file: File, dayId: string, prevPhotoId: string) => {
+      if (!projectId) return
+      if (isAnon) {
+        toast.error('Sign up to edit')
+        return
+      }
+      if (isShowcase) {
+        // Showcase keeps the existing media.id, day_id and sort_order
+        // and just swaps the url to a fresh blob URL — F5 disposes it
+        // along with the rest of the showcase state.
+        setMedia((prev) =>
+          prev.map((m) =>
+            m.id === prevPhotoId
+              ? ({
+                  ...m,
+                  url: URL.createObjectURL(file),
+                  file_name: file.name,
+                  file_size: file.size,
+                  mime_type: file.type,
+                } as MediaRecord)
+              : m,
+          ),
+        )
+        return
+      }
+      const token = await getToken()
+      if (!token) {
+        toast.error('Sign up to edit')
+        return
+      }
+      bumpUploading(dayId, 1)
+      try {
+        const updated = await replacePhoto(projectId, prevPhotoId, file, file.name, token)
+        setMedia((prev) => prev.map((m) => (m.id === prevPhotoId ? updated : m)))
+      } catch (e: any) {
+        toast.error(e?.message || 'Could not replace photo')
+      } finally {
+        bumpUploading(dayId, -1)
+      }
+    },
+    [projectId, getToken, setMedia, bumpUploading, isShowcase, isAnon],
+  )
+
+  return {
+    uploadingByDay,
+    handleUpload,
+    handleDelete,
+    handleHeroUpload,
+    handleDayPhotoReplace,
+  }
 }
+
