@@ -34,7 +34,7 @@ export default function TermsPage() {
             1. What Waytico is
           </h2>
           <p className="text-foreground/80 leading-relaxed">
-            Waytico is a software service that helps travel operators create, share, and manage
+            Waytico is a software service that helps travel operators create, send, and manage
             trip proposals and operational plans. We provide the tools; you provide the expertise
             and the content.
           </p>
@@ -59,7 +59,7 @@ export default function TermsPage() {
             3. How you can use Waytico
           </h2>
           <p className="text-foreground/80 leading-relaxed">
-            You can use Waytico to run your travel business — creating proposals, sharing them with
+            You can use Waytico to run your travel business — creating proposals, sending them to
             clients, managing bookings, and all the normal things that implies.
           </p>
           <p className="text-foreground/80 leading-relaxed">You can&apos;t use Waytico to:</p>
@@ -89,7 +89,7 @@ export default function TermsPage() {
           </p>
           <p className="text-foreground/80 leading-relaxed">
             By putting it in Waytico, you give us permission to store it, display it, process it
-            through our AI pipelines, and deliver it to the clients you share it with. That
+            through our AI pipelines, and deliver it to the clients you send it to. That
             permission ends when you delete the content or your account.
           </p>
           <p className="text-foreground/80 leading-relaxed">
@@ -156,7 +156,7 @@ export default function TermsPage() {
             7. Your clients
           </h2>
           <p className="text-foreground/80 leading-relaxed">
-            When you share a trip page with a client, you&apos;re the one inviting them into the
+            When you send a trip page to a client, you&apos;re the one inviting them into the
             relationship. You&apos;re responsible for what you tell them, what you promise them,
             and what you deliver. Waytico is not a party to your deal with your client.
           </p>

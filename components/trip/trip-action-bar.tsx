@@ -322,7 +322,7 @@ export function TripActionBar({
       </div>
       {canShare && (
         <div className="ml-auto lg:ml-3">
-          <ShareMenu title={title} url={shareUrl} publicStatus={status} label="Share" onShareAction={onShareAction} />
+          <ShareMenu title={title} url={shareUrl} publicStatus={status} label="Send" onShareAction={onShareAction} />
         </div>
       )}
     </div>

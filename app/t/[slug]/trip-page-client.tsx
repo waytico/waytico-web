@@ -1890,7 +1890,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   onClick={() => setAnonShareOpen((v) => !v)}
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 transition-colors whitespace-nowrap"
                 >
-                  Share as is →
+                  Send as is →
                 </button>
                 <ShareMenu
                   title={data.project.title || 'Your trip'}

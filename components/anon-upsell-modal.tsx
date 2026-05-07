@@ -107,7 +107,7 @@ export default function AnonUpsellModal({
               onClick={handleShare}
               className="w-full mb-4 py-3 px-4 rounded-xl bg-accent text-accent-foreground font-semibold text-sm hover:bg-accent/90 transition-colors"
             >
-              Share with your client as is →
+              Send to your client as is →
             </button>
 
             {/* Divider */}

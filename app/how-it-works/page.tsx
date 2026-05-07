@@ -86,7 +86,7 @@ export default function HowItWorksPage() {
           </h2>
           <p className="text-foreground/80 leading-relaxed">
             One link instead of a Word doc, a PDF, a shared folder, and three WhatsApp threads.
-            Free to create, edit, and share as many proposals as you want — see the{' '}
+            Free to create, edit, and send as many proposals as you want — see the{' '}
             <a
               href="/pricing"
               className="text-primary hover:underline underline-offset-2"

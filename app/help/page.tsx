@@ -40,7 +40,7 @@ export default function HelpPage() {
             You describe a trip in the chat on the home page — where it&apos;s going, how long, who
             it&apos;s for, anything specific the client has asked for. Waytico generates a proposal
             page with a hero, an overview, a day-by-day itinerary, what&apos;s included, your
-            terms, and your contact details. You get a private link to share with your client.
+            terms, and your contact details. You get a private link to send to your client.
           </p>
 
           <h3 className="text-xl font-serif font-semibold mt-8 mb-2">Do I need to sign up to try it?</h3>
@@ -118,10 +118,10 @@ export default function HelpPage() {
           </p>
 
           <h3 className="text-xl font-serif font-semibold mt-8 mb-2">
-            How do I share a proposal with a client?
+            How do I send a proposal to a client?
           </h3>
           <p className="text-foreground/80 leading-relaxed">
-            On any quoted trip page, tap <strong className="font-semibold text-foreground">Share with client</strong>.
+            On any quoted trip page, tap <strong className="font-semibold text-foreground">Send to client</strong>.
             You can send it via email, WhatsApp, Telegram, or copy the link. Same link your client
             keeps, even if you keep editing the page after.
           </p>
@@ -187,7 +187,7 @@ export default function HelpPage() {
           </p>
 
           <h2 className="text-2xl md:text-3xl font-serif font-semibold mt-12 mb-3">
-            Clients and sharing
+            Clients and sending
           </h2>
 
           <h3 className="text-xl font-serif font-semibold mt-8 mb-2">Do my clients need an account?</h3>
