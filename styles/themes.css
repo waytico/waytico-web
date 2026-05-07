@@ -4193,7 +4193,7 @@
   flex-wrap: wrap;
   justify-content: center;
   align-items: baseline;
-  column-gap: 0.9em;
+  column-gap: 1.5em;
   row-gap: 4px;
 }
 
@@ -4240,7 +4240,8 @@
   transform-origin: left center;
   color: rgba(245, 240, 230, 0.85);
   text-decoration: none;
-  margin-left: 2px;
+  margin-left: 0.6em;
+  margin-right: 0.6em;
   transition: color 0.18s ease;
 }
 
@@ -4357,7 +4358,7 @@
 [data-theme="magazine"] .tp-mag-footer__brand-mark {
   font-family: var(--font-syne);
   font-weight: 500;
-  font-size: 18px;
+  font-size: 12px;
   line-height: 1;
   letter-spacing: 0.10em;
   text-transform: uppercase;
@@ -4371,7 +4372,7 @@
 
 @media (min-width: 1024px) {
   [data-theme="magazine"] .tp-mag-footer__brand-mark {
-    font-size: 22px;
+    font-size: 14px;
   }
 }
 
@@ -4381,7 +4382,10 @@
 
 [data-theme="magazine"] .tp-mag-footer__copy-brand {
   /* Wordmark inside the copy line — only the brand word gets Syne
-     uppercase + scaleX. Surrounding text stays plain sans. */
+     uppercase + scaleX. Surrounding text stays plain sans.
+     margin-inline compensates for the visual width gained by scaleX:
+     transform doesn't affect layout-reserved space, so without it
+     neighbouring "© 2026" and ". Built for…" overlap the wordmark. */
   font-family: var(--font-syne);
   font-weight: 500;
   font-size: 11px;
@@ -4390,6 +4394,7 @@
   display: inline-block;
   transform: scaleX(1.35);
   transform-origin: center;
+  margin-inline: 0.9em;
   color: rgba(245, 240, 230, 0.7);
 }
 
@@ -4401,6 +4406,7 @@
   color: rgba(245, 240, 230, 0.45);
   margin: 0;
 }
+
 
 
 

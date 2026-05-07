@@ -153,7 +153,7 @@ function FooterMagazine({ editable }: { editable: boolean }) {
                 the parent flex-wrap allows the login to drop to a
                 second visual row without breaking the centred copy
                 line above. */}
-            <span className="tp-mag-footer__minimal-sep" aria-hidden="true">·</span>
+            <span className="tp-mag-footer__minimal-sep" aria-hidden="true">|</span>
             <Link
               href={signInHref}
               className="tp-mag-footer__minimal-login"
@@ -234,4 +234,5 @@ function FooterMagazineColumn({
     </div>
   )
 }
+
 
