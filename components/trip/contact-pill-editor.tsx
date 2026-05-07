@@ -120,6 +120,7 @@ export function ContactPillEditor({ owner, operatorContact, onPhoto = false, onS
         operatorContact={operatorContact}
         onPhoto={onPhoto}
         label={composedLabel}
+        showOnboardingTip
       />
 
       <button

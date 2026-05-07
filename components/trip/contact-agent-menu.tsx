@@ -29,6 +29,13 @@ type Props = {
   /** Trigger label override. Defaults to "Contact agent". The Magazine
    *  TopNav passes "Inquire" so the pill reads as a single-purpose CTA. */
   label?: string
+  /** Render the small accent-tinted "Your client sees these on the
+   *  quote — fill them in your dashboard" onboarding tip above the
+   *  channel row. Defaults to false because the tip is operator-facing
+   *  chrome — it doesn't belong on real public visits or inside any
+   *  preview-as-client surface. The owner-side wrapper
+   *  (ContactPillEditor) is the only legitimate caller that flips it on. */
+  showOnboardingTip?: boolean
 }
 
 const ICON: Record<ChannelKey, React.ComponentType<any>> = {
@@ -61,7 +68,7 @@ const ICON: Record<ChannelKey, React.ComponentType<any>> = {
  * trips where the operator hasn't filled their brand profile yet, the
  * dropdown disappears (instead of showing an empty menu).
  */
-export function ContactAgentMenu({ owner, operatorContact, onPhoto = false, label }: Props) {
+export function ContactAgentMenu({ owner, operatorContact, onPhoto = false, label, showOnboardingTip = false }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -120,9 +127,11 @@ export function ContactAgentMenu({ owner, operatorContact, onPhoto = false, labe
           aria-label="Contact channels"
           className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-xl bg-background border border-border shadow-lg z-30 overflow-hidden"
         >
-          <OnboardingTip>
-            Your client sees these on the quote — fill them in your dashboard.
-          </OnboardingTip>
+          {showOnboardingTip && (
+            <OnboardingTip>
+              Your client sees these on the quote — fill them in your dashboard.
+            </OnboardingTip>
+          )}
           <div className="px-2 py-1.5 flex items-center gap-1 flex-wrap">
             {channels.map(({ key, value }) => {
               const Icon = ICON[key]

@@ -86,10 +86,14 @@ export function DevicePreview({ slug }: Props) {
   return (
     <>
       {/* Floating thumbnail — rendered the entire time DevicePreview is
-          mounted. z-40 lifts it above the Header (z-30) and the preview
-          banner (z-20); fullscreen overlay (z-50) sits even higher. */}
+          mounted. Hidden on mobile viewports (< md) because the operator
+          is already on a phone and a phone-in-phone is redundant — they
+          see the mobile version directly through the desktop client-view
+          swap on the parent page.
+          z-40 lifts it above the Header (z-30) and the preview banner
+          (z-20); fullscreen overlay (z-50) sits even higher. */}
       <div
-        className={`fixed ${CORNER_CLASS[corner]} z-40 w-[220px] h-[440px] rounded-2xl bg-black border border-white/10 shadow-2xl overflow-hidden flex flex-col select-none`}
+        className={`hidden md:flex fixed ${CORNER_CLASS[corner]} z-40 w-[220px] h-[440px] rounded-2xl bg-black border border-white/10 shadow-2xl overflow-hidden flex-col select-none`}
         aria-label="Mobile preview"
       >
         {/* Header strip with the two controls. Compact on purpose so
@@ -122,26 +126,51 @@ export function DevicePreview({ slug }: Props) {
         {/* Iframe is wrapped in a button so a click anywhere on the
             visible page area expands. pointer-events: none on the
             iframe itself prevents it from intercepting the click;
-            scrolling/interacting happens in fullscreen mode. */}
+            scrolling/interacting happens in fullscreen mode.
+
+            The iframe renders at a real mobile width (390px wide ×
+            ~720px tall — same shape as a typical phone viewport) and
+            is then scaled down to fit the 220×~413 visible area.
+            Without this scaling the iframe would render the page in a
+            220px-wide viewport — narrower than every Tailwind
+            breakpoint (sm starts at 640px, mobile-first base layouts
+            assume ≥320px) — and the Magazine top strip would shred:
+            QUOTE code, dates, and Contact Agent pile on top of each
+            other. Rendering at 390px and visually scaling preserves
+            the actual mobile layout. transform-origin: top left so
+            the scaled corner aligns with the iframe wrapper's
+            top-left, not its center.
+
+            Scale factor: thumbnail content area ≈ 220 wide × 413 tall
+            (440 minus the 27px header strip). 220/390 ≈ 0.564 → render
+            iframe 390×732, scale to 220×413. */}
         <button
           type="button"
           onClick={() => setFullscreen(true)}
-          className="flex-1 relative bg-white cursor-zoom-in"
+          className="flex-1 relative bg-white cursor-zoom-in overflow-hidden"
           aria-label="Expand mobile preview"
         >
           <iframe
             src={previewSrc}
             title="Mobile preview"
-            className="absolute inset-0 w-full h-full pointer-events-none"
+            className="absolute top-0 left-0 pointer-events-none border-0"
+            style={{
+              width: '390px',
+              height: '732px',
+              transform: 'scale(0.564)',
+              transformOrigin: 'top left',
+            }}
           />
         </button>
       </div>
 
       {/* Fullscreen overlay — only mounted while expanded so we don't
-          keep two iframes alive when the operator just wants a glance. */}
+          keep two iframes alive when the operator just wants a glance.
+          Hidden on mobile (md:flex) because the only path to open it is
+          via the thumbnail above, which itself is hidden on mobile. */}
       {fullscreen && (
         <div
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8"
+          className="hidden md:flex fixed inset-0 z-50 bg-black/70 backdrop-blur-sm items-center justify-center p-4 sm:p-8"
           onClick={() => setFullscreen(false)}
           aria-modal="true"
           role="dialog"

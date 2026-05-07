@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import Footer from '@/components/footer'
 import type { ThemeId } from '@/lib/themes'
 import {
@@ -53,8 +53,19 @@ export function TripFooter({ editable, theme }: Props) {
   // dumped at /. usePathname() is a client-only hook, which is why
   // this whole module is now 'use client' (it has no other client-
   // only behaviour).
+  //
+  // Inside the DevicePreview iframe (?previewAs=client) we suppress
+  // the Agent login link entirely. Without that gate, an operator
+  // who clicked it inside the iframe would be sent to /sign-in and
+  // bounced back to /t/[slug] without the previewAs query (Clerk's
+  // redirect_url uses pathname, not full URL) — they'd land in their
+  // own owner UI inside the iframe, see the Preview button there,
+  // click it, and a new DevicePreview-2 would mount. Repeat ad
+  // infinitum.
   const year = new Date().getFullYear()
   const pathname = usePathname() || '/'
+  const searchParams = useSearchParams()
+  const isPreviewIframe = searchParams?.get('previewAs') === 'client'
   const signInHref = `/sign-in?redirect_url=${encodeURIComponent(pathname)}`
   return (
     <footer
@@ -75,14 +86,19 @@ export function TripFooter({ editable, theme }: Props) {
             Same shape on non-Magazine public footer for cross-theme
             consistency. `mx-2` on the separator gives both sides a
             comfortable gap so the brand-credit and the login don't
-            read as one fused phrase. */}
-        <span aria-hidden="true" className="mx-2 text-muted-foreground/60">·</span>
-        <Link
-          href={signInHref}
-          className="hover:text-foreground transition-colors"
-        >
-          Agent login
-        </Link>
+            read as one fused phrase. Suppressed inside the
+            DevicePreview iframe — see comment on isPreviewIframe above. */}
+        {!isPreviewIframe && (
+          <>
+            <span aria-hidden="true" className="mx-2 text-muted-foreground/60">·</span>
+            <Link
+              href={signInHref}
+              className="hover:text-foreground transition-colors"
+            >
+              Agent login
+            </Link>
+          </>
+        )}
       </div>
     </footer>
   )
@@ -116,7 +132,12 @@ function FooterMagazine({ editable }: { editable: boolean }) {
   // variant above. usePathname() drives both branches; on the owner
   // path below the value is unused but the hook still has to be
   // called unconditionally to satisfy React rules-of-hooks.
+  // isPreviewIframe drives the same Agent-login suppression as the
+  // Classic variant — see that block's comment for the cycle this
+  // prevents.
   const pathname = usePathname() || '/'
+  const searchParams = useSearchParams()
+  const isPreviewIframe = searchParams?.get('previewAs') === 'client'
   const signInHref = `/sign-in?redirect_url=${encodeURIComponent(pathname)}`
 
   // Public / traveller mode — minimal centred strip.
@@ -152,14 +173,19 @@ function FooterMagazine({ editable }: { editable: boolean }) {
                 consistency with the rest of the line; on narrow mobile
                 the parent flex-wrap allows the login to drop to a
                 second visual row without breaking the centred copy
-                line above. */}
-            <span className="tp-mag-footer__minimal-sep" aria-hidden="true">|</span>
-            <Link
-              href={signInHref}
-              className="tp-mag-footer__minimal-login"
-            >
-              Agent login
-            </Link>
+                line above. Suppressed inside the DevicePreview iframe
+                — see isPreviewIframe comment above. */}
+            {!isPreviewIframe && (
+              <>
+                <span className="tp-mag-footer__minimal-sep" aria-hidden="true">|</span>
+                <Link
+                  href={signInHref}
+                  className="tp-mag-footer__minimal-login"
+                >
+                  Agent login
+                </Link>
+              </>
+            )}
           </p>
         </footer>
       </div>
