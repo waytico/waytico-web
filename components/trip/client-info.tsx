@@ -27,6 +27,7 @@ import {
 } from '@/lib/contact-icons'
 import type { Client, Mutations } from './trip-types'
 import { OnboardingTip } from '@/components/onboarding-tip'
+import SmartClientPicker from '@/components/dashboard/smart-client-picker'
 
 type Props = {
   projectId: string
@@ -170,6 +171,69 @@ export function ClientInfo({
             )}
           </div>
         </div>
+
+        {/* Assign-client accent prompt - only when no client is linked yet.
+            Surfaces a faster path than typing every Identity field below:
+            search the existing roster or one-click "Create new with X".
+            Wrapped in showOwnerUI/!isShowcase/!isAnonCreator gate at the
+            parent level (trip-page-client.tsx), so we don't re-check here. */}
+        {!localClient && (
+          <div
+            role="region"
+            aria-label="Assign a client to this trip"
+            className="mb-3 rounded-lg border border-accent/30 border-l-[3px] border-l-accent bg-accent/5 p-4"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles size={14} className="text-accent shrink-0" aria-hidden="true" />
+              <p className="text-sm font-medium text-foreground/90">
+                Assign a client so this trip doesn&apos;t get lost
+              </p>
+            </div>
+            <SmartClientPicker
+              autoFocus={false}
+              placeholder="Search by name, phone, email…"
+              onPick={async (picked) => {
+                const ok = await saveProjectPatch({ clientId: picked.id })
+                if (ok) {
+                  setLocalClient(picked)
+                  onClientChanged?.(picked)
+                  toast.success('Client linked')
+                }
+              }}
+              onCreateNew={async (draft) => {
+                try {
+                  const token = await getToken()
+                  if (!token) {
+                    toast.error('Not signed in')
+                    return
+                  }
+                  const res = await apiFetch('/api/clients/upsert', {
+                    method: 'POST',
+                    token,
+                    body: JSON.stringify(draft),
+                  })
+                  if (!res.ok) {
+                    toast.error('Could not create client')
+                    return
+                  }
+                  const created = ((await res.json()).client as Client) ?? null
+                  if (!created) {
+                    toast.error('Could not create client')
+                    return
+                  }
+                  const ok2 = await saveProjectPatch({ clientId: created.id })
+                  if (ok2) {
+                    setLocalClient(created)
+                    onClientChanged?.(created)
+                    toast.success('Client created and linked')
+                  }
+                } catch {
+                  toast.error('Network error')
+                }
+              }}
+            />
+          </div>
+        )}
 
         {/* ── Identity ───────────────────────────────────────── */}
         <div className="mb-1.5">
