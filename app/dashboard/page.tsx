@@ -3,170 +3,91 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
-import { ArrowDown, ArrowUp, Search } from 'lucide-react'
-import BrandCard from '@/components/brand-card'
-import PreferencesCard from '@/components/preferences-card'
-import ChatFlow from '@/components/chat-flow'
 import Header from '@/components/header'
-import TripRow from '@/components/trip-row'
-import type { Project, ProjectStatus } from '@/components/project-card'
+import SettingsStrip, { type StripExpanded } from '@/components/dashboard/settings-strip'
+import WorkspaceTabs, { type WorkspaceView } from '@/components/dashboard/workspace-tabs'
+import TripsTab from '@/components/dashboard/trips-tab'
+import ClientsTab from '@/components/dashboard/clients-tab'
+import type { Project } from '@/components/project-card'
 import { apiFetch } from '@/lib/api'
-
-type SortMode = 'state' | 'client' | 'issued' | 'expires'
-type SortDir = 'asc' | 'desc'
-type StatusFilter = 'all' | ProjectStatus
-type PerPage = 10 | 25 | 50 | 100
-
-const STATUS_ORDER: Record<ProjectStatus, number> = {
-  draft: 0,
-  quoted: 1,
-  active: 2,
-  completed: 3,
-  archived: 4,
-}
-
-const STATUS_FILTER_OPTIONS: { key: StatusFilter; label: string }[] = [
-  { key: 'all', label: 'All trips' },
-  { key: 'draft', label: 'Drafts' },
-  { key: 'quoted', label: 'Quoted' },
-  { key: 'active', label: 'Active' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'archived', label: 'Archived' },
-]
-
-const PER_PAGE_OPTIONS: PerPage[] = [10, 25, 50, 100]
 
 function SkeletonRow() {
   return <div className="animate-pulse bg-secondary/50 rounded-md h-14 mb-2" />
 }
 
-/** Sortable column-header button. Renders the column label with an arrow
- *  that's only visible when the column is the active sort target. The
- *  arrow direction reflects sortDir; clicking the active column toggles
- *  it, and picking a different column resets to 'asc' so each column's
- *  natural ordering (encoded in the comparator) shows first. */
-function SortHeader({
-  label,
-  mode,
-  active,
-  dir,
-  align = 'left',
-  onPick,
-}: {
-  label: string
-  mode: SortMode
-  active: boolean
-  dir: SortDir
-  align?: 'left' | 'right'
-  onPick: (next: SortMode) => void
-}) {
-  const Arrow = dir === 'asc' ? ArrowDown : ArrowUp
-  return (
-    <button
-      type="button"
-      onClick={() => onPick(mode)}
-      aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
-      className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold transition-colors ${
-        align === 'right' ? 'flex-row-reverse' : ''
-      } ${active ? 'text-foreground/80' : 'text-foreground/40 hover:text-foreground/70'}`}
-    >
-      <span>{label}</span>
-      <Arrow className={`w-3 h-3 ${active ? 'opacity-100' : 'opacity-0'}`} />
-    </button>
-  )
+function parseView(raw: string | null): WorkspaceView {
+  return raw === 'clients' ? 'clients' : 'trips'
 }
 
-// Status tabs shown above the list. Drafts are intentionally omitted —
-// drafts are rare (only generation failures land there) and stay
-// reachable through the search box if needed.
-const TAB_FILTERS: { key: StatusFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'quoted', label: 'Quoted' },
-  { key: 'active', label: 'Active' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'archived', label: 'Archived' },
-]
-
-const VALID_SORT_MODES: SortMode[] = ['state', 'client', 'issued', 'expires']
-const VALID_PER_PAGE: PerPage[] = [10, 25, 50, 100]
-
-function parseStatusFilter(raw: string | null): StatusFilter {
-  if (!raw) return 'all'
-  if (
-    raw === 'all' ||
-    raw === 'draft' ||
-    raw === 'quoted' ||
-    raw === 'active' ||
-    raw === 'completed' ||
-    raw === 'archived'
-  ) return raw
-  return 'all'
-}
-
-function parseSortMode(raw: string | null): SortMode {
-  if (raw && (VALID_SORT_MODES as string[]).includes(raw)) return raw as SortMode
-  return 'state'
-}
-
-function parseSortDir(raw: string | null): SortDir {
-  return raw === 'desc' ? 'desc' : 'asc'
-}
-
-function parsePerPage(raw: string | null): PerPage {
-  const n = raw ? Number(raw) : NaN
-  if ((VALID_PER_PAGE as number[]).includes(n)) return n as PerPage
-  return 25
-}
-
-function parsePage(raw: string | null): number {
-  const n = raw ? Number(raw) : NaN
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1
-}
-
+/**
+ * /dashboard — operator workspace shell.
+ *
+ *   Header
+ *   SettingsStrip (Profile / Preferences pills)
+ *   WorkspaceTabs (Trips / Clients)
+ *   TripsTab | ClientsTab
+ *
+ * Top-level URL state: ?view=trips|clients (default trips).
+ * Trips-internal URL params live under t-prefixed keys (tq, ttab,
+ * tsort, tdir, tpage, tper). Legacy unprefixed keys (q, tab, sort,
+ * dir, page, per) are migrated once on first mount to keep shared
+ * links from the pre-refactor era working.
+ */
 export default function DashboardPage() {
   const { isLoaded, isSignedIn, getToken } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+
   const [projects, setProjects] = useState<Project[] | null>(null)
-  // Initial values come from URL so back/forward and shared links survive.
-  // After first render the URL is the single source of truth; setters below
-  // patch the query string and React state mirrors what the URL says.
-  const [search, setSearch] = useState(() => searchParams.get('q') ?? '')
-  const [sortMode, setSortMode] = useState<SortMode>(() =>
-    parseSortMode(searchParams.get('sort')),
-  )
-  const [sortDir, setSortDir] = useState<SortDir>(() =>
-    parseSortDir(searchParams.get('dir')),
-  )
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() =>
-    parseStatusFilter(searchParams.get('tab')),
-  )
-  const [perPage, setPerPage] = useState<PerPage>(() =>
-    parsePerPage(searchParams.get('per')),
-  )
-  const [page, setPage] = useState(() => parsePage(searchParams.get('page')))
+  const [view, setView] = useState<WorkspaceView>(() => parseView(searchParams.get('view')))
+  const [stripExpanded, setStripExpanded] = useState<StripExpanded>(null)
 
-  // Push current state back into the URL whenever a knob changes. We use
-  // replace (not push) so the browser history doesn't fill up with one
-  // entry per keystroke in the search box.
+  // One-shot legacy URL migration. Old dashboard kept trips state on
+  // unprefixed keys (?q=&tab=&sort=…). Map them to t-prefixed keys so
+  // pre-refactor bookmarks land on the right rows. Idempotent: the
+  // run-once guard prevents loops with the URL-sync effect inside
+  // TripsTab.
+  const [legacyMapped, setLegacyMapped] = useState(false)
   useEffect(() => {
-    const params = new URLSearchParams()
-    if (search.trim()) params.set('q', search.trim())
-    if (statusFilter !== 'all') params.set('tab', statusFilter)
-    if (sortMode !== 'state') params.set('sort', sortMode)
-    if (sortDir !== 'asc') params.set('dir', sortDir)
-    if (page !== 1) params.set('page', String(page))
-    if (perPage !== 25) params.set('per', String(perPage))
-    const qs = params.toString()
+    if (legacyMapped) return
+    const sp = new URLSearchParams(searchParams.toString())
+    let dirty = false
+    const remap = (oldKey: string, newKey: string) => {
+      if (sp.has(oldKey) && !sp.has(newKey)) {
+        const v = sp.get(oldKey)
+        if (v !== null) sp.set(newKey, v)
+        sp.delete(oldKey)
+        dirty = true
+      } else if (sp.has(oldKey)) {
+        sp.delete(oldKey)
+        dirty = true
+      }
+    }
+    remap('q', 'tq')
+    remap('tab', 'ttab')
+    remap('sort', 'tsort')
+    remap('dir', 'tdir')
+    remap('page', 'tpage')
+    remap('per', 'tper')
+    if (dirty) {
+      const qs = sp.toString()
+      router.replace(qs ? `/dashboard?${qs}` : '/dashboard', { scroll: false })
+    }
+    setLegacyMapped(true)
+    // Run once on first mount; subsequent searchParams changes are
+    // managed by tab-internal effects.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Push view changes into URL.
+  useEffect(() => {
+    const sp = new URLSearchParams(searchParams.toString())
+    if (view === 'trips') sp.delete('view')
+    else sp.set('view', view)
+    const qs = sp.toString()
     router.replace(qs ? `/dashboard?${qs}` : '/dashboard', { scroll: false })
-  }, [search, statusFilter, sortMode, sortDir, page, perPage, router])
-
-  // Reset to page 1 whenever something that would change row counts moves.
-  // Combined with the URL sync above: filter/sort changes both reset page
-  // AND drop it from the URL.
-  useEffect(() => {
-    setPage(1)
-  }, [search, sortMode, sortDir, statusFilter, perPage])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view])
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.replace('/sign-in')
@@ -196,341 +117,50 @@ export default function DashboardPage() {
   }, [isLoaded, isSignedIn, getToken])
 
   function handleUpdate(updated: Project) {
-    setProjects((prev) => (prev ? prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)) : prev))
+    setProjects((prev) =>
+      prev ? prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)) : prev,
+    )
   }
-
   function handleDelete(id: string) {
     setProjects((prev) => (prev ? prev.filter((p) => p.id !== id) : prev))
   }
 
-  function pickSort(next: SortMode) {
-    if (next === sortMode) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortMode(next)
-      setSortDir('asc')
-    }
-  }
+  const tripsCount = useMemo(() => projects?.length ?? 0, [projects])
 
-  // Search → filter → sort.
-  const visible = useMemo(() => {
-    if (!projects) return null
-    let list = projects
-
-    if (search.trim()) {
-      const q = search.toLowerCase().trim()
-      list = list.filter((p) => {
-        const hay = [
-          p.title,
-          p.region,
-          p.country,
-          p.client?.nickname,
-          p.client?.name,
-          p.client?.email,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-        return hay.includes(q)
-      })
-    }
-
-    if (statusFilter !== 'all') {
-      list = list.filter((p) => p.status === statusFilter)
-    }
-
-    const sorted = [...list]
-    if (sortMode === 'state') {
-      sorted.sort((a, b) => {
-        const sa = STATUS_ORDER[a.status as ProjectStatus] ?? 99
-        const sb = STATUS_ORDER[b.status as ProjectStatus] ?? 99
-        if (sa !== sb) return sa - sb
-        return +new Date(b.created_at) - +new Date(a.created_at)
-      })
-    } else if (sortMode === 'client') {
-      // Alphabetical by the dashboard's primary heading: nickname →
-      // title fallback. Empty values sink to the bottom regardless of dir.
-      sorted.sort((a, b) => {
-        const ka = (a.client?.nickname || a.title || '').toLowerCase().trim()
-        const kb = (b.client?.nickname || b.title || '').toLowerCase().trim()
-        if (!ka && !kb) return 0
-        if (!ka) return 1
-        if (!kb) return -1
-        return ka.localeCompare(kb)
-      })
-    } else if (sortMode === 'issued') {
-      // Sort by proposal_date (when the quote was issued). Trips
-      // without a proposal_date sink to the bottom regardless of dir.
-      sorted.sort((a, b) => {
-        const ad = (a as any).proposal_date as string | null
-        const bd = (b as any).proposal_date as string | null
-        if (ad && bd) return +new Date(bd) - +new Date(ad) // newest first
-        if (ad) return -1
-        if (bd) return 1
-        return 0
-      })
-    } else if (sortMode === 'expires') {
-      // Sort by valid_until (when the quote expires). Soonest-expiring
-      // first by default; trips without a valid_until sink to bottom.
-      sorted.sort((a, b) => {
-        const ad = (a as any).valid_until as string | null
-        const bd = (b as any).valid_until as string | null
-        if (ad && bd) return +new Date(ad) - +new Date(bd) // soonest first
-        if (ad) return -1
-        if (bd) return 1
-        return 0
-      })
-    }
-
-    if (sortDir === 'desc') sorted.reverse()
-
-    return sorted
-  }, [projects, search, statusFilter, sortMode, sortDir])
-
-  const totalCount = visible?.length ?? 0
-  const totalPages = Math.max(1, Math.ceil(totalCount / perPage))
-  const currentPage = Math.min(page, totalPages)
-  const pagedList = useMemo(() => {
-    if (!visible) return null
-    const start = (currentPage - 1) * perPage
-    return visible.slice(start, start + perPage)
-  }, [visible, currentPage, perPage])
-
-  const hasAnyTrip = projects !== null && projects.length > 0
+  const loading = !isLoaded || projects === null
 
   return (
     <>
       <Header />
       <div className="min-h-[calc(100vh-73px)] bg-background text-foreground">
         <main className="max-w-4xl mx-auto px-4 py-8">
-          {isLoaded && projects !== null && (
-            <>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/55 mb-2 px-1">
-                Profile
-              </h3>
-              <BrandCard />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/55 mb-2 mt-6 px-1">
-                Preferences
-              </h3>
-              <PreferencesCard />
-            </>
-          )}
-
-          {(!isLoaded || projects === null) && (
+          {loading ? (
             <div className="space-y-2 px-4">
               <SkeletonRow />
               <SkeletonRow />
               <SkeletonRow />
             </div>
-          )}
-
-          {isLoaded && projects !== null && projects.length === 0 && (
-            <div className="mt-8 px-4">
-              <h2 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-6 text-center">
-                Create your first quote
-              </h2>
-              <ChatFlow />
-            </div>
-          )}
-
-          {isLoaded && hasAnyTrip && (
+          ) : (
             <>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/55 mb-2 mt-6 px-1">
-                Trips
-              </h3>
-              <div className="rounded-lg border border-border bg-card mb-6">
-                {/* Status tabs — primary filter knob. Counts are computed
-                    against the unfiltered project set so users see
-                    distribution at a glance. Active tab styled with
-                    accent underline. */}
-                <div
-                  className="border-b border-border/70 px-2 sm:px-4 flex items-center gap-1 overflow-x-auto"
-                  role="tablist"
-                  aria-label="Filter trips by status"
-                >
-                  {TAB_FILTERS.map((tab) => {
-                    const count =
-                      tab.key === 'all'
-                        ? projects?.length ?? 0
-                        : projects?.filter((p) => p.status === tab.key).length ?? 0
-                    const active = statusFilter === tab.key
-                    return (
-                      <button
-                        key={tab.key}
-                        type="button"
-                        role="tab"
-                        aria-selected={active}
-                        onClick={() => setStatusFilter(tab.key)}
-                        className={`relative py-2.5 px-3 text-sm whitespace-nowrap transition-colors ${
-                          active
-                            ? 'text-foreground font-medium'
-                            : 'text-foreground/55 hover:text-foreground/85'
-                        }`}
-                      >
-                        {tab.label}
-                        <span
-                          className={`ml-1.5 text-xs ${
-                            active ? 'text-foreground/55' : 'text-foreground/35'
-                          }`}
-                        >
-                          {count}
-                        </span>
-                        {active && (
-                          <span className="absolute left-2 right-2 -bottom-px h-0.5 bg-foreground rounded-full" />
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                {/* Toolbar: search only. Sort lives on column headers. */}
-                <div className="border-b border-border/70 px-4 py-3 flex flex-wrap items-center gap-3">
-                  <div className="relative flex-1 min-w-[180px] max-w-sm">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
-                    <input
-                      type="search"
-                      placeholder="Search trips, clients…"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="w-full pl-8 pr-3 h-8 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent"
-                    />
-                  </div>
-                </div>
-
-                {/* Column headers — desktop. Widths mirror trip-row.tsx
-                    exactly: 12 (avatar) / flex-1 (client) / 20 (issued) /
-                    20 (expires) / 24 (state pill). Click a header to
-                    sort by that column; click again to flip direction.
-                    Headers only render when there are rows to sort. */}
-                {totalCount > 0 && (
-                  <div className="hidden md:flex items-center gap-3 px-4 py-2 border-b border-border/70">
-                    <div className="w-12 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <SortHeader
-                        label="Client"
-                        mode="client"
-                        active={sortMode === 'client'}
-                        dir={sortDir}
-                        onPick={pickSort}
-                      />
-                    </div>
-                    <div className="w-20 flex-shrink-0 flex justify-end">
-                      <SortHeader
-                        label="Issued"
-                        mode="issued"
-                        active={sortMode === 'issued'}
-                        dir={sortDir}
-                        align="right"
-                        onPick={pickSort}
-                      />
-                    </div>
-                    <div className="w-20 flex-shrink-0 flex justify-end">
-                      <SortHeader
-                        label="Expires"
-                        mode="expires"
-                        active={sortMode === 'expires'}
-                        dir={sortDir}
-                        align="right"
-                        onPick={pickSort}
-                      />
-                    </div>
-                    <div className="w-24 flex-shrink-0 flex justify-end">
-                      <SortHeader
-                        label="State"
-                        mode="state"
-                        active={sortMode === 'state'}
-                        dir={sortDir}
-                        align="right"
-                        onPick={pickSort}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Column headers — mobile. The Issued / Expires columns
-                    in trip-row are hidden below md, so strict alignment
-                    is impossible; instead we render a compact sort
-                    chip-row so all four sort axes stay reachable on
-                    phones. */}
-                {totalCount > 0 && (
-                  <div className="md:hidden flex items-center gap-2 flex-wrap px-4 py-2 border-b border-border/70">
-                    <span className="text-[10px] uppercase tracking-wider text-foreground/40 font-semibold">
-                      Sort
-                    </span>
-                    <SortHeader label="Client" mode="client" active={sortMode === 'client'} dir={sortDir} onPick={pickSort} />
-                    <SortHeader label="Issued" mode="issued" active={sortMode === 'issued'} dir={sortDir} onPick={pickSort} />
-                    <SortHeader label="Expires" mode="expires" active={sortMode === 'expires'} dir={sortDir} onPick={pickSort} />
-                    <SortHeader label="State" mode="state" active={sortMode === 'state'} dir={sortDir} onPick={pickSort} />
-                  </div>
-                )}
-
-                {totalCount === 0 ? (
-                  <div className="px-4 py-8 text-sm text-foreground/50 text-center">
-                    {search.trim() ? `No matches for “${search}”.` : 'Nothing to show with these filters.'}
-                  </div>
-                ) : (
-                  <div className="py-1">
-                    {pagedList?.map((p) => (
-                      <TripRow
-                        key={p.id}
-                        project={p}
-                        dimmed={p.status === 'completed' || p.status === 'archived'}
-                        onUpdate={handleUpdate}
-                        onDelete={handleDelete}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {totalCount > 0 && (
-                  <div className="border-t border-border/70 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-foreground/60">
-                    <div>
-                      {((currentPage - 1) * perPage + 1).toLocaleString()}–
-                      {Math.min(currentPage * perPage, totalCount).toLocaleString()}{' '}
-                      of {totalCount.toLocaleString()}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <label className="flex items-center gap-1.5">
-                        Per page
-                        <select
-                          value={perPage}
-                          onChange={(e) => setPerPage(Number(e.target.value) as PerPage)}
-                          className="h-7 px-1.5 text-xs bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent"
-                        >
-                          {PER_PAGE_OPTIONS.map((n) => (
-                            <option key={n} value={n}>
-                              {n}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          disabled={currentPage <= 1}
-                          onClick={() => setPage((n) => Math.max(1, n - 1))}
-                          className="px-2 py-1 rounded hover:bg-secondary/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                          aria-label="Previous page"
-                        >
-                          ‹
-                        </button>
-                        <span className="px-1">
-                          {currentPage} / {totalPages}
-                        </span>
-                        <button
-                          type="button"
-                          disabled={currentPage >= totalPages}
-                          onClick={() => setPage((n) => Math.min(totalPages, n + 1))}
-                          className="px-2 py-1 rounded hover:bg-secondary/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                          aria-label="Next page"
-                        >
-                          ›
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <SettingsStrip
+                expanded={stripExpanded}
+                onToggle={setStripExpanded}
+              />
+              <WorkspaceTabs
+                view={view}
+                onChange={setView}
+                tripsCount={tripsCount}
+                clientsCount={null}
+              />
+              {view === 'trips' ? (
+                <TripsTab
+                  projects={projects}
+                  onUpdate={handleUpdate}
+                  onDelete={handleDelete}
+                />
+              ) : (
+                <ClientsTab projects={projects} />
+              )}
             </>
           )}
         </main>
