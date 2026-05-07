@@ -235,6 +235,8 @@ export function ClientInfo({
           </div>
         )}
 
+        {localClient && (
+        <>
         {/* ── Identity ───────────────────────────────────────── */}
         <div className="mb-1.5">
           <Field
@@ -370,6 +372,8 @@ export function ClientInfo({
           />
         </div>
         </div>
+        </>
+        )}
       </div>
     </section>
   )
@@ -532,3 +536,4 @@ function Field({
     </div>
   )
 }
+

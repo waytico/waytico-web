@@ -445,10 +445,13 @@ export default function ClientsTab({ clients, projects, refresh }: Props) {
       <EditClientModal
         open={editClient !== null}
         client={editClient}
+        tripCount={editClient ? projects.filter((p) => p.client?.id === editClient.id).length : 0}
         onClose={() => setEditClient(null)}
         onSaved={async () => { await refresh() }}
+        onDeleted={async () => { await refresh() }}
       />
     </div>
   )
 }
+
 

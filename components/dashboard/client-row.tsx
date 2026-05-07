@@ -152,16 +152,34 @@ export default function ClientRow({
             ]}
           />
           {expanded ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-label="Collapse"
+              className="inline-flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+            >
+              <ChevronUp className="w-4 h-4" />
+            </button>
           ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-label="Expand"
+              className="inline-flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
           )}
         </div>
       </div>
 
       {expanded && (
-        <ClientRowExpanded trips={trips.filter((t) => t.client?.id === client.id)} />
+        <ClientRowExpanded
+          client={client}
+          trips={trips.filter((t) => t.client?.id === client.id)}
+        />
       )}
     </>
   )
 }
+

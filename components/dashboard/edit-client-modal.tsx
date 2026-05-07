@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '@clerk/nextjs'
-import { Ban, Archive, X } from 'lucide-react'
+import { Ban, Archive, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiFetch } from '@/lib/api'
 import type { Client } from '@/components/trip/trip-types'
@@ -11,8 +11,14 @@ import type { Client } from '@/components/trip/trip-types'
 type Props = {
   open: boolean
   client: Client | null
+  /** How many trips reference this client. Drives the delete-confirm
+   *  message — operators get a louder warning when removing a client
+   *  with linked trips (FK is ON DELETE SET NULL on backend, so trips
+   *  survive but lose attribution). */
+  tripCount?: number
   onClose: () => void
   onSaved: (client: Client) => void
+  onDeleted?: (clientId: string) => void
 }
 
 type FormState = {
@@ -60,7 +66,7 @@ function fromClient(c: Client): FormState {
  * shown so the operator can edit any piece of the record without
  * digging through "More fields".
  */
-export default function EditClientModal({ open, client, onClose, onSaved }: Props) {
+export default function EditClientModal({ open, client, tripCount = 0, onClose, onSaved, onDeleted }: Props) {
   const { getToken } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [state, setState] = useState<FormState | null>(null)
@@ -126,6 +132,32 @@ export default function EditClientModal({ open, client, onClose, onSaved }: Prop
       const data = await res.json()
       onSaved(data.client)
       toast.success('Client updated')
+      onClose()
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!client) return
+    const headline = client.nickname || client.name || client.email || 'this client'
+    const message =
+      tripCount > 0
+        ? `${headline} has ${tripCount} trip${tripCount === 1 ? '' : 's'} on file. Trips will keep their data but become unowned. Delete client?`
+        : `Delete ${headline}? This cannot be undone.`
+    if (!window.confirm(message)) return
+    setSaving(true)
+    try {
+      const token = await getToken()
+      const res = await apiFetch(`/api/clients/${client.id}`, { token, method: 'DELETE' })
+      if (!res.ok) {
+        toast.error('Could not delete')
+        return
+      }
+      toast.success('Client deleted')
+      onDeleted?.(client.id)
       onClose()
     } catch {
       toast.error('Network error')
@@ -212,25 +244,37 @@ export default function EditClientModal({ open, client, onClose, onSaved }: Prop
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border">
+        <div className="flex items-center gap-2 px-5 py-3 border-t border-border">
           <button
             type="button"
-            onClick={onClose}
-            className="px-3 h-9 text-sm text-foreground/70 hover:text-foreground"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
+            onClick={handleDelete}
             disabled={saving}
-            className="px-4 h-9 text-sm rounded-md bg-foreground text-background disabled:opacity-40 disabled:cursor-not-allowed hover:bg-foreground/90 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 h-9 text-sm text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-md disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            {saving ? 'Saving…' : 'Save changes'}
+            <Trash2 className="w-3.5 h-3.5" />
+            Delete
           </button>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 h-9 text-sm text-foreground/70 hover:text-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 h-9 text-sm rounded-md bg-foreground text-background disabled:opacity-40 disabled:cursor-not-allowed hover:bg-foreground/90 transition-colors"
+            >
+              {saving ? 'Saving…' : 'Save changes'}
+            </button>
+          </div>
         </div>
       </div>
     </div>,
     document.body,
   )
 }
+
