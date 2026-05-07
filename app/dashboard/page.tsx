@@ -10,6 +10,7 @@ import TripsTab from '@/components/dashboard/trips-tab'
 import ClientsTab from '@/components/dashboard/clients-tab'
 import type { Project } from '@/components/project-card'
 import { apiFetch } from '@/lib/api'
+import { useClients } from '@/hooks/use-clients'
 
 function SkeletonRow() {
   return <div className="animate-pulse bg-secondary/50 rounded-md h-14 mb-2" />
@@ -39,6 +40,7 @@ export default function DashboardPage() {
   const searchParams = useSearchParams()
 
   const [projects, setProjects] = useState<Project[] | null>(null)
+  const { clients, refresh: refreshClients } = useClients()
   const [view, setView] = useState<WorkspaceView>(() => parseView(searchParams.get('view')))
   const [stripExpanded, setStripExpanded] = useState<StripExpanded>(null)
 
@@ -126,6 +128,7 @@ export default function DashboardPage() {
   }
 
   const tripsCount = useMemo(() => projects?.length ?? 0, [projects])
+  const clientsCount = useMemo(() => clients?.length ?? null, [clients])
 
   const loading = !isLoaded || projects === null
 
@@ -150,7 +153,7 @@ export default function DashboardPage() {
                 view={view}
                 onChange={setView}
                 tripsCount={tripsCount}
-                clientsCount={null}
+                clientsCount={clientsCount}
               />
               {view === 'trips' ? (
                 <TripsTab
@@ -159,7 +162,11 @@ export default function DashboardPage() {
                   onDelete={handleDelete}
                 />
               ) : (
-                <ClientsTab projects={projects} />
+                <ClientsTab
+                  clients={clients}
+                  projects={projects}
+                  refresh={refreshClients}
+                />
               )}
             </>
           )}

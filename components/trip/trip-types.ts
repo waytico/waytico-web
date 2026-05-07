@@ -172,6 +172,12 @@ export type Client = {
   tiktok: string | null
   source: string | null
   notes: string | null
+  /** Hidden behind dashboard's "Show archived" toggle.
+   *  Independent of `blacklisted`. */
+  archived: boolean
+  /** Marked do-not-engage. Visible by default with a ban icon;
+   *  toggled out via "Hide blacklisted". Independent of `archived`. */
+  blacklisted: boolean
   created_at: string
   updated_at: string
 }
