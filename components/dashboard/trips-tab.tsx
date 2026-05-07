@@ -258,10 +258,10 @@ export default function TripsTab({ projects, onUpdate, onDelete }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card mb-6">
+    <div className="rounded-lg border border-border/50 bg-card mb-6">
       {/* Status tabs row + "+ New trip" */}
       <div
-        className="border-b border-border/70 px-2 sm:px-4 flex items-center gap-1 overflow-x-auto"
+        className="border-b border-border/40 px-2 sm:px-4 flex items-center gap-1 overflow-x-auto"
         role="tablist"
         aria-label="Filter trips by status"
       >
@@ -278,7 +278,7 @@ export default function TripsTab({ projects, onUpdate, onDelete }: Props) {
               role="tab"
               aria-selected={active}
               onClick={() => setStatusFilter(tab.key)}
-              className={`relative py-2.5 px-3 text-sm whitespace-nowrap transition-colors ${
+              className={`relative py-2 px-3 text-sm whitespace-nowrap transition-colors ${
                 active
                   ? 'text-foreground font-medium'
                   : 'text-foreground/55 hover:text-foreground/85'
@@ -301,7 +301,7 @@ export default function TripsTab({ projects, onUpdate, onDelete }: Props) {
       </div>
 
       {/* Toolbar: search + "+ New trip" button */}
-      <div className="border-b border-border/70 px-4 py-3 flex flex-wrap items-center gap-3">
+      <div className="border-b border-border/40 px-4 py-2.5 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[180px] max-w-sm">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
           <input
@@ -325,7 +325,7 @@ export default function TripsTab({ projects, onUpdate, onDelete }: Props) {
       </div>
 
       {totalCount > 0 && (
-        <div className="hidden md:flex items-center gap-3 px-4 py-2 border-b border-border/70">
+        <div className="hidden md:flex items-center gap-3 px-4 py-2 border-b border-border/40">
           <div className="w-12 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <SortHeader label="Client" mode="client" active={sortMode === 'client'} dir={sortDir} onPick={pickSort} />
@@ -343,7 +343,7 @@ export default function TripsTab({ projects, onUpdate, onDelete }: Props) {
       )}
 
       {totalCount > 0 && (
-        <div className="md:hidden flex items-center gap-2 flex-wrap px-4 py-2 border-b border-border/70">
+        <div className="md:hidden flex items-center gap-2 flex-wrap px-4 py-2 border-b border-border/40">
           <span className="text-[10px] uppercase tracking-wider text-foreground/40 font-semibold">
             Sort
           </span>
@@ -373,7 +373,7 @@ export default function TripsTab({ projects, onUpdate, onDelete }: Props) {
       )}
 
       {totalCount > 0 && (
-        <div className="border-t border-border/70 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-foreground/60">
+        <div className="border-t border-border/40 px-4 py-2 flex items-center justify-between gap-3 text-xs text-foreground/60">
           <div>
             {((currentPage - 1) * perPage + 1).toLocaleString()}–
             {Math.min(currentPage * perPage, totalCount).toLocaleString()}{' '}
@@ -423,3 +423,4 @@ export default function TripsTab({ projects, onUpdate, onDelete }: Props) {
     </div>
   )
 }
+

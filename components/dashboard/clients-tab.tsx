@@ -233,9 +233,9 @@ export default function ClientsTab({ clients, projects, refresh }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card mb-6">
+    <div className="rounded-lg border border-border/50 bg-card mb-6">
       {/* Status tabs + visibility toggles + "+ New client" */}
-      <div className="border-b border-border/70 px-2 sm:px-4 py-2 flex items-center gap-2 flex-wrap">
+      <div className="border-b border-border/40 px-2 sm:px-4 py-2 flex items-center gap-2 flex-wrap">
         <div role="tablist" aria-label="Filter clients by status" className="flex items-center gap-1">
           {STATUS_TABS.map((tab) => {
             const count =
@@ -305,7 +305,7 @@ export default function ClientsTab({ clients, projects, refresh }: Props) {
       </div>
 
       {/* Search input */}
-      <div className="border-b border-border/70 px-4 py-3 flex flex-wrap items-center gap-3">
+      <div className="border-b border-border/40 px-4 py-2.5 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[180px] max-w-sm">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
           <input
@@ -320,7 +320,7 @@ export default function ClientsTab({ clients, projects, refresh }: Props) {
 
       {/* Sort header — desktop. Mirrors trips-tab visually. */}
       {totalCount > 0 && (
-        <div className="hidden md:flex items-center gap-3 px-4 py-2 border-b border-border/70 text-[10px] uppercase tracking-wider font-semibold text-foreground/40">
+        <div className="hidden md:flex items-center gap-3 px-4 py-2 border-b border-border/40 text-[10px] uppercase tracking-wider font-semibold text-foreground/40">
           <div className="w-9 flex-shrink-0" />
           <button
             type="button"
@@ -349,7 +349,7 @@ export default function ClientsTab({ clients, projects, refresh }: Props) {
 
       {/* Sort chips — mobile */}
       {totalCount > 0 && (
-        <div className="md:hidden flex items-center gap-2 flex-wrap px-4 py-2 border-b border-border/70">
+        <div className="md:hidden flex items-center gap-2 flex-wrap px-4 py-2 border-b border-border/40">
           <span className="text-[10px] uppercase tracking-wider text-foreground/40 font-semibold">Sort</span>
           {(['name', 'activity', 'trips'] as const).map((m) => (
             <button
@@ -389,7 +389,7 @@ export default function ClientsTab({ clients, projects, refresh }: Props) {
       )}
 
       {totalCount > 0 && (
-        <div className="border-t border-border/70 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-foreground/60">
+        <div className="border-t border-border/40 px-4 py-2 flex items-center justify-between gap-3 text-xs text-foreground/60">
           <div>
             {((currentPage - 1) * perPage + 1).toLocaleString()}–
             {Math.min(currentPage * perPage, totalCount).toLocaleString()}{' '}
@@ -451,3 +451,4 @@ export default function ClientsTab({ clients, projects, refresh }: Props) {
     </div>
   )
 }
+

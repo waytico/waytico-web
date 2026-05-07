@@ -27,7 +27,7 @@ const TABS: ReadonlyArray<{ key: WorkspaceView; label: string }> = [
 export default function WorkspaceTabs({ view, onChange, tripsCount, clientsCount }: Props) {
   return (
     <div
-      className="border-b border-border/70 mb-4 flex items-center gap-1"
+      className="border-b border-border/40 mb-4 flex items-center gap-1"
       role="tablist"
       aria-label="Workspace view"
     >
@@ -60,3 +60,4 @@ export default function WorkspaceTabs({ view, onChange, tripsCount, clientsCount
     </div>
   )
 }
+
