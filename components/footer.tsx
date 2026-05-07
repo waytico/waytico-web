@@ -41,7 +41,7 @@ export default function Footer() {
             >
               {FOOTER_BRAND_WORDMARK}
             </Link>
-            <span className="text-[12px] text-muted-foreground">{renderCopyLine(new Date().getFullYear(), 'font-syne font-medium uppercase tracking-[0.18em] inline-block mx-2', { transform: 'scaleX(1.35)', transformOrigin: 'center' })}</span>
+            <span className="text-[12px] text-muted-foreground">{renderCopyLine(new Date().getFullYear(), 'font-syne font-medium uppercase tracking-[0.18em] inline-block mx-4', { transform: 'scaleX(1.35)', transformOrigin: 'center' })}</span>
           </div>
         </div>
       </footer>
@@ -77,6 +77,7 @@ function FooterColumn({
     </div>
   )
 }
+
 
 
 

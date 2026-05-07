@@ -4394,7 +4394,7 @@
   display: inline-block;
   transform: scaleX(1.35);
   transform-origin: center;
-  margin-inline: 0.9em;
+  margin-inline: 1.6em;
   color: rgba(245, 240, 230, 0.7);
 }
 
@@ -4406,6 +4406,7 @@
   color: rgba(245, 240, 230, 0.45);
   margin: 0;
 }
+
 
 
 
