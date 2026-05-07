@@ -1,6 +1,6 @@
 'use client'
 
-export type WorkspaceView = 'trips' | 'clients'
+export type WorkspaceView = 'trips' | 'clients' | 'photos'
 
 type Props = {
   view: WorkspaceView
@@ -13,6 +13,7 @@ type Props = {
 const TABS: ReadonlyArray<{ key: WorkspaceView; label: string }> = [
   { key: 'trips', label: 'Trips' },
   { key: 'clients', label: 'Clients' },
+  { key: 'photos', label: 'Photos' },
 ]
 
 /**
@@ -33,7 +34,8 @@ export default function WorkspaceTabs({ view, onChange, tripsCount, clientsCount
     >
       {TABS.map((t) => {
         const active = view === t.key
-        const count = t.key === 'trips' ? tripsCount : clientsCount
+        const count =
+          t.key === 'trips' ? tripsCount : t.key === 'clients' ? clientsCount : null
         return (
           <button
             key={t.key}

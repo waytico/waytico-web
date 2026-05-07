@@ -8,6 +8,7 @@ import SettingsStrip, { type StripExpanded } from '@/components/dashboard/settin
 import WorkspaceTabs, { type WorkspaceView } from '@/components/dashboard/workspace-tabs'
 import TripsTab from '@/components/dashboard/trips-tab'
 import ClientsTab from '@/components/dashboard/clients-tab'
+import PhotoBankPageClient from '@/app/dashboard/photo-bank-page-client'
 import type { Project } from '@/components/project-card'
 import { apiFetch } from '@/lib/api'
 import { useClients } from '@/hooks/use-clients'
@@ -17,7 +18,9 @@ function SkeletonRow() {
 }
 
 function parseView(raw: string | null): WorkspaceView {
-  return raw === 'clients' ? 'clients' : 'trips'
+  if (raw === 'clients') return 'clients'
+  if (raw === 'photos') return 'photos'
+  return 'trips'
 }
 
 /**
@@ -155,18 +158,29 @@ export default function DashboardPage() {
                 tripsCount={tripsCount}
                 clientsCount={clientsCount}
               />
-              {view === 'trips' ? (
+              {view === 'trips' && (
                 <TripsTab
                   projects={projects}
                   onUpdate={handleUpdate}
                   onDelete={handleDelete}
                 />
-              ) : (
+              )}
+              {view === 'clients' && (
                 <ClientsTab
                   clients={clients}
                   projects={projects}
                   refresh={refreshClients}
                 />
+              )}
+              {view === 'photos' && (
+                /* TZ Photo Bank Stage 4 — tier-aware photo bank tab.
+                 * `plan='free'` is the default for every operator until
+                 * the future Stripe upgrade flow flips users.plan to
+                 * 'paid'. Hardcoding 'free' here keeps the dashboard
+                 * usable today: free users get the upgrade banner +
+                 * global preview; paid-bound UI is stubbed but not
+                 * exercised end-to-end (TZ Execution policy). */
+                <PhotoBankPageClient plan="free" />
               )}
             </>
           )}
