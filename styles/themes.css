@@ -4366,6 +4366,9 @@
   text-transform: uppercase;
   color: rgba(245, 240, 230, 0.95);
   text-decoration: none;
+  display: inline-block;
+  transform: scaleX(1.35);
+  transform-origin: left center;
   transition: color 0.18s ease;
 }
 
@@ -4391,4 +4394,5 @@
   transform: scaleX(1.35);
   transform-origin: center;
 }
+
 
