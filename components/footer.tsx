@@ -37,11 +37,11 @@ export default function Footer() {
             <Link
               href="/"
               className="font-syne font-medium uppercase tracking-[0.18em] text-[13px] text-foreground/70 hover:text-foreground transition-colors inline-block"
-              style={{ transform: 'scaleX(1.25)', transformOrigin: 'left center' }}
+              style={{ transform: 'scaleX(1.35)', transformOrigin: 'left center' }}
             >
               {FOOTER_BRAND_WORDMARK}
             </Link>
-            <span className="text-[12px] text-muted-foreground">{renderCopyLine(new Date().getFullYear(), 'font-syne font-medium uppercase tracking-[0.18em] inline-block', { transform: 'scaleX(1.25)', transformOrigin: 'center' })}</span>
+            <span className="text-[12px] text-muted-foreground">{renderCopyLine(new Date().getFullYear(), 'font-syne font-medium uppercase tracking-[0.18em] inline-block', { transform: 'scaleX(1.35)', transformOrigin: 'center' })}</span>
           </div>
         </div>
       </footer>
@@ -77,6 +77,7 @@ function FooterColumn({
     </div>
   )
 }
+
 
 
 

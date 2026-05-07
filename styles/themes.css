@@ -4170,13 +4170,18 @@
 }
 
 [data-theme="magazine"] .tp-mag-footer__minimal-line {
-  font-family: var(--font-sans);
-  font-weight: 400;
-  font-size: 12px;
-  letter-spacing: 0.02em;
+  font-family: var(--font-syne);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transform: scaleX(1.35);
+  transform-origin: center;
+  width: fit-content;
+  max-width: 100%;
   color: rgba(245, 240, 230, 0.55);
   text-align: center;
-  margin: 0;
+  margin: 0 auto;
   padding-inline: 24px;
   /* Inline-flex so the brand-credit stays glued to "Powered by" while
      the agent-login utility link (after the second separator) is
@@ -4228,21 +4233,12 @@
 }
 
 [data-theme="magazine"] .tp-mag-footer__minimal-brand {
-  /* Syne wordmark inline within the copy line. Carries its own
-     uppercase + scaleX, parent line is now plain sans. */
-  font-family: var(--font-syne);
-  font-weight: 500;
-  font-style: normal;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  /* Brand emphasis inside the minimal copy line. Inherits Syne
+     uppercase + scaleX from parent .tp-mag-footer__minimal-line. */
   color: rgba(245, 240, 230, 0.85);
   text-decoration: none;
   margin-left: 2px;
   transition: color 0.18s ease;
-  display: inline-block;
-  transform: scaleX(1.25);
-  transform-origin: left center;
 }
 
 [data-theme="magazine"] .tp-mag-footer__minimal-brand:hover {
@@ -4365,7 +4361,7 @@
   color: rgba(245, 240, 230, 0.95);
   text-decoration: none;
   display: inline-block;
-  transform: scaleX(1.25);
+  transform: scaleX(1.35);
   transform-origin: left center;
   transition: color 0.18s ease;
 }
@@ -4381,27 +4377,24 @@
 }
 
 [data-theme="magazine"] .tp-mag-footer__copy-brand {
-  /* Syne wordmark inside the copy line. Same treatment as
-     __brand-mark and __minimal-brand — stamped uppercase + scaleX. */
+  /* Brand emphasis inside the copy line. Inherits Syne uppercase +
+     scaleX from parent .tp-mag-footer__copy — no double-transform. */
+  color: rgba(245, 240, 230, 0.7);
+}
+
+[data-theme="magazine"] .tp-mag-footer__copy {
   font-family: var(--font-syne);
   font-weight: 500;
   font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(245, 240, 230, 0.7);
   display: inline-block;
-  transform: scaleX(1.25);
+  transform: scaleX(1.35);
   transform-origin: center;
-}
-
-[data-theme="magazine"] .tp-mag-footer__copy {
-  font-family: var(--font-sans);
-  font-weight: 400;
-  font-size: 11px;
-  letter-spacing: 0.02em;
   color: rgba(245, 240, 230, 0.45);
   margin: 0;
 }
+
 
 
 
