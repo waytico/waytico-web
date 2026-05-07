@@ -192,6 +192,22 @@ export type MediaLite = {
   sort_order?: number | null
   day_id?: string | null
   visible_to_client?: boolean
+  /** Photo Bank — true when the suggest engine placed this row. Drives
+   *  the owner-mode yellow border (with `low_confidence`) and the
+   *  attribution popover (with `attribution_html`). */
+  auto_matched?: boolean
+  /** Photo Bank — true when the suggest engine matched on a fallback
+   *  signal (region only, no landmark/tag overlap). Owner mode renders
+   *  a thin yellow border + tooltip; public mode never shows it. */
+  low_confidence?: boolean
+  /** Photo Bank — pre-rendered attribution HTML for global-bank-sourced
+   *  rows (CC-BY/CC-BY-SA/CC0/PD). Server-escaped upstream; safe to
+   *  drop into the AttributionPopover via dangerouslySetInnerHTML. */
+  attribution_html?: string | null
+  /** Photo Bank — true whenever `attribution_html` came from
+   *  `global_photo_bank` (LEFT JOIN match). Frontend gates the "i"
+   *  icon on this flag (or falls back to checking attribution_html). */
+  is_global_source?: boolean
 }
 
 /**

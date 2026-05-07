@@ -5,6 +5,7 @@ import { UI } from '@/lib/ui-strings'
 import type { ThemeId } from '@/lib/themes'
 import { ITINERARY_STYLE } from '@/lib/themes'
 import type { Day, MediaLite } from './trip-types'
+import { AttributionPopover } from './attribution-popover'
 import { pad2, fmtDayDate, addDaysISO, normalizeMagazineTitle } from '@/lib/trip-format'
 import {
   DndContext,
@@ -1010,16 +1011,36 @@ function MagazineDayPhoto(props: {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [dragOver, setDragOver] = useState(false)
 
-  // Public viewer — just the image, no interactivity.
+  // Public viewer — image + (optional) attribution popover. The popover
+  // overlays an "i" icon in the corner when `photo.attribution_html` is
+  // non-null (global-bank rows). No interactivity beyond that.
   if (!editable) {
     if (!photo) return null
+    if (!photo.attribution_html) {
+      return (
+        <img
+          src={photo.url}
+          alt={photo.caption || ''}
+          className="tp-mag-day__photo-img"
+          draggable={false}
+        />
+      )
+    }
     return (
-      <img
-        src={photo.url}
-        alt={photo.caption || ''}
-        className="tp-mag-day__photo-img"
-        draggable={false}
-      />
+      <div className="tp-mag-day__photo-zone" style={{ position: 'relative' }}>
+        <img
+          src={photo.url}
+          alt={photo.caption || ''}
+          className="tp-mag-day__photo-img"
+          draggable={false}
+        />
+        <div
+          className="tp-mag-day__photo-actions"
+          style={{ position: 'absolute', right: 8, bottom: 8 }}
+        >
+          <AttributionPopover html={photo.attribution_html ?? null} />
+        </div>
+      </div>
     )
   }
 
@@ -1150,8 +1171,10 @@ function MagazineDayPhoto(props: {
   return (
     <div
       className={
-        'tp-mag-day__photo-zone' + (dragOver ? ' is-dragover' : '')
+        'tp-mag-day__photo-zone' + (dragOver ? ' is-dragover' : '') +
+        (photo?.low_confidence ? ' tp-mag-day__photo-zone--low-confidence' : '')
       }
+      title={photo?.low_confidence ? 'AI matched on a fallback signal — review' : undefined}
       {...dropHandlers}
     >
       {fileInput}
@@ -1169,6 +1192,9 @@ function MagazineDayPhoto(props: {
       )}
 
       <div className="tp-mag-day__photo-actions">
+        {photo?.attribution_html && (
+          <AttributionPopover html={photo.attribution_html ?? null} />
+        )}
         {isUploading ? (
           <span className="tp-mag-day__photo-pill">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />

@@ -4408,8 +4408,59 @@
 }
 
 
+/* ============================================================
+   Photo Bank — low-confidence yellow border (owner mode only)
+   Used by MagazineDayPhoto when the suggest engine matched on
+   a fallback signal (region only). Public viewers never see it.
+   Class added in itinerary.tsx via tp-mag-day__photo-zone--low-confidence.
+   ============================================================ */
+[data-theme="magazine"] .tp-mag-day__photo-zone--low-confidence {
+  outline: 2px solid #f59e0b; /* amber-500 */
+  outline-offset: -2px;
+}
 
-
-
-
-
+/* Photo Bank — attribution popover ("i" icon + bubble).
+   Themed to be unobtrusive on photo backgrounds. */
+.tp-attr {
+  position: relative;
+  display: inline-flex;
+}
+.tp-attr__btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+  font-size: 12px;
+  font-style: italic;
+  font-family: serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  transition: background 120ms ease;
+}
+.tp-attr__btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+.tp-attr__pop {
+  position: absolute;
+  right: 0;
+  bottom: 28px;
+  min-width: 220px;
+  max-width: 320px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(20, 20, 20, 0.95);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  z-index: 50;
+}
+.tp-attr__pop a {
+  color: #93c5fd;
+  text-decoration: underline;
+}

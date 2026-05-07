@@ -1972,6 +1972,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
           <TripHero
             theme={resolvedTheme}
             heroPhoto={heroPhoto?.url || null}
+            heroAttributionHtml={
+              heroPhoto?.attribution_html ??
+              (p as any).cover_attribution_html ??
+              null
+            }
             status={!showOwnerUI ? p.status : null}
             code={extractQuoteCode(slug)}
             dateRange={dateRange}

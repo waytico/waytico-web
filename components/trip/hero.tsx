@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
+import { AttributionPopover } from './attribution-popover'
 import type { ThemeId } from '@/lib/themes'
 import { HERO_STYLE } from '@/lib/themes'
 import { fmtDate, isDateInPast, numberToWords, normalizeMagazineTitle } from '@/lib/trip-format'
@@ -18,6 +19,9 @@ type HeroProps = {
   theme: ThemeId
   /** URL of the hero photo, or null for empty / placeholder. */
   heroPhoto: string | null
+  /** Photo Bank — pre-rendered attribution HTML for global-bank covers.
+   *  Renders a clickable "i" icon in the hero corner when non-null. */
+  heroAttributionHtml?: string | null
   /** Status pill — only renders for quoted / active / completed (per TZ-6 §6.2). */
   status: string | null | undefined
   /** Pre-formatted "Jun 18–21, 2026" (or null). */
@@ -552,6 +556,7 @@ function CardSideStat({
 function HeroMagazine(props: HeroProps) {
   const {
     heroPhoto,
+    heroAttributionHtml,
     titleSlot,
     status,
     proposalDate,
@@ -636,6 +641,22 @@ function HeroMagazine(props: HeroProps) {
           className="tp-mag-hero__photo"
           aria-hidden="true"
         />
+      )}
+      {heroPhoto && heroAttributionHtml && (
+        <div
+          className="tp-mag-hero__attribution"
+          style={{
+            position: 'absolute',
+            right: 12,
+            top: 12,
+            zIndex: 5,
+          }}
+        >
+          {/* AttributionPopover renders only an "i" button + popover; the
+              outer wrapper exists so we can position it independently of
+              the rest of the hero layout. */}
+          <AttributionPopover html={heroAttributionHtml} />
+        </div>
       )}
       <div className="tp-mag-hero__veil" aria-hidden="true" />
 
