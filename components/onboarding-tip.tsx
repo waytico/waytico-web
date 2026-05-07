@@ -3,7 +3,7 @@ import { Info } from 'lucide-react'
 
 /**
  * Small accent-tinted explainer strip prepended to surfaces an operator
- * may not immediately understand (Client info block, Design picker, Share
+ * may not immediately understand (Client info block, Design picker, Send
  * menu, Contact-agent popover). Mirrors the visual register of the
  * preview-as-client banner — same accent palette, same compact type — so
  * "explainer above your work" reads as a consistent affordance across

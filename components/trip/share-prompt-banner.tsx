@@ -28,14 +28,14 @@ export default function SharePromptBanner({ onPick, onCreateNew, onDismiss }: Pr
   return (
     <div
       role="region"
-      aria-label="Save the client after sharing"
+      aria-label="Save the client after sending"
       className="w-full border-b border-accent/30 bg-accent/10"
     >
       <div className="max-w-4xl mx-auto px-4 py-3">
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground/90 mb-2">
-              Just shared this trip — save the client so it doesn&apos;t get lost.
+              Just sent this trip — save the client so it doesn&apos;t get lost.
             </p>
             <SmartClientPicker
               autoFocus

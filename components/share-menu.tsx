@@ -12,7 +12,7 @@ type Props = {
   /** When provided, overrides internal open state (controlled mode). */
   forceOpen?: boolean
   onOpenChange?: (open: boolean) => void
-  /** Custom label for the trigger button. Defaults to "Share with client". */
+  /** Custom label for the trigger button. Defaults to "Send". */
   label?: string
   /** When true, the trigger button is hidden — only the dropdown renders (controlled mode). */
   hideTrigger?: boolean
@@ -20,7 +20,7 @@ type Props = {
   onShareAction?: () => void
 }
 
-export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenChange, label = 'Share', hideTrigger, onShareAction }: Props) {
+export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenChange, label = 'Send', hideTrigger, onShareAction }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
