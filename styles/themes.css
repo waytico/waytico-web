@@ -4170,18 +4170,13 @@
 }
 
 [data-theme="magazine"] .tp-mag-footer__minimal-line {
-  font-family: var(--font-syne);
-  font-weight: 500;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  transform: scaleX(1.35);
-  transform-origin: center;
-  width: fit-content;
-  max-width: 100%;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 12px;
+  letter-spacing: 0.02em;
   color: rgba(245, 240, 230, 0.55);
   text-align: center;
-  margin: 0 auto;
+  margin: 0;
   padding-inline: 24px;
   /* Inline-flex so the brand-credit stays glued to "Powered by" while
      the agent-login utility link (after the second separator) is
@@ -4233,8 +4228,16 @@
 }
 
 [data-theme="magazine"] .tp-mag-footer__minimal-brand {
-  /* Brand emphasis inside the minimal copy line. Inherits Syne
-     uppercase + scaleX from parent .tp-mag-footer__minimal-line. */
+  /* Wordmark inline within the copy line. Only the brand word gets
+     Syne uppercase + scaleX; surrounding "Powered by" stays sans. */
+  font-family: var(--font-syne);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  display: inline-block;
+  transform: scaleX(1.35);
+  transform-origin: left center;
   color: rgba(245, 240, 230, 0.85);
   text-decoration: none;
   margin-left: 2px;
@@ -4377,12 +4380,8 @@
 }
 
 [data-theme="magazine"] .tp-mag-footer__copy-brand {
-  /* Brand emphasis inside the copy line. Inherits Syne uppercase +
-     scaleX from parent .tp-mag-footer__copy — no double-transform. */
-  color: rgba(245, 240, 230, 0.7);
-}
-
-[data-theme="magazine"] .tp-mag-footer__copy {
+  /* Wordmark inside the copy line — only the brand word gets Syne
+     uppercase + scaleX. Surrounding text stays plain sans. */
   font-family: var(--font-syne);
   font-weight: 500;
   font-size: 11px;
@@ -4391,9 +4390,18 @@
   display: inline-block;
   transform: scaleX(1.35);
   transform-origin: center;
+  color: rgba(245, 240, 230, 0.7);
+}
+
+[data-theme="magazine"] .tp-mag-footer__copy {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 11px;
+  letter-spacing: 0.02em;
   color: rgba(245, 240, 230, 0.45);
   margin: 0;
 }
+
 
 
 
