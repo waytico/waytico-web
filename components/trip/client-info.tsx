@@ -371,9 +371,9 @@ export function ClientInfo({
             wide
           />
         </div>
-        </div>
         </>
         )}
+        </div>
       </div>
     </section>
   )
