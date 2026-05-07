@@ -10,9 +10,9 @@ import {
   FOOTER_LEGAL_LINKS,
   FOOTER_CONTACT_EMAIL,
   FOOTER_BRAND_WORDMARK,
-  footerCopyLine,
   type FooterLink,
 } from '@/lib/footer-content'
+import { renderCopyLine } from '@/lib/footer-copy'
 
 type Props = {
   /** Owner mode = render the full footer (product / resources /
@@ -202,7 +202,9 @@ function FooterMagazine({ editable }: { editable: boolean }) {
             <Link href="/" className="tp-mag-footer__brand-mark">
               {FOOTER_BRAND_WORDMARK}
             </Link>
-            <p className="tp-mag-footer__copy">{footerCopyLine(year)}</p>
+            <p className="tp-mag-footer__copy">
+              {renderCopyLine(year, 'tp-mag-footer__copy-brand')}
+            </p>
           </div>
         </div>
       </footer>
@@ -232,3 +234,4 @@ function FooterMagazineColumn({
     </div>
   )
 }
+

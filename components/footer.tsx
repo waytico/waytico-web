@@ -6,9 +6,9 @@ import {
   FOOTER_LEGAL_LINKS,
   FOOTER_CONTACT_EMAIL,
   FOOTER_BRAND_WORDMARK,
-  footerCopyLine,
   type FooterLink,
 } from '@/lib/footer-content'
+import { renderCopyLine } from '@/lib/footer-copy'
 
 export default function Footer() {
   return (
@@ -37,11 +37,11 @@ export default function Footer() {
             <Link
               href="/"
               className="font-syne font-medium uppercase tracking-[0.18em] text-[13px] text-foreground/70 hover:text-foreground transition-colors inline-block"
-              style={{ transform: 'scaleX(1.35)', transformOrigin: 'left center' }}
+              style={{ transform: 'scaleX(1.25)', transformOrigin: 'left center' }}
             >
               {FOOTER_BRAND_WORDMARK}
             </Link>
-            <span className="font-syne font-medium uppercase tracking-[0.18em] text-[11px] inline-block" style={{ transform: 'scaleX(1.35)', transformOrigin: 'right center' }}>{footerCopyLine(new Date().getFullYear())}</span>
+            <span className="text-[12px] text-muted-foreground">{renderCopyLine(new Date().getFullYear(), 'font-syne font-medium uppercase tracking-[0.18em] inline-block', { transform: 'scaleX(1.25)', transformOrigin: 'center' })}</span>
           </div>
         </div>
       </footer>
@@ -77,5 +77,6 @@ function FooterColumn({
     </div>
   )
 }
+
 
 
