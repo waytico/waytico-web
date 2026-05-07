@@ -1973,7 +1973,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             theme={resolvedTheme}
             heroPhoto={heroPhoto?.url || null}
             heroAttributionHtml={
-              heroPhoto?.attribution_html ??
+              (heroPhoto as any)?.attribution_html ??
               (p as any).cover_attribution_html ??
               null
             }
