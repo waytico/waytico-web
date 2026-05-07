@@ -6,7 +6,7 @@ import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
-import { apiFetch } from '@/lib/api'
+import { apiFetch, setImpersonationToken } from '@/lib/api'
 
 type Tab = 'users' | 'projects' | 'prompts'
 
@@ -173,6 +173,8 @@ export default function AdminPage() {
 function UsersTab({ getToken }: { getToken: () => Promise<string | null> }) {
   const [users, setUsers] = useState<AdminUser[] | null>(null)
   const [search, setSearch] = useState('')
+  const [impersonating, setImpersonating] = useState<string | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     let active = true
@@ -208,6 +210,42 @@ function UsersTab({ getToken }: { getToken: () => Promise<string | null> }) {
     })
   }, [users, search])
 
+  async function startImpersonation(u: AdminUser) {
+    if (impersonating) return
+    setImpersonating(u.id)
+    try {
+      const token = await getToken()
+      const res = await apiFetch(`/api/admin/impersonate/${u.id}`, {
+        token,
+        method: 'POST',
+      })
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+        throw new Error(txt || `HTTP ${res.status}`)
+      }
+      const data = await res.json()
+      setImpersonationToken(data.token)
+      // Cache target metadata so the banner can show a name without
+      // a roundtrip on every page render.
+      try {
+        sessionStorage.setItem(
+          'waytico:impersonation-meta',
+          JSON.stringify({
+            email: data.target?.email ?? null,
+            name: data.target?.name ?? null,
+          }),
+        )
+      } catch {}
+      // Force a reload so SSR + client both pick up the impersonation
+      // header from sessionStorage on subsequent fetches.
+      router.replace('/dashboard')
+      router.refresh()
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not start impersonation')
+      setImpersonating(null)
+    }
+  }
+
   return (
     <section>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
@@ -232,13 +270,14 @@ function UsersTab({ getToken }: { getToken: () => Promise<string | null> }) {
               <th className="text-right font-semibold p-3">Trips</th>
               <th className="text-left font-semibold p-3">Onb.</th>
               <th className="text-right font-semibold p-3">Joined</th>
+              <th className="text-right font-semibold p-3 w-28"></th>
             </tr>
           </thead>
           <tbody>
             {!visible &&
               [0, 1, 2].map((i) => (
                 <tr key={i} className="border-b border-border/50 last:border-0">
-                  <td colSpan={5} className="p-3">
+                  <td colSpan={6} className="p-3">
                     <div className="h-5 bg-secondary/50 rounded animate-pulse" />
                   </td>
                 </tr>
@@ -246,7 +285,7 @@ function UsersTab({ getToken }: { getToken: () => Promise<string | null> }) {
             {visible && visible.length === 0 && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="p-6 text-center text-sm text-foreground/55"
                 >
                   Nothing matched.
@@ -277,6 +316,17 @@ function UsersTab({ getToken }: { getToken: () => Promise<string | null> }) {
                 </td>
                 <td className="p-3 text-right text-xs tabular-nums text-foreground/65">
                   {fmtDate(u.created_at)}
+                </td>
+                <td className="p-3 text-right">
+                  <button
+                    type="button"
+                    onClick={() => startImpersonation(u)}
+                    disabled={impersonating !== null}
+                    className="text-xs px-2.5 py-1 rounded-md border border-border hover:bg-secondary/60 transition-colors disabled:opacity-50"
+                    title="Sign in as this user temporarily for support"
+                  >
+                    {impersonating === u.id ? '…' : 'Impersonate'}
+                  </button>
                 </td>
               </tr>
             ))}

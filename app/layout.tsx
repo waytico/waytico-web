@@ -11,6 +11,7 @@ import {
 } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 import { Toaster } from 'sonner'
+import ImpersonationBanner from '@/components/impersonation-banner'
 import './globals.css'
 
 // Default trip-page typography (editorial theme + global brand chrome)
@@ -133,6 +134,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <html lang="en" className={fontVars}>
         <body className="font-sans antialiased">
+          <ImpersonationBanner />
           {children}
           <Toaster position="top-center" />
         </body>

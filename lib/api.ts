@@ -1,7 +1,48 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
+const IMPERSONATION_STORAGE_KEY = 'waytico:impersonation-token'
+
+/**
+ * Read the active impersonation token from sessionStorage. Returns null
+ * server-side or when no admin is currently impersonating. Cleared on
+ * tab close or via `clearImpersonation()`.
+ */
+export function getImpersonationToken(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return sessionStorage.getItem(IMPERSONATION_STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function setImpersonationToken(token: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    sessionStorage.setItem(IMPERSONATION_STORAGE_KEY, token)
+  } catch {
+    // sessionStorage can throw in private mode; impersonation just won't
+    // persist across reloads in that case.
+  }
+}
+
+export function clearImpersonation(): void {
+  if (typeof window === 'undefined') return
+  try {
+    sessionStorage.removeItem(IMPERSONATION_STORAGE_KEY)
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Fetch wrapper that adds Clerk JWT when available.
+ *
+ * If a current impersonation token exists in sessionStorage, attaches it
+ * via x-impersonation-token. The backend resolves it BEFORE Clerk JWT,
+ * so all requests act as the impersonated user. Both headers are sent;
+ * Clerk JWT stays around so we can fall back to admin identity by simply
+ * clearing the impersonation token.
  */
 export async function apiFetch(
   path: string,
@@ -15,6 +56,11 @@ export async function apiFetch(
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
+  }
+
+  const impToken = getImpersonationToken()
+  if (impToken) {
+    headers['x-impersonation-token'] = impToken
   }
 
   return fetch(`${API_URL}${path}`, { ...fetchOptions, headers })
