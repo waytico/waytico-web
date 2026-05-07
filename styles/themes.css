@@ -1458,8 +1458,8 @@
   font-size: 14px;
   line-height: 1.45;
   color: var(--bar-ink);
-  min-height: 32px;
-  max-height: 200px;
+  min-height: 96px;
+  max-height: 280px;
   font-style: italic;
 }
 .tp-chat-input::placeholder {

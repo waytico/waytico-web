@@ -568,6 +568,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
   // themes ignore this state — for them ClientInfo renders unconditionally
   // for owners, like before.
   const [clientInfoOpen, setClientInfoOpen] = useState(false)
+  // Mirrors TripChatWidget's open/closed state up to the page so we can
+  // hide the floating ScrollToTop button while the panel covers the
+  // bottom-right corner. Reported back via the widget's onOpenChange prop.
+  const [chatOpen, setChatOpen] = useState(false)
 
   // ── Share-prompt banner (TZ Stage 5) ─────────────────────────────
   // Trigger: any share-channel pick on a trip without a linked client_id.
@@ -2316,7 +2320,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       {showOwnerUI && !isShowcase && !isAnonCreator && (
         <>
-          <TripChatWidget projectId={p.id} getToken={getToken} onTripUpdated={handleTripUpdated} status={p.status} theme={resolvedTheme} language={p.language ?? null} />
+          <TripChatWidget projectId={p.id} getToken={getToken} onTripUpdated={handleTripUpdated} status={p.status} theme={resolvedTheme} language={p.language ?? null} onOpenChange={setChatOpen} />
           {/* Owner-only breathing room between the last section and the
               footer. The command bar floats over the page; this spacer
               gives the operator empty space where the bar can rest
@@ -2358,6 +2362,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
             language={p.language ?? null}
             isShowcase
             onShowcaseActions={applyShowcaseActions}
+            onOpenChange={setChatOpen}
             tripContext={
               `Trip: ${p.title}.\n` +
               `Region: ${p.region || 'Île-de-France'}, ${p.country || 'France'}.\n` +
@@ -2380,7 +2385,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         editable={ed}
       />
 
-      <ScrollToTop bottomOffset={showOwnerUI ? 80 : 24} />
+      <ScrollToTop bottomOffset={showOwnerUI ? 88 : 24} hidden={chatOpen} />
     </div>
   )
 }

@@ -6,13 +6,16 @@ import { ChevronUp } from 'lucide-react'
 type Props = {
   /** Extra bottom offset in px — use when a fixed bottom bar (e.g. command bar) is present. */
   bottomOffset?: number
+  /** Hide the button entirely. Used when a floating panel (e.g. AI Page editor)
+   *  is open and would visually conflict with the up-arrow. */
+  hidden?: boolean
 }
 
 /**
  * Scroll-to-top button. Appears after scrolling 300px, fixed bottom-right.
  * Offset prop lets callers push it above a fixed bottom bar.
  */
-export function ScrollToTop({ bottomOffset = 24 }: Props) {
+export function ScrollToTop({ bottomOffset = 24, hidden = false }: Props) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -33,7 +36,7 @@ export function ScrollToTop({ bottomOffset = 24 }: Props) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  if (!visible) return null
+  if (!visible || hidden) return null
 
   return (
     <button

@@ -4,7 +4,7 @@
  * TripChatWidget — collapsible AI assistant widget for trip-page owners.
  *
  * Shipped state (collapsed): pill button bottom-right with a sparkles icon
- * and "Edit with AI" label. Click → opens a panel with full conversation
+ * and "AI Page editor" label. Click → opens a panel with full conversation
  * thread, suggestion chips for first-time use, and the same edit-chat
  * backend the previous TripCommandBar talked to.
  *
@@ -109,6 +109,13 @@ interface TripChatWidgetProps {
    * trip-page-client implements the actual local-state mutation.
    */
   onShowcaseActions?: (actions: any[]) => void
+  /**
+   * Notifies the parent whenever the panel opens or closes. Used by
+   * trip-page-client to hide the floating ScrollToTop button while the
+   * panel is open (they share the bottom-right corner and would otherwise
+   * stack visually).
+   */
+  onOpenChange?: (open: boolean) => void
 }
 
 function getFileIcon(type: string): string {
@@ -189,6 +196,7 @@ export function TripChatWidget({
   isShowcase,
   tripContext,
   onShowcaseActions,
+  onOpenChange,
 }: TripChatWidgetProps) {
   const allowFileUpload = !isShowcase && (status === 'active' || status === 'completed')
 
@@ -233,6 +241,13 @@ export function TripChatWidget({
     } catch {}
   }, [projectId, open])
 
+  // Mirror open state to parent. Kept in its own effect so it also fires
+  // on the post-hydrate transition false → true when the panel was open
+  // in the previous tab session.
+  useEffect(() => {
+    onOpenChange?.(open)
+  }, [open, onOpenChange])
+
   // Persist thread.
   useEffect(() => {
     if (messages.length === 0 && !sessionId) return
@@ -270,12 +285,13 @@ export function TripChatWidget({
     if (open) setUnread(0)
   }, [open])
 
-  // Auto-grow textarea (8-line cap).
+  // Auto-grow textarea — capped at 280px (matches .tp-chat-input max-height
+  // in themes.css). Past that the browser shows a native scrollbar.
   useEffect(() => {
     const el = textareaRef.current
     if (!el) return
     el.style.height = 'auto'
-    el.style.height = Math.min(el.scrollHeight, 200) + 'px'
+    el.style.height = Math.min(el.scrollHeight, 280) + 'px'
   }, [input])
 
   // Auto-scroll thread to the bottom on new messages.
@@ -459,10 +475,10 @@ export function TripChatWidget({
         data-theme={theme || 'editorial'}
         className="tp-chat-fab"
         onClick={() => setOpen(true)}
-        aria-label="Open trip assistant"
+        aria-label="Open AI Page editor"
       >
         <Sparkles className="tp-chat-fab__icon" aria-hidden="true" />
-        <span className="tp-chat-fab__label">Edit with AI</span>
+        <span className="tp-chat-fab__label">AI Page editor</span>
         {unread > 0 && (
           <span className="tp-chat-fab__badge" aria-label={`${unread} new replies`}>
             {unread > 9 ? '9+' : unread}
@@ -477,13 +493,13 @@ export function TripChatWidget({
       data-theme={theme || 'editorial'}
       className="tp-chat-panel"
       role="dialog"
-      aria-label="Trip assistant"
+      aria-label="AI Page editor"
       aria-modal="true"
     >
       <div className="tp-chat-panel__header">
         <div className="tp-chat-panel__header-title">
           <Sparkles className="tp-chat-panel__header-icon" aria-hidden="true" />
-          <span>Trip assistant</span>
+          <span>AI Page editor</span>
         </div>
         <button
           type="button"
