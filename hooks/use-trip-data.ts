@@ -41,6 +41,13 @@ type Options = {
   projectId: string | undefined
   // bumping this from the outside forces a re-fetch of /full
   ownerRefreshKey: number
+  // When true, owner-detect is suppressed entirely. Used by the
+  // ?previewAs=client iframe path so a logged-in operator doesn't get
+  // the /full payload (and isOwner stays false) inside the preview
+  // frame even though the Clerk session cookie is shared with the
+  // parent tab. Optional — undefined / false preserves existing
+  // behavior.
+  disableOwnerFetch?: boolean
 }
 
 export function useTripData({
@@ -53,6 +60,7 @@ export function useTripData({
   setIsOwner,
   projectId,
   ownerRefreshKey,
+  disableOwnerFetch,
 }: Options) {
   const { getToken, isLoaded, isSignedIn } = useAuth()
 
@@ -129,6 +137,7 @@ export function useTripData({
   // becomes known (polling completes → SSR-null → populated).
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
+    if (disableOwnerFetch) return
     let cancelled = false
     ;(async () => {
       const ok = await refreshOwnerData()
@@ -139,7 +148,7 @@ export function useTripData({
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, isSignedIn, refreshOwnerData, ownerRefreshKey, projectId])
+  }, [isLoaded, isSignedIn, refreshOwnerData, ownerRefreshKey, projectId, disableOwnerFetch])
 
   // 3. Refresh after agent tool-call edits. Re-fetch public data (fresh
   // itinerary / hero / sections) and, if owner, overlay the richer /full

@@ -22,6 +22,7 @@ import { TripActionBar } from '@/components/trip/trip-action-bar'
 import { ArchiveDialog } from '@/components/trip/archive-dialog'
 import { EditableField } from '@/components/editable/editable-field'
 import { ShowcasePills, ShowcaseBanner, SHOWCASE_BANNER_HEIGHT } from '@/components/trip/showcase-pills'
+import { DevicePreview } from '@/components/trip/device-preview'
 
 import { ThemeRoot } from '@/components/trip/theme-root'
 import { TripNav } from '@/components/trip/nav'
@@ -419,8 +420,20 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const searchParams = useSearchParams()
   const { isSignedIn, getToken, isLoaded } = useAuth()
 
+  // When the trip page is loaded inside the DevicePreview iframe we
+  // want a clean public client view: no Header, no TripActionBar, no
+  // ClientInfo, no upsell modals — same render as a logged-out
+  // visitor would see. The flag is sourced from the URL (not session
+  // storage), so it survives cold loads and is independent of any
+  // shared Clerk cookie state. We *derive* isOwner / isAnonCreator
+  // from their underlying state by ANDing in !isPreviewIframe — every
+  // render-condition that already keys off those two booleans flips
+  // to "public viewer" without us touching each call site.
+  const isPreviewIframe = searchParams.get('previewAs') === 'client'
+
   const [data, setData] = useState(initialData)
-  const [isAnonCreator, setIsAnonCreator] = useState(false)
+  const [isAnonCreatorRaw, setIsAnonCreator] = useState(false)
+  const isAnonCreator = isAnonCreatorRaw && !isPreviewIframe
   const [projectIdForClaim, setProjectIdForClaim] = useState<string | null>(null)
   const [anonShareOpen, setAnonShareOpen] = useState(false)
   const [sharedOnce, setSharedOnce] = useState(false)
@@ -560,7 +573,11 @@ export default function TripPageClient({ slug, initialData }: Props) {
   }, [searchParams, isSignedIn, isLoaded, getToken, slug, router])
 
   // ─── Photos / owner state ──────────────────────────────────
-  const [isOwner, setIsOwner] = useState(false)
+  // isOwner is derived: ANDing isPreviewIframe (declared at top of
+  // the component) keeps the iframe path strictly public-view, even
+  // if the iframe shares a Clerk session with the parent tab.
+  const [isOwnerRaw, setIsOwner] = useState(false)
+  const isOwner = isOwnerRaw && !isPreviewIframe
   const [previewAsClient, setPreviewAsClient] = useState(false)
   const showOwnerUI = isOwner && !previewAsClient
   const [archiveOpen, setArchiveOpen] = useState(false)
@@ -698,6 +715,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
     setIsOwner,
     projectId: data?.project?.id,
     ownerRefreshKey,
+    disableOwnerFetch: isPreviewIframe,
   })
 
   const {
@@ -1741,6 +1759,14 @@ export default function TripPageClient({ slug, initialData }: Props) {
             <span>This is how your client sees the page.</span>
           </div>
         </div>
+      )}
+      {/* Floating mobile-companion to "Preview as client". Mounted on
+          the same condition as the preview-banner above so both appear
+          and disappear together. The iframe renders /t/[slug]?previewAs
+          =client, which the trip-page-client (this file) detects via
+          isPreviewIframe at the top and short-circuits all owner UI. */}
+      {isOwner && previewAsClient && !isShowcase && !isAnonCreator && (
+        <DevicePreview slug={slug} />
       )}
       {isShowcase && <ShowcaseBanner />}
       {isShowcase && showOwnerUI && p.id && (
