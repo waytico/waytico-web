@@ -116,7 +116,7 @@ export default function PricingPage() {
             </li>
             <li>
               <strong className="font-semibold text-foreground">Quote-building stays free.</strong>{' '}
-              Creating, editing, sharing proposals will not require a paid plan.
+              Creating, editing, sending proposals will not require a paid plan.
               Subscription is for advanced features, not basic ones.
             </li>
             <li>
