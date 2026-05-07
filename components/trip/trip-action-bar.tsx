@@ -52,6 +52,12 @@ type Props = {
   clientInfoOpen?: boolean
   onToggleClientInfo?: () => void
   /**
+   * Forwarded to ShareMenu. Fired when the operator picks any share
+   * channel (Email/WhatsApp/Telegram/Copy). Drives the SharePromptBanner
+   * shown for trips without a linked client_id (TZ Stage 5).
+   */
+  onShareAction?: () => void
+  /**
    * When true, the Preview slot is replaced by an "Exit preview" pill that
    * pulses in accent colors. The owner is currently viewing the trip page
    * as a client; pressing the pill leaves preview mode. The pill occupies
@@ -95,6 +101,7 @@ export function TripActionBar({
   showClientInfoToggle,
   clientInfoOpen,
   onToggleClientInfo,
+  onShareAction,
   previewMode = false,
   onExitPreview,
 }: Props) {
@@ -315,7 +322,7 @@ export function TripActionBar({
       </div>
       {canShare && (
         <div className="ml-auto lg:ml-3">
-          <ShareMenu title={title} url={shareUrl} publicStatus={status} label="Share" />
+          <ShareMenu title={title} url={shareUrl} publicStatus={status} label="Share" onShareAction={onShareAction} />
         </div>
       )}
     </div>

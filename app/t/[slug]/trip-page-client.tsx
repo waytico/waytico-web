@@ -13,6 +13,7 @@ import PhotosBlock from '@/components/photos-block'
 import PhotoLightbox from '@/components/photo-lightbox'
 import Header from '@/components/header'
 import ShareMenu from '@/components/share-menu'
+import SharePromptBanner from '@/components/trip/share-prompt-banner'
 import AnonUpsellModal from '@/components/anon-upsell-modal'
 import PostClaimUpsellModal from '@/components/post-claim-upsell-modal'
 import { ScrollToTop } from '@/components/scroll-to-top'
@@ -567,6 +568,83 @@ export default function TripPageClient({ slug, initialData }: Props) {
   // themes ignore this state — for them ClientInfo renders unconditionally
   // for owners, like before.
   const [clientInfoOpen, setClientInfoOpen] = useState(false)
+
+  // ── Share-prompt banner (TZ Stage 5) ─────────────────────────────
+  // Trigger: any share-channel pick on a trip without a linked client_id.
+  // Persistence: sessionStorage keyed per trip — survives refresh and
+  // cross-tab navigation back to this page during the session, but
+  // doesn't follow the user across full session restarts (closing the
+  // tab clears sessionStorage). The flag is rewritten on each subsequent
+  // share so a dismissed banner re-opens after the next share.
+  const [sharePromptOpen, setSharePromptOpen] = useState(false)
+  const sharePromptKey = data?.project?.id
+    ? `waytico:share-prompt:${data.project.id}`
+    : null
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!sharePromptKey) return
+    if ((data as any)?.client) return
+    try {
+      if (window.sessionStorage.getItem(sharePromptKey) === 'open') {
+        setSharePromptOpen(true)
+      }
+    } catch {
+      // sessionStorage may be unavailable (private mode in some browsers).
+      // The banner just stays closed — no-op fallback.
+    }
+  }, [sharePromptKey, (data as any)?.client])
+
+  function handleShareAction() {
+    if (!sharePromptKey) return
+    if ((data as any)?.client) return
+    try {
+      window.sessionStorage.setItem(sharePromptKey, 'open')
+    } catch { /* ignore */ }
+    setSharePromptOpen(true)
+  }
+
+  function dismissSharePrompt() {
+    if (sharePromptKey) {
+      try { window.sessionStorage.removeItem(sharePromptKey) } catch { /* ignore */ }
+    }
+    setSharePromptOpen(false)
+  }
+
+  async function sharePromptHandlePick(picked: any) {
+    const ok = await saveProjectPatch({ clientId: picked.id })
+    if (ok) {
+      if (sharePromptKey) {
+        try { window.sessionStorage.removeItem(sharePromptKey) } catch { /* ignore */ }
+      }
+      setSharePromptOpen(false)
+      setOwnerRefreshKey((k) => k + 1)
+    }
+  }
+
+  async function sharePromptHandleCreateNew(draft: Record<string, unknown>) {
+    try {
+      const token = await getToken()
+      if (!token) return
+      const res = await apiFetch('/api/clients/upsert', {
+        method: 'POST',
+        token,
+        body: JSON.stringify(draft),
+      })
+      if (!res.ok) return
+      const created = (await res.json()).client
+      if (!created) return
+      const ok = await saveProjectPatch({ clientId: created.id })
+      if (ok) {
+        if (sharePromptKey) {
+          try { window.sessionStorage.removeItem(sharePromptKey) } catch { /* ignore */ }
+        }
+        setSharePromptOpen(false)
+        setOwnerRefreshKey((k) => k + 1)
+      }
+    } catch { /* surfacing handled by SmartClientPicker call-site */ }
+  }
+
   // Showcase / demo mode — detected by the seed-showcase slug. When this is
   // the live trip, we force owner UI on (every visitor sees editable fields,
   // drag, AI bar, theme switcher) and intercept all mutations into local
@@ -1637,9 +1715,18 @@ export default function TripPageClient({ slug, initialData }: Props) {
                    can toggle preview on/off without moving the mouse. */
                 previewMode={previewAsClient}
                 onExitPreview={() => setPreviewAsClient(false)}
+                onShareAction={handleShareAction}
               />
             ) : undefined
           }
+        />
+      )}
+
+      {showOwnerUI && !isShowcase && !isAnonCreator && !((data as any)?.client) && sharePromptOpen && (
+        <SharePromptBanner
+          onPick={sharePromptHandlePick}
+          onCreateNew={sharePromptHandleCreateNew}
+          onDismiss={dismissSharePrompt}
         />
       )}
 
