@@ -1,14 +1,19 @@
 'use client'
 
 /**
- * Photo Bank — browser-side EXIF parse before resize (TZ Photo Bank Stage 4 §7.3).
+ * Photo Bank — browser-side EXIF parse stub (TZ Photo Bank Stage 4 §7.3).
  *
- * Lazy-loads `exifr` so we don't pay the parse cost for free users.
- * Paid-only flow: caller is `use-photo-upload`, which sends the parsed
- * `{takenAt, lat, lng}` alongside the register payload (server then
- * does its own canonical EXIF + Nominatim reverse-geocode pass; the
- * client read is purely a UX nicety to keep timestamps right when the
- * canvas resize strips EXIF metadata).
+ * Paid-only path — caller is `usePhotoBankUpload`. The browser EXIF
+ * pipeline lands when the billing flow is enabled and the `exifr`
+ * package is added to the web bundle (currently a backend-only
+ * dependency on waytico-backend). Until then this stub returns a
+ * no-op shape so the component graph compiles without dragging in a
+ * 200 KB EXIF parser into the free user's bundle.
+ *
+ * The server-side register endpoint already does its own canonical
+ * EXIF + Nominatim reverse-geocode pass via `exifr` on Node, so this
+ * client-side read is purely a UX nicety (preserving timestamps when
+ * the canvas resize strips metadata).
  */
 
 export interface BrowserExif {
@@ -17,22 +22,6 @@ export interface BrowserExif {
   lng: number | null
 }
 
-export async function readExif(file: File): Promise<BrowserExif> {
-  try {
-    const exifr = (await import('exifr')).default || (await import('exifr'))
-    const data = await (exifr as any).parse(file, {
-      pick: ['DateTimeOriginal', 'GPSLatitude', 'GPSLongitude', 'latitude', 'longitude'],
-    })
-    if (!data) return { takenAt: null, lat: null, lng: null }
-    const takenAtRaw: any = data.DateTimeOriginal
-    const takenAt =
-      takenAtRaw instanceof Date && !isNaN(takenAtRaw.getTime())
-        ? takenAtRaw.toISOString()
-        : null
-    const lat = typeof data.latitude === 'number' ? data.latitude : null
-    const lng = typeof data.longitude === 'number' ? data.longitude : null
-    return { takenAt, lat, lng }
-  } catch {
-    return { takenAt: null, lat: null, lng: null }
-  }
+export async function readExif(_file: File): Promise<BrowserExif> {
+  return { takenAt: null, lat: null, lng: null }
 }
