@@ -1243,20 +1243,6 @@
     from { transform: translateY(100%); }
     to   { transform: translateY(0); }
   }
-  /* Tighten empty-state spacing: vertical real estate is scarce on the
-     bottom sheet. Drop the auto-centering on .tp-chat-empty so the
-     prompt sits near the top instead of floating in the middle, and
-     shave the surrounding paddings. */
-  .tp-chat-panel__messages {
-    padding: 8px 16px;
-  }
-  .tp-chat-empty {
-    margin: 0;
-    padding: 4px 8px;
-  }
-  .tp-chat-quick-prompts {
-    padding: 4px 16px 0;
-  }
 }
 
 .tp-chat-panel__header {
@@ -1410,6 +1396,28 @@
   gap: 6px;
   padding: 8px 16px 0;
 }
+
+/* Mobile-only override of empty-state spacing. Sits AFTER the default
+   declarations of .tp-chat-panel__messages, .tp-chat-empty and
+   .tp-chat-quick-prompts so the cascade resolves in our favour — a
+   media query does not raise specificity, only file order does.
+   Vertical real estate is scarce on the 75dvh bottom sheet; drop the
+   auto-centering on .tp-chat-empty so the prompt sits near the top
+   instead of floating in the middle, and shave the surrounding
+   paddings. */
+@media (max-width: 1023px) {
+  .tp-chat-panel__messages {
+    padding: 8px 16px;
+  }
+  .tp-chat-empty {
+    margin: 0;
+    padding: 4px 8px;
+  }
+  .tp-chat-quick-prompts {
+    padding: 4px 16px 0;
+  }
+}
+
 .tp-chat-chip {
   flex: 0 0 auto;
   padding: 7px 12px;
