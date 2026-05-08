@@ -14,11 +14,25 @@
  * Toggles on click (and closes on outside click). No hover state — a
  * popover that opens on hover is awkward for keyboard users and
  * touch screens both.
+ *
+ * placement controls which direction the bubble pops from the icon.
+ * Default is 'up' (bubble appears above the icon) — correct for the
+ * common case of an icon sitting at the bottom-right of a photo, where
+ * upward means away from the photo into headroom. Pass 'down' when
+ * the icon sits at the top-right of a clipped container (e.g. the
+ * Magazine hero, which has overflow:hidden) — there the upward pop
+ * would be clipped and the bubble would be invisible.
  */
 
 import { useEffect, useRef, useState } from 'react'
 
-export function AttributionPopover({ html }: { html: string | null }) {
+export function AttributionPopover({
+  html,
+  placement = 'up',
+}: {
+  html: string | null
+  placement?: 'up' | 'down'
+}) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLSpanElement | null>(null)
 
@@ -50,7 +64,7 @@ export function AttributionPopover({ html }: { html: string | null }) {
       {open && (
         <span
           role="tooltip"
-          className="tp-attr__pop"
+          className={`tp-attr__pop tp-attr__pop--${placement}`}
           // Server pre-escapes author / license / source via escapeHtml
           // before assembling the anchor tags — see Stage 7's
           // services/global-bank/attribution.ts:renderAttributionHtml.

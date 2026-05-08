@@ -654,8 +654,10 @@ function HeroMagazine(props: HeroProps) {
         >
           {/* AttributionPopover renders only an "i" button + popover; the
               outer wrapper exists so we can position it independently of
-              the rest of the hero layout. */}
-          <AttributionPopover html={heroAttributionHtml} />
+              the rest of the hero layout. placement="down" because the
+              hero has overflow:hidden and the icon sits at top:12 — a
+              default upward pop would be clipped above the hero edge. */}
+          <AttributionPopover html={heroAttributionHtml} placement="down" />
         </div>
       )}
       <div className="tp-mag-hero__veil" aria-hidden="true" />
