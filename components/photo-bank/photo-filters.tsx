@@ -1,13 +1,18 @@
 'use client'
 
 /**
- * Photo Bank — filter strip (search / category / region).
+ * Photo Bank — filter strip (search / category / city / country dropdown).
  *
- * Reused между free preview (global) и paid full UI. Controlled
- * component — caller owns the state. `category` options match a
- * subset of the controlled vocabulary that's most useful for filter
- * (subject types + activity), not the full 51-entry list which
- * would noise the dropdown.
+ * TZ Stage 10 Block B: replaces the previous single 'region' field with
+ *   - city: free-text (debounced ILIKE prefix on backend)
+ *   - country: dropdown built from /api/global-bank/countries
+ * The search field itself targets ai_description / ai_tags / ai_landmarks
+ * only — city/country dropped from the OR-pool to kill cross-region
+ * false positives ('Paris' returning Rome rows whose description references
+ * Paris).
+ *
+ * Reused by both free preview и paid full UI; controlled component, caller
+ * owns state.
  */
 
 import { ChangeEvent } from 'react'
@@ -32,8 +37,11 @@ export interface PhotoFiltersProps {
   onSearchChange: (v: string) => void
   category: string
   onCategoryChange: (v: string) => void
-  region: string
-  onRegionChange: (v: string) => void
+  city: string
+  onCityChange: (v: string) => void
+  country: string
+  onCountryChange: (v: string) => void
+  countryOptions: string[]
 }
 
 export function PhotoFilters(props: PhotoFiltersProps) {
@@ -42,8 +50,11 @@ export function PhotoFilters(props: PhotoFiltersProps) {
     onSearchChange,
     category,
     onCategoryChange,
-    region,
-    onRegionChange,
+    city,
+    onCityChange,
+    country,
+    onCountryChange,
+    countryOptions,
   } = props
   const handle =
     (setter: (v: string) => void) =>
@@ -71,19 +82,28 @@ export function PhotoFilters(props: PhotoFiltersProps) {
       >
         <option value="">All categories</option>
         {VISIBLE_CATEGORIES.map((c) => (
-          <option key={c} value={c}>
-            {c.replace(/_/g, ' ')}
-          </option>
+          <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>
         ))}
       </select>
       <input
         type="text"
-        value={region}
-        onChange={handle(onRegionChange)}
-        placeholder="City or country"
-        className="h-9 w-[160px] rounded border border-zinc-300 bg-white px-3 text-sm"
-        aria-label="Region"
+        value={city}
+        onChange={handle(onCityChange)}
+        placeholder="City"
+        className="h-9 w-[140px] rounded border border-zinc-300 bg-white px-3 text-sm"
+        aria-label="City"
       />
+      <select
+        value={country}
+        onChange={handle(onCountryChange)}
+        className="h-9 rounded border border-zinc-300 bg-white px-2 text-sm"
+        aria-label="Country"
+      >
+        <option value="">All countries</option>
+        {countryOptions.map((c) => (
+          <option key={c} value={c}>{c}</option>
+        ))}
+      </select>
     </div>
   )
 }

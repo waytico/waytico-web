@@ -25,24 +25,32 @@ export interface GlobalPhotoItem {
   ai_description: string | null
   city: string | null
   country: string | null
+  region?: string | null
   license: string
+  license_url?: string | null
   attribution_html: string | null
   ai_quality_score: number | null
   is_hero_candidate: boolean
+  reviewed_at?: string | null
   created_at: string
 }
 
 export interface GlobalListResponse {
   photos: GlobalPhotoItem[]
-  nextCursor: string | null
+  page: number
+  perPage: number
+  totalCount: number
+  totalPages: number
 }
 
 export interface ListGlobalFilters {
   search?: string
   category?: string
-  region?: string
-  cursor?: string
-  limit?: number
+  city?: string
+  country?: string
+  reviewed?: 'true' | 'false' | 'all'
+  page?: number
+  perPage?: number
 }
 
 export type AuthedFetch = (path: string, init?: RequestInit) => Promise<Response>
@@ -54,13 +62,24 @@ export async function listGlobalPhotos(
   const sp = new URLSearchParams()
   if (filters.search) sp.set('search', filters.search)
   if (filters.category) sp.set('category', filters.category)
-  if (filters.region) sp.set('region', filters.region)
-  if (filters.cursor) sp.set('cursor', filters.cursor)
-  sp.set('limit', String(filters.limit ?? 24))
+  if (filters.city) sp.set('city', filters.city)
+  if (filters.country) sp.set('country', filters.country)
+  if (filters.reviewed) sp.set('reviewed', filters.reviewed)
+  sp.set('page', String(filters.page ?? 1))
+  sp.set('perPage', String(filters.perPage ?? 50))
   const url = `${API_URL}/api/global-bank?${sp.toString()}`
   const res = await authedFetch(url)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return (await res.json()) as GlobalListResponse
+}
+
+export async function listGlobalCountries(
+  authedFetch: AuthedFetch,
+): Promise<string[]> {
+  const res = await authedFetch(`${API_URL}/api/global-bank/countries`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const j = (await res.json()) as { countries: string[] }
+  return Array.isArray(j.countries) ? j.countries : []
 }
 
 // ─────────────────────────────────────────────────────────────────────

@@ -1,19 +1,24 @@
 'use client'
 
 /**
- * Photo Bank — dashboard page (TZ §7).
+ * Photo Bank — dashboard page (TZ §7 + Stage 10 Block B).
  *
  * Tier-aware:
- *   - Free  → upgrade banner + read-only global preview + filters.
- *   - Paid  → full management UI (quota bar, upload modal, paid grid,
- *             detail modal). Stub-grade — components import cleanly,
- *             render without crashing, but end-to-end upload/edit run
- *             ships with the billing flow per Execution policy.
+ *   - Free  → upgrade banner (paid uploads still gated) + global preview
+ *             with offset pagination + filters (search / city / country
+ *             dropdown / reviewed toggle).
+ *   - Paid  → full management UI; reuses the same filter strip on top
+ *             of user-bank list. Stub-grade: end-to-end paid run lands
+ *             with the billing flow.
  *
- * Free users never call the paid endpoints — `useUserPlan` resolves
- * `plan='free'` for everyone today (default in users.plan), so the
- * paid branch only becomes reachable when the operator's row flips
- * to `plan='paid'`.
+ * Stage 10 Block B notes:
+ *   - Offset pagination replaces the cursor pattern so the UI can show
+ *     "Page X of Y" + per-page selector.
+ *   - City filter is a debounced text input (ILIKE prefix on backend).
+ *   - Country filter is a dropdown built from /api/global-bank/countries.
+ *   - Search field is description/tags/landmarks-only — city/country
+ *     are no longer in the search OR-pool, killing false positives like
+ *     'Paris' returning Rome rows.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -30,6 +35,7 @@ import { PhotoDetailModal } from '@/components/photo-bank/photo-detail-modal'
 import { PhotoUploadModal } from '@/components/photo-bank/photo-upload-modal'
 import {
   listGlobalPhotos,
+  listGlobalCountries,
   listUserPhotos,
   getQuota,
   type GlobalPhotoItem,
@@ -40,14 +46,20 @@ import {
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
+const PER_PAGE_OPTIONS = [25, 50, 100] as const
+
 interface PhotoBankPageClientProps {
-  /** Plan resolved on the parent page from /api/users/me. Free is the
-   *  default; paid flips when the future Stripe upgrade flow lands. */
   plan: 'free' | 'paid'
-  /** When the operator hasn't yet attested copyright; controls whether
-   *  the upload modal opens straight to the picker or to the
-   *  attestation step. Paid-only — undefined for free. */
   needsAttestation?: boolean
+}
+
+function useDebounced<T>(value: T, ms = 300): T {
+  const [v, setV] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), ms)
+    return () => clearTimeout(t)
+  }, [value, ms])
+  return v
 }
 
 export default function PhotoBankPageClient(props: PhotoBankPageClientProps) {
@@ -55,10 +67,6 @@ export default function PhotoBankPageClient(props: PhotoBankPageClientProps) {
   const isPaid = plan === 'paid'
   const { getToken } = useAuth()
 
-  // Single auth wrapper used by every API call. apiFetch in lib/api
-  // drops the Bearer in for /api/* — but the Photo Bank endpoints sit
-  // on a different host (NEXT_PUBLIC_API_URL → onrender.com), so we
-  // attach the token explicitly.
   const authedFetch: AuthedFetch = useCallback(
     async (path, init) => {
       const token = await getToken().catch(() => null)
@@ -69,13 +77,34 @@ export default function PhotoBankPageClient(props: PhotoBankPageClientProps) {
     [getToken],
   )
 
-  // Filters — shared shape between free и paid UIs.
+  // Filters (debounced for free-text fields).
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
-  const [region, setRegion] = useState('')
+  const [city, setCity] = useState('')
+  const [country, setCountry] = useState('')
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState<number>(50)
 
-  // ── Free: global preview ─────────────────────────────────────────
+  const debouncedSearch = useDebounced(search, 300)
+  const debouncedCity = useDebounced(city, 300)
+
+  // Reset page on any filter change.
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearch, category, debouncedCity, country, perPage])
+
+  // Country dropdown options.
+  const [countries, setCountries] = useState<string[]>([])
+  useEffect(() => {
+    listGlobalCountries(authedFetch)
+      .then(setCountries)
+      .catch(() => setCountries([]))
+  }, [authedFetch])
+
+  // ── Free: global listing ─────────────────────────────────────────
   const [globalPhotos, setGlobalPhotos] = useState<GlobalPhotoItem[]>([])
+  const [globalTotal, setGlobalTotal] = useState(0)
+  const [globalTotalPages, setGlobalTotalPages] = useState(1)
   const [globalLoading, setGlobalLoading] = useState(false)
   const [globalError, setGlobalError] = useState<string | null>(null)
 
@@ -83,11 +112,32 @@ export default function PhotoBankPageClient(props: PhotoBankPageClientProps) {
     if (isPaid) return
     setGlobalLoading(true)
     setGlobalError(null)
-    listGlobalPhotos(authedFetch, { search, category, region, limit: 24 })
-      .then((r) => setGlobalPhotos(r.photos))
+    listGlobalPhotos(authedFetch, {
+      search: debouncedSearch,
+      category,
+      city: debouncedCity,
+      country,
+      page,
+      perPage,
+      reviewed: 'all',
+    })
+      .then((r) => {
+        setGlobalPhotos(r.photos)
+        setGlobalTotal(r.totalCount)
+        setGlobalTotalPages(r.totalPages)
+      })
       .catch((e: Error) => setGlobalError(e.message))
       .finally(() => setGlobalLoading(false))
-  }, [isPaid, authedFetch, search, category, region])
+  }, [
+    isPaid,
+    authedFetch,
+    debouncedSearch,
+    category,
+    debouncedCity,
+    country,
+    page,
+    perPage,
+  ])
 
   // ── Paid: user-bank list + quota ─────────────────────────────────
   const [userPhotos, setUserPhotos] = useState<UserPhotoItem[]>([])
@@ -102,7 +152,12 @@ export default function PhotoBankPageClient(props: PhotoBankPageClientProps) {
     setUserLoading(true)
     setUserError(null)
     Promise.all([
-      listUserPhotos(authedFetch, { search, category, region, limit: 50 }),
+      listUserPhotos(authedFetch, {
+        search: debouncedSearch,
+        category,
+        region: city || country,
+        limit: perPage,
+      } as any),
       getQuota(authedFetch),
     ])
       .then(([list, q]) => {
@@ -111,7 +166,7 @@ export default function PhotoBankPageClient(props: PhotoBankPageClientProps) {
       })
       .catch((e: Error) => setUserError(e.message))
       .finally(() => setUserLoading(false))
-  }, [isPaid, authedFetch, search, category, region])
+  }, [isPaid, authedFetch, debouncedSearch, category, city, country, perPage])
 
   const filtersBlock = (
     <PhotoFilters
@@ -119,10 +174,56 @@ export default function PhotoBankPageClient(props: PhotoBankPageClientProps) {
       onSearchChange={setSearch}
       category={category}
       onCategoryChange={setCategory}
-      region={region}
-      onRegionChange={setRegion}
+      city={city}
+      onCityChange={setCity}
+      country={country}
+      onCountryChange={setCountry}
+      countryOptions={countries}
     />
   )
+
+  const paginationBar = useMemo(() => {
+    if (isPaid) return null
+    return (
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+        <div>
+          {globalTotal > 0 ? (
+            <>Showing page {page} of {globalTotalPages} · {globalTotal} photos</>
+          ) : (
+            <>0 photos</>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-zinc-600">Per page</label>
+          <select
+            value={perPage}
+            onChange={(e) => setPerPage(Number(e.target.value))}
+            className="h-8 rounded border border-zinc-300 bg-white px-2 text-sm"
+          >
+            {PER_PAGE_OPTIONS.map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            className="rounded border border-zinc-300 bg-white px-2 py-1 disabled:opacity-50"
+          >
+            ← Prev
+          </button>
+          <button
+            type="button"
+            disabled={page >= globalTotalPages}
+            onClick={() => setPage((p) => Math.min(globalTotalPages, p + 1))}
+            className="rounded border border-zinc-300 bg-white px-2 py-1 disabled:opacity-50"
+          >
+            Next →
+          </button>
+        </div>
+      </div>
+    )
+  }, [isPaid, globalTotal, globalTotalPages, page, perPage])
 
   // ─────────────────────────────────────────────────────────────────
   // Free render
@@ -135,7 +236,7 @@ export default function PhotoBankPageClient(props: PhotoBankPageClientProps) {
         {globalLoading && (
           <div className="flex items-center justify-center py-12 text-zinc-500">
             <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="ml-2">Loading global preview…</span>
+            <span className="ml-2">Loading global photos…</span>
           </div>
         )}
         {globalError && (
@@ -155,12 +256,13 @@ export default function PhotoBankPageClient(props: PhotoBankPageClientProps) {
             No photos match your filters yet. Try a broader search.
           </div>
         )}
+        {paginationBar}
       </div>
     )
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // Paid render — stub-grade per TZ Stage 4 (TZ Execution policy)
+  // Paid render — Stage 4 stub-grade
   // ─────────────────────────────────────────────────────────────────
   return (
     <div>
@@ -189,18 +291,12 @@ export default function PhotoBankPageClient(props: PhotoBankPageClientProps) {
         </div>
       )}
       {userError && (
-        <div className="rounded bg-amber-50 p-3 text-sm text-amber-800">
-          {userError}
-        </div>
+        <div className="rounded bg-amber-50 p-3 text-sm text-amber-800">{userError}</div>
       )}
       {!userLoading && !userError && (
         <PhotoBankGrid>
           {userPhotos.map((p) => (
-            <PhotoCard
-              key={p.id}
-              photo={p}
-              onEdit={(ph) => setDetailPhoto(ph)}
-            />
+            <PhotoCard key={p.id} photo={p} onEdit={(ph) => setDetailPhoto(ph)} />
           ))}
         </PhotoBankGrid>
       )}
