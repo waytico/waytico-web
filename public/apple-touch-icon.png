@@ -1,0 +1,29 @@
+Waytico favicon — "Three bars" (T-04)
+========================================
+
+Brand color : #C4622D (terracotta)
+Background  : transparent (PNG/SVG); apple-touch-icon uses #F5F1EA paper
+
+Files
+-----
+  favicon.svg               Master vector. Serve as primary favicon.
+  favicon-paper-bg.svg      Same mark on paper-color tile (for light backgrounds where transparency reads wrong).
+  favicon-16.png            Browser tab (small).
+  favicon-32.png            Browser tab (retina) and bookmarks.
+  favicon-48.png            Windows site icon.
+  favicon-64.png            Generic.
+  favicon-96.png            Android Chrome legacy.
+  favicon-128.png           Generic.
+  favicon-180.png           Reserve.
+  favicon-192.png           Android Chrome / PWA.
+  favicon-256.png           Generic.
+  favicon-512.png           PWA splash / large.
+  apple-touch-icon.png      iOS home-screen icon (180x180, non-transparent).
+  site.webmanifest          PWA manifest.
+  head-snippet.html         Drop into <head>.
+
+Install
+-------
+1. Upload all files to your site root (so they live at /favicon.svg, /favicon-32.png, etc.).
+2. Paste the contents of head-snippet.html into your <head>.
+3. Hard-refresh (browsers aggressively cache favicons).
