@@ -28,10 +28,14 @@ function parseView(raw: string | null): WorkspaceView {
  *
  *   Header
  *   SettingsStrip (Profile / Preferences pills)
- *   WorkspaceTabs (Trips / Clients)
- *   TripsTab | ClientsTab
+ *   WorkspaceTabs (Trips / Clients / Photos*)
+ *   TripsTab | ClientsTab | PhotoBankPageClient
  *
- * Top-level URL state: ?view=trips|clients (default trips).
+ *   * Photos tab is paid-only (Stage 11 Block B). Free operators never
+ *     see it; if they navigate to ?view=photos directly the page
+ *     redirects them to ?view=trips once user.plan resolves.
+ *
+ * Top-level URL state: ?view=trips|clients|photos (default trips).
  * Trips-internal URL params live under t-prefixed keys (tq, ttab,
  * tsort, tdir, tpage, tper). Legacy unprefixed keys (q, tab, sort,
  * dir, page, per) are migrated once on first mount to keep shared
@@ -46,6 +50,10 @@ export default function DashboardPage() {
   const { clients, refresh: refreshClients } = useClients()
   const [view, setView] = useState<WorkspaceView>(() => parseView(searchParams.get('view')))
   const [stripExpanded, setStripExpanded] = useState<StripExpanded>(null)
+  // Stage 11 Block B — null = unknown (initial), keeps Photos tab
+  // hidden during the brief window before /api/users/me resolves so
+  // the tab never flashes for a free operator.
+  const [plan, setPlan] = useState<'free' | 'paid' | null>(null)
 
   // One-shot legacy URL migration. Old dashboard kept trips state on
   // unprefixed keys (?q=&tab=&sort=…). Map them to t-prefixed keys so
@@ -121,6 +129,39 @@ export default function DashboardPage() {
     }
   }, [isLoaded, isSignedIn, getToken])
 
+  // Stage 11 Block B — load user.plan to gate the Photos tab.
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return
+    let active = true
+    ;(async () => {
+      try {
+        const token = await getToken()
+        const res = await apiFetch('/api/users/me', { token, cache: 'no-store' })
+        if (!res.ok) {
+          if (active) setPlan('free')
+          return
+        }
+        const j = (await res.json()) as { user?: { plan?: string } }
+        const userPlan = j?.user?.plan === 'paid' ? 'paid' : 'free'
+        if (active) setPlan(userPlan)
+      } catch {
+        if (active) setPlan('free')
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [isLoaded, isSignedIn, getToken])
+
+  // Stage 11 Block B — when a free operator lands on ?view=photos
+  // (direct link, bookmark, or post-tab-click that races with the
+  // plan fetch), bounce them back to ?view=trips once plan resolves.
+  useEffect(() => {
+    if (plan === 'free' && view === 'photos') {
+      setView('trips')
+    }
+  }, [plan, view])
+
   function handleUpdate(updated: Project) {
     setProjects((prev) =>
       prev ? prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)) : prev,
@@ -157,6 +198,7 @@ export default function DashboardPage() {
                 onChange={setView}
                 tripsCount={tripsCount}
                 clientsCount={clientsCount}
+                showPhotosTab={plan === 'paid'}
               />
               {view === 'trips' && (
                 <TripsTab
@@ -172,15 +214,13 @@ export default function DashboardPage() {
                   refresh={refreshClients}
                 />
               )}
-              {view === 'photos' && (
-                /* TZ Photo Bank Stage 4 — tier-aware photo bank tab.
-                 * `plan='free'` is the default for every operator until
-                 * the future Stripe upgrade flow flips users.plan to
-                 * 'paid'. Hardcoding 'free' here keeps the dashboard
-                 * usable today: free users get the upgrade banner +
-                 * global preview; paid-bound UI is stubbed but not
-                 * exercised end-to-end (TZ Execution policy). */
-                <PhotoBankPageClient plan="free" />
+              {/* Stage 11 Block B — Photos panel only renders for paid;
+                * the redirect effect above keeps free users from ever
+                * landing here. Hardcoded `plan='free'` (TZ Photo Bank
+                * Stage 4) replaced by the actual plan so paid users
+                * see their own bank instead of the global preview. */}
+              {view === 'photos' && plan === 'paid' && (
+                <PhotoBankPageClient plan="paid" />
               )}
             </>
           )}
