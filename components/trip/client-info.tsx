@@ -72,6 +72,20 @@ export function ClientInfo({
     return ok
   }
 
+  async function handleUnlink() {
+    if (!localClient) return
+    const headline = localClient.nickname || localClient.name || 'this client'
+    const confirmed = window.confirm(
+      `Unlink ${headline} from this trip? Trip will keep its data, the client stays in your roster.`,
+    )
+    if (!confirmed) return
+    const ok = await saveProjectPatch({ clientId: null })
+    if (ok) {
+      setLocalClient(null)
+      toast.success('Client unlinked')
+    }
+  }
+
   return (
     <section aria-label="Client info — operator only" className="w-full">
       <div className="max-w-4xl mx-4 sm:mx-auto my-3 bg-highlight border border-accent/20 rounded-xl overflow-hidden shadow-lg">
@@ -145,6 +159,7 @@ export function ClientInfo({
               onSaved={() => { /* handled in edit modal */ }}
               onRequestEdit={() => setEditOpen(true)}
               onRequestSwitch={() => setSwitchOpen(true)}
+              onRequestUnlink={handleUnlink}
             />
           )}
         </div>

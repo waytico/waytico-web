@@ -1,31 +1,33 @@
 'use client'
 
-import NewClientModal from '@/components/dashboard/new-client-modal'
+import ClientCardModal from './client-card-modal'
 import type { Client } from '@/components/trip/trip-types'
 
 type Props = {
   open: boolean
-  /** Pre-populate from a smart-detected draft. The modal opens with
-   *  these values pre-filled. */
+  /** Pre-populate from a smart-detected draft. */
   preDraft?: Partial<Client>
   onClose: () => void
   onSaved: (client: Client, deduped: boolean) => void
 }
 
 /**
- * ClientCreateModal — thin wrapper around NewClientModal exposing the
- * `preDraft` prop. The wrapper exists so that picker / trip-page
- * call-sites depend on the stable `client/` namespace; Stage 2 swaps
- * the implementation to the unified <ClientCard mode="create"> without
- * touching call-sites.
+ * ClientCreateModal — trip-page-side create entrypoint. Stage 3 makes
+ * this a tiny wrapper around <ClientCardModal mode="create" host="trip">.
+ * Used by trip-page client-info accent-prompt flow, the
+ * SwitchClientDialog, and the share-prompt-banner create-flow in
+ * trip-page-client.tsx.
  */
 export default function ClientCreateModal({ open, preDraft, onClose, onSaved }: Props) {
   return (
-    <NewClientModal
+    <ClientCardModal
       open={open}
-      preDraft={preDraft}
+      mode="create"
+      host="trip"
+      client={null}
+      initialDraft={preDraft}
+      onSaved={(saved, deduped) => onSaved(saved, deduped)}
       onClose={onClose}
-      onSaved={onSaved}
     />
   )
 }
