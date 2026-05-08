@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import {
   Cormorant_Garamond,
   DM_Sans,
@@ -82,6 +82,20 @@ const syne = Syne({
 export const metadata: Metadata = {
   title: 'Waytico — AI Trip Proposal Pages',
   description: 'Create beautiful trip proposal pages in seconds.',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
+    ],
+    apple: { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+  },
+  manifest: '/site.webmanifest',
+}
+
+export const viewport: Viewport = {
+  themeColor: '#C4622D',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
