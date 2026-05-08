@@ -1239,6 +1239,16 @@
     border: 0;
     animation: tp-chat-panel-slide-up 220ms ease-out;
   }
+  /* In empty state shrink the whole panel to its content height so the
+     footer link sits right under the input row instead of floating at
+     75dvh with a tall blank band below. max-height keeps a safety
+     ceiling. As soon as a message lands :has() stops matching and the
+     panel returns to fixed 75dvh so the messages list scrolls
+     normally. */
+  .tp-chat-panel:has(.tp-chat-empty) {
+    height: auto;
+    max-height: 75dvh;
+  }
   @keyframes tp-chat-panel-slide-up {
     from { transform: translateY(100%); }
     to   { transform: translateY(0); }
@@ -1425,15 +1435,6 @@
      and the container returns to flex:1 for normal scrolling. */
   .tp-chat-panel__messages:has(> .tp-chat-empty) {
     flex: 0 0 auto;
-  }
-  /* Reduce textarea baseline height on mobile. Desktop keeps 96px
-     because the panel is fixed 600px tall, so a 96px input balances
-     the layout. On the 75dvh sheet that 96px combined with flex:1
-     auto-stretches the input row and pushes the panel taller than it
-     needs to be in empty state. JS auto-grow (cap 280px) still kicks
-     in as the operator types. */
-  .tp-chat-input {
-    min-height: 64px;
   }
 }
 
