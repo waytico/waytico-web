@@ -432,6 +432,38 @@ export default function TripPageClient({ slug, initialData }: Props) {
   // to "public viewer" without us touching each call site.
   const isPreviewIframe = searchParams.get('previewAs') === 'client'
 
+  // When loaded inside DevicePreview's iframe (?previewAs=client),
+  // listen for scroll-sync commands from the parent window. The
+  // parent emits {type: 'waytico:scroll-sync', hash} whenever the
+  // operator scrolls the desktop trip-page across a new section /
+  // day boundary. We respond by scrolling the iframe to the matching
+  // anchor — section IDs (#overview, #price, …) and day IDs
+  // (#day-1, #day-2, …) are rendered by the same components on both
+  // sides, so the same hash works in either DOM.
+  //
+  // Origin check is mandatory: we only respond to messages from
+  // the same origin (i.e. the parent Waytico tab embedding us).
+  // 'auto' over 'smooth' so rapid section changes feel responsive
+  // rather than queuing up smooth scrolls that lag behind the
+  // operator's actual position.
+  useEffect(() => {
+    if (!isPreviewIframe) return
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return
+      const data = e.data
+      if (!data || data.type !== 'waytico:scroll-sync') return
+      const hash = typeof data.hash === 'string' ? data.hash : ''
+      if (hash === '') {
+        window.scrollTo({ top: 0, behavior: 'auto' })
+        return
+      }
+      const el = document.getElementById(hash.slice(1))
+      if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' })
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [isPreviewIframe])
+
   const [data, setData] = useState(initialData)
   const [isAnonCreatorRaw, setIsAnonCreator] = useState(false)
   const isAnonCreator = isAnonCreatorRaw && !isPreviewIframe

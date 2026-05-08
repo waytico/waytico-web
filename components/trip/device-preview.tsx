@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Maximize2, Move, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Eye, Maximize2, Move, X } from 'lucide-react'
 
 /**
  * DevicePreview — floating mobile companion to "Preview as client".
@@ -143,19 +143,26 @@ type Props = {
 export function DevicePreview({ slug }: Props) {
   const [corner, setCorner] = useState<Corner>('br')
 
-  // Thumbnail src is captured once on mount — fixed at whatever
-  // section the operator was looking at the moment they hit
-  // "Preview". Doesn't follow subsequent parent scroll (would
-  // require postMessage round-trips both ways; out of scope).
+  // Refs to both iframes so the parent-side scroll listener (below)
+  // can postMessage scroll-sync commands into them. The thumbnail
+  // ref is always populated while DevicePreview is mounted; the
+  // fullscreen ref is null while the overlay is closed and gets a
+  // fresh contentWindow each time it's opened.
+  const thumbnailIframeRef = useRef<HTMLIFrameElement>(null)
+  const fullscreenIframeRef = useRef<HTMLIFrameElement>(null)
+
+  // Initial src — captured once on mount, mirrors the operator's
+  // current desktop scroll position via URL hash. After this, the
+  // scroll-sync effect below keeps the iframe scrolled to the right
+  // section as the operator continues scrolling the desktop page.
   const [thumbnailSrc] = useState(() => buildSrc(slug))
 
   // Fullscreen src is recomputed each time the operator expands —
   // if they scrolled the desktop view after opening preview, the
-  // fullscreen overlay reflects their *current* position, not the
-  // stale one from when the thumbnail mounted. Presence of a value
-  // also doubles as the "is fullscreen open" flag — a single source
-  // of truth, so we never end up with the overlay rendering with a
-  // stale src.
+  // fullscreen overlay reflects their *current* position from frame
+  // 1, before scroll-sync messages even start landing. Presence of a
+  // value also doubles as the "is fullscreen open" flag — single
+  // source of truth.
   const [fullscreenSrc, setFullscreenSrc] = useState<string | null>(null)
   const fullscreen = fullscreenSrc !== null
 
@@ -172,6 +179,50 @@ export function DevicePreview({ slug }: Props) {
     document.addEventListener('keydown', onEsc)
     return () => document.removeEventListener('keydown', onEsc)
   }, [fullscreen])
+
+  // Parent → iframe scroll sync. The operator scrolls the desktop
+  // trip page; we read which section/day they're now looking at and
+  // postMessage that hash to both iframes. The trip-page-client
+  // module — when loaded with ?previewAs=client — listens for
+  // 'waytico:scroll-sync' messages and scrollIntoView's the target
+  // anchor.
+  //
+  // Why rAF + dedupe-by-hash instead of timer-based throttle: scroll
+  // events fire ~60/sec; getCurrentSectionHash is cheap (a handful
+  // of getBoundingClientRect calls), but blasting postMessage into
+  // an iframe at 60 Hz interrupts any in-flight smooth-scroll inside
+  // the iframe and gives a stuttery feel. Reading at rAF cadence
+  // and only emitting when the resulting hash *changes* means
+  // exactly one message per section/day boundary the operator
+  // crosses — section-level sync, not pixel-level — which is what
+  // the iframe can react to crisply.
+  //
+  // Strictly unidirectional (parent emits, iframe listens). No
+  // possibility of a feedback loop because the iframe never posts
+  // back. Origin is locked to window.location.origin on both ends.
+  useEffect(() => {
+    let scheduled = false
+    let lastHash = ''
+    const post = () => {
+      const hash = getCurrentSectionHash()
+      if (hash === lastHash) return
+      lastHash = hash
+      const msg = { type: 'waytico:scroll-sync', hash }
+      const origin = window.location.origin
+      thumbnailIframeRef.current?.contentWindow?.postMessage(msg, origin)
+      fullscreenIframeRef.current?.contentWindow?.postMessage(msg, origin)
+    }
+    const onScroll = () => {
+      if (scheduled) return
+      scheduled = true
+      requestAnimationFrame(() => {
+        scheduled = false
+        post()
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   const cycleCorner = () => {
     setCorner((cur) => {
@@ -220,6 +271,16 @@ export function DevicePreview({ slug }: Props) {
           </div>
         </div>
 
+        {/* "Client view" banner — mirrors the desktop preview banner
+            placement (sticky-under-Header) so the operator gets the
+            same visual cue both inside and outside the device frame.
+            Compact at this size (220px wide); inline-flex centers
+            icon + truncated copy without breaking onto two lines. */}
+        <div className="bg-accent text-accent-foreground px-2 py-1 flex items-center justify-center gap-1.5 text-[9px] flex-shrink-0">
+          <Eye className="w-3 h-3 flex-shrink-0" />
+          <span className="truncate">This is how your client sees the page.</span>
+        </div>
+
         {/* Iframe is wrapped in a button so a click anywhere on the
             visible page area expands. pointer-events: none on the
             iframe itself prevents it from intercepting the click;
@@ -248,6 +309,7 @@ export function DevicePreview({ slug }: Props) {
           aria-label="Expand mobile preview"
         >
           <iframe
+            ref={thumbnailIframeRef}
             src={thumbnailSrc}
             title="Mobile preview"
             className="absolute top-0 left-0 pointer-events-none border-0"
@@ -278,15 +340,27 @@ export function DevicePreview({ slug }: Props) {
             onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-[390px] h-full max-h-[820px] rounded-[36px] overflow-hidden bg-black border border-white/15 shadow-2xl flex flex-col"
           >
+            {/* "Client view" banner — same content & palette as the
+                desktop preview banner. Sits above the iframe so the
+                operator's eye lands on the cue first, then on the
+                page being previewed. The close button (× pill)
+                floats over it in the top-right; pr-12 reserves
+                horizontal room so the banner copy doesn't slip
+                under the pill. */}
+            <div className="bg-accent text-accent-foreground px-3 py-1.5 pr-12 flex items-center justify-center gap-2 text-xs flex-shrink-0">
+              <Eye className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>This is how your client sees the page.</span>
+            </div>
             <button
               type="button"
               onClick={closeFullscreen}
-              className="absolute top-2 right-2 z-10 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+              className="absolute top-1.5 right-2 z-10 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
               aria-label="Close mobile preview"
             >
               <X className="w-4 h-4" />
             </button>
             <iframe
+              ref={fullscreenIframeRef}
               src={fullscreenSrc!}
               title="Mobile preview (fullscreen)"
               className="flex-1 w-full bg-white"
