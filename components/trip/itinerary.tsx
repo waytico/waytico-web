@@ -809,6 +809,7 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
       onDayPhotoReplace={onDayPhotoReplace}
       onDayDelete={onDayDelete}
       onDayPhotoEdit={onDayPhotoEdit}
+      onDayPickFromBank={onDayPickFromBank}
       uploading={day.id ? (uploadingByDay?.[day.id] ?? 0) : 0}
       interceptUpload={interceptUpload}
       onDayInsertAbove={onDayInsertAbove}
