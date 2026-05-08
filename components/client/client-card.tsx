@@ -178,6 +178,7 @@ export default function ClientCard(props: Props) {
     onRequestSwitch,
     onRequestUnlink,
     onRequestDelete,
+    onRequestNewTrip,
     onClose,
   } = props
 
