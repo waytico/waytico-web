@@ -1,3 +1,5 @@
+import { auth } from '@clerk/nextjs/server'
+import { redirect } from 'next/navigation'
 import ChatFlow from '@/components/chat-flow'
 import Footer from '@/components/footer'
 import Header from '@/components/header'
@@ -5,9 +7,19 @@ import Header from '@/components/header'
 type SearchParams = {
   clientId?: string
   clientName?: string
+  new?: string
 }
 
 export default function Home({ searchParams }: { searchParams?: SearchParams }) {
+  // Signed-in operators land on /dashboard. Create-intent paths
+  // (?clientId=..., ?new=1) keep / accessible — used by dashboard
+  // empty-state CTA and by chat-flow start-over.
+  const { userId } = auth()
+  const isCreateIntent = !!searchParams?.clientId || searchParams?.new === '1'
+  if (userId && !isCreateIntent) {
+    redirect('/dashboard')
+  }
+
   const clientId = searchParams?.clientId
   const clientLabel = searchParams?.clientName
 

@@ -468,7 +468,7 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
           </span>
           <button
             type="button"
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/?new=1')}
             aria-label="Clear client"
             className="inline-flex items-center justify-center w-4 h-4 rounded-full text-foreground/55 hover:text-foreground hover:bg-foreground/10"
           >

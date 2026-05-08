@@ -314,7 +314,7 @@ export default function TripsTab({ projects, onUpdate, onDelete }: Props) {
         </div>
         <button
           type="button"
-          onClick={() => router.push('/')}
+          onClick={() => router.push('/?new=1')}
           aria-label="New trip"
           title="New trip"
           className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium uppercase tracking-wider rounded-md border border-border text-foreground/80 hover:bg-secondary/60 hover:text-foreground transition-colors"
