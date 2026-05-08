@@ -39,8 +39,9 @@ import { TripTerms } from '@/components/trip/terms'
 import { TripAccommodations } from '@/components/trip/accommodations'
 import { TripContacts } from '@/components/trip/contacts'
 import { ClientInfo } from '@/components/trip/client-info'
+import ClientCreateModal from '@/components/client/client-create-modal'
 import { HeroOwnerOverlay, HeroDropZone } from '@/components/trip/owner-extras'
-import type { PricingMode } from '@/components/trip/trip-types'
+import type { PricingMode, Client } from '@/components/trip/trip-types'
 import { TripFooter } from '@/components/trip/trip-footer'
 
 import { apiFetch } from '@/lib/api'
@@ -598,6 +599,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
   // tab clears sessionStorage). The flag is rewritten on each subsequent
   // share so a dismissed banner re-opens after the next share.
   const [sharePromptOpen, setSharePromptOpen] = useState(false)
+  const [sharePromptCreateOpen, setSharePromptCreateOpen] = useState(false)
+  const [sharePromptCreateDraft, setSharePromptCreateDraft] = useState<Partial<Client> | undefined>(undefined)
   const sharePromptKey = data?.project?.id
     ? `waytico:share-prompt:${data.project.id}`
     : null
@@ -643,27 +646,21 @@ export default function TripPageClient({ slug, initialData }: Props) {
     }
   }
 
-  async function sharePromptHandleCreateNew(draft: Record<string, unknown>) {
-    try {
-      const token = await getToken()
-      if (!token) return
-      const res = await apiFetch('/api/clients/upsert', {
-        method: 'POST',
-        token,
-        body: JSON.stringify(draft),
-      })
-      if (!res.ok) return
-      const created = (await res.json()).client
-      if (!created) return
-      const ok = await saveProjectPatch({ clientId: created.id })
-      if (ok) {
-        if (sharePromptKey) {
-          try { window.sessionStorage.removeItem(sharePromptKey) } catch { /* ignore */ }
-        }
-        setSharePromptOpen(false)
-        setOwnerRefreshKey((k) => k + 1)
+  function sharePromptHandleCreateNew(draft: Partial<Client>) {
+    setSharePromptCreateDraft(draft)
+    setSharePromptCreateOpen(true)
+  }
+
+  async function sharePromptHandleCreated(created: Client) {
+    const ok = await saveProjectPatch({ clientId: created.id })
+    if (ok) {
+      if (sharePromptKey) {
+        try { window.sessionStorage.removeItem(sharePromptKey) } catch { /* ignore */ }
       }
-    } catch { /* surfacing handled by SmartClientPicker call-site */ }
+      setSharePromptOpen(false)
+      setSharePromptCreateOpen(false)
+      setOwnerRefreshKey((k) => k + 1)
+    }
   }
 
   // Showcase / demo mode — detected by the seed-showcase slug. When this is
@@ -1748,6 +1745,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         <SharePromptBanner
           onPick={sharePromptHandlePick}
           onCreateNew={sharePromptHandleCreateNew}
+          onCreateRequest={sharePromptHandleCreateNew}
           onDismiss={dismissSharePrompt}
         />
       )}
@@ -1955,6 +1953,16 @@ export default function TripPageClient({ slug, initialData }: Props) {
       <PostClaimUpsellModal
         show={showPostClaimUpsell}
         onClose={() => setShowPostClaimUpsell(false)}
+      />
+
+      {/* Share-prompt → No-matches → create-client modal. Mounted via
+          portal in document.body (NewClientModal does it internally), so
+          it escapes the SharePromptBanner sticky stacking context. */}
+      <ClientCreateModal
+        open={sharePromptCreateOpen}
+        preDraft={sharePromptCreateDraft}
+        onClose={() => setSharePromptCreateOpen(false)}
+        onSaved={(created) => sharePromptHandleCreated(created)}
       />
 
       {/* Themed surface — switching data-theme reflows tokens in styles/themes.css.

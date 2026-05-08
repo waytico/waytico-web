@@ -28,6 +28,7 @@ import {
 import type { Client, Mutations } from './trip-types'
 import { OnboardingTip } from '@/components/onboarding-tip'
 import SmartClientPicker from '@/components/dashboard/smart-client-picker'
+import ClientCreateModal from '@/components/client/client-create-modal'
 
 type Props = {
   projectId: string
@@ -80,6 +81,8 @@ export function ClientInfo({
 }: Props) {
   const { getToken } = useAuth()
   const [localClient, setLocalClient] = useState<Client | null>(client)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createDraft, setCreateDraft] = useState<Partial<Client> | undefined>(undefined)
 
   useEffect(() => setLocalClient(client), [client])
 
@@ -200,36 +203,13 @@ export function ClientInfo({
                   toast.success('Client linked')
                 }
               }}
-              onCreateNew={async (draft) => {
-                try {
-                  const token = await getToken()
-                  if (!token) {
-                    toast.error('Not signed in')
-                    return
-                  }
-                  const res = await apiFetch('/api/clients/upsert', {
-                    method: 'POST',
-                    token,
-                    body: JSON.stringify(draft),
-                  })
-                  if (!res.ok) {
-                    toast.error('Could not create client')
-                    return
-                  }
-                  const created = ((await res.json()).client as Client) ?? null
-                  if (!created) {
-                    toast.error('Could not create client')
-                    return
-                  }
-                  const ok2 = await saveProjectPatch({ clientId: created.id })
-                  if (ok2) {
-                    setLocalClient(created)
-                    onClientChanged?.(created)
-                    toast.success('Client created and linked')
-                  }
-                } catch {
-                  toast.error('Network error')
-                }
+              onCreateNew={(draft) => {
+                setCreateDraft(draft)
+                setCreateOpen(true)
+              }}
+              onCreateRequest={(draft) => {
+                setCreateDraft(draft)
+                setCreateOpen(true)
               }}
             />
           </div>
@@ -375,6 +355,19 @@ export function ClientInfo({
         )}
         </div>
       </div>
+      <ClientCreateModal
+        open={createOpen}
+        preDraft={createDraft}
+        onClose={() => setCreateOpen(false)}
+        onSaved={async (created) => {
+          const ok = await saveProjectPatch({ clientId: created.id })
+          if (ok) {
+            setLocalClient(created)
+            onClientChanged?.(created)
+            toast.success('Client created and linked')
+          }
+        }}
+      />
     </section>
   )
 }

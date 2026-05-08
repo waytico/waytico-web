@@ -7,6 +7,7 @@ import type { Client } from './trip-types'
 type Props = {
   onPick: (client: Client) => Promise<void> | void
   onCreateNew: (draft: Partial<Client>) => Promise<void> | void
+  onCreateRequest?: (draft: Partial<Client>) => Promise<void> | void
   onDismiss: () => void
 }
 
@@ -24,7 +25,7 @@ type Props = {
  * comes back the moment the operator triggers another share (the
  * sessionStorage flag is rewritten by the share handler).
  */
-export default function SharePromptBanner({ onPick, onCreateNew, onDismiss }: Props) {
+export default function SharePromptBanner({ onPick, onCreateNew, onCreateRequest, onDismiss }: Props) {
   return (
     <div
       role="region"
@@ -42,6 +43,7 @@ export default function SharePromptBanner({ onPick, onCreateNew, onDismiss }: Pr
               placeholder="Search by name, phone, email…"
               onPick={onPick}
               onCreateNew={onCreateNew}
+              onCreateRequest={onCreateRequest}
             />
           </div>
           <button

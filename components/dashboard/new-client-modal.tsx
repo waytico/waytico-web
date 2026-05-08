@@ -13,7 +13,9 @@ type Props = {
   open: boolean
   onClose: () => void
   /** Pre-fill on open. Used by SmartClientPicker → "Create new with X". */
-  draft?: Partial<Client>
+  /** Pre-populate fields from a smart-detected draft. Modal opens with
+   *  these values pre-filled. Used by SmartClientPicker auto-create. */
+  preDraft?: Partial<Client>
   /** Called with the resulting client (newly created OR existing-deduped). */
   onSaved: (client: Client, deduped: boolean) => void
 }
@@ -86,7 +88,7 @@ const CONTACT_LABELS: Record<ChipKey, string> = {
  * client (server dedups by email/phone), surfaces a toast and treats
  * it as a successful link.
  */
-export default function NewClientModal({ open, onClose, draft, onSaved }: Props) {
+export default function NewClientModal({ open, onClose, preDraft, onSaved }: Props) {
   const { getToken } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [state, setState] = useState<FormState>(EMPTY)
@@ -99,12 +101,12 @@ export default function NewClientModal({ open, onClose, draft, onSaved }: Props)
 
   useEffect(() => {
     if (open) {
-      setState(draftToState(draft))
+      setState(draftToState(preDraft))
       setShowMore(false)
       setSaving(false)
       setPickerOpen(false)
     }
-  }, [open, draft])
+  }, [open, preDraft])
 
   // Esc closes
   useEffect(() => {

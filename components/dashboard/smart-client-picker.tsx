@@ -11,9 +11,15 @@ import { clientAvatarClass, clientInitials } from '@/lib/clients-derive'
 type Props = {
   /** Existing client picked from the dropdown. */
   onPick: (client: Client) => void
-  /** "Create new client with X" pressed. Caller opens its own modal
-   *  with this draft pre-populated; pass null/undefined to omit the row. */
+  /** "Create new client with X" pressed in the dropdown footer. Caller
+   *  opens its own modal with this draft pre-populated; pass
+   *  null/undefined to omit the row. */
   onCreateNew?: (draft: Partial<Client>) => void
+  /** Auto-create request after a No-matches result. Called once per
+   *  unique query, ~500ms after the empty result settles. Lets the
+   *  caller open the create modal without an extra click. Independent
+   *  of `onCreateNew` (which is the explicit dropdown button). */
+  onCreateRequest?: (draft: Partial<Client>) => void
   /** Hide already-linked clients (e.g. don't suggest the trip's current
    *  client back to itself). */
   excludeIds?: string[]
@@ -22,20 +28,25 @@ type Props = {
 }
 
 const MIN_QUERY = 2
+const AUTO_CREATE_DELAY_MS = 500
 
 /**
  * SmartClientPicker — search-as-you-type over the operator's roster
- * via /api/clients/search, with a "Create new" CTA at the bottom of
- * the dropdown when no exact match is selected.
+ * via /api/clients/search.
  *
- * Used by NewClientModal's primary identifier slot, by trip-page
- * assign-client UI (Stage 4), and by post-share banner (Stage 5).
+ * Two create paths:
+ *   - `onCreateRequest` — auto-fired ~500ms after a No-matches result
+ *     (TZ Stage 1: skip the extra dropdown click).
+ *   - `onCreateNew` — explicit "Create new client with X" footer in
+ *     the dropdown, kept as a fallback when results exist but none
+ *     match.
  *
  * Debounce 250ms, abort previous in-flight fetch on new keystroke.
  */
 export default function SmartClientPicker({
   onPick,
   onCreateNew,
+  onCreateRequest,
   excludeIds,
   placeholder,
   autoFocus,
@@ -50,6 +61,8 @@ export default function SmartClientPicker({
   const abortRef = useRef<AbortController | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const detectionRef = useRef<SmartDetection | null>(null)
+  const autoCreateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastAutoQueryRef = useRef<string | null>(null)
 
   // Outside-click closes dropdown.
   useEffect(() => {
@@ -104,6 +117,35 @@ export default function SmartClientPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
 
+  // Reset auto-create memory whenever the query changes — every fresh
+  // query gets its own one-shot auto-create attempt.
+  useEffect(() => {
+    lastAutoQueryRef.current = null
+  }, [value])
+
+  // Auto-fire onCreateRequest when search settles on No matches.
+  // 500ms delay so the operator gets a moment to read the empty
+  // dropdown before the modal pops.
+  useEffect(() => {
+    if (autoCreateTimerRef.current) clearTimeout(autoCreateTimerRef.current)
+    if (!onCreateRequest) return
+    if (loading) return
+    if (results === null) return
+    if (results.length !== 0) return
+    const q = value.trim()
+    if (q.length < MIN_QUERY) return
+    if (lastAutoQueryRef.current === q) return
+    autoCreateTimerRef.current = setTimeout(() => {
+      lastAutoQueryRef.current = q
+      onCreateRequest(buildDraftFromDetection())
+      setOpen(false)
+    }, AUTO_CREATE_DELAY_MS)
+    return () => {
+      if (autoCreateTimerRef.current) clearTimeout(autoCreateTimerRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results, loading, value, onCreateRequest])
+
   function buildDraftFromDetection(): Partial<Client> {
     const d = detectionRef.current ?? detectIdentity(value)
     const draft: Partial<Client> = {}
@@ -148,7 +190,9 @@ export default function SmartClientPicker({
           )}
 
           {!loading && results !== null && results.length === 0 && (
-            <div className="px-3 py-2 text-xs text-muted-foreground">No matches.</div>
+            <div className="px-3 py-2 text-xs text-muted-foreground">
+              {onCreateRequest ? 'No matches — opening new client form…' : 'No matches.'}
+            </div>
           )}
 
           {!loading &&
