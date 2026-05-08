@@ -54,27 +54,97 @@ const CORNER_CLASS: Record<Corner, string> = {
 // sticky Header / preview-banner up top), then walk counter-clockwise.
 const CORNER_CYCLE: Corner[] = ['br', 'bl', 'tl', 'tr']
 
+/**
+ * Section IDs the trip page renders, in document order. Used to mirror
+ * the operator's desktop scroll position into the iframe via URL hash:
+ * if they hit "Preview" while looking at the price block, the mobile
+ * preview opens at the price block too instead of resetting to the top.
+ *
+ * Same IDs across themes (Magazine + Classic + Cinematic + Clean) —
+ * verified in components/trip/{overview,itinerary,accommodations,
+ * included,price,terms,contacts}.tsx.
+ */
+const SECTION_IDS = [
+  'overview',
+  'itinerary',
+  'accommodations',
+  'included',
+  'price',
+  'terms',
+  'contacts',
+] as const
+
+/**
+ * Read the parent document and return the URL hash (`#itinerary`,
+ * `#price`, …) for whichever section the operator is currently
+ * looking at on the desktop trip page. Picks the *last* section
+ * whose top has scrolled past ~30% of the viewport — that maps to
+ * "the section currently dominating the screen".
+ *
+ * Returns '' when the operator is still above the first section
+ * (hero / nav area) or when no section IDs are mounted yet, which
+ * makes the iframe load at the top — the same behavior we had
+ * before this feature, so it's a safe fallback.
+ */
+function getCurrentSectionHash(): string {
+  if (typeof window === 'undefined') return ''
+  let current: string | null = null
+  const cutoff = window.innerHeight * 0.3
+  for (const id of SECTION_IDS) {
+    const el = document.getElementById(id)
+    if (!el) continue
+    const rect = el.getBoundingClientRect()
+    if (rect.top < cutoff) {
+      current = id
+    } else {
+      // Sections are in document order — once we hit one that hasn't
+      // scrolled into the cutoff yet, no later one has either.
+      break
+    }
+  }
+  return current ? `#${current}` : ''
+}
+
+const buildSrc = (slug: string) =>
+  `/t/${slug}?previewAs=client${getCurrentSectionHash()}`
+
 type Props = {
   /** URL slug of the trip; iframe loads /t/{slug}?previewAs=client */
   slug: string
 }
 
 export function DevicePreview({ slug }: Props) {
-  const [fullscreen, setFullscreen] = useState(false)
   const [corner, setCorner] = useState<Corner>('br')
+
+  // Thumbnail src is captured once on mount — fixed at whatever
+  // section the operator was looking at the moment they hit
+  // "Preview". Doesn't follow subsequent parent scroll (would
+  // require postMessage round-trips both ways; out of scope).
+  const [thumbnailSrc] = useState(() => buildSrc(slug))
+
+  // Fullscreen src is recomputed each time the operator expands —
+  // if they scrolled the desktop view after opening preview, the
+  // fullscreen overlay reflects their *current* position, not the
+  // stale one from when the thumbnail mounted. Presence of a value
+  // also doubles as the "is fullscreen open" flag — a single source
+  // of truth, so we never end up with the overlay rendering with a
+  // stale src.
+  const [fullscreenSrc, setFullscreenSrc] = useState<string | null>(null)
+  const fullscreen = fullscreenSrc !== null
+
+  const openFullscreen = () => setFullscreenSrc(buildSrc(slug))
+  const closeFullscreen = () => setFullscreenSrc(null)
 
   // Esc closes the fullscreen overlay (returns to thumbnail). The
   // thumbnail itself is dismissed via the "Exit preview" pill, not Esc.
   useEffect(() => {
     if (!fullscreen) return
     const onEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setFullscreen(false)
+      if (e.key === 'Escape') closeFullscreen()
     }
     document.addEventListener('keydown', onEsc)
     return () => document.removeEventListener('keydown', onEsc)
   }, [fullscreen])
-
-  const previewSrc = `/t/${slug}?previewAs=client`
 
   const cycleCorner = () => {
     setCorner((cur) => {
@@ -113,7 +183,7 @@ export function DevicePreview({ slug }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => setFullscreen(true)}
+              onClick={openFullscreen}
               className="p-1 hover:bg-white/10 rounded transition-colors"
               aria-label="Expand mobile preview"
               title="Expand mobile preview"
@@ -146,12 +216,12 @@ export function DevicePreview({ slug }: Props) {
             iframe 390×732, scale to 220×413. */}
         <button
           type="button"
-          onClick={() => setFullscreen(true)}
+          onClick={openFullscreen}
           className="flex-1 relative bg-white cursor-zoom-in overflow-hidden"
           aria-label="Expand mobile preview"
         >
           <iframe
-            src={previewSrc}
+            src={thumbnailSrc}
             title="Mobile preview"
             className="absolute top-0 left-0 pointer-events-none border-0"
             style={{
@@ -171,7 +241,7 @@ export function DevicePreview({ slug }: Props) {
       {fullscreen && (
         <div
           className="hidden md:flex fixed inset-0 z-50 bg-black/70 backdrop-blur-sm items-center justify-center p-4 sm:p-8"
-          onClick={() => setFullscreen(false)}
+          onClick={closeFullscreen}
           aria-modal="true"
           role="dialog"
         >
@@ -183,14 +253,14 @@ export function DevicePreview({ slug }: Props) {
           >
             <button
               type="button"
-              onClick={() => setFullscreen(false)}
+              onClick={closeFullscreen}
               className="absolute top-2 right-2 z-10 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
               aria-label="Close mobile preview"
             >
               <X className="w-4 h-4" />
             </button>
             <iframe
-              src={previewSrc}
+              src={fullscreenSrc!}
               title="Mobile preview (fullscreen)"
               className="flex-1 w-full bg-white"
             />
