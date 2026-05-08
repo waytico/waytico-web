@@ -12,16 +12,29 @@ type Phase = 'idle' | 'sending' | 'chatting' | 'generating'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
-// Time-based fake progress steps. Total ~40s, calibrated to median pipeline
-// timing (Hero ~4s, Days ~17s, Overview/Locations/Validate ~12s combined).
-// If backend finishes earlier we fast-forward through remaining steps and
-// redirect; if it takes longer we stick on the last step with "Almost there…"
+// Time-based fake progress steps. Total ~45s, calibrated to median pipeline
+// timing (Hero ~4s, Days ~17s, Overview/Locations/Validate ~12s combined,
+// PhotoMatch ~5s). If backend finishes earlier we fast-forward through
+// remaining steps and redirect; if it takes longer we stick on the last
+// step with "Almost there…".
+//
+// Stage 11 Block D — added "Matching photos from the library" 6th step.
+// Backend pipeline runs photo_match after validate; the suggest engine
+// is fast (~50ms/day SQL + apply) but the new step gives the operator
+// visible feedback that it's happening. Skipped scenario (region without
+// global bank coverage, e.g. Vancouver) — pipeline reaches quoted status
+// faster, the polling effect flips `finishing`, and fast-forward marks
+// step 6 completed in the same pass it marks the other steps. The UI is
+// time-based + status-poll driven; backend SSE photo_match_* events are
+// not consumed (a future pass can wire EventSource if per-day sub-progress
+// is wanted).
 const GEN_STEPS: { label: string; duration: number }[] = [
   { label: 'Reading your brief',                 duration: 4000 },
   { label: 'Mapping out the route',              duration: 6000 },
   { label: 'Crafting day-by-day itinerary',      duration: 15000 },
   { label: 'Picking highlights and locations',   duration: 9000 },
   { label: 'Polishing the proposal',             duration: 6000 },
+  { label: 'Matching photos from the library',   duration: 5000 },
 ]
 
 const ALLOWED_MIMES = [
@@ -406,7 +419,7 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
         <p className="text-sm text-muted-foreground text-center mt-10">
           {stuck && stepIndex < total
             ? 'Almost there…'
-            : 'This usually takes 30–60 seconds'}
+            : 'This usually takes 30–90 seconds'}
         </p>
       </div>
     )
