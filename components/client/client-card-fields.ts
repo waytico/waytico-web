@@ -37,7 +37,7 @@ export type ChannelConfig = {
   key: ChannelKey
   label: string
   type: 'text' | 'tel' | 'email'
-  Icon: ComponentType<{ size?: number; className?: string }>
+  Icon: ComponentType<any>
   placeholder: string
   /** View-mode href. Null when value can't be linked (e.g. empty). */
   buildHref: (value: string) => string | null

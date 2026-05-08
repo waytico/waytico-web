@@ -372,7 +372,7 @@ function ChannelRow({
   value,
   href,
 }: {
-  Icon: React.ComponentType<{ size?: number; className?: string }>
+  Icon: React.ComponentType<any>
   label: string
   value: string
   href: string | null
@@ -405,7 +405,7 @@ function ActionBtn({
   onClick,
 }: {
   label: string
-  Icon: React.ComponentType<{ size?: number; className?: string }>
+  Icon: React.ComponentType<any>
   onClick: () => void
 }) {
   return (
@@ -821,7 +821,7 @@ function Input({
   highlighted,
 }: {
   label: string
-  Icon?: React.ComponentType<{ size?: number; className?: string }>
+  Icon?: React.ComponentType<any>
   placeholder?: string
   value: string
   onChange: (v: string) => void
@@ -854,7 +854,7 @@ function Textarea({
   rows = 3,
 }: {
   label: string
-  Icon?: React.ComponentType<{ size?: number; className?: string }>
+  Icon?: React.ComponentType<any>
   placeholder?: string
   value: string
   onChange: (v: string) => void
