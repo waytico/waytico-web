@@ -4,7 +4,10 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
+import { SignedIn, SignedOut, UserButton, useAuth } from '@clerk/nextjs'
+import { useEffect, useState } from 'react'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
 type Props = {
   /**
@@ -111,6 +114,31 @@ function GlobalRight() {
   const signInHref = pathname.startsWith('/t/')
     ? `/sign-in?redirect_url=${encodeURIComponent(pathname)}`
     : '/sign-in'
+  const { getToken, isSignedIn } = useAuth()
+  const [isAdmin, setIsAdmin] = useState(false)
+  useEffect(() => {
+    if (!isSignedIn) {
+      setIsAdmin(false)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const token = await getToken().catch(() => null)
+        const headers = new Headers()
+        if (token) headers.set('Authorization', `Bearer ${token}`)
+        const res = await fetch(`${API_URL}/api/users/me`, { headers })
+        if (!res.ok) return
+        const j = (await res.json()) as { user?: { is_admin?: boolean } }
+        if (!cancelled) setIsAdmin(!!j.user?.is_admin)
+      } catch {
+        // ignore — admin link just won't render
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isSignedIn, getToken])
   return (
     <div className="flex items-center gap-3">
       <SignedOut>
@@ -128,6 +156,14 @@ function GlobalRight() {
         >
           Dashboard
         </Link>
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="text-foreground/70 hover:text-foreground transition-colors font-medium"
+          >
+            Admin
+          </Link>
+        )}
         <UserButton afterSignOutUrl="/" />
       </SignedIn>
     </div>
