@@ -462,7 +462,13 @@ function ClientCardForm({
   onClose?: () => void
 }) {
   const { getToken } = useAuth()
-  const baseline = client
+  // TZ Stage 5: when a dashboard create hits an existing roster entry,
+  // we don't close — we hoist the existing client into baseline so the
+  // form swaps to edit-this-existing mode and the operator can either
+  // Save changes or close.
+  const [dedupNotice, setDedupNotice] = useState<Client | null>(null)
+  const effectiveBaseline = dedupNotice ?? client
+  const effectiveMode: 'edit' | 'create' = dedupNotice ? 'edit' : mode
   const [form, setForm] = useState<FormState>(() =>
     fromClient(client, initialDraft, tripFields),
   )
@@ -473,9 +479,11 @@ function ClientCardForm({
   // client), reset form. Edit mode always re-syncs to the latest
   // baseline; create mode keeps user input.
   useEffect(() => {
-    if (mode === 'edit') setForm(fromClient(client, undefined, tripFields))
+    if (effectiveMode === 'edit' && effectiveBaseline) {
+      setForm(fromClient(effectiveBaseline, undefined, tripFields))
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client?.id, tripFields?.bookingRef, tripFields?.specialRequests, tripFields?.internalNotes, mode])
+  }, [effectiveBaseline?.id, tripFields?.bookingRef, tripFields?.specialRequests, tripFields?.internalNotes, effectiveMode])
 
   const valid = hasIdentifier(form)
   const detectedKey = useMemo<ChannelKey | null>(() => {
@@ -495,11 +503,11 @@ function ClientCardForm({
     setSaving(true)
     try {
       const token = await getToken()
-      if (mode === 'edit' && baseline) {
-        const patch = buildPayload(form, baseline)
+      if (effectiveMode === 'edit' && effectiveBaseline) {
+        const patch = buildPayload(form, effectiveBaseline)
         const tripPatch = collectTripPatch(form, tripFields)
         if (Object.keys(patch).length > 0) {
-          const res = await apiFetch(`/api/clients/${baseline.id}`, {
+          const res = await apiFetch(`/api/clients/${effectiveBaseline.id}`, {
             method: 'PATCH',
             token,
             body: JSON.stringify(patch),
@@ -544,13 +552,26 @@ function ClientCardForm({
           toast.error('Could not save client')
           return
         }
-        // Stage 5 will surface a real `created` flag from the server.
-        // Until then: created_at within 5s ≈ newly created.
-        const ageMs = Date.now() - +new Date(saved.created_at)
-        const deduped = ageMs > 5000
+        // TZ Stage 5: server tells us explicitly whether the upsert hit
+        // an existing row. Fall back to the legacy created_at heuristic
+        // only if the server didn't include the flag (older deploys).
+        const serverCreated: boolean | undefined =
+          typeof data.created === 'boolean' ? data.created : undefined
+        const deduped =
+          serverCreated !== undefined
+            ? !serverCreated
+            : Date.now() - +new Date(saved.created_at) > 5000
         await onSaved(saved, deduped)
         if (deduped) {
-          toast.success('Linked existing client')
+          if (host === 'dashboard') {
+            // Don't close the modal — let the operator see the existing
+            // record and either Save changes or close. Switch to edit
+            // mode by hoisting the existing client into baseline state.
+            setDedupNotice(saved)
+            toast.success('Already in your roster — opened existing client')
+            return
+          }
+          toast.success('Linked existing client (already in your roster)')
         } else {
           toast.success(host === 'trip' ? 'Client created and linked' : 'Client added')
         }
@@ -563,13 +584,16 @@ function ClientCardForm({
     }
   }
 
-  const titleText = mode === 'create' ? 'New client' : 'Edit client'
+  const titleText =
+    dedupNotice ? 'Existing client' : mode === 'create' ? 'New client' : 'Edit client'
   const saveLabel =
-    mode === 'create'
-      ? host === 'trip'
-        ? 'Create & link to trip'
-        : 'Create client'
-      : 'Save changes'
+    dedupNotice
+      ? 'Save changes'
+      : mode === 'create'
+        ? host === 'trip'
+          ? 'Create & link to trip'
+          : 'Create client'
+        : 'Save changes'
 
   const hintText =
     mode === 'create'
@@ -610,7 +634,17 @@ function ClientCardForm({
 
       {/* Body */}
       <div className="px-4 py-4 space-y-5">
-        {hintText && (
+        {dedupNotice && (
+          <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-xs text-foreground">
+            <div className="font-medium text-accent">
+              Already in your roster — opened existing client below.
+            </div>
+            <div className="text-foreground/70 mt-0.5">
+              Edit any field and Save changes, or Close to leave this client unchanged.
+            </div>
+          </div>
+        )}
+        {hintText && !dedupNotice && (
           <div className="rounded-md border border-accent/30 bg-accent/5 px-3 py-2 text-xs text-foreground/80 italic">
             {hintText}
           </div>
@@ -671,7 +705,7 @@ function ClientCardForm({
         </FormSection>
 
         {/* About — full About not in create (compact form) */}
-        {mode === 'edit' && (
+        {effectiveMode === 'edit' && (
           <FormSection title="About">
             <div className="space-y-3">
               <Input
@@ -692,7 +726,7 @@ function ClientCardForm({
         )}
 
         {/* For this trip */}
-        {showTripFields && host === 'trip' && mode === 'edit' && (
+        {showTripFields && host === 'trip' && effectiveMode === 'edit' && (
           <FormSection title="For this trip" subtitle="operator only">
             <div className="space-y-3">
               <Input
@@ -721,7 +755,7 @@ function ClientCardForm({
         )}
 
         {/* Lifecycle (dashboard host, edit mode only) */}
-        {host === 'dashboard' && mode === 'edit' && (
+        {host === 'dashboard' && effectiveMode === 'edit' && (
           <div className="border-t border-dashed border-border/70 pt-4 space-y-2">
             <div className="text-[10px] uppercase tracking-[0.12em] font-medium text-foreground/55">
               Lifecycle
@@ -746,7 +780,7 @@ function ClientCardForm({
       {/* Footer */}
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-border">
         <div>
-          {host === 'dashboard' && mode === 'edit' && onRequestDelete && (
+          {host === 'dashboard' && effectiveMode === 'edit' && onRequestDelete && (
             <button
               type="button"
               onClick={onRequestDelete}
