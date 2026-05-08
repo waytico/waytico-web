@@ -1243,6 +1243,20 @@
     from { transform: translateY(100%); }
     to   { transform: translateY(0); }
   }
+  /* Tighten empty-state spacing: vertical real estate is scarce on the
+     bottom sheet. Drop the auto-centering on .tp-chat-empty so the
+     prompt sits near the top instead of floating in the middle, and
+     shave the surrounding paddings. */
+  .tp-chat-panel__messages {
+    padding: 8px 16px;
+  }
+  .tp-chat-empty {
+    margin: 0;
+    padding: 4px 8px;
+  }
+  .tp-chat-quick-prompts {
+    padding: 4px 16px 0;
+  }
 }
 
 .tp-chat-panel__header {
