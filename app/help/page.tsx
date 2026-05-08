@@ -241,6 +241,17 @@ export default function HelpPage() {
             they&apos;re yours forever.
           </p>
 
+          <h3 className="text-xl font-serif font-semibold mt-8 mb-2">
+            What about copyright takedowns?
+          </h3>
+          <p className="text-foreground/80 leading-relaxed">
+            If you believe content hosted by Waytico infringes your copyright, see our{' '}
+            <Link href="/help/dmca" className="text-primary hover:underline underline-offset-2">
+              DMCA / copyright takedown page
+            </Link>
+            {' '}for the contact address, what to include, and how we respond.
+          </p>
+
           <h2 className="text-2xl md:text-3xl font-serif font-semibold mt-12 mb-3">Still stuck?</h2>
           <p className="text-foreground/80 leading-relaxed">
             Email{' '}

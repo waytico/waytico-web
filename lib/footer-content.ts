@@ -32,6 +32,7 @@ export const FOOTER_LEGAL_LINKS: FooterLink[] = [
   { href: '/privacy', label: 'Privacy Policy' },
   { href: '/personal-information', label: 'Personal Information' },
   { href: '/cookies', label: 'Cookies' },
+  { href: '/help/dmca', label: 'DMCA / copyright' },
 ]
 
 export const FOOTER_CONTACT_EMAIL = 'hello@waytico.com'
