@@ -1414,7 +1414,7 @@
     padding: 4px 8px;
   }
   .tp-chat-quick-prompts {
-    padding: 4px 16px 0;
+    padding: 4px 16px 6px;
   }
   /* In empty state the messages container is flex:1 and stretches to
      fill the bottom-sheet — that creates a tall empty band between the
@@ -1425,6 +1425,15 @@
      and the container returns to flex:1 for normal scrolling. */
   .tp-chat-panel__messages:has(> .tp-chat-empty) {
     flex: 0 0 auto;
+  }
+  /* Reduce textarea baseline height on mobile. Desktop keeps 96px
+     because the panel is fixed 600px tall, so a 96px input balances
+     the layout. On the 75dvh sheet that 96px combined with flex:1
+     auto-stretches the input row and pushes the panel taller than it
+     needs to be in empty state. JS auto-grow (cap 280px) still kicks
+     in as the operator types. */
+  .tp-chat-input {
+    min-height: 64px;
   }
 }
 
