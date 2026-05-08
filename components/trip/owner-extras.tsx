@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
+import { ImagePlus, LayoutGrid, Loader2, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 /**
