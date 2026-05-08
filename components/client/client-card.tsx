@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import {
   User,
   UserPlus,
+  Plus,
   Edit3,
   RefreshCcw,
   Link2Off,
@@ -66,6 +67,9 @@ type Props = {
   onRequestUnlink?: () => void
   /** Delete action (dashboard edit mode only). */
   onRequestDelete?: () => void
+  /** TZ Stage 4: dashboard host only — opens a new chat with this
+   *  client pre-attached. */
+  onRequestNewTrip?: () => void
   /** Edit mode only — close button. */
   onClose?: () => void
 }
@@ -187,6 +191,7 @@ export default function ClientCard(props: Props) {
         onRequestEdit={onRequestEdit}
         onRequestSwitch={onRequestSwitch}
         onRequestUnlink={onRequestUnlink}
+        onRequestNewTrip={onRequestNewTrip}
       />
     )
   }
@@ -216,6 +221,7 @@ function ClientCardView({
   onRequestEdit,
   onRequestSwitch,
   onRequestUnlink,
+  onRequestNewTrip,
 }: {
   host: ClientCardHost
   client: Client | null
@@ -224,6 +230,7 @@ function ClientCardView({
   onRequestEdit?: () => void
   onRequestSwitch?: () => void
   onRequestUnlink?: () => void
+  onRequestNewTrip?: () => void
 }) {
   if (!client) return null
 
@@ -256,6 +263,9 @@ function ClientCardView({
         <div className="flex items-center gap-1 shrink-0">
           {onRequestEdit && (
             <ActionBtn label="Edit" Icon={Edit3} onClick={onRequestEdit} />
+          )}
+          {host === 'dashboard' && onRequestNewTrip && (
+            <ActionBtn label="New trip" Icon={Plus} onClick={onRequestNewTrip} />
           )}
           {onRequestSwitch && (
             <ActionBtn label="Switch" Icon={RefreshCcw} onClick={onRequestSwitch} />

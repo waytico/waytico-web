@@ -190,7 +190,12 @@ export default function ClientRowExpanded({ client, trips }: Props) {
             <span>No trips yet</span>
             <button
               type="button"
-              onClick={() => router.push('/')}
+              onClick={() => {
+                const label = client.nickname || client.name || ''
+                const qs = new URLSearchParams({ clientId: client.id })
+                if (label) qs.set('clientName', label)
+                router.push(`/?${qs.toString()}`)
+              }}
               className="text-xs text-foreground/80 hover:text-foreground underline-offset-2 hover:underline"
             >
               + New trip for this client

@@ -2,7 +2,15 @@ import ChatFlow from '@/components/chat-flow'
 import Footer from '@/components/footer'
 import Header from '@/components/header'
 
-export default function Home() {
+type SearchParams = {
+  clientId?: string
+  clientName?: string
+}
+
+export default function Home({ searchParams }: { searchParams?: SearchParams }) {
+  const clientId = searchParams?.clientId
+  const clientLabel = searchParams?.clientName
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Header />
@@ -14,7 +22,7 @@ export default function Home() {
           <p className="text-base md:text-lg text-foreground/70 leading-relaxed text-balance max-w-xl mx-auto">
             Describe the trip. Get a webpage. Send the link. In minutes.
           </p>
-          <ChatFlow />
+          <ChatFlow prefilledClientId={clientId} prefilledClientLabel={clientLabel} />
         </div>
       </main>
       <Footer />

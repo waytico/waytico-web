@@ -81,9 +81,16 @@ type ChatFlowProps = {
    * isn't competing with marketing copy below it.
    */
   children?: React.ReactNode
+  /** TZ Stage 4: dashboard "+ New trip for this client" prefill. When
+   *  set, every /api/chat POST carries prefilledClientId so the
+   *  pipeline can attach the resulting trip to that client. The label
+   *  is the operator-facing copy in the inline plate above the
+   *  textarea — typically the client's nickname or name. */
+  prefilledClientId?: string
+  prefilledClientLabel?: string
 }
 
-export default function ChatFlow({ children }: ChatFlowProps) {
+export default function ChatFlow({ children, prefilledClientId, prefilledClientLabel }: ChatFlowProps) {
   const router = useRouter()
   const { getToken, isLoaded, isSignedIn } = useAuth()
   const [input, setInput] = useState('')
@@ -280,6 +287,7 @@ export default function ChatFlow({ children }: ChatFlowProps) {
         formData.append('message', messageToSend)
         formData.append('file', fileToSend)
         if (sessionId) formData.append('sessionId', sessionId)
+        if (prefilledClientId) formData.append('prefilledClientId', prefilledClientId)
         // Do NOT set Content-Type — browser adds multipart boundary
         res = await fetch(`${API_URL}/api/chat`, {
           method: 'POST',
@@ -291,7 +299,11 @@ export default function ChatFlow({ children }: ChatFlowProps) {
         res = await fetch(`${API_URL}/api/chat`, {
           method: 'POST',
           headers,
-          body: JSON.stringify({ message: messageToSend, ...(sessionId && { sessionId }) }),
+          body: JSON.stringify({
+            message: messageToSend,
+            ...(sessionId && { sessionId }),
+            ...(prefilledClientId && { prefilledClientId }),
+          }),
         })
       }
 
@@ -444,6 +456,26 @@ export default function ChatFlow({ children }: ChatFlowProps) {
             - briefConfirmed=false → phase flips to 'chatting' and this
               block re-appears for the user to type their reply. */}
       {!(phase === 'sending' && messages.length > 0) && (
+      <>
+      {prefilledClientId && messages.length === 0 && (
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 pl-3 pr-2 py-1 text-xs text-foreground/80">
+          <span>
+            Creating a trip for{' '}
+            <span className="font-medium text-foreground">
+              {prefilledClientLabel || 'this client'}
+            </span>
+            .
+          </span>
+          <button
+            type="button"
+            onClick={() => router.push('/')}
+            aria-label="Clear client"
+            className="inline-flex items-center justify-center w-4 h-4 rounded-full text-foreground/55 hover:text-foreground hover:bg-foreground/10"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
       <div
         className="relative"
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
@@ -562,6 +594,7 @@ export default function ChatFlow({ children }: ChatFlowProps) {
           </Button>
         </div>
       </div>
+      </>
       )}
 
       {/* Optional below-textarea content (e.g. signed-out example block).
