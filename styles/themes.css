@@ -1416,6 +1416,16 @@
   .tp-chat-quick-prompts {
     padding: 4px 16px 0;
   }
+  /* In empty state the messages container is flex:1 and stretches to
+     fill the bottom-sheet — that creates a tall empty band between the
+     prompt copy and the quick-prompt chips. When .tp-chat-empty is the
+     only child, collapse the container to its content height so chips
+     and input sit right under the empty-state copy. As soon as a
+     message is appended .tp-chat-empty unmounts, :has() stops matching,
+     and the container returns to flex:1 for normal scrolling. */
+  .tp-chat-panel__messages:has(> .tp-chat-empty) {
+    flex: 0 0 auto;
+  }
 }
 
 .tp-chat-chip {
