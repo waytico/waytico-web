@@ -1,62 +1,75 @@
-'use client'
-
 /**
- * Admin shell — TZ Photo Bank Stage 10 Block D.
+ * Admin shell — Stage 11 Block A (security fix).
  *
- * Sidebar nav for admin tools. Routes:
- *   /admin            — Stats landing (placeholder)
- *   /admin/photo-bank — Review queue
- *   /admin/photo-bank/crawl — Ad-hoc crawler
+ * Server-side auth gate. Two-layer defense in depth:
+ *   1. middleware.ts redirects anonymous visitors before this renders.
+ *   2. This layout double-checks auth and additionally enforces the
+ *      ADMIN_EMAILS allowlist (which middleware can't — it requires a
+ *      backend round-trip).
  *
- * Auth gate is server-side: every backend admin endpoint sits behind
- * `requireAdmin` (ADMIN_EMAILS allowlist). The frontend doesn't try to
- * pre-render anything sensitive — list/crawl/edit calls are made
- * client-side with the operator's Clerk Bearer token; non-admin users
- * see 401/403 and the empty UI gracefully.
+ * Resolution order:
+ *   - userId === null  → redirect to /sign-in?redirect_url=/admin
+ *   - is_admin === false → redirect to /dashboard (no admin shell HTML)
+ *   - else → render shell
+ *
+ * Backend /api/admin/* endpoints are independently gated by
+ * requireAdmin (ADMIN_EMAILS allowlist on the server). This layout's
+ * sole job is to prevent the shell HTML (sidebar nav structure) from
+ * being delivered to unauthorized visitors.
+ *
+ * The sidebar moved to ./_components/admin-sidebar.tsx because it
+ * needs usePathname for active-link styling — that's a client concern.
  */
 
-import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { usePathname } from 'next/navigation'
+import { auth } from '@clerk/nextjs/server'
+import { redirect } from 'next/navigation'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
+import { AdminSidebar } from './_components/admin-sidebar'
 
-const NAV_ITEMS = [
-  { href: '/admin', label: 'Stats' },
-  { href: '/admin/photo-bank', label: 'Photo bank' },
-  { href: '/admin/photo-bank/crawl', label: 'Ad-hoc crawl' },
-]
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
-  const pathname = usePathname() || '/admin'
+async function isAdminUser(): Promise<boolean> {
+  const { getToken } = auth()
+  const token = await getToken().catch(() => null)
+  if (!token) return false
+  try {
+    const res = await fetch(`${API_URL}/api/users/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    })
+    if (!res.ok) return false
+    const j = (await res.json()) as { user?: { is_admin?: boolean } }
+    return !!j.user?.is_admin
+  } catch {
+    return false
+  }
+}
+
+export default async function AdminLayout({
+  children,
+}: {
+  children: ReactNode
+}) {
+  const { userId } = auth()
+  if (!userId) {
+    redirect('/sign-in?redirect_url=/admin')
+  }
+
+  const ok = await isAdminUser()
+  if (!ok) {
+    redirect('/dashboard')
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:flex-row">
           <aside className="md:w-56 shrink-0">
-            <nav className="flex flex-col gap-1 text-sm">
-              {NAV_ITEMS.map((item) => {
-                const active =
-                  item.href === '/admin'
-                    ? pathname === '/admin'
-                    : pathname.startsWith(item.href)
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={
-                      'rounded px-3 py-2 transition-colors ' +
-                      (active
-                        ? 'bg-zinc-900 text-white'
-                        : 'text-zinc-700 hover:bg-zinc-100')
-                    }
-                  >
-                    {item.label}
-                  </Link>
-                )
-              })}
-            </nav>
+            <AdminSidebar />
           </aside>
           <section className="flex-1 min-w-0">{children}</section>
         </div>
