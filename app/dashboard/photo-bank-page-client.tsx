@@ -152,11 +152,16 @@ export default function PhotoBankPageClient(props: PhotoBankPageClientProps) {
     setUserLoading(true)
     setUserError(null)
     Promise.all([
+      // listUserPhotos still uses the legacy region semantic — pass city
+      // OR country to it via the `as any` escape hatch since the public
+      // ListGlobalFilters type dropped `region` in Stage 10 Block B.
+      // Paid path is stub-grade today; fix the type contract когда billing
+      // включит реальный flow.
       listUserPhotos(authedFetch, {
         search: debouncedSearch,
         category,
-        region: city || country,
         limit: perPage,
+        ...(city ? { city } : country ? { country } : {}),
       } as any),
       getQuota(authedFetch),
     ])
