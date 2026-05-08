@@ -180,7 +180,6 @@ function buildQuickPrompts(language: string | null | undefined): string[] {
   if (lang && lang !== 'en') {
     prompts.push(`Translate to ${lang.toUpperCase()}`)
   }
-  prompts.push('Suggest improvements')
   return prompts
 }
 
