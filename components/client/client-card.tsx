@@ -780,7 +780,7 @@ function ClientCardForm({
       {/* Footer */}
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-border">
         <div>
-          {host === 'dashboard' && effectiveMode === 'edit' && onRequestDelete && (
+          {effectiveMode === 'edit' && onRequestDelete && (
             <button
               type="button"
               onClick={onRequestDelete}
@@ -976,3 +976,4 @@ function Toggle({
     </button>
   )
 }
+

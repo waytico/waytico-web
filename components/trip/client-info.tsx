@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useAuth } from '@clerk/nextjs'
 import { Lock, Sparkles, X } from 'lucide-react'
 import { toast } from 'sonner'
+import { apiFetch } from '@/lib/api'
 import type { Client, Mutations } from './trip-types'
 import { OnboardingTip } from '@/components/onboarding-tip'
 import SmartClientPicker from '@/components/dashboard/smart-client-picker'
@@ -54,6 +56,7 @@ export function ClientInfo({
   onClientChanged,
   onClose,
 }: Props) {
+  const { getToken } = useAuth()
   const [localClient, setLocalClient] = useState<Client | null>(client)
   const [createOpen, setCreateOpen] = useState(false)
   const [createDraft, setCreateDraft] = useState<Partial<Client> | undefined>(undefined)
@@ -83,6 +86,35 @@ export function ClientInfo({
     if (ok) {
       setLocalClient(null)
       toast.success('Client unlinked')
+    }
+  }
+
+  // DELETE the client itself (not just unlink). Trip survives because
+  // FK on trip_projects.client_id is ON DELETE SET NULL — local trip
+  // will lose its client_id which we mirror in state. Removes the
+  // client from the agent's whole roster, not only this trip.
+  async function handleDelete() {
+    if (!localClient) return
+    const headline = localClient.nickname || localClient.name || 'this client'
+    const confirmed = window.confirm(
+      `Delete ${headline} from your roster? This removes them from your client list completely. Their trips will lose ownership but stay intact.`,
+    )
+    if (!confirmed) return
+    try {
+      const token = await getToken()
+      const res = await apiFetch(`/api/clients/${localClient.id}`, {
+        token,
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        toast.error('Could not delete')
+        return
+      }
+      setLocalClient(null)
+      setEditOpen(false)
+      toast.success('Client deleted')
+    } catch {
+      toast.error('Network error')
     }
   }
 
@@ -196,6 +228,7 @@ export function ClientInfo({
             const ok = await saveProjectPatch(patch as Record<string, unknown>)
             return ok
           }}
+          onRequestDelete={handleDelete}
           onClose={() => setEditOpen(false)}
         />
       )}
@@ -290,3 +323,4 @@ function SwitchClientDialog({
     document.body,
   )
 }
+
