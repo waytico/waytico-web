@@ -872,6 +872,7 @@ function MagazineDay(props: {
   onDayPhotoReplace?: (file: File, dayId: string, prevPhotoId: string) => void
   onDayDelete?: (mediaId: string) => void
   onDayPhotoEdit?: (m: MediaLite) => void
+  onDayPickFromBank?: (dayId: string) => void
   uploading: number
   interceptUpload?: () => void
   onDayInsertAbove?: (atIndex: number) => Promise<boolean> | void
@@ -890,6 +891,7 @@ function MagazineDay(props: {
     onDayPhotoReplace,
     onDayDelete,
     onDayPhotoEdit,
+    onDayPickFromBank,
     uploading,
     interceptUpload,
     onDayInsertAbove,
