@@ -81,6 +81,12 @@ const SECTION_IDS = [
  * whose top has scrolled past ~30% of the viewport — that maps to
  * "the section currently dominating the screen".
  *
+ * When the dominating section is the itinerary, drills further: looks
+ * for `day-1`, `day-2`, … anchors (added on every itinerary DayCard
+ * variant) and returns the hash of the topmost-visible day. Without
+ * this drill-down, opening Preview while reading Day 5 would still
+ * dump the iframe at Day 1.
+ *
  * Returns '' when the operator is still above the first section
  * (hero / nav area) or when no section IDs are mounted yet, which
  * makes the iframe load at the top — the same behavior we had
@@ -102,6 +108,27 @@ function getCurrentSectionHash(): string {
       break
     }
   }
+
+  // Drill into per-day anchors when the operator is reading the
+  // itinerary. Days are numbered 1..N consecutively (server reconciles
+  // dayNumber on every reorder/delete), so we can scan `day-1`,
+  // `day-2`, … until we hit one that doesn't exist yet — that's the
+  // end of the list. Same cutoff rule: last day whose top has
+  // scrolled past 30% of viewport wins.
+  if (current === 'itinerary') {
+    let dayHash: string | null = null
+    for (let n = 1; n <= 60; n++) {
+      const dayEl = document.getElementById(`day-${n}`)
+      if (!dayEl) break
+      if (dayEl.getBoundingClientRect().top < cutoff) {
+        dayHash = `day-${n}`
+      } else {
+        break
+      }
+    }
+    if (dayHash) return `#${dayHash}`
+  }
+
   return current ? `#${current}` : ''
 }
 

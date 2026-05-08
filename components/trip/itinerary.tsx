@@ -289,6 +289,8 @@ function PlainDayShell({
   if (layout === 'photo-cards') {
     return (
       <article
+        // Stable per-day anchor — see MagazineDay for rationale.
+        id={`day-${day.dayNumber}`}
         className="day"
         style={photo ? { backgroundImage: `url(${photo})` } : undefined}
       >
@@ -308,7 +310,7 @@ function PlainDayShell({
   }
   if (layout === 'grid') {
     return (
-      <article className="day">
+      <article id={`day-${day.dayNumber}`} className="day">
         <div className="day-head">
           <span className="day-num">DAY {pad2(day.dayNumber)}</span>
           {dayDateLabel && <span className="day-date">{dayDateLabel}</span>}
@@ -321,7 +323,7 @@ function PlainDayShell({
     )
   }
   return (
-    <article className="day">
+    <article id={`day-${day.dayNumber}`} className="day">
       <div className="day-num">{pad2(day.dayNumber)}</div>
       <div>
         <h3 className="day-title">{renderDayTitle(day)}</h3>
@@ -516,6 +518,11 @@ function SortableDay({
   if (layout === 'photo-cards') {
     return (
       <article
+        // Stable per-day anchor — see MagazineDay for rationale.
+        // DevicePreview reads the parent (owner-side) DOM to mirror
+        // scroll position into the iframe, so the anchor must exist
+        // on both owner-side and public-side render paths.
+        id={`day-${day.dayNumber}`}
         ref={setNodeRef}
         style={{ ...style, ...(photo ? { backgroundImage: `url(${photo})` } : null) }}
         className={'day' + (isDragging ? ' is-dragging' : '')}
@@ -539,6 +546,7 @@ function SortableDay({
   if (layout === 'grid') {
     return (
       <article
+        id={`day-${day.dayNumber}`}
         ref={setNodeRef}
         style={style}
         className={'day' + (isDragging ? ' is-dragging' : '')}
@@ -559,6 +567,7 @@ function SortableDay({
   // timeline
   return (
     <article
+      id={`day-${day.dayNumber}`}
       ref={setNodeRef}
       style={style}
       className={'day' + (isDragging ? ' is-dragging' : '')}
@@ -910,6 +919,13 @@ function MagazineDay(props: {
 
   return (
     <article
+      // Stable per-day anchor used by DevicePreview to mirror the
+      // operator's desktop scroll position into the iframe ("if I
+      // hit Preview while reading Day 3, mobile preview opens at
+      // Day 3 too"). Numeric dayNumber is preferred over UUID
+      // day.id — same value lives on desktop & iframe DOM regardless
+      // of legacy rows that haven't been saved with an id yet.
+      id={`day-${day.dayNumber}`}
       ref={editable ? sortable.setNodeRef : undefined}
       className={
         'tp-mag-day' +
