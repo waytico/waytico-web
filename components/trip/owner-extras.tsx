@@ -23,6 +23,7 @@ export function HeroOwnerOverlay({
   heroPhotoId,
   onDelete,
   onPickFile,
+  onPickFromBank,
   dragOver,
   emptyState,
 }: {
@@ -31,6 +32,9 @@ export function HeroOwnerOverlay({
   heroPhotoId: string | null
   onDelete: () => void
   onPickFile: () => void
+  /** Stage 10 Block C — opens the Photo Bank picker modal. Optional;
+   *  caller passes when the trip page wires the picker (free + paid). */
+  onPickFromBank?: () => void
   dragOver: boolean
   emptyState: boolean
 }) {
@@ -87,6 +91,20 @@ export function HeroOwnerOverlay({
             >
               <Trash2 className="h-4 w-4" />
             </button>
+            {onPickFromBank && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onPickFromBank()
+                }}
+                className={pillClickable}
+                aria-label="Choose hero photo from Photo Bank"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Choose from bank
+              </button>
+            )}
           </>
         )}
       </div>
@@ -95,7 +113,7 @@ export function HeroOwnerOverlay({
           primary action on a brand-new hero (oversized pill, dead-center).
           Uploading and filled states stay in the top-right cluster above. */}
       {!isUploading && emptyState && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 pointer-events-none">
           <button
             type="button"
             onClick={onPickFile}
@@ -105,6 +123,17 @@ export function HeroOwnerOverlay({
             <ImagePlus className="h-5 w-5" />
             Drag or add photo
           </button>
+          {onPickFromBank && (
+            <button
+              type="button"
+              onClick={onPickFromBank}
+              className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-black/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-black/65"
+              aria-label="Choose hero photo from Photo Bank"
+            >
+              <LayoutGrid className="h-4 w-4" />
+              Choose from bank
+            </button>
+          )}
         </div>
       )}
     </>

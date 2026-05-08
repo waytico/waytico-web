@@ -25,7 +25,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, ImagePlus, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
+import { GripVertical, ImagePlus, LayoutGrid, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
 
 type ItineraryProps = {
   theme: ThemeId
@@ -79,6 +79,8 @@ type ItineraryProps = {
   /** Filled-state edit-pencil: open the trip-level PhotoLightbox at
    *  initialMode='edit' (parent wires that up to setLightbox + crop UI). */
   onDayPhotoEdit?: (m: MediaLite) => void
+  /** Stage 10 Block C — opens Photo Bank picker for the given day. */
+  onDayPickFromBank?: (dayId: string) => void
   /** Per-day uploading-counter map (from usePhotoUpload). Keyed by day.id. */
   uploadingByDay?: Record<string, number>
   /** Anon-creator intercept: short-circuits both click-to-pick and
@@ -156,6 +158,7 @@ export function TripItinerary(props: ItineraryProps) {
         onDayPhotoReplace={props.onDayPhotoReplace}
         onDayDelete={props.onDayDelete}
         onDayPhotoEdit={props.onDayPhotoEdit}
+        onDayPickFromBank={props.onDayPickFromBank}
         uploadingByDay={props.uploadingByDay}
         interceptUpload={props.interceptUpload}
       />
@@ -708,6 +711,7 @@ type ItineraryMagazineProps = {
   onDayPhotoReplace?: (file: File, dayId: string, prevPhotoId: string) => void
   onDayDelete?: (mediaId: string) => void
   onDayPhotoEdit?: (m: MediaLite) => void
+  onDayPickFromBank?: (dayId: string) => void
   uploadingByDay?: Record<string, number>
   interceptUpload?: () => void
 }
@@ -728,6 +732,7 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
     onDayPhotoReplace,
     onDayDelete,
     onDayPhotoEdit,
+    onDayPickFromBank,
     uploadingByDay,
     interceptUpload,
   } = props
@@ -974,6 +979,7 @@ function MagazineDay(props: {
             onReplace={onDayPhotoReplace}
             onDelete={onDayDelete}
             onEdit={onDayPhotoEdit}
+            onPickFromBank={onDayPickFromBank}
             interceptUpload={interceptUpload}
           />
         </div>
@@ -1021,9 +1027,12 @@ function MagazineDayPhoto(props: {
   onReplace?: (file: File, dayId: string, prevPhotoId: string) => void
   onDelete?: (mediaId: string) => void
   onEdit?: (m: MediaLite) => void
+  /** Stage 10 Block C — open Photo Bank picker; caller resolves into
+   *  PATCH /api/media/:id with the picked source ids. */
+  onPickFromBank?: (dayId: string) => void
   interceptUpload?: () => void
 }) {
-  const { dayId, photo, editable, uploading, onUpload, onReplace, onDelete, onEdit, interceptUpload } = props
+  const { dayId, photo, editable, uploading, onUpload, onReplace, onDelete, onEdit, onPickFromBank, interceptUpload } = props
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [dragOver, setDragOver] = useState(false)
 
@@ -1178,6 +1187,25 @@ function MagazineDayPhoto(props: {
             </span>
           )}
         </button>
+        {onPickFromBank && !isUploading && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (interceptUpload) {
+                interceptUpload()
+                return
+              }
+              onPickFromBank(dayId)
+            }}
+            className="tp-mag-day__photo-pill"
+            aria-label="Choose photo from Photo Bank"
+            style={{ marginTop: 4 }}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            Choose from bank
+          </button>
+        )}
       </>
     )
   }
@@ -1210,6 +1238,24 @@ function MagazineDayPhoto(props: {
       <div className="tp-mag-day__photo-actions">
         {photo?.attribution_html && (
           <AttributionPopover html={photo.attribution_html ?? null} />
+        )}
+        {!isUploading && onPickFromBank && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (interceptUpload) {
+                interceptUpload()
+                return
+              }
+              onPickFromBank(dayId)
+            }}
+            className="tp-mag-day__photo-pill"
+            aria-label="Choose photo from Photo Bank"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            Choose from bank
+          </button>
         )}
         {isUploading ? (
           <span className="tp-mag-day__photo-pill">

@@ -41,6 +41,12 @@ import { TripContacts } from '@/components/trip/contacts'
 import { ClientInfo } from '@/components/trip/client-info'
 import ClientCreateModal from '@/components/client/client-create-modal'
 import { HeroOwnerOverlay, HeroDropZone } from '@/components/trip/owner-extras'
+import {
+  PhotoBankPickerModal,
+  type PickerSelection,
+  type PickerMode,
+} from '@/components/photo-bank/photo-bank-picker-modal'
+import type { AuthedFetch } from '@/lib/photo-bank-api'
 import type { PricingMode, Client } from '@/components/trip/trip-types'
 import { TripFooter } from '@/components/trip/trip-footer'
 
@@ -1221,6 +1227,167 @@ export default function TripPageClient({ slug, initialData }: Props) {
       : fmtDateRange(p.dates_start, p.dates_end)
 
   const heroPhoto = media.find((m) => m.placement === 'hero') || null
+
+  // ── Stage 10 Block C — Photo Bank picker modal state ─────────────
+  // Free + paid both wire to the same modal; mode toggles the tabs.
+  // Hardcoded 'free' for now — paid plan flips when billing flow lands
+  // (matches /dashboard?view=photos pattern).
+  const pickerPlan: PickerMode = 'free'
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerTarget, setPickerTarget] = useState<
+    | { kind: 'hero' }
+    | { kind: 'day'; dayId: string }
+    | null
+  >(null)
+  const pickerAuthedFetch: AuthedFetch = useCallback(
+    async (path, init) => {
+      const token = await getToken().catch(() => null)
+      const headers = new Headers(init?.headers)
+      if (token) headers.set('Authorization', `Bearer ${token}`)
+      return fetch(path, { ...init, headers })
+    },
+    [getToken],
+  )
+  const openHeroPicker = useCallback(() => {
+    if (isAnonCreator) {
+      toast.error('Sign up to edit')
+      return
+    }
+    setPickerTarget({ kind: 'hero' })
+    setPickerOpen(true)
+  }, [isAnonCreator])
+  const openDayPicker = useCallback((dayId: string) => {
+    if (isAnonCreator) {
+      toast.error('Sign up to edit')
+      return
+    }
+    setPickerTarget({ kind: 'day', dayId })
+    setPickerOpen(true)
+  }, [isAnonCreator])
+  const onPickerSelect = useCallback(
+    async (selection: PickerSelection) => {
+      const target = pickerTarget
+      if (!target) return
+      try {
+        if (target.kind === 'hero') {
+          const token = await getToken()
+          if (heroPhoto) {
+            // Existing hero — PATCH the row to swap url + provenance.
+            const res = await apiFetch(`/api/media/${heroPhoto.id}`, {
+              method: 'PATCH',
+              token,
+              body: JSON.stringify({
+                url: selection.cdnUrl,
+                sourceGlobalBankId: selection.source === 'global' ? selection.sourceId : null,
+                sourcePhotoBankId: selection.source === 'user' ? selection.sourceId : null,
+                autoMatched: false,
+                lowConfidence: false,
+                caption: selection.caption ?? undefined,
+              }),
+            })
+            if (!res.ok) throw new Error(`PATCH hero (${res.status})`)
+            const j = await res.json().catch(() => ({}))
+            const updated = (j as any).media as MediaRecord | undefined
+            if (updated) {
+              setMedia((cur) => cur.map((m) => (m.id === updated.id ? updated : m)))
+            }
+          } else {
+            // Empty hero — POST a new placement='hero' trip_media row.
+            const res = await apiFetch(`/api/projects/${p.id}/media`, {
+              method: 'POST',
+              token,
+              body: JSON.stringify({
+                type: 'photo',
+                url: selection.cdnUrl,
+                placement: 'hero',
+                caption: selection.caption ?? undefined,
+              }),
+            })
+            if (!res.ok) throw new Error(`Create hero (${res.status})`)
+            const j = await res.json().catch(() => ({}))
+            const created = (j as any).media as MediaRecord | undefined
+            if (created) {
+              // Patch source ids onto the new row
+              const tk = await getToken()
+              await apiFetch(`/api/media/${created.id}`, {
+                method: 'PATCH',
+                token: tk,
+                body: JSON.stringify({
+                  sourceGlobalBankId: selection.source === 'global' ? selection.sourceId : null,
+                  sourcePhotoBankId: selection.source === 'user' ? selection.sourceId : null,
+                  autoMatched: false,
+                  lowConfidence: false,
+                }),
+              }).catch(() => {})
+              setMedia((cur) => [...cur, created])
+            }
+          }
+          toast.success('Hero photo updated')
+        } else {
+          const dayId = target.dayId
+          const existing = media.find(
+            (m) => m.day_id === dayId && m.type !== 'document',
+          )
+          const token = await getToken()
+          if (existing) {
+            const res = await apiFetch(`/api/media/${existing.id}`, {
+              method: 'PATCH',
+              token,
+              body: JSON.stringify({
+                url: selection.cdnUrl,
+                sourceGlobalBankId: selection.source === 'global' ? selection.sourceId : null,
+                sourcePhotoBankId: selection.source === 'user' ? selection.sourceId : null,
+                autoMatched: false,
+                lowConfidence: false,
+                caption: selection.caption ?? undefined,
+              }),
+            })
+            if (!res.ok) throw new Error(`PATCH day (${res.status})`)
+            const j = await res.json().catch(() => ({}))
+            const updated = (j as any).media as MediaRecord | undefined
+            if (updated) {
+              setMedia((cur) => cur.map((m) => (m.id === updated.id ? updated : m)))
+            }
+          } else {
+            const res = await apiFetch(`/api/projects/${p.id}/media`, {
+              method: 'POST',
+              token,
+              body: JSON.stringify({
+                type: 'photo',
+                url: selection.cdnUrl,
+                dayId,
+                caption: selection.caption ?? undefined,
+              }),
+            })
+            if (!res.ok) throw new Error(`Create day (${res.status})`)
+            const j = await res.json().catch(() => ({}))
+            const created = (j as any).media as MediaRecord | undefined
+            if (created) {
+              const tk = await getToken()
+              await apiFetch(`/api/media/${created.id}`, {
+                method: 'PATCH',
+                token: tk,
+                body: JSON.stringify({
+                  sourceGlobalBankId: selection.source === 'global' ? selection.sourceId : null,
+                  sourcePhotoBankId: selection.source === 'user' ? selection.sourceId : null,
+                  autoMatched: false,
+                  lowConfidence: false,
+                }),
+              }).catch(() => {})
+              setMedia((cur) => [...cur, created])
+            }
+          }
+          toast.success('Day photo updated')
+        }
+      } catch (err: any) {
+        toast.error(err?.message || 'Could not apply photo')
+      } finally {
+        setPickerOpen(false)
+        setPickerTarget(null)
+      }
+    },
+    [pickerTarget, heroPhoto, media, getToken, p.id, setMedia],
+  )
   const hasHeroBg = !!heroPhoto
 
   // Proposal lifecycle dates — read from DB (auto-filled at create: today + 14d).
@@ -2101,6 +2268,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                       ? toast.error('Sign up to edit')
                       : heroInputRef.current?.click()
                   }
+                  onPickFromBank={openHeroPicker}
                   dragOver={heroDragOver}
                   emptyState={!hasHeroBg}
                 />
@@ -2203,6 +2371,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           onDayUpload={ed ? handleUpload : undefined}
           onDayPhotoReplace={ed ? handleDayPhotoReplace : undefined}
           onDayDelete={ed ? handleDelete : undefined}
+          onDayPickFromBank={(dayId) => openDayPicker(dayId)}
           onDayPhotoEdit={
             ed
               ? (m) => {
@@ -2360,6 +2529,21 @@ export default function TripPageClient({ slug, initialData }: Props) {
             saveWhatToBring={saveWhatToBring}
           />
         )}
+      <PhotoBankPickerModal
+        open={pickerOpen}
+        onClose={() => {
+          setPickerOpen(false)
+          setPickerTarget(null)
+        }}
+        onSelect={onPickerSelect}
+        mode={pickerPlan}
+        tripContext={{
+          city: (p.region as string | null) ?? null,
+          country: (p.country as string | null) ?? null,
+          region: (p.region as string | null) ?? null,
+        }}
+        authedFetch={pickerAuthedFetch}
+      />
       </ThemeRoot>
 
       {resolvedTheme === 'magazine' && (
