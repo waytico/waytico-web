@@ -117,14 +117,35 @@ export interface UserListResponse {
   quotaLimitBytes: number
 }
 
+// Paid user-bank list filters — independent shape from the (Stage 10
+// Block B) global ListGlobalFilters. Keeps `region` + `cursor` + `limit`
+// because the user-bank endpoint (Stage 2) still uses cursor pagination
+// and a single region filter; refactor когда billing flow ships.
+export interface UserListFilters {
+  search?: string
+  category?: string
+  region?: string
+  city?: string
+  country?: string
+  cursor?: string
+  limit?: number
+  processing?: boolean
+  pinned?: boolean
+}
+
 export async function listUserPhotos(
   authedFetch: AuthedFetch,
-  filters: ListGlobalFilters & { processing?: boolean; pinned?: boolean } = {},
+  filters: UserListFilters = {},
 ): Promise<UserListResponse> {
   const sp = new URLSearchParams()
   if (filters.search) sp.set('search', filters.search)
   if (filters.category) sp.set('category', filters.category)
   if (filters.region) sp.set('region', filters.region)
+  // city/country are accepted for consistency with the page client's
+  // shared filter strip; the user-bank endpoint maps both to the
+  // legacy `region` query param.
+  if (filters.city) sp.set('region', filters.city)
+  else if (filters.country) sp.set('region', filters.country)
   if (filters.processing) sp.set('processing', 'true')
   if (filters.pinned) sp.set('pinned', 'true')
   if (filters.cursor) sp.set('cursor', filters.cursor)
