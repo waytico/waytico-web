@@ -26,6 +26,7 @@ export function HeroOwnerOverlay({
   onPickFromBank,
   dragOver,
   emptyState,
+  noMatchReason,
 }: {
   hasBg: boolean
   uploadingHero: number
@@ -37,6 +38,14 @@ export function HeroOwnerOverlay({
   onPickFromBank?: () => void
   dragOver: boolean
   emptyState: boolean
+  /** Stage 11 Block C — when true, the empty-state slot prefixes its
+   *  buttons with an explanation that the global Photo Bank had no
+   *  match for this trip's region. Hero suggestion completed but
+   *  returned no photo, so the operator understands why the hero is
+   *  empty rather than wondering whether it's a glitch. Renames the
+   *  buttons to "Upload your own" / "Browse all photos" to match the
+   *  no-match framing. False or undefined → original copy. */
+  noMatchReason?: boolean
 }) {
   const isUploading = uploadingHero > 0
   // Pill styling shared by every state — high-contrast dark fill so it
@@ -114,24 +123,33 @@ export function HeroOwnerOverlay({
           Uploading and filled states stay in the top-right cluster above. */}
       {!isUploading && emptyState && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 pointer-events-none">
+          {noMatchReason && (
+            <p className="pointer-events-none max-w-md px-4 text-center text-sm font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
+              We don&apos;t have matching photos for this region in our library yet.
+            </p>
+          )}
           <button
             type="button"
             onClick={onPickFile}
             className="pointer-events-auto inline-flex items-center gap-2.5 rounded-full bg-black/60 px-6 py-3.5 text-base font-medium text-white transition-colors hover:bg-black/80"
-            aria-label="Add hero photo"
+            aria-label={noMatchReason ? 'Upload your own photo' : 'Add hero photo'}
           >
             <ImagePlus className="h-5 w-5" />
-            Drag or add photo
+            {noMatchReason ? 'Upload your own' : 'Drag or add photo'}
           </button>
           {onPickFromBank && (
             <button
               type="button"
               onClick={onPickFromBank}
               className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-black/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-black/65"
-              aria-label="Choose hero photo from Photo Bank"
+              aria-label={
+                noMatchReason
+                  ? 'Browse all photos in the bank'
+                  : 'Choose hero photo from Photo Bank'
+              }
             >
               <LayoutGrid className="h-4 w-4" />
-              Choose from bank
+              {noMatchReason ? 'Browse all photos' : 'Choose from bank'}
             </button>
           )}
         </div>

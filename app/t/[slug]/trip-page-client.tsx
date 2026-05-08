@@ -1194,6 +1194,16 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const shareUrl = `${APP_URL}/t/${slug}`
   const ed = showOwnerUI
 
+  // Stage 11 Block C — has the photo-suggest pipeline finished? When
+  // true, an empty hero or empty Magazine day photo is a confirmed
+  // no-match (region not covered by the global bank) rather than the
+  // moments before pipeline events arrive. Drives the "We don't have
+  // matching photos…" hero message and the "No matching photo." day
+  // caption — empty slots stay actionable but now also explain
+  // themselves.
+  const pipelineDone =
+    p.status === 'quoted' || p.status === 'active' || p.status === 'completed'
+
   // TZ-6 §3: NUMERIC arrives from PostgreSQL as string ("3450.00") — coerce
   // exactly once at the top of trip-page-client before forwarding to children.
   const pricePerPersonNum = coercePrice(p.price_per_person)
@@ -2271,6 +2281,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   onPickFromBank={openHeroPicker}
                   dragOver={heroDragOver}
                   emptyState={!hasHeroBg}
+                  noMatchReason={pipelineDone && !hasHeroBg}
                 />
               ) : undefined
             }
@@ -2384,6 +2395,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           interceptUpload={
             isAnonCreator ? () => toast.error('Sign up to edit') : undefined
           }
+          pipelineDone={pipelineDone && ed}
         />
 
         <TripAccommodations

@@ -86,6 +86,14 @@ type ItineraryProps = {
   /** Anon-creator intercept: short-circuits both click-to-pick and
    *  drag-and-drop with a "Sign up to edit" toast before any S3 call. */
   interceptUpload?: () => void
+  /** Stage 11 Block C — when true, the photo-suggest pipeline has run
+   *  (trip is at least quoted) and any day still without a primary
+   *  photo is a confirmed no-match rather than a pre-pipeline empty.
+   *  Magazine empty-state day photos prefix their dropzone with a
+   *  "No matching photo." caption so the operator understands the
+   *  empty slot is library coverage, not a glitch. Other variants
+   *  ignore this prop. */
+  pipelineDone?: boolean
 }
 
 function getDayPhoto(media: MediaLite[], dayId: string): string | null {
@@ -161,6 +169,7 @@ export function TripItinerary(props: ItineraryProps) {
         onDayPickFromBank={props.onDayPickFromBank}
         uploadingByDay={props.uploadingByDay}
         interceptUpload={props.interceptUpload}
+        pipelineDone={props.pipelineDone}
       />
     )
   }
@@ -714,6 +723,9 @@ type ItineraryMagazineProps = {
   onDayPickFromBank?: (dayId: string) => void
   uploadingByDay?: Record<string, number>
   interceptUpload?: () => void
+  /** Stage 11 Block C — passes through to MagazineDayPhoto's empty
+   *  state for no-match captioning. See ItineraryProps. */
+  pipelineDone?: boolean
 }
 
 function ItineraryMagazine(props: ItineraryMagazineProps) {
@@ -735,6 +747,7 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
     onDayPickFromBank,
     uploadingByDay,
     interceptUpload,
+    pipelineDone,
   } = props
 
   // Local mirror so we can do an optimistic reorder before the backend
@@ -814,6 +827,7 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
       interceptUpload={interceptUpload}
       onDayInsertAbove={onDayInsertAbove}
       onDayRemove={onDayRemove}
+      pipelineDone={pipelineDone}
     />
   ))
 
@@ -878,6 +892,9 @@ function MagazineDay(props: {
   interceptUpload?: () => void
   onDayInsertAbove?: (atIndex: number) => Promise<boolean> | void
   onDayRemove?: (day: Day) => Promise<boolean> | void
+  /** Stage 11 Block C — passes through to MagazineDayPhoto's empty
+   *  state for the "No matching photo." caption. See ItineraryProps. */
+  pipelineDone?: boolean
 }) {
   const {
     day,
@@ -897,6 +914,7 @@ function MagazineDay(props: {
     interceptUpload,
     onDayInsertAbove,
     onDayRemove,
+    pipelineDone,
   } = props
   const id = day.id || `day-${day.dayNumber}`
   const sortable = useSortable({ id })
@@ -984,6 +1002,7 @@ function MagazineDay(props: {
             onEdit={onDayPhotoEdit}
             onPickFromBank={onDayPickFromBank}
             interceptUpload={interceptUpload}
+            noMatchReason={!!pipelineDone}
           />
         </div>
       )}
@@ -1034,8 +1053,27 @@ function MagazineDayPhoto(props: {
    *  PATCH /api/media/:id with the picked source ids. */
   onPickFromBank?: (dayId: string) => void
   interceptUpload?: () => void
+  /** Stage 11 Block C — when true, the photo-suggest pipeline has run
+   *  (trip is at least quoted) and this empty slot is a confirmed
+   *  no-match. Empty state prefixes its dropzone with a "No matching
+   *  photo." caption so the operator knows it's library coverage,
+   *  not a glitch or pre-pipeline state. False/undefined → original
+   *  copy. */
+  noMatchReason?: boolean
 }) {
-  const { dayId, photo, editable, uploading, onUpload, onReplace, onDelete, onEdit, onPickFromBank, interceptUpload } = props
+  const {
+    dayId,
+    photo,
+    editable,
+    uploading,
+    onUpload,
+    onReplace,
+    onDelete,
+    onEdit,
+    onPickFromBank,
+    interceptUpload,
+    noMatchReason,
+  } = props
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [dragOver, setDragOver] = useState(false)
 
@@ -1169,13 +1207,22 @@ function MagazineDayPhoto(props: {
     return (
       <>
         {fileInput}
+        {/* Stage 11 Block C — when the photo-suggest pipeline has run
+            and this slot still has no match, prefix the dropzone with
+            an explanation so the operator understands the empty state
+            is library coverage rather than a glitch. */}
+        {noMatchReason && !isUploading && (
+          <p className="tp-mag-day__photo-empty-caption mb-1.5 text-center text-xs text-muted-foreground">
+            No matching photo.
+          </p>
+        )}
         <button
           type="button"
           onClick={triggerPicker}
           className={
             'tp-mag-day__photo-empty' + (dragOver ? ' is-dragover' : '')
           }
-          aria-label="Add day photo"
+          aria-label={noMatchReason ? 'Upload your own photo' : 'Add day photo'}
           {...dropHandlers}
         >
           {isUploading ? (
@@ -1186,7 +1233,7 @@ function MagazineDayPhoto(props: {
           ) : (
             <span className="tp-mag-day__photo-empty-label">
               <ImagePlus className="h-3.5 w-3.5" />
-              Drag or add photo
+              {noMatchReason ? 'Drag image' : 'Drag or add photo'}
             </span>
           )}
         </button>
