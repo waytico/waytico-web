@@ -490,17 +490,23 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
         </div>
       )}
       <div
-        className="relative"
+        className="relative flex flex-col min-h-[420px] md:min-h-[300px] rounded-2xl border border-border bg-card focus-within:ring-2 focus-within:ring-accent/50 overflow-hidden"
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
         onDragLeave={(e) => { e.preventDefault(); setIsDragging(false) }}
         onDrop={handleDrop}
       >
         {isDragging && (
-          <div className="absolute inset-0 z-10 rounded-2xl border-2 border-dashed border-accent bg-accent/10 flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 z-10 border-2 border-dashed border-accent bg-accent/10 flex items-center justify-center pointer-events-none">
             <p className="text-accent font-medium">Drop file here</p>
           </div>
         )}
 
+        {/* Textarea — flex-1 child of the framed wrapper. No own border /
+            background / focus ring (those live on the wrapper now via
+            focus-within). When content overflows, the textarea scrolls
+            internally; the controls row sits below as a real sibling, so
+            the caret stays visible against the controls instead of
+            disappearing under an absolute overlay. */}
         <Textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -509,14 +515,14 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
             ? (isSignedIn ? PLACEHOLDER_SIGNEDIN : PLACEHOLDER_SIGNEDOUT)
             : 'Add details or type "confirm" to generate…'
           }
-          className="min-h-[420px] md:min-h-[300px] p-5 pb-28 text-base rounded-2xl border border-border bg-card text-foreground placeholder:text-muted-foreground placeholder:not-italic italic resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
+          className="flex-1 min-h-0 p-5 pb-3 text-base rounded-none border-0 bg-transparent text-foreground placeholder:text-muted-foreground placeholder:not-italic italic resize-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
           rows={3}
           disabled={phase === 'sending'}
         />
 
-        {/* File chip */}
+        {/* File chip — flow row between textarea and controls. */}
         {selectedFile && (
-          <div className="absolute bottom-14 left-5 right-5">
+          <div className="shrink-0 px-5 pb-2">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-secondary text-secondary-foreground rounded-full text-xs max-w-full">
               {fileIcon(selectedFile.type)}
               <span className="truncate max-w-[200px]">{truncateName(selectedFile.name)}</span>
@@ -545,10 +551,10 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
             aria-hidden="true"
             className="absolute left-5 right-5 pointer-events-none italic text-base text-muted-foreground leading-[1.5] text-left"
             style={{
-              // Top offset = textarea padding (20px) + first prompt line
-              // height (~24px) + small breathing room. The first prompt
-              // line "Describe your trip. For example:" lives in the
-              // textarea's placeholder attribute above this overlay.
+              // Top offset = wrapper border (1px) + textarea padding (20px)
+              // + first prompt line (~24px) + small breathing room. The
+              // first prompt line "Describe your trip. For example:" lives
+              // in the textarea's placeholder attribute above this overlay.
               top: '52px',
               // Mask: keep the first two example lines (3 days … / Day 1)
               // fully visible, fade out everything from Day 2 onward.
@@ -565,11 +571,11 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
           </div>
         )}
 
-        {/* Bottom controls — gradient backdrop prevents textarea content from
-             visually overflowing onto the Attach button / CTA when user types
-             long inputs. */}
-        <div className="absolute bottom-0 left-0 right-0 pt-12 pb-4 px-5 flex items-center justify-between rounded-b-2xl bg-gradient-to-t from-card via-card to-transparent pointer-events-none">
-          <div className="flex items-center gap-3 pointer-events-auto">
+        {/* Bottom controls — sibling of textarea, occupies real flex-row
+            space. Native textarea scroll now keeps the caret visible
+            because controls no longer float on top of textarea content. */}
+        <div className="shrink-0 px-5 pt-2 pb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <input
               ref={fileInputRef}
               type="file"
@@ -601,7 +607,7 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
           <Button
             onClick={send}
             disabled={(!input.trim() && !selectedFile) || phase === 'sending'}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-full px-6 py-2 font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 pointer-events-auto"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-full px-6 py-2 font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
           >
             {messages.length === 0 ? 'Create quote →' : 'Send →'}
           </Button>
@@ -618,5 +624,6 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
     </div>
   )
 }
+
 
 
