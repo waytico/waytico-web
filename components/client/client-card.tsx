@@ -653,7 +653,7 @@ function ClientCardForm({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="Nickname"
-              placeholder='e.g. "Mike" or "Sarah 2 pax"'
+              placeholder='e.g. "Anna 1 pax" or "Nick Rockies"'
               value={form.nickname}
               onChange={(v) => setForm((s) => ({ ...s, nickname: v }))}
             />

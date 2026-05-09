@@ -11,6 +11,7 @@ import SmartClientPicker from '@/components/dashboard/smart-client-picker'
 import ClientCreateModal from '@/components/client/client-create-modal'
 import ClientCard from '@/components/client/client-card'
 import ClientCardModal from '@/components/client/client-card-modal'
+import { OnboardingTip } from '@/components/onboarding-tip'
 
 type Props = {
   projectId: string
@@ -121,43 +122,39 @@ export function ClientInfo({
 
   return (
     <section aria-label="Client info — operator only" className="w-full">
-      {/* No client → dark-on-orange banner, flush to the action bar above */}
+      {/* No client → compact card with accent header strip + search input
+          (mirrors ThemeSwitcher dropdown / OnboardingTip pattern) */}
       {!localClient && (
-        <div className="w-full bg-accent text-accent-foreground">
-          <div className="max-w-2xl mx-auto px-4 sm:px-5 py-3">
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <Lock size={13} className="shrink-0 opacity-90" aria-hidden="true" />
-                <h2 className="text-xs uppercase tracking-[0.12em] font-semibold truncate">
-                  Assign a client so this trip doesn&apos;t get lost
-                </h2>
-              </div>
-              {onClose && (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  aria-label="Close client info"
-                  className="inline-flex items-center justify-center w-6 h-6 rounded-full text-accent-foreground/80 hover:text-accent-foreground hover:bg-accent-foreground/10 transition-colors shrink-0"
-                >
-                  <X size={14} aria-hidden="true" />
-                </button>
-              )}
-            </div>
-            <div role="region" aria-label="Assign a client to this trip">
-              <SmartClientPicker
-                autoFocus={false}
-                placeholder="Search client by name, phone, email…"
-                onPick={(picked) => { void handleLink(picked) }}
-                onCreateNew={(draft) => {
-                  setCreateDraft(draft)
-                  setCreateOpen(true)
-                }}
-                onCreateRequest={(draft) => {
-                  setCreateDraft(draft)
-                  setCreateOpen(true)
-                }}
-              />
-            </div>
+        <div className="max-w-2xl mx-4 sm:mx-auto my-3 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+          <div className="relative">
+            <OnboardingTip>
+              Assign a client so this trip doesn&apos;t get lost
+            </OnboardingTip>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close client info"
+                className="absolute top-1.5 right-2 inline-flex items-center justify-center w-5 h-5 rounded-full text-accent-foreground/80 hover:text-accent-foreground hover:bg-accent-foreground/10 transition-colors"
+              >
+                <X size={13} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+          <div className="px-4 py-3" role="region" aria-label="Assign a client to this trip">
+            <SmartClientPicker
+              autoFocus={false}
+              placeholder="Search client by name, phone, email…"
+              onPick={(picked) => { void handleLink(picked) }}
+              onCreateNew={(draft) => {
+                setCreateDraft(draft)
+                setCreateOpen(true)
+              }}
+              onCreateRequest={(draft) => {
+                setCreateDraft(draft)
+                setCreateOpen(true)
+              }}
+            />
           </div>
         </div>
       )}
