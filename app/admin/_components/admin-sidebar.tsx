@@ -16,7 +16,6 @@ import { usePathname } from 'next/navigation'
 const NAV_ITEMS = [
   { href: '/admin', label: 'Stats' },
   { href: '/admin/photo-bank', label: 'Photo bank' },
-  { href: '/admin/photo-bank/crawl', label: 'Ad-hoc crawl' },
 ]
 
 export function AdminSidebar() {
