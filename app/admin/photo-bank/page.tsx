@@ -9,9 +9,10 @@
  * listing.service.listGlobalPhotos).
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { Loader2 } from 'lucide-react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { Loader2, X } from 'lucide-react'
 import { useAdminPhotoReview, type AuthedFetch } from '@/hooks/use-admin-photo-review'
 import { PhotoReviewCard } from '@/components/admin/photo-review-card'
 import { listGlobalCountries } from '@/lib/photo-bank-api'
@@ -40,7 +41,34 @@ export default function AdminPhotoBankPage() {
     [getToken],
   )
 
-  const [reviewed, setReviewed] = useState<'true' | 'false' | 'all'>('false')
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Stage 11 — when navigated here from /admin/photo-bank/crawl with
+  // a list of UUIDs ("Show photos from this crawl"), restrict the
+  // listing to those IDs and default `reviewed` to 'all' so newly-
+  // crawled-but-unreviewed rows show up alongside any already-reviewed.
+  const idsCsv = searchParams.get('ids') ?? ''
+  const ids = useMemo(
+    () =>
+      idsCsv
+        ? idsCsv
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => /^[0-9a-fA-F-]{36}$/.test(s))
+        : [],
+    [idsCsv],
+  )
+  const idsActive = ids.length > 0
+
+  const reviewedQuery = searchParams.get('reviewed') as
+    | 'true'
+    | 'false'
+    | 'all'
+    | null
+  const [reviewed, setReviewed] = useState<'true' | 'false' | 'all'>(
+    reviewedQuery ?? (idsActive ? 'all' : 'false'),
+  )
   const [search, setSearch] = useState('')
   const [city, setCity] = useState('')
   const [country, setCountry] = useState('')
@@ -57,8 +85,11 @@ export default function AdminPhotoBankPage() {
     search: debouncedSearch,
     city: debouncedCity,
     country,
-    perPage: 50,
+    ids: idsActive ? ids : undefined,
+    perPage: idsActive ? 100 : 50,
   })
+
+  const clearIdsFilter = () => router.push('/admin/photo-bank')
 
   return (
     <div>
@@ -68,6 +99,22 @@ export default function AdminPhotoBankPage() {
           {review.totalCount} photos · page {review.page} of {review.totalPages}
         </div>
       </header>
+
+      {idsActive && (
+        <div className="mb-3 flex items-center justify-between rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <span>
+            Showing <strong>{ids.length}</strong> photo{ids.length === 1 ? '' : 's'} from one
+            crawl run.
+          </span>
+          <button
+            type="button"
+            onClick={clearIdsFilter}
+            className="inline-flex items-center gap-1 rounded border border-amber-400 bg-white px-2 py-0.5 text-xs hover:bg-amber-100"
+          >
+            <X className="h-3 w-3" /> Clear
+          </button>
+        </div>
+      )}
 
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         <select
