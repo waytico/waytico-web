@@ -48,10 +48,17 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
 
   if (publicStatus !== 'quoted' && publicStatus !== 'active') return null
 
-  const message = `${title} — ${url}`
+  // WhatsApp and Telegram both render a rich preview card from the URL's
+  // OG tags (which include the trip title). Prepending the title to the
+  // message body would print it twice on the recipient's screen — once
+  // above the card, once inside it. Send the URL alone; let OG do the work.
+  //
+  // Email is structurally different: subject and body are separate fields
+  // and never duplicate visually, so the subject keeps the trip title
+  // (helpful for inbox preview lists) while the body stays a clean URL.
   const mailto = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(url)}`
-  const whatsapp = `https://wa.me/?text=${encodeURIComponent(message)}`
-  const telegram = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`
+  const whatsapp = `https://wa.me/?text=${encodeURIComponent(url)}`
+  const telegram = `https://t.me/share/url?url=${encodeURIComponent(url)}`
 
   const copy = async () => {
     try {
