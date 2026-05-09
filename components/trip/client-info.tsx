@@ -19,7 +19,7 @@ type Props = {
   internalNotes: string | null
   specialRequests: string | null
   saveProjectPatch: Mutations['saveProjectPatch']
-  onClientChanged?: (client: Client) => void
+  onClientChanged?: (client: Client | null) => void
   /**
    * When provided, renders a close (×) button in the top-right of the
    * block header. Used by themes that gate ClientInfo behind a toggle in
@@ -84,6 +84,7 @@ export function ClientInfo({
     const ok = await saveProjectPatch({ clientId: null })
     if (ok) {
       setLocalClient(null)
+      onClientChanged?.(null)
       toast.success('Client unlinked')
     }
   }
@@ -111,6 +112,7 @@ export function ClientInfo({
       }
       setLocalClient(null)
       setEditOpen(false)
+      onClientChanged?.(null)
       toast.success('Client deleted')
     } catch {
       toast.error('Network error')
@@ -119,32 +121,28 @@ export function ClientInfo({
 
   return (
     <section aria-label="Client info — operator only" className="w-full">
-      <div className="max-w-2xl mx-4 sm:mx-auto my-3 bg-highlight border border-accent/20 rounded-xl shadow-lg">
-        <div className="px-5 py-3">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-2 gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <Lock size={13} className="text-foreground/60 shrink-0" aria-hidden="true" />
-              <h2 className="text-xs uppercase tracking-[0.12em] font-semibold text-foreground/80 truncate">
-                {!localClient
-                  ? "Assign a client so this trip doesn't get lost"
-                  : 'Client'}
-              </h2>
+      {/* No client → dark-on-orange banner, flush to the action bar above */}
+      {!localClient && (
+        <div className="w-full bg-accent text-accent-foreground">
+          <div className="max-w-2xl mx-auto px-4 sm:px-5 py-3">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <Lock size={13} className="shrink-0 opacity-90" aria-hidden="true" />
+                <h2 className="text-xs uppercase tracking-[0.12em] font-semibold truncate">
+                  Assign a client so this trip doesn&apos;t get lost
+                </h2>
+              </div>
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close client info"
+                  className="inline-flex items-center justify-center w-6 h-6 rounded-full text-accent-foreground/80 hover:text-accent-foreground hover:bg-accent-foreground/10 transition-colors shrink-0"
+                >
+                  <X size={14} aria-hidden="true" />
+                </button>
+              )}
             </div>
-            {onClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Close client info"
-                className="inline-flex items-center justify-center w-6 h-6 rounded-full text-foreground/50 hover:text-foreground hover:bg-foreground/5 transition-colors shrink-0"
-              >
-                <X size={14} aria-hidden="true" />
-              </button>
-            )}
-          </div>
-
-          {/* No client → picker (heading hoisted to section header) */}
-          {!localClient && (
             <div role="region" aria-label="Assign a client to this trip">
               <SmartClientPicker
                 autoFocus={false}
@@ -160,10 +158,33 @@ export function ClientInfo({
                 }}
               />
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
-          {/* Client linked → view card */}
-          {localClient && (
+      {/* Client linked → cream card */}
+      {localClient && (
+        <div className="max-w-2xl mx-4 sm:mx-auto my-3 bg-highlight border border-accent/20 rounded-xl shadow-lg">
+          <div className="px-5 py-3">
+            <div className="flex items-center justify-between mb-2 gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Lock size={13} className="text-foreground/60 shrink-0" aria-hidden="true" />
+                <h2 className="text-xs uppercase tracking-[0.12em] font-semibold text-foreground/80 truncate">
+                  Client
+                </h2>
+              </div>
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close client info"
+                  className="inline-flex items-center justify-center w-6 h-6 rounded-full text-foreground/50 hover:text-foreground hover:bg-foreground/5 transition-colors shrink-0"
+                >
+                  <X size={14} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+
             <ClientCard
               mode="view"
               host="trip"
@@ -175,9 +196,9 @@ export function ClientInfo({
               onRequestSwitch={() => setSwitchOpen(true)}
               onRequestUnlink={handleUnlink}
             />
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Create modal — used by accent-prompt picker */}
       <ClientCreateModal
