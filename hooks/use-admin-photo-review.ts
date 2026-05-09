@@ -28,6 +28,10 @@ export interface ReviewFilters {
    *  "Show photos from this crawl" link on /admin/photo-bank/crawl).
    *  When set, search/city/country/category still AND with it. */
   ids?: string[]
+  /** Stage 11 — when explicitly false, the hook skips its fetch and
+   *  returns an empty result. Used by the browse view so the photo
+   *  grid doesn't load anything until a city is picked. Default true. */
+  enabled?: boolean
   page?: number
   perPage?: number
 }
@@ -65,7 +69,16 @@ export function useAdminPhotoReview(
   const busyRef = useRef<Set<string>>(new Set())
 
   const idsKey = (filters.ids ?? []).join(',')
+  const enabled = filters.enabled !== false
   const reload = useCallback(async () => {
+    if (!enabled) {
+      setPhotos([])
+      setTotalCount(0)
+      setTotalPages(1)
+      setFocusedId(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -105,6 +118,7 @@ export function useAdminPhotoReview(
     filters.country,
     filters.category,
     idsKey,
+    enabled,
   ])
 
   useEffect(() => {
