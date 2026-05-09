@@ -596,10 +596,8 @@ function ClientCardForm({
         : 'Save changes'
 
   const hintText =
-    mode === 'create'
-      ? host === 'trip'
-        ? 'For this trip'
-        : 'Adds them to your client list.'
+    mode === 'create' && host === 'dashboard'
+      ? 'Adds them to your client list.'
       : null
 
   return (
@@ -655,7 +653,7 @@ function ClientCardForm({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="Nickname"
-              placeholder="How you call them"
+              placeholder='e.g. "Mike" or "Sarah 2 pax"'
               value={form.nickname}
               onChange={(v) => setForm((s) => ({ ...s, nickname: v }))}
             />

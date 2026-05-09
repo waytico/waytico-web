@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from '@clerk/nextjs'
 import { Plus } from 'lucide-react'
 import SmartClientInput, { detectIdentity, type SmartDetection } from './smart-client-input'
@@ -64,12 +65,18 @@ export default function SmartClientPicker({
   const autoCreateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastAutoQueryRef = useRef<string | null>(null)
 
-  // Outside-click closes dropdown.
+  // Outside-click closes dropdown. The dropdown lives in a body portal,
+  // so contains() on wrapRef alone returns false for clicks inside it.
+  // We check both the wrapper and any ancestor tagged as the picker
+  // dropdown (data-smart-picker-dropdown set on the portal node).
   useEffect(() => {
     if (!open) return
     function onDown(e: MouseEvent) {
-      if (!wrapRef.current) return
-      if (!wrapRef.current.contains(e.target as Node)) setOpen(false)
+      const target = e.target as HTMLElement | null
+      if (!target) return
+      if (wrapRef.current && wrapRef.current.contains(target)) return
+      if (target.closest('[data-smart-picker-dropdown="1"]')) return
+      setOpen(false)
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
@@ -163,27 +170,46 @@ export default function SmartClientPicker({
 
   const showDropdown = open && value.trim().length >= MIN_QUERY
 
-  return (
-    <div ref={wrapRef} className="relative">
-      <SmartClientInput
-        value={value}
-        onChange={(v) => {
-          setValue(v)
-          if (!open) setOpen(true)
-        }}
-        onDetect={(d) => {
-          detectionRef.current = d
-        }}
-        placeholder={placeholder ?? 'Search client by name, phone, email…'}
-        autoFocus={autoFocus}
-        inputRef={inputRef}
-      />
+  // Mount dropdown into document.body so it escapes any ancestor that
+  // clips overflow (sticky bars, magazine fixed-position ClientInfo
+  // wrapper, etc.). Position is measured off the input wrapper.
+  const [coords, setCoords] = useState<{ left: number; top: number; width: number } | null>(null)
+  const [portalReady, setPortalReady] = useState(false)
+  useEffect(() => setPortalReady(true), [])
 
-      {showDropdown && (
+  useLayoutEffect(() => {
+    if (!showDropdown || !wrapRef.current) return
+    const update = () => {
+      const r = wrapRef.current!.getBoundingClientRect()
+      setCoords({ left: r.left, top: r.bottom + 4, width: r.width })
+    }
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  }, [showDropdown])
+
+  const dropdown = showDropdown && coords && portalReady
+    ? createPortal(
         <div
           role="listbox"
           aria-label="Client search results"
-          className="absolute z-30 left-0 right-0 mt-1 rounded-md border border-border bg-card shadow-lg overflow-hidden"
+          ref={(el) => {
+            // Tag the portal node so the outside-click handler can
+            // recognise clicks inside the dropdown as still "inside"
+            // the picker (mousedown handler reads this).
+            if (el) (el as any).dataset.smartPickerDropdown = '1'
+          }}
+          style={{
+            position: 'fixed',
+            left: coords.left,
+            top: coords.top,
+            width: coords.width,
+          }}
+          className="z-[60] rounded-md border border-border bg-card shadow-lg overflow-hidden"
         >
           {loading && (
             <div className="px-3 py-2 text-xs text-muted-foreground">Searching…</div>
@@ -245,8 +271,27 @@ export default function SmartClientPicker({
               </span>
             </button>
           )}
-        </div>
-      )}
+        </div>,
+        document.body,
+      )
+    : null
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <SmartClientInput
+        value={value}
+        onChange={(v) => {
+          setValue(v)
+          if (!open) setOpen(true)
+        }}
+        onDetect={(d) => {
+          detectionRef.current = d
+        }}
+        placeholder={placeholder ?? 'Search client by name, phone, email…'}
+        autoFocus={autoFocus}
+        inputRef={inputRef}
+      />
+      {dropdown}
     </div>
   )
 }
