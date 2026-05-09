@@ -18,6 +18,7 @@ import { PhotoReviewCard } from '@/components/admin/photo-review-card'
 import { listGlobalCountries } from '@/lib/photo-bank-api'
 import { CrawlAccordion } from './_components/crawl-accordion'
 import { BrowsePanel } from './_components/browse-panel'
+import { ReclassifyPanel } from './_components/reclassify-panel'
 
 const PER_PAGE_OPTIONS = [25, 50, 100] as const
 
@@ -113,31 +114,36 @@ export default function AdminPhotoBankPage() {
         <CrawlAccordion />
       </div>
 
-      <div className="mb-3 flex items-center gap-1 border-b border-zinc-200">
-        <button
-          type="button"
-          onClick={() => setView('review')}
-          className={
-            'border-b-2 px-3 py-2 text-sm font-medium transition-colors ' +
-            (view === 'review'
-              ? 'border-zinc-900 text-zinc-900'
-              : 'border-transparent text-zinc-500 hover:text-zinc-700')
-          }
-        >
-          Review queue
-        </button>
-        <button
-          type="button"
-          onClick={() => setView('browse')}
-          className={
-            'border-b-2 px-3 py-2 text-sm font-medium transition-colors ' +
-            (view === 'browse'
-              ? 'border-zinc-900 text-zinc-900'
-              : 'border-transparent text-zinc-500 hover:text-zinc-700')
-          }
-        >
-          Browse library
-        </button>
+      <div className="mb-3 flex items-center justify-between gap-2 border-b border-zinc-200">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setView('review')}
+            className={
+              'border-b-2 px-3 py-2 text-sm font-medium transition-colors ' +
+              (view === 'review'
+                ? 'border-zinc-900 text-zinc-900'
+                : 'border-transparent text-zinc-500 hover:text-zinc-700')
+            }
+          >
+            Review queue
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('browse')}
+            className={
+              'border-b-2 px-3 py-2 text-sm font-medium transition-colors ' +
+              (view === 'browse'
+                ? 'border-zinc-900 text-zinc-900'
+                : 'border-transparent text-zinc-500 hover:text-zinc-700')
+            }
+          >
+            Browse library
+          </button>
+        </div>
+        <div className="pb-1">
+          <ReclassifyPanel />
+        </div>
       </div>
 
       {view === 'browse' && <BrowsePanel />}
