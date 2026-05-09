@@ -42,6 +42,8 @@ export interface GlobalPhotoItem {
   mime_type?: string | null
   reviewed_at?: string | null
   created_at: string
+  /** Stage 11 — number of times this row was used in trip_media. */
+  usage_count?: number
 }
 
 export interface GlobalListResponse {
@@ -93,6 +95,47 @@ export async function listGlobalCountries(
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const j = (await res.json()) as { countries: string[] }
   return Array.isArray(j.countries) ? j.countries : []
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Stage 11 — admin browse view: country / city aggregates.
+// Both endpoints are gated by ADMIN_EMAILS on the backend.
+// ─────────────────────────────────────────────────────────────────────
+
+export interface CountryStats {
+  country: string
+  photo_count: number
+  city_count: number
+}
+
+export async function listAdminCountryStats(
+  authedFetch: AuthedFetch,
+): Promise<CountryStats[]> {
+  const res = await authedFetch(
+    `${API_URL}/api/admin/global-bank/countries-stats`,
+  )
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const j = (await res.json()) as { countries: CountryStats[] }
+  return Array.isArray(j.countries) ? j.countries : []
+}
+
+export interface CityStats {
+  city: string
+  photo_count: number
+  last_crawled_at: string | null
+}
+
+export async function listAdminCitiesByCountry(
+  authedFetch: AuthedFetch,
+  country: string,
+): Promise<CityStats[]> {
+  const sp = new URLSearchParams({ country })
+  const res = await authedFetch(
+    `${API_URL}/api/admin/global-bank/cities?${sp.toString()}`,
+  )
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const j = (await res.json()) as { cities: CityStats[] }
+  return Array.isArray(j.cities) ? j.cities : []
 }
 
 // ─────────────────────────────────────────────────────────────────────
