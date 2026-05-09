@@ -60,7 +60,7 @@ export default function ClientCardModal(props: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={props.mode === 'create' ? 'New client' : 'Edit client'}
-        className="relative w-full max-w-lg shadow-xl"
+        className="relative w-full max-w-md shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <ClientCard

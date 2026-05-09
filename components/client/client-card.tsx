@@ -598,8 +598,8 @@ function ClientCardForm({
   const hintText =
     mode === 'create'
       ? host === 'trip'
-        ? 'Fill what you have — saving links them to this trip.'
-        : "Fill what you have — they'll be added to your client list."
+        ? 'For this trip'
+        : 'Adds them to your client list.'
       : null
 
   return (
@@ -617,9 +617,14 @@ function ClientCardForm({
         >
           {mode === 'create' ? <UserPlus size={18} /> : client ? clientInitials(client) : <User size={18} />}
         </span>
-        <h2 className="text-sm font-semibold text-foreground flex-1 min-w-0 truncate">
-          {titleText}
-        </h2>
+        <div className="flex flex-col flex-1 min-w-0">
+          <h2 className="text-sm font-semibold text-foreground truncate">
+            {titleText}
+          </h2>
+          {hintText && !dedupNotice && (
+            <span className="text-[11px] text-foreground/55 truncate">{hintText}</span>
+          )}
+        </div>
         {onClose && (
           <button
             type="button"
@@ -644,22 +649,19 @@ function ClientCardForm({
             </div>
           </div>
         )}
-        {hintText && !dedupNotice && (
-          <div className="rounded-md border border-accent/30 bg-accent/5 px-3 py-2 text-xs text-foreground/80 italic">
-            {hintText}
-          </div>
-        )}
 
         {/* Identity */}
         <FormSection title="Identity">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="Nickname"
+              placeholder="How you call them"
               value={form.nickname}
               onChange={(v) => setForm((s) => ({ ...s, nickname: v }))}
             />
             <Input
               label="Name"
+              placeholder="Full name"
               value={form.name}
               onChange={(v) => setForm((s) => ({ ...s, name: v }))}
             />
@@ -874,9 +876,9 @@ function Input({
   highlighted?: boolean
 }) {
   return (
-    <label className="flex items-center gap-2">
-      {Icon && <Icon size={14} className="text-foreground/55 shrink-0" />}
-      <span className="w-20 text-[10px] uppercase tracking-wider text-foreground/55 shrink-0">
+    <label className="flex flex-col gap-1 min-w-0">
+      <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-foreground/55">
+        {Icon && <Icon size={12} className="text-foreground/55 shrink-0" />}
         {label}
       </span>
       <input
@@ -884,7 +886,7 @@ function Input({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`flex-1 px-2.5 h-8 text-sm bg-background border rounded-md focus:outline-none focus:ring-1 focus:ring-accent ${highlighted ? 'border-accent' : 'border-border'}`}
+        className={`w-full min-w-0 px-2.5 h-8 text-sm bg-background border rounded-md focus:outline-none focus:ring-1 focus:ring-accent ${highlighted ? 'border-accent' : 'border-border'}`}
       />
     </label>
   )
@@ -906,9 +908,9 @@ function Textarea({
   rows?: number
 }) {
   return (
-    <label className="flex items-start gap-2">
-      {Icon && <Icon size={14} className="text-foreground/55 shrink-0 mt-2" />}
-      <span className="w-20 text-[10px] uppercase tracking-wider text-foreground/55 shrink-0 mt-2">
+    <label className="flex flex-col gap-1 min-w-0">
+      <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-foreground/55">
+        {Icon && <Icon size={12} className="text-foreground/55 shrink-0" />}
         {label}
       </span>
       <textarea
@@ -916,7 +918,7 @@ function Textarea({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="flex-1 px-2.5 py-1.5 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent resize-y"
+        className="w-full min-w-0 px-2.5 py-1.5 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent resize-y"
       />
     </label>
   )
