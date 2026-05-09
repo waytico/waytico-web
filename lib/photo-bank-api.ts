@@ -19,6 +19,9 @@ const API_URL =
 export interface GlobalPhotoItem {
   id: string
   cdn_url: string
+  /** Stage 11 — pre-resized 400px JPEG. NULL until crawler ran with
+   *  thumbnail support OR until backfill CLI processed the row. */
+  thumbnail_url?: string | null
   ai_categories: string[]
   ai_tags: string[]
   ai_landmarks: string[]
@@ -31,6 +34,12 @@ export interface GlobalPhotoItem {
   attribution_html: string | null
   ai_quality_score: number | null
   is_hero_candidate: boolean
+  ai_processed?: boolean
+  cleanup_processed?: boolean
+  width?: number | null
+  height?: number | null
+  file_size?: number | null
+  mime_type?: string | null
   reviewed_at?: string | null
   created_at: string
 }
@@ -49,6 +58,9 @@ export interface ListGlobalFilters {
   city?: string
   country?: string
   reviewed?: 'true' | 'false' | 'all'
+  /** Stage 11 — restrict listing to specific photo IDs. CSV-encoded
+   *  on the wire; the listing endpoint filters via `id = ANY(...)`. */
+  ids?: string[]
   page?: number
   perPage?: number
 }
@@ -65,6 +77,7 @@ export async function listGlobalPhotos(
   if (filters.city) sp.set('city', filters.city)
   if (filters.country) sp.set('country', filters.country)
   if (filters.reviewed) sp.set('reviewed', filters.reviewed)
+  if (filters.ids && filters.ids.length > 0) sp.set('ids', filters.ids.join(','))
   sp.set('page', String(filters.page ?? 1))
   sp.set('perPage', String(filters.perPage ?? 50))
   const url = `${API_URL}/api/global-bank?${sp.toString()}`
