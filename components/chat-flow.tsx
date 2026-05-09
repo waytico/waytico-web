@@ -573,9 +573,11 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
               // it doesn't visually dominate the card.
             }}
           >
-            {PLACEHOLDER_EXAMPLE_BODY.map((line, i) => (
-              <p key={i} className="m-0 text-left">{line || '\u00A0'}</p>
-            ))}
+            {PLACEHOLDER_EXAMPLE_BODY.map((line, i) =>
+              line === ''
+                ? <div key={i} aria-hidden="true" style={{ height: 12 }} />
+                : <p key={i} className="m-0 text-left">{line}</p>
+            )}
           </div>
         )}
 
@@ -632,6 +634,7 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
     </div>
   )
 }
+
 
 
 
