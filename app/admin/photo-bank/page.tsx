@@ -16,6 +16,7 @@ import { Loader2, X } from 'lucide-react'
 import { useAdminPhotoReview, type AuthedFetch } from '@/hooks/use-admin-photo-review'
 import { PhotoReviewCard } from '@/components/admin/photo-review-card'
 import { listGlobalCountries } from '@/lib/photo-bank-api'
+import { CrawlAccordion } from './_components/crawl-accordion'
 
 const PER_PAGE_OPTIONS = [25, 50, 100] as const
 
@@ -93,6 +94,10 @@ export default function AdminPhotoBankPage() {
 
   return (
     <div>
+      <div className="mb-4">
+        <CrawlAccordion />
+      </div>
+
       <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-lg font-medium">Photo bank — admin review</h1>
         <div className="text-sm text-zinc-500">
