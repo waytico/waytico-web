@@ -24,6 +24,10 @@ export interface ReviewFilters {
   city?: string
   country?: string
   category?: string
+  /** Stage 11 — restrict listing to specific photo IDs (used by the
+   *  "Show photos from this crawl" link on /admin/photo-bank/crawl).
+   *  When set, search/city/country/category still AND with it. */
+  ids?: string[]
   page?: number
   perPage?: number
 }
@@ -63,6 +67,7 @@ export function useAdminPhotoReview(
   const [focusedId, setFocusedId] = useState<string | null>(null)
   const busyRef = useRef<Set<string>>(new Set())
 
+  const idsKey = (filters.ids ?? []).join(',')
   const reload = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -75,6 +80,7 @@ export function useAdminPhotoReview(
       if (filters.city) sp.set('city', filters.city)
       if (filters.country) sp.set('country', filters.country)
       if (filters.category) sp.set('category', filters.category)
+      if (idsKey) sp.set('ids', idsKey)
       const res = await authedFetch(`${API_URL}/api/admin/global-bank/photos?${sp.toString()}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const j = (await res.json()) as {
@@ -101,6 +107,7 @@ export function useAdminPhotoReview(
     filters.city,
     filters.country,
     filters.category,
+    idsKey,
   ])
 
   useEffect(() => {
