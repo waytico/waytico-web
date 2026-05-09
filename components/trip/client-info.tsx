@@ -3,11 +3,10 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '@clerk/nextjs'
-import { Lock, Sparkles, X } from 'lucide-react'
+import { Lock, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiFetch } from '@/lib/api'
 import type { Client, Mutations } from './trip-types'
-import { OnboardingTip } from '@/components/onboarding-tip'
 import SmartClientPicker from '@/components/dashboard/smart-client-picker'
 import ClientCreateModal from '@/components/client/client-create-modal'
 import ClientCard from '@/components/client/client-card'
@@ -120,53 +119,36 @@ export function ClientInfo({
 
   return (
     <section aria-label="Client info — operator only" className="w-full">
-      <div className="max-w-4xl mx-4 sm:mx-auto my-3 bg-highlight border border-accent/20 rounded-xl overflow-hidden shadow-lg">
-        <OnboardingTip>
-          Your client&apos;s record. Edit it here or from your client list in the
-          dashboard — same card, both places.
-        </OnboardingTip>
+      <div className="max-w-2xl mx-4 sm:mx-auto my-3 bg-highlight border border-accent/20 rounded-xl shadow-lg">
         <div className="px-5 py-3">
           {/* Header */}
           <div className="flex items-center justify-between mb-2 gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <Lock size={13} className="text-foreground/60 shrink-0" aria-hidden="true" />
-              <h2 className="text-xs uppercase tracking-[0.12em] font-semibold text-foreground/80">
-                Client
+              <h2 className="text-xs uppercase tracking-[0.12em] font-semibold text-foreground/80 truncate">
+                {!localClient
+                  ? "Assign a client so this trip doesn't get lost"
+                  : 'Client'}
               </h2>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-accent bg-accent/10 px-2 py-0.5 rounded-full whitespace-nowrap">
-                For your eyes only
-              </span>
-              {onClose && (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  aria-label="Close client info"
-                  className="inline-flex items-center justify-center w-6 h-6 rounded-full text-foreground/50 hover:text-foreground hover:bg-foreground/5 transition-colors"
-                >
-                  <X size={14} aria-hidden="true" />
-                </button>
-              )}
-            </div>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close client info"
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full text-foreground/50 hover:text-foreground hover:bg-foreground/5 transition-colors shrink-0"
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            )}
           </div>
 
-          {/* No client → accent prompt */}
+          {/* No client → picker (heading hoisted to section header) */}
           {!localClient && (
-            <div
-              role="region"
-              aria-label="Assign a client to this trip"
-              className="rounded-lg border border-accent/30 border-l-[3px] border-l-accent bg-accent/5 p-4"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles size={14} className="text-accent shrink-0" aria-hidden="true" />
-                <p className="text-sm font-medium text-foreground/90">
-                  Assign a client so this trip doesn&apos;t get lost
-                </p>
-              </div>
+            <div role="region" aria-label="Assign a client to this trip">
               <SmartClientPicker
                 autoFocus={false}
-                placeholder="Search by name, phone, email…"
+                placeholder="Search client by name, phone, email…"
                 onPick={(picked) => { void handleLink(picked) }}
                 onCreateNew={(draft) => {
                   setCreateDraft(draft)
@@ -312,7 +294,7 @@ function SwitchClientDialog({
         <div className="p-5">
           <SmartClientPicker
             autoFocus
-            placeholder="Search by name, phone, email…"
+            placeholder="Search client by name, phone, email…"
             excludeIds={excludeIds}
             onPick={onPick}
             onCreateRequest={onCreateRequest}

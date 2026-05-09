@@ -174,7 +174,7 @@ export default function SmartClientPicker({
         onDetect={(d) => {
           detectionRef.current = d
         }}
-        placeholder={placeholder ?? 'Search by phone, email, name…'}
+        placeholder={placeholder ?? 'Search client by name, phone, email…'}
         autoFocus={autoFocus}
         inputRef={inputRef}
       />
