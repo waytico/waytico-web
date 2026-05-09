@@ -101,7 +101,7 @@ export default function SmartClientInput({
         placeholder={placeholder}
         className={
           className ??
-          'w-full px-3 h-10 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent'
+          'w-full px-3 h-10 text-sm text-foreground bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent'
         }
       />
       {detectionLabel && (
