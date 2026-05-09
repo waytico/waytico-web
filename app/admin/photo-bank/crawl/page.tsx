@@ -31,7 +31,15 @@ interface CityEntry {
   name: string
   status: CityPhase
   progress: { phase: CityPhase; current: number; total: number }
-  result?: { fetched: number; approved: number; rejected_deleted: number }
+  result?: {
+    fetched: number
+    approved: number
+    rejected_deleted: number
+    /** Stage 11 — UUIDs of inserted rows for this city, mirrored from
+     *  the per-city sub-state. Empty when the run errored or the
+     *  backend predates the column. */
+    photoIds: string[]
+  }
   error?: string
 }
 
@@ -122,6 +130,16 @@ function CityRow({ city }: { city: CityEntry }) {
         {detail && (
           <span className="ml-2 text-zinc-500">— {detail}</span>
         )}
+        {city.status === 'done' &&
+          city.result &&
+          city.result.photoIds.length > 0 && (
+            <a
+              href={`/admin/photo-bank?ids=${city.result.photoIds.join(',')}&reviewed=all`}
+              className="ml-2 text-xs text-emerald-700 underline hover:text-emerald-900"
+            >
+              show →
+            </a>
+          )}
       </span>
     </div>
   )
@@ -366,12 +384,37 @@ export default function AdminCrawlPage() {
                 Total: {totals.fetched} fetched, {totals.kept} kept,{' '}
                 {totals.deleted} deleted
               </div>
-              <a
-                href="/admin/photo-bank"
-                className="mt-2 inline-block rounded border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50"
-              >
-                Open photo bank to review →
-              </a>
+              {(() => {
+                const allIds = state.cities.flatMap(
+                  (c) => c.result?.photoIds ?? [],
+                )
+                if (allIds.length === 0) {
+                  return (
+                    <a
+                      href="/admin/photo-bank"
+                      className="mt-2 inline-block rounded border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50"
+                    >
+                      Open photo bank to review →
+                    </a>
+                  )
+                }
+                return (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <a
+                      href={`/admin/photo-bank?ids=${allIds.join(',')}&reviewed=all`}
+                      className="inline-block rounded border border-emerald-400 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-800 hover:bg-emerald-100"
+                    >
+                      Show these {allIds.length} photos →
+                    </a>
+                    <a
+                      href="/admin/photo-bank"
+                      className="inline-block rounded border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50"
+                    >
+                      Open full photo bank
+                    </a>
+                  </div>
+                )
+              })()}
             </div>
           )}
         </div>
