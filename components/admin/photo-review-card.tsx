@@ -57,6 +57,9 @@ export interface ReviewPhoto {
   license: string
   attribution_html: string | null
   reviewed_at: string | null
+  /** Stage 11 — number of times this row was used in trip_media.
+   *  Surfaced on the browse view as a "Used in N trips" badge. */
+  usage_count?: number
 }
 
 export interface PhotoPatch {
@@ -328,6 +331,14 @@ export function PhotoReviewCard(props: PhotoReviewCardProps) {
         {photo.city && (
           <span className="absolute right-1 bottom-7 rounded bg-white/90 px-1.5 py-0.5 text-[10px] text-zinc-700">
             {photo.city}
+          </span>
+        )}
+        {typeof photo.usage_count === 'number' && photo.usage_count > 0 && (
+          <span
+            title={`Used in ${photo.usage_count} trip${photo.usage_count === 1 ? '' : 's'}`}
+            className="absolute left-1 bottom-1 rounded bg-violet-700/95 px-1.5 py-0.5 text-[10px] font-medium text-white"
+          >
+            ×{photo.usage_count}
           </span>
         )}
         <span className="absolute bottom-1 right-1">
