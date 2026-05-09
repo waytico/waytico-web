@@ -56,16 +56,20 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 //     overlay is hidden as soon as the user types or focuses-and-types.
 //   - SIGNEDIN: short prompt — operators already know the product, no
 //     example needed.
-const PLACEHOLDER_SIGNEDOUT = `Paris for 2`
-const PLACEHOLDER_SIGNEDIN = `Paris for 2`
+const PLACEHOLDER_SIGNEDOUT = `Describe your trip — like this:`
+const PLACEHOLDER_SIGNEDIN = `Describe your trip — like this:`
 
-// Example body shown as a visual overlay below the native placeholder
-// (idle state, empty input). Italic — same treatment as the operator's
-// actual input. First line "Paris for 2" lives in the native
-// placeholder above; this body picks up from the day list. The empty
-// string before "Hotel:" creates a visual break matching the gap
-// between the native placeholder and the first day line.
+// Italic example overlay shown below the native placeholder while the
+// input is empty. The native placeholder above ("Describe your trip
+// — like this:") plays the role of an inviting prompt — upright, in
+// the standard placeholder colour. This body is the actual example
+// the operator might type, rendered italic and slightly dimmer so the
+// hierarchy reads prompt → example. The overlay starts with the
+// trip headline ("Paris for 2") so the whole example is visibly
+// "what you would write here", not split across two render layers.
 const PLACEHOLDER_EXAMPLE_BODY = [
+  'Paris for 2',
+  '',
   'June 22 — Marais and Seine',
   'June 23 — Louvre and Saint-Germain with a Sainte-Chapelle concert',
   'June 24 — Montmartre and a farewell brunch',
@@ -553,13 +557,15 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
         {messages.length === 0 && !input && !selectedFile && (
           <div
             aria-hidden="true"
-            className="absolute left-5 right-5 pointer-events-none italic text-base text-muted-foreground leading-[1.5] text-left"
+            className="absolute left-5 right-5 pointer-events-none italic text-base text-muted-foreground/60 leading-[1.5] text-left"
             style={{
-              // Top offset = wrapper border (1px) + textarea padding (20px)
-              // + first prompt line (~24px) + small breathing room. The
-              // first line "Paris for 2" lives in the textarea's
-              // placeholder attribute above this overlay.
-              top: '52px',
+              // Top offset = wrapper border (1px) + textarea padding
+              // (20px) + native prompt line (~24px) + ~24px gap so the
+              // example reads as a separate block beneath the prompt.
+              // Native prompt ("Describe your trip — like this:") lives
+              // in the textarea's placeholder attribute above this
+              // overlay and renders upright at full muted-foreground.
+              top: '68px',
               // No mask: example is now 5 short lines + a visual break.
               // The labels Hotel: / Price: make those lines meaningful
               // signposts (not a decorative tail) — fade was hiding the
@@ -626,6 +632,7 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
     </div>
   )
 }
+
 
 
 
