@@ -1715,76 +1715,29 @@ export default function TripPageClient({ slug, initialData }: Props) {
   // Price section now renders both modes, dropdown, and headline editor
   // internally — see components/trip/price.tsx. trip-page-client only
   // forwards raw price fields + a single visibility flag.
-  const priceVisible = ed || pricePerPersonNum != null || priceTotalNum != null
+  const priceVisible =
+    ed ||
+    (pricePerPersonNum != null && pricePerPersonNum > 0) ||
+    (priceTotalNum != null && priceTotalNum > 0)
 
-  // Effective terms: per-trip override wins, otherwise inherit from the
-  // brand-level Default Terms set on the owner profile. This makes
-  // edits to brand_terms reflect on the trip page in real time without
-  // having to copy text into every trip — and per-trip terms still take
-  // precedence whenever they exist (operator override).
+  // Terms — per-trip only, no live brand fallback. New trips get a
+  // one-time snapshot of users.brand_terms at create time (see
+  // trips.service.ts), but once the operator clears the field on a
+  // trip the section disappears for the client. To re-introduce
+  // terms, the operator pastes / types into the trip directly.
   const tripTermsTrimmed = (p.terms || '').trim()
-  const brandTermsTrimmed = (owner?.brand_terms || '').trim()
-  const effectiveTerms = tripTermsTrimmed || brandTermsTrimmed || null
-  const termsAreInherited = !tripTermsTrimmed && !!brandTermsTrimmed
+  const effectiveTerms = tripTermsTrimmed || null
 
   const termsBodySlot: ReactNode = ed ? (
-    tripTermsTrimmed ? (
-      // Operator has set a per-trip override — let them edit it directly.
-      <EditableField
-        as="multiline"
-        editable
-        value={p.terms}
-        placeholder="Click to add terms"
-        rows={6}
-        className="w-full"
-        onSave={(v) => saveProjectPatch({ terms: v })}
-      />
-    ) : termsAreInherited ? (
-      // Inherited from brand_terms. Render the resolved text for clarity,
-      // plus an explicit "Override for this trip" button that, when
-      // clicked, seeds the override field with the current brand text so
-      // the operator can tweak it instead of starting from a blank slate.
-      <>
-        <DescriptionParagraphs text={effectiveTerms} preserveLineBreaks />
-        <p
-          style={{
-            fontSize: 12,
-            color: 'var(--ink-mute)',
-            marginTop: 12,
-            fontStyle: 'italic',
-          }}
-        >
-          Showing your brand default terms.{' '}
-          <button
-            type="button"
-            onClick={() => saveProjectPatch({ terms: brandTermsTrimmed })}
-            style={{
-              color: 'var(--accent)',
-              textDecoration: 'underline',
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              font: 'inherit',
-              fontStyle: 'italic',
-            }}
-          >
-            Override for this trip
-          </button>
-        </p>
-      </>
-    ) : (
-      // No trip override and no brand default — placeholder editor.
-      <EditableField
-        as="multiline"
-        editable
-        value={p.terms}
-        placeholder="Click to add terms"
-        rows={4}
-        className="w-full"
-        onSave={(v) => saveProjectPatch({ terms: v })}
-      />
-    )
+    <EditableField
+      as="multiline"
+      editable
+      value={p.terms}
+      placeholder="Click to add terms"
+      rows={tripTermsTrimmed ? 6 : 4}
+      className="w-full"
+      onSave={(v) => saveProjectPatch({ terms: v })}
+    />
   ) : (
     <DescriptionParagraphs text={effectiveTerms} preserveLineBreaks />
   )

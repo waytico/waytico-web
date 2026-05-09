@@ -204,8 +204,28 @@ export function TripContacts({ owner, operatorContact, editable, saveProjectPatc
               />
             )}
             <div className="tp-contacts-identity">
-              {brandName && (
-                <p className="tp-contacts-brand-name">{brandName}</p>
+              {editable ? (
+                <EditableField
+                  as="text"
+                  editable
+                  value={brandName}
+                  placeholder="Add company name"
+                  className="tp-contacts-brand-name"
+                  onSave={(v) => {
+                    const next = v.trim() ? v.trim() : null
+                    return saveValue(
+                      'name',
+                      next,
+                      operatorContact,
+                      saveProjectPatch,
+                    )
+                  }}
+                  maxLength={200}
+                />
+              ) : (
+                brandName && (
+                  <p className="tp-contacts-brand-name">{brandName}</p>
+                )
               )}
               {tagline && (
                 <p className="tp-contacts-brand-tagline">{tagline}</p>
@@ -455,7 +475,7 @@ function ChannelTextRow({
 /* ──────────────────────────────────────────────────────────────────── */
 
 async function saveValue(
-  key: ChannelKey | 'heading' | 'subheading',
+  key: ChannelKey | 'heading' | 'subheading' | 'name',
   next: string | null,
   current: OperatorContact,
   saveProjectPatch?: Mutations['saveProjectPatch'],
@@ -581,8 +601,28 @@ function ContactsMagazine({
                 className="tp-mag-contacts__logo"
               />
             )}
-            {brandName && (
-              <p className="tp-mag-contacts__brand-name">{brandName}</p>
+            {editable ? (
+              <EditableField
+                as="text"
+                editable
+                value={brandName}
+                placeholder="Add company name"
+                className="tp-mag-contacts__brand-name"
+                onSave={(v) => {
+                  const next = v.trim() ? v.trim() : null
+                  return saveValue(
+                    'name',
+                    next,
+                    operatorContact,
+                    saveProjectPatch,
+                  )
+                }}
+                maxLength={200}
+              />
+            ) : (
+              brandName && (
+                <p className="tp-mag-contacts__brand-name">{brandName}</p>
+              )
             )}
             {tagline && (
               <p className="tp-mag-contacts__brand-tagline">{tagline}</p>
