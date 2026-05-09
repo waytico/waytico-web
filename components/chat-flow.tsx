@@ -64,7 +64,6 @@ const PLACEHOLDER_SIGNEDIN = `2 people in Paris`
 // actual input. First line "2 people in Paris" lives in the native
 // placeholder above; this body picks up from the day list.
 const PLACEHOLDER_EXAMPLE_BODY = [
-  '',
   'June 22, Marais and Seine',
   'June 23, Louvre and Saint-Germain with a Sainte-Chapelle concert',
   'June 24, Montmartre and a farewell brunch.',
@@ -558,13 +557,13 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
               // first line "2 people in Paris" lives in the textarea's
               // placeholder attribute above this overlay.
               top: '52px',
-              // Mask: keep the day list (4 visual lines × ~24px = 96px)
-              // fully visible; fade the trailing hotel + price lines so
+              // Mask: keep the 3 day-lines fully visible (3 × ~24px =
+              // 72px solid); fade the trailing hotel + price lines so
               // the block tapers off rather than dominating the card.
               maskImage:
-                'linear-gradient(to bottom, black 0, black 96px, transparent 168px)',
+                'linear-gradient(to bottom, black 0, black 72px, transparent 144px)',
               WebkitMaskImage:
-                'linear-gradient(to bottom, black 0, black 96px, transparent 168px)',
+                'linear-gradient(to bottom, black 0, black 72px, transparent 144px)',
             }}
           >
             {PLACEHOLDER_EXAMPLE_BODY.map((line, i) => (
@@ -626,6 +625,7 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
     </div>
   )
 }
+
 
 
 
