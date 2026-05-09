@@ -56,19 +56,22 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 //     overlay is hidden as soon as the user types or focuses-and-types.
 //   - SIGNEDIN: short prompt — operators already know the product, no
 //     example needed.
-const PLACEHOLDER_SIGNEDOUT = `2 people in Paris`
-const PLACEHOLDER_SIGNEDIN = `2 people in Paris`
+const PLACEHOLDER_SIGNEDOUT = `Paris for 2`
+const PLACEHOLDER_SIGNEDIN = `Paris for 2`
 
 // Example body shown as a visual overlay below the native placeholder
 // (idle state, empty input). Italic — same treatment as the operator's
-// actual input. First line "2 people in Paris" lives in the native
-// placeholder above; this body picks up from the day list.
+// actual input. First line "Paris for 2" lives in the native
+// placeholder above; this body picks up from the day list. The empty
+// string before "Hotel:" creates a visual break matching the gap
+// between the native placeholder and the first day line.
 const PLACEHOLDER_EXAMPLE_BODY = [
-  'June 22, Marais and Seine',
-  'June 23, Louvre and Saint-Germain with a Sainte-Chapelle concert',
-  'June 24, Montmartre and a farewell brunch.',
-  'Hôtel des Deux Pavillons in the Marais.',
-  '€1,800 total, private transfers included.',
+  'June 22 — Marais and Seine',
+  'June 23 — Louvre and Saint-Germain with a Sainte-Chapelle concert',
+  'June 24 — Montmartre and a farewell brunch',
+  '',
+  'Hotel: Hôtel des Deux Pavillons in the Marais',
+  'Price: €1,800 total, private transfers included',
 ]
 
 function fileIcon(mime: string) {
@@ -554,16 +557,14 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
             style={{
               // Top offset = wrapper border (1px) + textarea padding (20px)
               // + first prompt line (~24px) + small breathing room. The
-              // first line "2 people in Paris" lives in the textarea's
+              // first line "Paris for 2" lives in the textarea's
               // placeholder attribute above this overlay.
               top: '52px',
-              // Mask: keep the 3 day-lines fully visible (3 × ~24px =
-              // 72px solid); fade the trailing hotel + price lines so
-              // the block tapers off rather than dominating the card.
-              maskImage:
-                'linear-gradient(to bottom, black 0, black 72px, transparent 144px)',
-              WebkitMaskImage:
-                'linear-gradient(to bottom, black 0, black 72px, transparent 144px)',
+              // No mask: example is now 5 short lines + a visual break.
+              // The labels Hotel: / Price: make those lines meaningful
+              // signposts (not a decorative tail) — fade was hiding the
+              // most useful information. The body is short enough that
+              // it doesn't visually dominate the card.
             }}
           >
             {PLACEHOLDER_EXAMPLE_BODY.map((line, i) => (
@@ -625,6 +626,7 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
     </div>
   )
 }
+
 
 
 
