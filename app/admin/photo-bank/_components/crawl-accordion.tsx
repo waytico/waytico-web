@@ -60,6 +60,37 @@ interface MultiCrawlState {
 
 const MAX_CITIES = 20
 
+/** localStorage key used to persist the in-flight crawl job id across
+ *  navigations / page reloads. The backend keeps job state in-memory
+ *  for the lifetime of the worker process, so as long as the server
+ *  hasn't restarted we can pick the job back up just by re-fetching
+ *  /global-bank/crawl/:jobId. Cleared on completion or 404. */
+const ACTIVE_JOB_KEY = 'waytico:active-crawl-job'
+
+function saveActiveJob(jobId: string) {
+  try {
+    localStorage.setItem(ACTIVE_JOB_KEY, jobId)
+  } catch {
+    // ignore (private mode / quota)
+  }
+}
+
+function loadActiveJob(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_JOB_KEY)
+  } catch {
+    return null
+  }
+}
+
+function clearActiveJob() {
+  try {
+    localStorage.removeItem(ACTIVE_JOB_KEY)
+  } catch {
+    // ignore
+  }
+}
+
 function parseCities(raw: string): string[] {
   const seen = new Set<string>()
   const out: string[] = []
@@ -175,6 +206,76 @@ export function CrawlAccordion() {
   }
   useEffect(() => () => stopPoll(), [])
 
+  /** Start (or restart) a 2-second poll loop against an existing job.
+   *  Used both right after submit and from the mount-time restore. */
+  const startPoll = useCallback(
+    (jobId: string) => {
+      stopPoll()
+      pollRef.current = setInterval(async () => {
+        try {
+          const r = await authedFetch(
+            `${API_URL}/api/admin/global-bank/crawl/${jobId}`,
+          )
+          if (r.status === 404) {
+            // Job was evicted (e.g. server restart). Drop our handle.
+            stopPoll()
+            clearActiveJob()
+            return
+          }
+          if (!r.ok) return
+          const cur = (await r.json()) as MultiCrawlState
+          setState(cur)
+          if (cur.completedAt) {
+            stopPoll()
+            clearActiveJob()
+          }
+        } catch {
+          // ignore — keep polling
+        }
+      }, 2000)
+    },
+    [authedFetch],
+  )
+
+  // Mount-time restore: if a previous session left an active job in
+  // localStorage, hydrate state from the backend and resume polling.
+  // The accordion auto-opens so the operator immediately sees progress.
+  useEffect(() => {
+    const jobId = loadActiveJob()
+    if (!jobId) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const r = await authedFetch(
+          `${API_URL}/api/admin/global-bank/crawl/${jobId}`,
+        )
+        if (cancelled) return
+        if (r.status === 404) {
+          clearActiveJob()
+          return
+        }
+        if (!r.ok) return
+        const cur = (await r.json()) as MultiCrawlState
+        setState(cur)
+        setOpen(true)
+        if (!cur.completedAt) {
+          startPoll(jobId)
+        } else {
+          // Job already finished while we were away — surface the
+          // summary, but don't keep polling and don't keep the key.
+          clearActiveJob()
+        }
+      } catch {
+        // ignore
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // authedFetch / startPoll are stable enough; mount-once is fine.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const submit = useCallback(async () => {
     if (!canSubmit) return
     setSubmitting(true)
@@ -197,6 +298,10 @@ export function CrawlAccordion() {
       }
       const j = (await res.json()) as { jobId: string }
 
+      // Persist the jobId so refresh / nav-away / nav-back keeps the
+      // poll alive (see the mount-time restore effect above).
+      saveActiveJob(j.jobId)
+
       // Seed local state immediately so the user sees their cities listed
       // as Queued before the first poll lands.
       setState({
@@ -213,20 +318,7 @@ export function CrawlAccordion() {
         })),
       })
 
-      stopPoll()
-      pollRef.current = setInterval(async () => {
-        try {
-          const r = await authedFetch(
-            `${API_URL}/api/admin/global-bank/crawl/${j.jobId}`,
-          )
-          if (!r.ok) return
-          const cur = (await r.json()) as MultiCrawlState
-          setState(cur)
-          if (cur.completedAt) stopPoll()
-        } catch {
-          // ignore — keep polling
-        }
-      }, 2000)
+      startPoll(j.jobId)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Submit failed')
     } finally {
@@ -239,6 +331,7 @@ export function CrawlAccordion() {
     country,
     searchQuery,
     targetCountPerCity,
+    startPoll,
   ])
 
   const allDone = state?.completedAt != null
@@ -285,6 +378,12 @@ export function CrawlAccordion() {
             <ChevronRight className="h-4 w-4 text-zinc-500" />
           )}
           Crawl new photos
+          {state && !allDone && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-800">
+              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+              Running
+            </span>
+          )}
         </span>
         <span className="text-xs text-zinc-500">
           {state
@@ -402,7 +501,13 @@ export function CrawlAccordion() {
                     : `Job in progress (${doneCount}/${cityTotal} cities done)`}
                 </div>
                 <div className="text-xs text-zinc-500">
-                  Job {state.jobId.slice(0, 8)}…
+                  Job {state.jobId.slice(0, 8)}… ·{' '}
+                  {(() => {
+                    const ms = (state.completedAt ?? Date.now()) - state.startedAt
+                    const m = Math.floor(ms / 60_000)
+                    const s = Math.floor((ms % 60_000) / 1000)
+                    return m > 0 ? `${m}m ${s}s` : `${s}s`
+                  })()}
                 </div>
               </div>
 
