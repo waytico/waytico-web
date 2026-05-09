@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ReviewPhoto } from '@/components/admin/photo-review-card'
+import type { ReviewPhoto, PhotoPatch } from '@/components/admin/photo-review-card'
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
@@ -44,10 +44,7 @@ export interface UseAdminReviewResult {
   setFocusedId: (id: string | null) => void
   approve: (id: string) => Promise<void>
   remove: (id: string) => Promise<void>
-  saveMeta: (
-    id: string,
-    patch: { city?: string | null; country?: string | null; region?: string | null },
-  ) => Promise<void>
+  saveMeta: (id: string, patch: PhotoPatch) => Promise<void>
   refresh: () => void
   setPage: (n: number) => void
   setPerPage: (n: number) => void
@@ -169,10 +166,7 @@ export function useAdminPhotoReview(
   )
 
   const saveMeta = useCallback(
-    async (
-      id: string,
-      patch: { city?: string | null; country?: string | null; region?: string | null },
-    ) => {
+    async (id: string, patch: PhotoPatch) => {
       try {
         const res = await authedFetch(
           `${API_URL}/api/admin/global-bank/photos/${id}`,
