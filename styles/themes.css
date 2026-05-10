@@ -1222,17 +1222,32 @@
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* Mobile: full-screen sheet that slides up from the bottom. We use 100dvh
-   instead of 100vh so the iOS keyboard doesn't crop the input row. */
+/* Mobile: bottom sheet ~75dvh, slides up from the bottom. Leaves the
+   top ~25% of the page visible so the operator keeps context (knows
+   which trip page is underneath). dvh (not vh) so the iOS keyboard
+   makes the sheet shrink rather than push the input out of view. */
 @media (max-width: 1023px) {
   .tp-chat-panel {
-    inset: 0;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: 100vw;
-    height: 100dvh;
+    height: 75dvh;
     max-height: none;
-    border-radius: 0;
+    border-radius: 12px 12px 0 0;
     border: 0;
     animation: tp-chat-panel-slide-up 220ms ease-out;
+  }
+  /* In empty state shrink the whole panel to its content height so the
+     footer link sits right under the input row instead of floating at
+     75dvh with a tall blank band below. max-height keeps a safety
+     ceiling. As soon as a message lands :has() stops matching and the
+     panel returns to fixed 75dvh so the messages list scrolls
+     normally. */
+  .tp-chat-panel:has(.tp-chat-empty) {
+    height: auto;
+    max-height: 75dvh;
   }
   @keyframes tp-chat-panel-slide-up {
     from { transform: translateY(100%); }
@@ -1391,6 +1406,38 @@
   gap: 6px;
   padding: 8px 16px 0;
 }
+
+/* Mobile-only override of empty-state spacing. Sits AFTER the default
+   declarations of .tp-chat-panel__messages, .tp-chat-empty and
+   .tp-chat-quick-prompts so the cascade resolves in our favour — a
+   media query does not raise specificity, only file order does.
+   Vertical real estate is scarce on the 75dvh bottom sheet; drop the
+   auto-centering on .tp-chat-empty so the prompt sits near the top
+   instead of floating in the middle, and shave the surrounding
+   paddings. */
+@media (max-width: 1023px) {
+  .tp-chat-panel__messages {
+    padding: 8px 16px;
+  }
+  .tp-chat-empty {
+    margin: 0;
+    padding: 4px 8px;
+  }
+  .tp-chat-quick-prompts {
+    padding: 4px 16px 6px;
+  }
+  /* In empty state the messages container is flex:1 and stretches to
+     fill the bottom-sheet — that creates a tall empty band between the
+     prompt copy and the quick-prompt chips. When .tp-chat-empty is the
+     only child, collapse the container to its content height so chips
+     and input sit right under the empty-state copy. As soon as a
+     message is appended .tp-chat-empty unmounts, :has() stops matching,
+     and the container returns to flex:1 for normal scrolling. */
+  .tp-chat-panel__messages:has(> .tp-chat-empty) {
+    flex: 0 0 auto;
+  }
+}
+
 .tp-chat-chip {
   flex: 0 0 auto;
   padding: 7px 12px;
