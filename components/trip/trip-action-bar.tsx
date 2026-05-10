@@ -322,33 +322,42 @@ function SendOrSaveControl({
     }
   }
 
-  const handleSendOrShare = async () => {
+  // Send (initial) and Save & notify both just open the share menu.
+  // The actual publish happens inside ShareMenu.beforeShare when the
+  // operator picks a channel — opening the menu and walking away
+  // must not flip the trip into `quoted` or alter the snapshot.
+  const handleSendOrShare = () => {
     if (busy) return
-    if (!isPublished) {
-      const ok = await publish()
-      if (ok) {
-        toast.success('Saved — share with your client')
-        setShareOpen(true)
-      }
-      return
-    }
-    // Already published, nothing pending — just open share.
     setShareOpen(true)
   }
 
+  // Silent re-publish for the "Save" button. This path only exists
+  // when the trip is already published and has pending edits the
+  // operator wants to push to the client view without re-sharing.
+  // Toast confirms because nothing else changes visibly.
   const handleSave = async () => {
     if (busy) return
     const ok = await publish()
     if (ok) toast.success('Saved')
   }
 
-  const handleSaveAndNotify = async () => {
+  // Save & notify is structurally the same as Send: open the menu,
+  // defer publish to the channel pick. Same beforeShare hook handles
+  // the publish (with a non-empty diff this time → change_log entry).
+  const handleSaveAndNotify = () => {
     if (busy) return
-    const ok = await publish()
-    if (ok) {
-      toast.success('Saved')
-      setShareOpen(true)
+    setShareOpen(true)
+  }
+
+  // beforeShare is invoked by ShareMenu the moment the operator
+  // picks a channel. Returns true if the share can proceed. Skips
+  // publish entirely when the trip is published and has nothing
+  // pending — the menu is then just a re-share of an existing link.
+  const beforeShare = async (): Promise<boolean> => {
+    if (!isPublished || hasPendingPublish) {
+      return await publish()
     }
+    return true
   }
 
   // Hide the control when there's nothing to send (archived,
@@ -383,6 +392,7 @@ function SendOrSaveControl({
       onOpenChange={(v) => setShareOpen(v)}
       hideTrigger
       onShareAction={onShareAction}
+      beforeShare={beforeShare}
     />
   )
 
