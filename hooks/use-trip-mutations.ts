@@ -35,11 +35,27 @@ type Options = {
    * showcase by slug and pass this flag in.
    */
   isShowcase?: boolean
+  /**
+   * Called once a mutation succeeds. The trip page passes
+   * refreshOwnerData here so per-edit changes refresh
+   * has_pending_publish — that flag lives only on /:id/full and
+   * doesn't roundtrip through individual PATCH responses, so without
+   * this hook the Save / Save & notify buttons never appear.
+   */
+  onMutationSuccess?: () => void
 }
 
-export function useTripMutations({ projectId, setData, setTasks, isShowcase }: Options) {
+export function useTripMutations({ projectId, setData, setTasks, isShowcase, onMutationSuccess }: Options) {
   const { getToken } = useAuth()
   const router = useRouter()
+
+  // Fire-and-forget — never await; the caller is free to chain
+  // additional state updates without blocking on the fetch.
+  const notifySuccess = useCallback(() => {
+    if (onMutationSuccess) {
+      queueMicrotask(onMutationSuccess)
+    }
+  }, [onMutationSuccess])
 
   const saveProjectPatch = useCallback(
     async (patch: Record<string, any>): Promise<boolean> => {
@@ -87,6 +103,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
           }
           return { ...prev, project: merged }
         })
+        notifySuccess()
         return true
       }
       try {
@@ -109,6 +126,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
         if (payload?.project) {
           setData((prev) => (prev ? { ...prev, project: payload.project } : prev))
         }
+        notifySuccess()
         return true
       } catch {
         toast.error('Save failed')
@@ -159,6 +177,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
             project: { ...prev.project, highlights: cleaned },
           }
         })
+        notifySuccess()
         return true
       }
 
@@ -186,6 +205,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
               : prev,
           )
         }
+        notifySuccess()
         return true
       } catch {
         toast.error('Save failed')
@@ -211,6 +231,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
             return merged
           }),
         )
+        notifySuccess()
         return true
       }
       try {
@@ -234,6 +255,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
         if (updated) {
           setTasks((cur) => cur.map((t) => (t.id === taskId ? updated : t)))
         }
+        notifySuccess()
         return true
       } catch {
         toast.error('Save failed')
@@ -262,6 +284,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
           })
           return { ...prev, project: { ...prev.project, itinerary: newIt } }
         })
+        notifySuccess()
         return true
       }
       try {
@@ -287,6 +310,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
           const newIt = it.map((d: any) => (d.id === dayId ? day : d))
           return { ...prev, project: { ...prev.project, itinerary: newIt } }
         })
+        notifySuccess()
         return true
       } catch {
         toast.error('Save failed')
@@ -382,6 +406,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
             }),
           } as any
         })
+        notifySuccess()
         return true
       }
       try {
@@ -411,6 +436,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
             accommodations: cur.map((a: any) => (a.id === id ? accommodation : a)),
           } as any
         })
+        notifySuccess()
         return true
       } catch {
         toast.error('Save failed')
@@ -430,6 +456,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
             : []
           return { ...prev, accommodations: cur.filter((a: any) => a.id !== id) } as any
         })
+        notifySuccess()
         return true
       }
       try {
@@ -454,6 +481,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
             : []
           return { ...prev, accommodations: cur.filter((a: any) => a.id !== id) } as any
         })
+        notifySuccess()
         return true
       } catch {
         toast.error('Delete failed')
@@ -471,6 +499,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
           if (!prev?.project) return prev
           return { ...prev, project: { ...prev.project, what_to_bring: next } }
         })
+        notifySuccess()
         return true
       }
       try {
@@ -494,6 +523,7 @@ export function useTripMutations({ projectId, setData, setTasks, isShowcase }: O
           if (!prev?.project) return prev
           return { ...prev, project: { ...prev.project, what_to_bring: whatToBring } }
         })
+        notifySuccess()
         return true
       } catch {
         toast.error('Save failed')

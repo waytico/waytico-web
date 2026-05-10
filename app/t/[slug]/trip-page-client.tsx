@@ -769,6 +769,12 @@ export default function TripPageClient({ slug, initialData }: Props) {
     setData: setData as any,
     setTasks: setTasks as any,
     isShowcase,
+    // Re-fetch /full after every mutation so has_pending_publish
+    // stays in sync. That flag only lives on /:id/full — it doesn't
+    // ride along on individual PATCH responses — so without this
+    // the Save / Save & notify badge would never appear after an
+    // inline edit.
+    onMutationSuccess: refreshOwnerData,
   })
 
   const handleDeleteProject = useCallback(async () => {

@@ -349,15 +349,16 @@ function SendOrSaveControl({
     setShareOpen(true)
   }
 
-  // beforeShare is invoked by ShareMenu the moment the operator
-  // picks a channel. Returns true if the share can proceed. Skips
-  // publish entirely when the trip is published and has nothing
-  // pending — the menu is then just a re-share of an existing link.
-  const beforeShare = async (): Promise<boolean> => {
+  // onShareCommit is invoked by ShareMenu the moment the operator
+  // picks a channel — fire-and-forget so the native click handler
+  // can still open the channel in its own tab (popup blocker is
+  // friendly to direct user-gesture window.open, but goes sour
+  // after async waits). Publish runs in parallel; on failure it
+  // surfaces a toast and the operator can retry from Save & notify.
+  const onShareCommit = () => {
     if (!isPublished || hasPendingPublish) {
-      return await publish()
+      void publish()
     }
-    return true
   }
 
   // Hide the control when there's nothing to send (archived,
@@ -392,7 +393,7 @@ function SendOrSaveControl({
       onOpenChange={(v) => setShareOpen(v)}
       hideTrigger
       onShareAction={onShareAction}
-      beforeShare={beforeShare}
+      onShareCommit={onShareCommit}
     />
   )
 
