@@ -52,13 +52,13 @@ interface MultiCrawlState {
   type: 'multi_city'
   startedAt: number
   completedAt?: number
+  cancelRequested?: boolean
+  cancelledAt?: number
   searchQuery: string | null
   country: string
   targetCountPerCity: number
   cities: CityEntry[]
 }
-
-const MAX_CITIES = 20
 
 /** localStorage key used to persist the in-flight crawl job id across
  *  navigations / page reloads. The backend keeps job state in-memory
@@ -101,7 +101,6 @@ function parseCities(raw: string): string[] {
     if (seen.has(key)) continue
     seen.add(key)
     out.push(c)
-    if (out.length >= MAX_CITIES) break
   }
   return out
 }
@@ -225,7 +224,7 @@ export function CrawlAccordion() {
           if (!r.ok) return
           const cur = (await r.json()) as MultiCrawlState
           setState(cur)
-          if (cur.completedAt) {
+          if (cur.completedAt || cur.cancelledAt) {
             stopPoll()
             clearActiveJob()
           }
@@ -258,7 +257,7 @@ export function CrawlAccordion() {
         const cur = (await r.json()) as MultiCrawlState
         setState(cur)
         setOpen(true)
-        if (!cur.completedAt) {
+        if (!cur.completedAt && !cur.cancelledAt) {
           startPoll(jobId)
         } else {
           // Job already finished while we were away — surface the
@@ -334,7 +333,32 @@ export function CrawlAccordion() {
     startPoll,
   ])
 
-  const allDone = state?.completedAt != null
+  const allDone = state?.completedAt != null || state?.cancelledAt != null
+  const wasCancelled = state?.cancelledAt != null
+  const cancelling = state?.cancelRequested === true && !allDone
+
+  const cancel = useCallback(async () => {
+    if (!state || allDone || cancelling) return
+    // Optimistic UI: flag locally so the Stop button disables right
+    // away. Polling will overwrite with the authoritative state.
+    setState((s) => (s ? { ...s, cancelRequested: true } : s))
+    try {
+      const res = await authedFetch(
+        `${API_URL}/api/admin/global-bank/crawl/${state.jobId}/cancel`,
+        { method: 'POST' },
+      )
+      if (!res.ok) {
+        // Roll back the optimistic flag on hard failures (network /
+        // 5xx). 404/409 we leave alone — the polling loop will reflect
+        // the real terminal state next tick.
+        if (res.status >= 500) {
+          setState((s) => (s ? { ...s, cancelRequested: false } : s))
+        }
+      }
+    } catch {
+      setState((s) => (s ? { ...s, cancelRequested: false } : s))
+    }
+  }, [state, allDone, cancelling, authedFetch])
   const totals = state
     ? state.cities.reduce(
         (acc, c) => {
@@ -381,15 +405,17 @@ export function CrawlAccordion() {
           {state && !allDone && (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-800">
               <Loader2 className="h-2.5 w-2.5 animate-spin" />
-              Running
+              {cancelling ? 'Stopping' : 'Running'}
             </span>
           )}
         </span>
         <span className="text-xs text-zinc-500">
           {state
-            ? allDone
-              ? `Last run: ${cityTotal} cit${cityTotal === 1 ? 'y' : 'ies'} done`
-              : `Job in progress (${doneCount}/${cityTotal})`
+            ? wasCancelled
+              ? `Stopped: ${doneCount}/${cityTotal} cit${cityTotal === 1 ? 'y' : 'ies'} done`
+              : allDone
+                ? `Last run: ${cityTotal} cit${cityTotal === 1 ? 'y' : 'ies'} done`
+                : `Job in progress (${doneCount}/${cityTotal})`
             : 'Wikimedia commons → AI classify → cleanup'}
         </span>
       </button>
@@ -407,7 +433,7 @@ export function CrawlAccordion() {
               <label className="mb-1 block text-sm font-medium text-zinc-700">
                 Cities{' '}
                 <span className="font-normal text-zinc-500">
-                  (one per line or comma-separated, max {MAX_CITIES})
+                  (one per line or comma-separated)
                 </span>
               </label>
               <textarea
@@ -494,20 +520,38 @@ export function CrawlAccordion() {
 
           {state && (
             <div className="mt-4 rounded border border-zinc-200 bg-zinc-50 p-3">
-              <div className="mb-2 flex items-center justify-between">
+              <div className="mb-2 flex items-center justify-between gap-3">
                 <div className="text-sm font-medium">
-                  {allDone
-                    ? `✓ All ${cityTotal} cit${cityTotal === 1 ? 'y' : 'ies'} done`
-                    : `Job in progress (${doneCount}/${cityTotal} cities done)`}
+                  {wasCancelled
+                    ? `■ Stopped (${doneCount}/${cityTotal} cities done)`
+                    : allDone
+                      ? `✓ All ${cityTotal} cit${cityTotal === 1 ? 'y' : 'ies'} done`
+                      : cancelling
+                        ? `Stopping after current city (${doneCount}/${cityTotal} done)…`
+                        : `Job in progress (${doneCount}/${cityTotal} cities done)`}
                 </div>
-                <div className="text-xs text-zinc-500">
-                  Job {state.jobId.slice(0, 8)}… ·{' '}
-                  {(() => {
-                    const ms = (state.completedAt ?? Date.now()) - state.startedAt
-                    const m = Math.floor(ms / 60_000)
-                    const s = Math.floor((ms % 60_000) / 1000)
-                    return m > 0 ? `${m}m ${s}s` : `${s}s`
-                  })()}
+                <div className="flex items-center gap-3">
+                  {!allDone && (
+                    <button
+                      type="button"
+                      onClick={cancel}
+                      disabled={cancelling}
+                      className="rounded border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+                    >
+                      {cancelling ? 'Stopping…' : 'Stop'}
+                    </button>
+                  )}
+                  <div className="text-xs text-zinc-500">
+                    Job {state.jobId.slice(0, 8)}… ·{' '}
+                    {(() => {
+                      const end =
+                        state.completedAt ?? state.cancelledAt ?? Date.now()
+                      const ms = end - state.startedAt
+                      const m = Math.floor(ms / 60_000)
+                      const s = Math.floor((ms % 60_000) / 1000)
+                      return m > 0 ? `${m}m ${s}s` : `${s}s`
+                    })()}
+                  </div>
                 </div>
               </div>
 
