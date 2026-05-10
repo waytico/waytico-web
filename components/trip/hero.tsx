@@ -84,6 +84,14 @@ type HeroProps = {
    *     pair in the dates row → "QUOTE A3K9P2 — ISSUED … — VALID UNTIL …".
    *  Hidden when null. */
   code?: string | null
+  /** Owner-side label for the QUOTE / DRAFT pair shown next to `code`
+   *  when the public status pill is absent (owner mode). Defaults to
+   *  "Quote" — the trip-page-client overrides to "Draft" when the
+   *  underlying trip is still a working copy (status='draft') so the
+   *  operator sees the real lifecycle state. The pill in the header's
+   *  action bar is the canonical state indicator; this label keeps the
+   *  hero strip in sync. */
+  ownerStatusLabel?: string
   /** Top-3 trip highlights (cities / regions / landmarks). Each entry is
    *  a slot so owner mode can wrap it with EditableField; public mode
    *  passes plain text or null. Nulls are filtered out before render.
@@ -115,6 +123,7 @@ function HeroTopStrip({
   validUntilSlot,
   contactAgentSlot,
   code,
+  ownerStatusLabel = 'Quote',
   onPhoto = false,
 }: {
   status?: string | null
@@ -124,6 +133,7 @@ function HeroTopStrip({
   validUntilSlot?: ReactNode
   contactAgentSlot?: (ctx: { onPhoto: boolean }) => ReactNode
   code?: string | null
+  ownerStatusLabel?: string
   onPhoto?: boolean
 }) {
   const hasStatus = !!status && ['quoted', 'active', 'completed'].includes(status)
@@ -236,7 +246,7 @@ function HeroTopStrip({
               gap: 8,
             }}
           >
-            <span>Quote</span>
+            <span>{ownerStatusLabel}</span>
             <span>{code}</span>
           </div>
         )}
@@ -372,6 +382,7 @@ export function TripHero(props: HeroProps) {
           validUntilSlot={props.validUntilSlot}
           contactAgentSlot={props.contactAgentSlot}
           code={props.code}
+          ownerStatusLabel={props.ownerStatusLabel}
           onPhoto={!!heroPhoto}
         />
         <div className="tp-container" style={{ position: 'relative', zIndex: 1 }}>
@@ -393,6 +404,7 @@ export function TripHero(props: HeroProps) {
           validUntilSlot={props.validUntilSlot}
           contactAgentSlot={props.contactAgentSlot}
           code={props.code}
+          ownerStatusLabel={props.ownerStatusLabel}
         />
         <div className="tp-container tp-hero--card">
           <div className="tp-hero-meta" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -452,6 +464,7 @@ export function TripHero(props: HeroProps) {
         validUntilSlot={props.validUntilSlot}
         contactAgentSlot={props.contactAgentSlot}
         code={props.code}
+          ownerStatusLabel={props.ownerStatusLabel}
       />
       <div className="tp-container tp-hero--split">
         <div className="tp-hero-meta">{meta}</div>
@@ -675,6 +688,7 @@ function HeroMagazine(props: HeroProps) {
         validUntilSlot={validUntilSlot}
         contactAgentSlot={contactAgentSlot}
         code={code}
+        ownerStatusLabel={props.ownerStatusLabel}
         onPhoto={true}
       />
 

@@ -2168,8 +2168,21 @@ export default function TripPageClient({ slug, initialData }: Props) {
               (p as any).cover_attribution_html ??
               null
             }
-            status={!showOwnerUI ? p.status : null}
+            status={
+              showOwnerUI
+                ? null
+                : // Not the owner's working view (client viewer, anon
+                  // creator, or owner-in-preview). The pill names the
+                  // document the way the client sees it. A draft has
+                  // not been Sent yet, but in preview we still want
+                  // the operator to see how the document will read,
+                  // so we surface 'quoted' for draft → "Quote".
+                  p.status === 'draft'
+                  ? 'quoted'
+                  : p.status
+            }
             code={extractQuoteCode(slug)}
+            ownerStatusLabel={p.status === 'draft' ? 'Draft' : 'Quote'}
             dateRange={dateRange}
             durationDays={p.duration_days}
             groupSize={p.group_size}
