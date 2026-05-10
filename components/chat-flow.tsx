@@ -154,7 +154,15 @@ export default function ChatFlow({ children, prefilledClientId, prefilledClientL
           if (res.ok) {
             const data = await res.json()
             const status = data.project?.status
-            if (status === 'quoted' || status === 'active' || status === 'completed') {
+            // Pipeline finishes in `draft` now (Send promotes to
+            // quoted on first publish). Treat any post-generating
+            // status as terminal — the trip is ready to open.
+            if (
+              status === 'draft' ||
+              status === 'quoted' ||
+              status === 'active' ||
+              status === 'completed'
+            ) {
               readySlugRef.current = data.project?.slug || slug
               setFinishing(true)
               return
