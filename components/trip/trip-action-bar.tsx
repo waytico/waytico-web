@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { ChevronDown, ChevronUp, Eye, Lock } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye, Lock, Send } from 'lucide-react'
 import ShareMenu from '@/components/share-menu'
 import { ActivateStubModal } from '@/components/activate-stub-modal'
 import { apiFetch } from '@/lib/api'
@@ -57,6 +57,11 @@ type Props = {
    * shown for trips without a linked client_id (TZ Stage 5).
    */
   onShareAction?: () => void
+  /** Publish state — drives Send vs Save / Save & notify CTA. */
+  isPublished?: boolean
+  hasPendingPublish?: boolean
+  /** Called after a successful publish so the page can refresh. */
+  onPublished?: () => void
   /**
    * When true, the Preview slot is replaced by an "Exit preview" pill that
    * pulses in accent colors. The owner is currently viewing the trip page
@@ -104,6 +109,9 @@ export function TripActionBar({
   onShareAction,
   previewMode = false,
   onExitPreview,
+  isPublished = false,
+  hasPendingPublish = false,
+  onPublished,
 }: Props) {
   const router = useRouter()
   const { getToken } = useAuth()
@@ -322,7 +330,16 @@ export function TripActionBar({
       </div>
       {canShare && (
         <div className="ml-auto lg:ml-3">
-          <ShareMenu title={title} url={shareUrl} publicStatus={status} label="Send" onShareAction={onShareAction} />
+          <SendOrSaveControl
+            projectId={projectId}
+            title={title}
+            shareUrl={shareUrl}
+            publicStatus={status}
+            isPublished={isPublished}
+            hasPendingPublish={hasPendingPublish}
+            onShareAction={onShareAction}
+            onPublished={onPublished}
+          />
         </div>
       )}
     </div>
@@ -350,5 +367,159 @@ export function TripActionBar({
       </div>
       <ActivateStubModal open={activateStubOpen} onClose={() => setActivateStubOpen(false)} />
     </>
+  )
+}
+
+/**
+ * Send / Save / Save & notify control.
+ *
+ * State machine:
+ *   1. Pre-first-publish (!isPublished)
+ *      → single "Send" button. Click publishes, then opens ShareMenu.
+ *   2. Published, no pending edits (isPublished && !hasPendingPublish)
+ *      → "Send" button. Opens ShareMenu (no publish — nothing to publish).
+ *   3. Published with pending edits (isPublished && hasPendingPublish)
+ *      → "Save" + "Save & notify". Save publishes silently. Save & notify
+ *      publishes, then opens ShareMenu.
+ *
+ * Refusing to publish on a no-op (server returns published=false) is
+ * idempotent; we still open ShareMenu when notify=true was clicked,
+ * because the agent's intent was to share.
+ */
+type SendOrSaveProps = {
+  projectId: string
+  title: string
+  shareUrl: string
+  publicStatus: string
+  isPublished: boolean
+  hasPendingPublish: boolean
+  onShareAction?: () => void
+  onPublished?: () => void
+}
+
+function SendOrSaveControl({
+  projectId,
+  title,
+  shareUrl,
+  publicStatus,
+  isPublished,
+  hasPendingPublish,
+  onShareAction,
+  onPublished,
+}: SendOrSaveProps) {
+  const { getToken } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
+
+  const publish = async (): Promise<boolean> => {
+    setBusy(true)
+    try {
+      const token = await getToken()
+      if (!token) {
+        toast.error('Sign in again')
+        return false
+      }
+      const res = await apiFetch(`/api/projects/${projectId}/publish`, {
+        method: 'POST',
+        token,
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err?.error || 'Could not save')
+        return false
+      }
+      onPublished?.()
+      return true
+    } catch {
+      toast.error('Network error')
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleSendOrShare = async () => {
+    if (busy) return
+    if (!isPublished) {
+      const ok = await publish()
+      if (ok) {
+        toast.success('Saved — share with your client')
+        setShareOpen(true)
+      }
+      return
+    }
+    // Already published, nothing pending — just open share.
+    setShareOpen(true)
+  }
+
+  const handleSave = async () => {
+    if (busy) return
+    const ok = await publish()
+    if (ok) toast.success('Saved')
+  }
+
+  const handleSaveAndNotify = async () => {
+    if (busy) return
+    const ok = await publish()
+    if (ok) {
+      toast.success('Saved')
+      setShareOpen(true)
+    }
+  }
+
+  if (publicStatus !== 'quoted' && publicStatus !== 'active') return null
+
+  // Pending edits — two-button cluster
+  if (isPublished && hasPendingPublish) {
+    return (
+      <div className="inline-flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={busy}
+          className="inline-flex items-center gap-1.5 px-2.5 lg:px-3 py-1 rounded-full text-sm font-medium bg-secondary text-foreground hover:bg-secondary/80 transition-colors whitespace-nowrap disabled:opacity-60"
+          title="Publish updates to the client view (silent)"
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          onClick={handleSaveAndNotify}
+          disabled={busy}
+          className="inline-flex items-center gap-1.5 px-2.5 lg:px-3 py-1 rounded-full text-sm font-medium bg-accent text-accent-foreground hover:bg-accent/90 transition-colors whitespace-nowrap disabled:opacity-60"
+          title="Publish updates and share the link"
+        >
+          Save & notify
+        </button>
+      </div>
+    )
+  }
+
+  // Pre-first-publish OR published with no pending edits — single Send.
+  // Our own trigger (so we can run the publish step before opening),
+  // ShareMenu rendered with hideTrigger and externally controlled.
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={handleSendOrShare}
+        disabled={busy}
+        aria-label="Send"
+        className="inline-flex items-center gap-1.5 px-2.5 lg:px-3 py-1 rounded-full text-sm font-medium bg-accent text-accent-foreground hover:bg-accent/90 transition-colors whitespace-nowrap disabled:opacity-60"
+      >
+        <Send className="w-4 h-4" aria-hidden="true" />
+        <span>Send</span>
+      </button>
+      <ShareMenu
+        title={title}
+        url={shareUrl}
+        publicStatus={publicStatus}
+        label="Send"
+        forceOpen={shareOpen}
+        onOpenChange={(v) => setShareOpen(v)}
+        hideTrigger
+        onShareAction={onShareAction}
+      />
+    </div>
   )
 }

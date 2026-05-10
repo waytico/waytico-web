@@ -19,6 +19,7 @@ import PostClaimUpsellModal from '@/components/post-claim-upsell-modal'
 import { ScrollToTop } from '@/components/scroll-to-top'
 import { TripChatWidget } from '@/components/trip/trip-chat-widget'
 import { TripActionBar } from '@/components/trip/trip-action-bar'
+import { ChangesBanner } from '@/components/trip/changes-banner'
 import { ArchiveDialog } from '@/components/trip/archive-dialog'
 import { EditableField } from '@/components/editable/editable-field'
 import { ShowcasePills, ShowcaseBanner, SHOWCASE_BANNER_HEIGHT } from '@/components/trip/showcase-pills'
@@ -1862,6 +1863,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
           Showcase / anon-creator paths keep their dedicated banners and,
           for showcase, render TripActionBar standalone (its own sticky
           wrapper, slid below the orange ShowcaseBanner via topOffset). */}
+      {/* Client-facing banner of unacknowledged changes. Rendered only
+          for the public viewer — owners (including preview-as-client)
+          and anonymous creators don't see it. Reads change_log straight
+          off the public payload; ack timestamp lives in localStorage,
+          per-device. */}
+      {!isOwner && !isAnonCreator && !isShowcase && Array.isArray((p as any).change_log) && (p as any).change_log.length > 0 && (
+        <ChangesBanner slug={slug} changeLog={(p as any).change_log} />
+      )}
+
       {isOwner && !isShowcase && !isAnonCreator && (
         <Header
           tripActions={
@@ -1897,6 +1907,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
                 previewMode={previewAsClient}
                 onExitPreview={() => setPreviewAsClient(false)}
                 onShareAction={handleShareAction}
+                /* Publish state — Send vs Save / Save & notify. */
+                isPublished={!!(p as any).is_published || !!(p as any).published_at}
+                hasPendingPublish={!!(p as any).has_pending_publish}
+                onPublished={() => setOwnerRefreshKey((k) => k + 1)}
               />
             ) : undefined
           }

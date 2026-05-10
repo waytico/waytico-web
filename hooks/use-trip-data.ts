@@ -117,10 +117,21 @@ export function useTripData({
       if (Array.isArray(payload.media)) setMedia(payload.media as MediaRecord[])
       // Overlay owner brand + linked client onto the payload so themed
       // components and the operator service block can read them.
+      // Overlay LIVE working copy onto whatever the public endpoint
+      // returned. After first publish the public endpoint serves the
+      // frozen snapshot — owners must see the live state, not the
+      // snapshot, otherwise their edits look like they didn't take.
+      // Accommodations are similarly live-overlayed for the owner.
       setData((prev) =>
         prev
           ? {
               ...prev,
+              project: payload.project
+                ? { ...prev.project, ...payload.project }
+                : prev.project,
+              accommodations: Array.isArray(payload.accommodations)
+                ? payload.accommodations
+                : prev.accommodations,
               owner: payload.owner ?? prev.owner ?? null,
               client: payload.client ?? null,
             }
