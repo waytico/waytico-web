@@ -118,6 +118,16 @@ export function buildTripMenu(status: string, cb: MenuCallbacks): MenuItem[] {
     items.push({ label: 'Restore', onClick: cb.restore })
     pushBrief()
     items.push({ label: 'Delete', onClick: cb.requestDelete, variant: 'danger' })
+  } else if (status === 'generating') {
+    // Generating rows are normally short-lived (~30–60s). When one
+    // sticks around, it's because the pipeline failed before the
+    // catch-handler could soft-delete the row, or before the
+    // hourly sweeper picked it up. Operator gets View brief (so
+    // they can see what they typed) and Delete (so they can clear
+    // it themselves without waiting). No Archive — there's nothing
+    // to archive.
+    pushBrief()
+    items.push({ label: 'Delete', onClick: cb.requestDelete, variant: 'danger' })
   }
 
   return items
