@@ -362,10 +362,35 @@ function SendOrSaveControl({
     return null
   }
 
-  // Pending edits — two-button cluster
+  // Render outline:
+  //   <wrapper>
+  //     <buttons (Send | Save + Save&notify)>
+  //     <ShareMenu always present, controlled via shareOpen>
+  //   </wrapper>
+  //
+  // ShareMenu must persist across state transitions: clicking Send
+  // publishes → isPublished/hasPendingPublish change → component
+  // re-renders. If ShareMenu only lived in one branch, the popover
+  // it tried to open would be unmounted by the next render. Keeping
+  // it at the wrapper level survives the buttons swapping out.
+  const sharedShareMenu = (
+    <ShareMenu
+      title={title}
+      url={shareUrl}
+      publicStatus={publicStatus}
+      label="Send"
+      forceOpen={shareOpen}
+      onOpenChange={(v) => setShareOpen(v)}
+      hideTrigger
+      onShareAction={onShareAction}
+    />
+  )
+
+  // Pending edits — two-button cluster, plus the persistent ShareMenu
+  // (Save & notify opens it after a successful publish).
   if (isPublished && hasPendingPublish) {
     return (
-      <div className="inline-flex items-center gap-1.5">
+      <div className="relative inline-flex items-center gap-1.5">
         <button
           type="button"
           onClick={handleSave}
@@ -384,6 +409,7 @@ function SendOrSaveControl({
         >
           Save & notify
         </button>
+        {sharedShareMenu}
       </div>
     )
   }
@@ -403,16 +429,7 @@ function SendOrSaveControl({
         <Send className="w-4 h-4" aria-hidden="true" />
         <span>Send</span>
       </button>
-      <ShareMenu
-        title={title}
-        url={shareUrl}
-        publicStatus={publicStatus}
-        label="Send"
-        forceOpen={shareOpen}
-        onOpenChange={(v) => setShareOpen(v)}
-        hideTrigger
-        onShareAction={onShareAction}
-      />
+      {sharedShareMenu}
     </div>
   )
 }
