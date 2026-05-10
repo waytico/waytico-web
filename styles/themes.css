@@ -1404,7 +1404,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 8px 16px 0;
+  padding: 8px 16px 6px;
 }
 
 /* Mobile-only override of empty-state spacing. Sits AFTER the default
