@@ -67,6 +67,13 @@ export type MenuCallbacks = {
    *  ActivateStubModal placeholder. Dashboard project-card omits this so
    *  the menu there stays the way it always was. */
   onActivate?: () => void
+  /** Optional — when provided, "View brief" appears as a menu item across
+   *  all statuses. Currently used by the dashboard trip-row so the operator
+   *  can re-read the original briefing-agent transcript and spot mismatches
+   *  with the generated trip ("I said 3 days, plan has 5"). The trip page
+   *  itself omits this — viewing the brief there would only clutter the
+   *  edit surface without adding edit capability. */
+  viewBrief?: () => void
 }
 
 /**
@@ -75,27 +82,41 @@ export type MenuCallbacks = {
  */
 export function buildTripMenu(status: string, cb: MenuCallbacks): MenuItem[] {
   const items: MenuItem[] = []
+  // "View brief" sits between the primary action and Archive/Delete in
+  // every status block. Skipped when no callback was supplied (so the
+  // trip-action-bar's menu stays untouched). Helper closure keeps the
+  // status branches readable.
+  const pushBrief = () => {
+    if (cb.viewBrief) {
+      items.push({ label: 'View brief', onClick: cb.viewBrief })
+    }
+  }
 
   if (status === 'draft') {
     items.push({ label: 'Publish', onClick: () => cb.changeStatus('quoted') })
+    pushBrief()
     items.push({ label: 'Archive…', onClick: cb.requestArchive })
     items.push({ label: 'Delete', onClick: cb.requestDelete, variant: 'danger' })
   } else if (status === 'quoted') {
     if (cb.onActivate) {
       items.push({ label: 'Make it a trip', onClick: cb.onActivate })
     }
+    pushBrief()
     items.push({ label: 'Archive…', onClick: cb.requestArchive })
     items.push({ label: 'Delete', onClick: cb.requestDelete, variant: 'danger' })
   } else if (status === 'active') {
     items.push({ label: 'Completed', onClick: () => cb.changeStatus('completed') })
+    pushBrief()
     items.push({ label: 'Archive…', onClick: cb.requestArchive })
     items.push({ label: 'Delete', onClick: cb.requestDelete, variant: 'danger' })
   } else if (status === 'completed') {
     items.push({ label: 'Reactivate', onClick: () => cb.changeStatus('active') })
+    pushBrief()
     items.push({ label: 'Archive…', onClick: cb.requestArchive })
     items.push({ label: 'Delete', onClick: cb.requestDelete, variant: 'danger' })
   } else if (status === 'archived') {
     items.push({ label: 'Restore', onClick: cb.restore })
+    pushBrief()
     items.push({ label: 'Delete', onClick: cb.requestDelete, variant: 'danger' })
   }
 

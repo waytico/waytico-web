@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { apiFetch } from '@/lib/api'
 import { ArchiveDialog } from './trip/archive-dialog'
 import { ActivateStubModal } from './activate-stub-modal'
+import { BriefModal } from './brief-modal'
 import { buildTripMenu, getStatusMeta } from '@/lib/trip-status'
 import { isDateInPast } from '@/lib/trip-format'
 import { attentionReason } from '@/lib/trip-grouping'
@@ -66,6 +67,7 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
   const [busy, setBusy] = useState(false)
   const [archiveOpen, setArchiveOpen] = useState(false)
   const [activateOpen, setActivateOpen] = useState(false)
+  const [briefOpen, setBriefOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const triggerWrapRef = useRef<HTMLDivElement>(null)
 
@@ -150,6 +152,7 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
     requestDelete: deleteProject,
     restore,
     onActivate: () => setActivateOpen(true),
+    viewBrief: () => setBriefOpen(true),
   })
 
   const reason = attentionReason(project)
@@ -323,6 +326,12 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
       />
 
       <ActivateStubModal open={activateOpen} onClose={() => setActivateOpen(false)} />
+
+      <BriefModal
+        open={briefOpen}
+        projectId={project.id}
+        onClose={() => setBriefOpen(false)}
+      />
     </>
   )
 }
