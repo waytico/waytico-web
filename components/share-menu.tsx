@@ -46,7 +46,17 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
     }
   }, [isOpen])
 
-  if (publicStatus !== 'quoted' && publicStatus !== 'active') return null
+  // Hide the menu in states where there is no public link to share
+  // (archived / generating / completed). `draft` is permitted — the
+  // SendOrSaveControl wrapper publishes the draft, then opens this
+  // menu so the operator can hand the link over.
+  if (
+    publicStatus === 'archived' ||
+    publicStatus === 'generating' ||
+    publicStatus === 'completed'
+  ) {
+    return null
+  }
 
   const message = `${title} — ${url}`
   const mailto = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(url)}`

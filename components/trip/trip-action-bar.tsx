@@ -1,15 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
 import { ChevronDown, ChevronUp, Eye, Lock, Send } from 'lucide-react'
 import ShareMenu from '@/components/share-menu'
-import { ActivateStubModal } from '@/components/activate-stub-modal'
 import { apiFetch } from '@/lib/api'
 import { type ThemeId } from '@/lib/themes'
-import { getStatusMeta, buildTripMenu } from '@/lib/trip-status'
+import { getStatusMeta } from '@/lib/trip-status'
 import { ThemeSwitcher } from '@/components/trip/theme-switcher'
 
 type Props = {
@@ -21,9 +19,16 @@ type Props = {
   /** Persisted design_theme from the project (null = default 'editorial'). */
   designTheme?: string | null
   onPreviewAsClient: () => void
+  /**
+   * Lifecycle callbacks — kept on the prop type for backward
+   * compatibility with the trip-page-client wrapper, but no longer
+   * invoked here. State transitions (Make it a trip / Archive /
+   * Delete / Restore / Reactivate / Mark complete) live on the
+   * dashboard cards and rows, not on the trip-page action bar.
+   */
   onStatusChanged?: () => void
-  onRequestArchive: () => void
-  onRequestDelete: () => void
+  onRequestArchive?: () => void
+  onRequestDelete?: () => void
   /** Showcase / demo plumbing — passed straight to ThemeSwitcher. */
   isShowcase?: boolean
   onLocalThemeChange?: (next: ThemeId) => void
@@ -96,9 +101,6 @@ export function TripActionBar({
   canShare,
   designTheme,
   onPreviewAsClient,
-  onStatusChanged,
-  onRequestArchive,
-  onRequestDelete,
   isShowcase,
   onLocalThemeChange,
   standalone = false,
@@ -113,155 +115,45 @@ export function TripActionBar({
   hasPendingPublish = false,
   onPublished,
 }: Props) {
-  const router = useRouter()
   const { getToken } = useAuth()
-  const [busy, setBusy] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [activateStubOpen, setActivateStubOpen] = useState(false)
-  const triggerWrapRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!menuOpen) return
-    const onClick = (e: MouseEvent) => {
-      if (triggerWrapRef.current && !triggerWrapRef.current.contains(e.target as Node)) {
-        setMenuOpen(false)
-      }
-    }
-    const onEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenuOpen(false)
-    }
-    document.addEventListener('mousedown', onClick)
-    document.addEventListener('keydown', onEsc)
-    return () => {
-      document.removeEventListener('mousedown', onClick)
-      document.removeEventListener('keydown', onEsc)
-    }
-  }, [menuOpen])
-
-  const changeStatus = async (next: string, verb: string) => {
-    if (busy) return
-    setBusy(true)
-    try {
-      const token = await getToken()
-      if (!token) {
-        toast.error('Sign in again')
-        return
-      }
-      const res = await apiFetch(`/api/projects/${projectId}/status`, {
-        method: 'PATCH',
-        token,
-        body: JSON.stringify({ status: next }),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        toast.error(err?.error || `Could not ${verb}`)
-        return
-      }
-      toast.success(`${title} — ${verb}d`)
-      onStatusChanged?.()
-      router.refresh()
-    } catch {
-      toast.error('Network error')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const restoreFromArchive = async () => {
-    if (busy) return
-    setBusy(true)
-    try {
-      const token = await getToken()
-      if (!token) {
-        toast.error('Sign in again')
-        return
-      }
-      const res = await apiFetch(`/api/projects/${projectId}/restore`, {
-        method: 'POST',
-        token,
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        toast.error(err?.error || 'Could not restore')
-        return
-      }
-      toast.success(`${title} — restored`)
-      onStatusChanged?.()
-      router.refresh()
-    } catch {
-      toast.error('Network error')
-    } finally {
-      setBusy(false)
-    }
-  }
+  // Lifecycle handlers (changeStatus, restoreFromArchive, busy state,
+  // menuOpen state, ActivateStubModal) used to live here. They moved
+  // to the dashboard cards / rows when the trip-page status pill became
+  // read-only. SendOrSaveControl below has its own busy state — this
+  // component itself no longer mutates anything.
 
   const meta = getStatusMeta(status)
 
-  const items = buildTripMenu(status, {
-    changeStatus: (next) =>
-      changeStatus(next, next === 'completed' ? 'complete' : next === 'active' ? 'reactivate' : next),
-    requestArchive: onRequestArchive,
-    requestDelete: onRequestDelete,
-    restore: restoreFromArchive,
-    onActivate: status === 'quoted' ? () => setActivateStubOpen(true) : undefined,
-  })
+  // Status pill is read-only here. All state transitions (Make it a trip,
+  // Archive, Delete, Restore, Reactivate, Mark complete) live on the
+  // dashboard now — the trip page is for editing the proposal, not for
+  // managing its lifecycle. This keeps the action bar focused on the
+  // single thing the operator does here: refine and Send.
 
-  // Pill-wrapper layout matching the Claude Design v2 handoff:
+  // Pill-wrapper layout:
   //
-  //   ╭─[ • QUOTE ⌄ │ 🔒 Client │ 🎨 Design │ 👁 Preview │ ✈ Share ]─╮
+  //   ╭─[ • QUOTE │ 🔒 Client │ 🎨 Design │ 👁 Preview │ ✈ Share ]─╮
   //
   // One soft cream capsule hugs all controls. Status pill stays flush
   // left; the actions group is flush right via ml-auto so Share lands
   // at the trailing edge. A single hairline divider after the status
-  // pill is always visible — it separates the trip-state control from
+  // pill is always visible — it separates the trip-state indicator from
   // the agent's tools. Inter-action dividers only show on lg+ alongside
   // the labels — bare-icon mode (mobile / tablet / laptop) reads
   // cleaner without them.
   const inlineRow = (
     <div className="flex items-center gap-1 lg:gap-1.5 w-full rounded-full bg-secondary/40 border border-border/50 px-1.5 py-0.5">
-      {/* Status pill — also opens the action menu (Make it a trip /
-          Archive / Delete / Restore — depends on current status). */}
-      <div ref={triggerWrapRef} className="relative inline-block lg:mr-3">
-        <button
-          type="button"
-          onClick={() => items.length > 0 && setMenuOpen((v) => !v)}
-          disabled={busy || items.length === 0}
-          className={`inline-flex items-center gap-2 px-3 py-1 text-xs font-sans font-semibold uppercase tracking-wider rounded-full transition-opacity hover:opacity-80 disabled:opacity-60 ${meta.chipClass}`}
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
+      {/* Status pill — non-interactive label. Lifecycle actions are on
+          the dashboard. */}
+      <div className="relative inline-block lg:mr-3">
+        <span
+          className={`inline-flex items-center gap-2 px-3 py-1 text-xs font-sans font-semibold uppercase tracking-wider rounded-full ${meta.chipClass}`}
+          aria-label={`Trip status: ${meta.label}`}
         >
           {meta.hasDot && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
           <span>{meta.label}</span>
-          {items.length > 0 && <ChevronDown className="w-3.5 h-3.5" />}
-        </button>
-
-        {menuOpen && items.length > 0 && (
-          <div
-            role="menu"
-            className="absolute left-0 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg py-1 z-30"
-          >
-            {items.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setMenuOpen(false)
-                  item.onClick()
-                }}
-                disabled={busy}
-                className={
-                  'block w-full text-left px-4 py-2 text-sm transition-colors disabled:opacity-60 ' +
-                  (item.variant === 'danger'
-                    ? 'text-destructive hover:bg-destructive/10'
-                    : 'hover:bg-secondary')
-                }
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        )}
+        </span>
       </div>
 
       {/* Always-visible divider between status pill and action group. */}
@@ -347,26 +239,18 @@ export function TripActionBar({
 
   // Default — return inline content; the global Header hosts it.
   if (!standalone) {
-    return (
-      <>
-        {inlineRow}
-        <ActivateStubModal open={activateStubOpen} onClose={() => setActivateStubOpen(false)} />
-      </>
-    )
+    return inlineRow
   }
 
   // Standalone — wrap in our own sticky bar (used by the showcase
   // demo where there's no global Header to host the row).
   return (
-    <>
-      <div
-        className="sticky z-30 w-full border-b border-border/60 bg-background/95 backdrop-blur-sm"
-        style={{ top: topOffset }}
-      >
-        <div className="max-w-7xl mx-auto px-4 py-2">{inlineRow}</div>
-      </div>
-      <ActivateStubModal open={activateStubOpen} onClose={() => setActivateStubOpen(false)} />
-    </>
+    <div
+      className="sticky z-30 w-full border-b border-border/60 bg-background/95 backdrop-blur-sm"
+      style={{ top: topOffset }}
+    >
+      <div className="max-w-7xl mx-auto px-4 py-2">{inlineRow}</div>
+    </div>
   )
 }
 
@@ -467,7 +351,16 @@ function SendOrSaveControl({
     }
   }
 
-  if (publicStatus !== 'quoted' && publicStatus !== 'active') return null
+  // Hide the control when there's nothing to send (archived,
+  // generating, completed). `draft` IS allowed — the whole point of
+  // Send is to publish a draft for the first time.
+  if (
+    publicStatus === 'archived' ||
+    publicStatus === 'generating' ||
+    publicStatus === 'completed'
+  ) {
+    return null
+  }
 
   // Pending edits — two-button cluster
   if (isPublished && hasPendingPublish) {

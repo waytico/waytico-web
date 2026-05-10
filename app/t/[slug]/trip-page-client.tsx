@@ -1202,8 +1202,15 @@ export default function TripPageClient({ slug, initialData }: Props) {
   // matching photos…" hero message and the "No matching photo." day
   // caption — empty slots stay actionable but now also explain
   // themselves.
+  // Pipeline is complete once we leave 'generating'. Draft, quoted,
+  // active and completed all share the same render assumption: the
+  // trip has a hero, days, and a finished structure. Status only
+  // affects what gates publish/share/active-phase blocks elsewhere.
   const pipelineDone =
-    p.status === 'quoted' || p.status === 'active' || p.status === 'completed'
+    p.status === 'draft' ||
+    p.status === 'quoted' ||
+    p.status === 'active' ||
+    p.status === 'completed'
 
   // TZ-6 §3: NUMERIC arrives from PostgreSQL as string ("3450.00") — coerce
   // exactly once at the top of trip-page-client before forwarding to children.
@@ -2037,7 +2044,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
       <ActivationToast />
 
-      {isAnonCreator && data?.project?.status === 'quoted' && projectIdForClaim && (
+      {isAnonCreator && (data?.project?.status === 'draft' || data?.project?.status === 'quoted') && projectIdForClaim && (
         <>
           {/* Non-dismissible sticky banner — fixed-height row, leading-none + flex items-center
               guarantees vertical centering of both text and pill button. */}
@@ -2113,7 +2120,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           ~50% of the page, soft sell once they've actually engaged with
           the quote. One shot per page lifetime. Two paths inside: share
           immediately (opens banner ShareMenu), or sign up free. */}
-      {isAnonCreator && data?.project?.status === 'quoted' && projectIdForClaim && (
+      {isAnonCreator && (data?.project?.status === 'draft' || data?.project?.status === 'quoted') && projectIdForClaim && (
         <AnonUpsellModal
           tripTitle={data.project.title || 'Your trip'}
           tripUrl={shareUrl}

@@ -24,7 +24,14 @@ export type StatusMeta = {
 }
 
 export const STATUS_META: Record<TripStatus, StatusMeta> = {
-  draft: { label: 'Draft', chipClass: 'bg-secondary text-foreground/60' },
+  // Distinct accent per active state so the dashboard at a glance
+  // tells the operator which trips are still working copies (draft —
+  // amber, "needs your attention"), which are quotes out with the
+  // client (quoted — accent terracotta), and which are running trips
+  // (active — success green, with a status dot). Completed and
+  // archived stay neutral grey because they're informational and the
+  // operator's eye should slide past them in normal use.
+  draft: { label: 'Draft', chipClass: 'bg-amber-100 text-amber-800' },
   generating: { label: 'Generating', chipClass: 'bg-secondary text-foreground/60' },
   quoted: { label: 'Quote', chipClass: 'bg-accent/10 text-accent' },
   active: { label: 'Active', chipClass: 'bg-success/15 text-success', hasDot: true },
@@ -93,7 +100,10 @@ export function buildTripMenu(status: string, cb: MenuCallbacks): MenuItem[] {
   }
 
   if (status === 'draft') {
-    items.push({ label: 'Publish', onClick: () => cb.changeStatus('quoted') })
+    // No "Publish" item here — the Send button on the trip page is the
+    // single source of truth for publishing. A menu shortcut would let
+    // the operator promote the trip without taking a snapshot, which
+    // would defeat the working-copy / published-snapshot split.
     pushBrief()
     items.push({ label: 'Archive…', onClick: cb.requestArchive })
     items.push({ label: 'Delete', onClick: cb.requestDelete, variant: 'danger' })

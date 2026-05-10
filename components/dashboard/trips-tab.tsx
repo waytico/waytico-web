@@ -21,7 +21,11 @@ const STATUS_ORDER: Record<ProjectStatus, number> = {
 }
 
 const TAB_FILTERS: { key: StatusFilter; label: string }[] = [
+  // All deliberately excludes Archived — operators don't want a long
+  // tail of cleared-out trips polluting the default view. Archived is
+  // visible only when its own tab is selected.
   { key: 'all', label: 'All' },
+  { key: 'draft', label: 'Draft' },
   { key: 'quoted', label: 'Quoted' },
   { key: 'active', label: 'Active' },
   { key: 'completed', label: 'Completed' },
@@ -192,6 +196,10 @@ export default function TripsTab({ projects, onUpdate, onDelete }: Props) {
 
     if (statusFilter !== 'all') {
       list = list.filter((p) => p.status === statusFilter)
+    } else {
+      // The "All" tab is the operator's working view — keep archived
+      // trips out of it. Operators reach archived via its own tab.
+      list = list.filter((p) => p.status !== 'archived')
     }
 
     const sorted = [...list]
@@ -268,7 +276,7 @@ export default function TripsTab({ projects, onUpdate, onDelete }: Props) {
         {TAB_FILTERS.map((tab) => {
           const count =
             tab.key === 'all'
-              ? projects?.length ?? 0
+              ? projects?.filter((p) => p.status !== 'archived').length ?? 0
               : projects?.filter((p) => p.status === tab.key).length ?? 0
           const active = statusFilter === tab.key
           return (
