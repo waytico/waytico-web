@@ -430,19 +430,25 @@ function stripEmphasis(s: string): string {
 
 export function normalizeMagazineTitle(raw: string | null | undefined): string {
   if (!raw) return ''
-  if (raw.includes('\n')) {
-    const idx = raw.indexOf('\n')
-    const head = stripEmphasis(raw.slice(0, idx))
-    const tail = stripEmphasis(raw.slice(idx + 1))
+  // LLM JSON responses occasionally leak the escaped form (two literal
+  // characters: backslash + "n") instead of a real newline. Convert it to
+  // the canonical separator before any other handling so the rest of the
+  // function operates on a clean value. Idempotent — strings without the
+  // literal sequence are returned unchanged by replace().
+  const text = String(raw).replace(/\\n/g, '\n')
+  if (text.includes('\n')) {
+    const idx = text.indexOf('\n')
+    const head = stripEmphasis(text.slice(0, idx))
+    const tail = stripEmphasis(text.slice(idx + 1))
     if (!tail) return head
     if (!head) return tail
     return `${head}\n${tail}`
   }
-  const m = raw.match(/^(.+?)\s*(\*+|_+)([^*_\n]+)\2\s*$/)
+  const m = text.match(/^(.+?)\s*(\*+|_+)([^*_\n]+)\2\s*$/)
   if (m) {
     const head = stripEmphasis(m[1])
     const tail = stripEmphasis(m[3])
     if (head && tail) return `${head}\n${tail}`
   }
-  return stripEmphasis(raw)
+  return stripEmphasis(text)
 }
