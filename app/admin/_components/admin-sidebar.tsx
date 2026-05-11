@@ -17,6 +17,8 @@ const NAV_ITEMS = [
   { href: '/admin', label: 'Stats' },
   { href: '/admin/users', label: 'Users' },
   { href: '/admin/projects', label: 'Projects' },
+  { href: '/admin/prompts', label: 'Prompts' },
+  { href: '/admin/models', label: 'Models' },
   { href: '/admin/photo-bank', label: 'Photo bank' },
 ]
 
