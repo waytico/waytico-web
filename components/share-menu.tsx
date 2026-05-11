@@ -29,9 +29,17 @@ type Props = {
    * through regardless.
    */
   onShareCommit?: () => void
+  /**
+   * Link-preview framing for OG metadata. `new` (default) → the
+   * preview reads "You got a trip from {agent}". `update` → "{agent}
+   * updated the trip" and forces a WhatsApp cache miss via a
+   * timestamp param. The base `url` stays canonical for analytics;
+   * only the shared variant carries the query string.
+   */
+  mode?: 'new' | 'update'
 }
 
-export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenChange, label = 'Send', hideTrigger, onShareAction, onShareCommit }: Props) {
+export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenChange, label = 'Send', hideTrigger, onShareAction, onShareCommit, mode = 'new' }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -68,10 +76,44 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
     return null
   }
 
-  const message = `${title} — ${url}`
-  const mailto = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(url)}`
+  /**
+   * Mode-tagged share URL. WhatsApp / Telegram / iMessage fetch the
+   * server-rendered <meta> tags for the exact URL the operator sent —
+   * the same canonical `/t/{slug}` rendered with `?s=update&v={ts}`
+   * yields a different og:title via generateMetadata, which is how
+   * the "{agent} updated the trip" framing is delivered.
+   *
+   * `v` is computed at render time. Multiple channel clicks in a
+   * single open-of-menu share the same render frame (until a state
+   * change re-renders), so all recipients of one Save&notify burst
+   * see consistent metadata. A new menu-open after a publish cycle
+   * remounts the surrounding controller and yields a fresh `v`.
+   */
+  const buildShareUrl = (): string => {
+    try {
+      const u = new URL(url)
+      u.searchParams.set('s', mode)
+      if (mode === 'update') {
+        u.searchParams.set('v', String(Date.now()))
+      }
+      return u.toString()
+    } catch {
+      // url is relative or malformed — fall back to a manual append
+      // that won't crash but may produce a duplicate ?s= if the caller
+      // passes a pre-decorated URL. Caller is expected to pass a clean
+      // absolute URL via shareUrl in trip-page-client, so this branch
+      // is purely defensive.
+      const sep = url.includes('?') ? '&' : '?'
+      const suffix = mode === 'update' ? `s=update&v=${Date.now()}` : 's=new'
+      return `${url}${sep}${suffix}`
+    }
+  }
+  const shareUrl = buildShareUrl()
+
+  const message = `${title} — ${shareUrl}`
+  const mailto = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(shareUrl)}`
   const whatsapp = `https://wa.me/?text=${encodeURIComponent(message)}`
-  const telegram = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`
+  const telegram = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title)}`
 
   /** Common click handler for share channels — kicks off the publish
    *  (if anything to publish), closes the menu, and lets the native
@@ -85,7 +127,7 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
   const copy = async () => {
     onShareCommit?.()
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(shareUrl)
       toast.success('Link copied')
     } catch {
       toast.error('Could not copy')

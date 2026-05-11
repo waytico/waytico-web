@@ -394,6 +394,7 @@ function SendOrSaveControl({
       hideTrigger
       onShareAction={onShareAction}
       onShareCommit={onShareCommit}
+      mode={hasPendingPublish ? 'update' : 'new'}
     />
   )
 

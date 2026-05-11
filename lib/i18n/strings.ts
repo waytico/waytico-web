@@ -127,6 +127,22 @@ export type StringSet = {
     linkCopied: string
     couldNotCopy: string
   }
+
+  /**
+   *  Link-preview metadata (Open Graph) shown when the trip URL is
+   *  pasted into WhatsApp / Telegram / iMessage / Slack etc. Two
+   *  variants drive different operator intents:
+   *    `newTrip`     — first share or re-share without changes (Send).
+   *    `tripUpdated` — re-share after edits (Save & notify).
+   *  `{label}` is replaced with the operator's `contact_label`
+   *  (Profile → "How clients address you"), falling back to
+   *  `defaultAgent` when the field is blank or the trip is anonymous.
+   */
+  linkPreview: {
+    newTrip: string
+    tripUpdated: string
+    defaultAgent: string
+  }
 }
 
 export const STRINGS: Record<LanguageId, StringSet> = {
@@ -218,6 +234,11 @@ export const STRINGS: Record<LanguageId, StringSet> = {
       linkCopied: 'Link copied',
       couldNotCopy: 'Could not copy',
     },
+    linkPreview: {
+      newTrip: 'You got a trip from {label}',
+      tripUpdated: '{label} updated the trip',
+      defaultAgent: 'an agent',
+    },
   },
 
   ru: {
@@ -307,6 +328,11 @@ export const STRINGS: Record<LanguageId, StringSet> = {
       copyLink: 'Скопировать ссылку',
       linkCopied: 'Ссылка скопирована',
       couldNotCopy: 'Не удалось скопировать',
+    },
+    linkPreview: {
+      newTrip: 'Вы получили тур от {label}',
+      tripUpdated: '{label} обновил тур',
+      defaultAgent: 'агента',
     },
   },
 }
