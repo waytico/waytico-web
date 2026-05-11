@@ -515,12 +515,14 @@ function PriceMagazine(props: PriceProps) {
               source={props.included ?? null}
               editable={props.editable}
               onSave={props.onSaveIncluded}
+              t={t}
             />
             <PriceDetails
               kind="out"
               source={props.notIncluded ?? null}
               editable={props.editable}
               onSave={props.onSaveNotIncluded}
+              t={t}
             />
           </div>
         </div>
@@ -549,13 +551,15 @@ function PriceDetails({
   source,
   editable,
   onSave,
+  t,
 }: {
   kind: 'in' | 'out'
   source: string | null
   editable: boolean
   onSave?: (next: string) => Promise<boolean>
+  t: ReturnType<typeof getStrings>
 }) {
-  const heading = kind === 'in' ? 'Included' : 'Not included'
+  const heading = kind === 'in' ? t.included : t.notIncluded
 
   // Public viewer: single rendering — same structure mobile and desktop
   // — to match the owner-side authoring surface byte-for-byte. Each
