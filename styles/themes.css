@@ -185,7 +185,12 @@
 
   --font-display: var(--font-serif), "Cormorant Garamond", Georgia, serif;
   --font-body:    var(--font-inter), "Inter", system-ui, sans-serif;
-  --font-mono:    var(--font-dm-mono), "DM Mono", var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace;
+  /* Mono: JetBrains Mono carries both Latin and Cyrillic, keeping a
+   *  single monospace family across en/ru. DM Mono used to lead the
+   *  stack but ships Latin only — mixing it with the Cyrillic fallback
+   *  inside a single eyebrow ("СОЗДАНО MAY 11" / "КАНАДА — 5 ДНЕЙ")
+   *  rendered the two scripts in visibly different families. */
+  --font-mono:    var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace;
 
   --display-weight: 500;
   --display-tracking: -0.005em;

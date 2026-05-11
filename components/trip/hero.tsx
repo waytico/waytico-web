@@ -274,7 +274,7 @@ function HeroTopStrip({
             {hasProposal && (
               <>
                 <span>{t.proposal}</span>
-                <span>{proposalSlot ?? (proposalDate ? fmtDate(proposalDate) : null)}</span>
+                <span>{proposalSlot ?? (proposalDate ? fmtDate(proposalDate, language) : null)}</span>
               </>
             )}
             {hasProposal && hasValidUntil && (
@@ -287,7 +287,7 @@ function HeroTopStrip({
                     ? t.expired
                     : t.validUntil}
                 </span>
-                <span>{validUntilSlot ?? (validUntil ? fmtDate(validUntil) : null)}</span>
+                <span>{validUntilSlot ?? (validUntil ? fmtDate(validUntil, language) : null)}</span>
               </>
             )}
           </div>

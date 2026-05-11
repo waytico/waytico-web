@@ -5,6 +5,24 @@
 
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
+// Russian month names — full, lower-case, genitive case (the form
+// required when "11 мая 2026" / "8 июня — 10 июня" reads naturally).
+// Intl.DateTimeFormat for ru gives abbreviated "мая" / "июн." plus a
+// trailing "г." after the year — neither of which matches Waytico's
+// editorial register. We render the date string by hand for ru so the
+// output is "11 мая, 2026" / "8–10 июня, 2026" — same shape as the
+// English form (day-month, comma, year) but with full Russian month
+// names and no era suffix.
+const RU_MONTHS_LONG = [
+  'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+  'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
+]
+
+function isRussian(language?: string | null): boolean {
+  if (!language) return false
+  return language.toLowerCase().startsWith('ru')
+}
+
 const CURRENCY_GLYPH: Record<string, string> = {
   EUR: '€',
   USD: '$',
@@ -36,12 +54,14 @@ function toDateHead(v: string | null | undefined): string | null {
   return ISO_DATE_HEAD_RE.test(head) ? head : null
 }
 
-/** "Jun 18–21, 2026" if same month, else "Jun 18 – Jul 2, 2026".
+/** "Jun 18–21, 2026" if same month, else "Jun 18 – Jul 2, 2026" (en).
+ *  "18–21 июня, 2026" / "18 июня – 2 июля, 2026" (ru).
  *
- *  Language-aware via Intl.DateTimeFormat.formatRange. For non-English
- *  locales the runtime emits locale-appropriate month abbreviations and
- *  separators. Falls back to the original English-only formatter if Intl
- *  refuses the locale or formatRange isn't available. */
+ *  Russian is hand-rolled (not Intl.formatRange) because the runtime
+ *  emits abbreviated month names with a trailing period ("июн.") and
+ *  appends "г." after the year — neither matches the editorial register
+ *  Magazine is going for. The English path still uses Intl.formatRange
+ *  for any non-English/non-Russian locale that callers might pass. */
 export function fmtDateRange(
   startISO: string | null | undefined,
   endISO: string | null | undefined,
@@ -53,6 +73,19 @@ export function fmtDateRange(
   const s = new Date(`${a}T00:00:00`)
   const e = new Date(`${b}T00:00:00`)
   if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null
+  if (isRussian(language)) {
+    const sameYear = s.getFullYear() === e.getFullYear()
+    const sameMonth = sameYear && s.getMonth() === e.getMonth()
+    const sMon = RU_MONTHS_LONG[s.getMonth()]
+    const eMon = RU_MONTHS_LONG[e.getMonth()]
+    if (sameMonth) {
+      return `${s.getDate()}–${e.getDate()} ${sMon}, ${s.getFullYear()}`
+    }
+    if (sameYear) {
+      return `${s.getDate()} ${sMon} – ${e.getDate()} ${eMon}, ${s.getFullYear()}`
+    }
+    return `${s.getDate()} ${sMon}, ${s.getFullYear()} – ${e.getDate()} ${eMon}, ${e.getFullYear()}`
+  }
   const lang = language && language.length > 0 ? language : 'en'
   if (lang !== 'en' && lang !== 'en-US') {
     try {
@@ -100,6 +133,15 @@ export function fmtDateRangeLong(
   const s = new Date(`${a}T00:00:00`)
   const e = new Date(`${b}T00:00:00`)
   if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null
+  if (isRussian(language)) {
+    const sameYear = s.getFullYear() === e.getFullYear()
+    const sMon = RU_MONTHS_LONG[s.getMonth()]
+    const eMon = RU_MONTHS_LONG[e.getMonth()]
+    if (sameYear) {
+      return `${s.getDate()} ${sMon} — ${e.getDate()} ${eMon}, ${s.getFullYear()}`
+    }
+    return `${s.getDate()} ${sMon}, ${s.getFullYear()} — ${e.getDate()} ${eMon}, ${e.getFullYear()}`
+  }
   const lang = language && language.length > 0 ? language : 'en'
   if (lang !== 'en' && lang !== 'en-US') {
     try {
@@ -128,12 +170,18 @@ export function fmtDateRangeLong(
   return `${startMon} ${s.getDate()}, ${s.getFullYear()} — ${endMon} ${e.getDate()}, ${e.getFullYear()}`
 }
 
-/** "Apr 22, 2026" */
-export function fmtDate(iso: string | null | undefined): string | null {
+/** "Jun 18, 2026" (en) / "18 июня, 2026" (ru). */
+export function fmtDate(
+  iso: string | null | undefined,
+  language?: string | null,
+): string | null {
   const head = toDateHead(iso)
   if (!head) return null
   const d = new Date(`${head}T00:00:00`)
   if (Number.isNaN(d.getTime())) return null
+  if (isRussian(language)) {
+    return `${d.getDate()} ${RU_MONTHS_LONG[d.getMonth()]}, ${d.getFullYear()}`
+  }
   return `${MONTH_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`
 }
 
@@ -156,6 +204,14 @@ export function fmtDayDate(
   if (!head) return null
   const d = new Date(`${head}T00:00:00`)
   if (Number.isNaN(d.getTime())) return null
+  if (isRussian(language)) {
+    // Day-of-week from Intl (handles capitalisation and locale rules
+    // we don't want to reinvent), but month name from our own array so
+    // it lands as "вторник, 8 июня" instead of Intl's default
+    // "вторник, 8 июн." with a trailing period on the month.
+    const weekday = new Intl.DateTimeFormat('ru', { weekday: 'long' }).format(d)
+    return `${weekday}, ${d.getDate()} ${RU_MONTHS_LONG[d.getMonth()]}`
+  }
   const lang = language && language.length > 0 ? language : 'en'
   try {
     return new Intl.DateTimeFormat(lang, {
