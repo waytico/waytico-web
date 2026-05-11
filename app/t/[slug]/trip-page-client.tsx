@@ -2210,7 +2210,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   : p.status
             }
             code={extractQuoteCode(slug)}
-            ownerStatusLabel={p.status === 'draft' ? 'Draft' : 'Quote'}
+            ownerStatusLabel={p.status === 'draft' ? t.status.draft : t.publicStatus.quote}
             dateRange={dateRange}
             durationDays={p.duration_days}
             groupSize={p.group_size}
