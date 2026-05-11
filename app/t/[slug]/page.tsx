@@ -52,7 +52,13 @@ function buildPreviewDescription(p: {
 }): string {
   const s = getStrings(p.language)
   const parts: string[] = []
-  if (p.title && p.title.trim()) parts.push(p.title.trim())
+  if (p.title && p.title.trim()) {
+    // Magazine title contract uses a `\n` separator between Head and
+    // Tail (rendered as a serif/italic line break in the hero). For
+    // a single-line OG description the line break collapses to a
+    // space — otherwise WhatsApp shows a literal newline mid-text.
+    parts.push(p.title.replace(/\s+/g, ' ').trim())
+  }
   if (p.country) parts.push(p.country)
   if (p.duration_days && p.duration_days > 0) {
     // Russian needs proper plural form; English uses one/many.
