@@ -29,8 +29,8 @@ const CURRENCY_GLYPH: Record<string, string> = {
   GBP: '£',
   CAD: 'CA$',
   AUD: 'A$',
-  JPY: '¥',
   CHF: 'CHF ',
+  RUB: '₽',
 }
 
 /** Glyph for a currency code, or the uppercased code as fallback. */

@@ -358,8 +358,8 @@ const SUPPORTED_CURRENCIES: Array<{ code: string; label: string }> = [
   { code: 'GBP', label: 'GBP (£)' },
   { code: 'CAD', label: 'CAD (CA$)' },
   { code: 'AUD', label: 'AUD (A$)' },
-  { code: 'JPY', label: 'JPY (¥)' },
   { code: 'CHF', label: 'CHF' },
+  { code: 'RUB', label: 'RUB (₽)' },
 ]
 
 /* ── Magazine variant ─────────────────────────────────────────────── */
