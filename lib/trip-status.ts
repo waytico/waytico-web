@@ -19,6 +19,14 @@ export type StatusMeta = {
   label: string
   /** Tailwind class string for the chip body */
   chipClass: string
+  /**
+   * Background + hover classes for the full dashboard row. Subtler tint
+   * than chipClass — the colored row is the at-a-glance signal, the
+   * pill confirms with the label. Hover intensifies the existing tint
+   * (so the row doesn't lose its color on hover, which a generic grey
+   * hover override would cause).
+   */
+  rowClass: string
   /** Show a small dot before the label (used for Active) */
   hasDot?: boolean
 }
@@ -31,12 +39,42 @@ export const STATUS_META: Record<TripStatus, StatusMeta> = {
   // (active — success green, with a status dot). Completed and
   // archived stay neutral grey because they're informational and the
   // operator's eye should slide past them in normal use.
-  draft: { label: 'Draft', chipClass: 'bg-amber-100 text-amber-800' },
-  generating: { label: 'Generating', chipClass: 'bg-secondary text-foreground/60' },
-  quoted: { label: 'Quote', chipClass: 'bg-accent/10 text-accent' },
-  active: { label: 'Active', chipClass: 'bg-success/15 text-success', hasDot: true },
-  completed: { label: 'Completed', chipClass: 'bg-secondary text-foreground/60' },
-  archived: { label: 'Archived', chipClass: 'bg-secondary text-foreground/60' },
+  //
+  // rowClass uses a much weaker tint (~5-8%) than chipClass so the
+  // row reads as a status-tinted band, not a saturated banner. Hover
+  // bumps the same hue 1 step (no grey-out), preserving the signal
+  // while pointing.
+  draft: {
+    label: 'Draft',
+    chipClass: 'bg-amber-100 text-amber-800',
+    rowClass: 'bg-amber-50/60 hover:bg-amber-50',
+  },
+  generating: {
+    label: 'Generating',
+    chipClass: 'bg-secondary text-foreground/60',
+    rowClass: 'bg-secondary/40 hover:bg-secondary/60',
+  },
+  quoted: {
+    label: 'Quote',
+    chipClass: 'bg-accent/10 text-accent',
+    rowClass: 'bg-accent/[0.04] hover:bg-accent/[0.08]',
+  },
+  active: {
+    label: 'Active',
+    chipClass: 'bg-success/15 text-success',
+    rowClass: 'bg-success/[0.06] hover:bg-success/[0.10]',
+    hasDot: true,
+  },
+  completed: {
+    label: 'Completed',
+    chipClass: 'bg-secondary text-foreground/60',
+    rowClass: 'bg-secondary/40 hover:bg-secondary/60',
+  },
+  archived: {
+    label: 'Archived',
+    chipClass: 'bg-secondary text-foreground/60',
+    rowClass: 'bg-secondary/40 hover:bg-secondary/60',
+  },
 }
 
 /**
@@ -48,6 +86,7 @@ export function getStatusMeta(status: string): StatusMeta {
     STATUS_META[status as TripStatus] || {
       label: status,
       chipClass: 'bg-secondary text-foreground/60',
+      rowClass: 'bg-secondary/40 hover:bg-secondary/60',
     }
   )
 }

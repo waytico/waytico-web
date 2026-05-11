@@ -175,7 +175,7 @@ export default function TripRow({ project, dimmed, showAttention, onUpdate, onDe
   return (
     <>
       <div
-        className={`flex items-center gap-3 px-4 py-3 border-t border-border/50 hover:bg-secondary/30 transition-colors ${dimmed ? 'opacity-70' : ''}`}
+        className={`flex items-center gap-3 px-4 py-3 border-t border-border/50 transition-colors ${meta.rowClass} ${dimmed ? 'opacity-70' : ''}`}
       >
         <Link
           href={`/t/${project.slug}`}
