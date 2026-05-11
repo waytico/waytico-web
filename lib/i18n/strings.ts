@@ -37,6 +37,11 @@ export type StringSet = {
   // Single words / short copy
   day: string
   days: string
+  /** Plural-aware day word — selected via pluralize(). Russian needs
+   *  three forms: 1 день / 2-4 дня / 5+ дней. English uses one/many. */
+  daysOne: string
+  daysFew: string
+  daysMany: string
   traveler: string
   travelers: string
   group: string
@@ -138,6 +143,9 @@ export const STRINGS: Record<LanguageId, StringSet> = {
     },
     day: 'Day',
     days: 'days',
+    daysOne: 'day',
+    daysFew: 'days',
+    daysMany: 'days',
     traveler: 'traveler',
     travelers: 'travelers',
     group: 'Group',
@@ -225,6 +233,9 @@ export const STRINGS: Record<LanguageId, StringSet> = {
     },
     day: 'День',
     days: 'дней',
+    daysOne: 'день',
+    daysFew: 'дня',
+    daysMany: 'дней',
     traveler: 'человек',
     travelers: 'человек',
     group: 'Группа',

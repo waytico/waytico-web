@@ -54,6 +54,7 @@ import { TripFooter } from '@/components/trip/trip-footer'
 import { apiFetch } from '@/lib/api'
 import { resolveTheme, type ThemeId } from '@/lib/themes'
 import { resolveLanguage, getStrings } from '@/lib/i18n/strings'
+import { toDativeName } from '@/lib/i18n/cases'
 import {
   fmtDate,
   fmtDateRange,
@@ -2279,7 +2280,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                         language={tripLanguage}
                         label={
                           owner?.contact_label
-                            ? `${t.contactAgent.namedPrefix} ${owner.contact_label}`
+                            ? `${t.contactAgent.namedPrefix} ${toDativeName(owner.contact_label, tripLanguage)}`
                             : undefined
                         }
                       />

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
 import { getStrings } from '@/lib/i18n/strings'
+import { pluralize } from '@/lib/i18n/plural'
 import { AttributionPopover } from './attribution-popover'
 import type { ThemeId } from '@/lib/themes'
 import { HERO_STYLE } from '@/lib/themes'
@@ -623,9 +624,20 @@ function HeroMagazine(props: HeroProps) {
   // Magazine intentionally ignores any inbound durationStatSlot. Owner and
   // public both render the spelled-out word ("SIX DAYS") so the eyebrow
   // line reads consistently — no stat-tile clickable digit here.
+  // Day word agrees with the count in the active language: English
+  // collapses to "day" / "days", Russian inflects "1 день / 2-4 дня /
+  // 5+ дней" via Intl.PluralRules.
+  const dayWord =
+    durationDays != null
+      ? pluralize(language, durationDays, {
+          one: t.daysOne,
+          few: t.daysFew,
+          many: t.daysMany,
+        })
+      : null
   const bottomDuration: ReactNode =
-    durationDisplay != null
-      ? `${durationDisplay} ${t.days.toUpperCase()}`
+    durationDisplay != null && dayWord
+      ? `${durationDisplay} ${dayWord.toUpperCase()}`
       : null
   const bottomDates: ReactNode = dateStatSlot ?? dateRange ?? null
 
