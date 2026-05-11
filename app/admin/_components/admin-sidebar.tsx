@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { href: '/admin/projects', label: 'Projects' },
   { href: '/admin/prompts', label: 'Prompts' },
   { href: '/admin/models', label: 'Models' },
+  { href: '/admin/ai-log', label: 'AI log' },
   { href: '/admin/photo-bank', label: 'Photo bank' },
 ]
 
