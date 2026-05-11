@@ -16,9 +16,9 @@ import { Loader2, X } from 'lucide-react'
 import { useAdminPhotoReview, type AuthedFetch } from '@/hooks/use-admin-photo-review'
 import { PhotoReviewCard } from '@/components/admin/photo-review-card'
 import { listGlobalCountries } from '@/lib/photo-bank-api'
-import { CrawlAccordion } from './_components/crawl-accordion'
 import { BrowsePanel } from './_components/browse-panel'
-import { ReclassifyPanel } from './_components/reclassify-panel'
+import { TargetsPanel } from './_components/targets-panel'
+import { WorkersPanel } from './_components/workers-panel'
 
 const PER_PAGE_OPTIONS = [25, 50, 100] as const
 
@@ -97,23 +97,19 @@ export default function AdminPhotoBankPage() {
   // Stage 11 — view mode. Browse mode hides the review queue UI and
   // renders the country/city navigator instead. URL-controlled so a
   // bookmark like ?view=browse keeps you in the right tab on reload.
-  const viewQuery = searchParams.get('view') as 'review' | 'browse' | null
-  const view: 'review' | 'browse' =
-    viewQuery === 'browse' ? 'browse' : 'review'
-  const setView = (next: 'review' | 'browse') => {
+  const viewQuery = searchParams.get('view') as 'review' | 'browse' | 'targets' | 'workers' | null
+  const view: 'review' | 'browse' | 'targets' | 'workers' =
+    viewQuery === 'browse' || viewQuery === 'targets' || viewQuery === 'workers' ? viewQuery : 'review'
+  const setView = (next: 'review' | 'browse' | 'targets' | 'workers') => {
     const sp = new URLSearchParams(searchParams.toString())
-    if (next === 'browse') sp.set('view', 'browse')
-    else sp.delete('view')
+    if (next === 'review') sp.delete('view')
+    else sp.set('view', next)
     const qs = sp.toString()
     router.push(qs ? `/admin/photo-bank?${qs}` : '/admin/photo-bank')
   }
 
   return (
     <div>
-      <div className="mb-4">
-        <CrawlAccordion />
-      </div>
-
       <div className="mb-3 flex items-center justify-between gap-2 border-b border-zinc-200">
         <div className="flex items-center gap-1">
           <button
@@ -140,13 +136,36 @@ export default function AdminPhotoBankPage() {
           >
             Browse library
           </button>
-        </div>
-        <div className="pb-1">
-          <ReclassifyPanel />
+          <button
+            type="button"
+            onClick={() => setView('targets')}
+            className={
+              'border-b-2 px-3 py-2 text-sm font-medium transition-colors ' +
+              (view === 'targets'
+                ? 'border-zinc-900 text-zinc-900'
+                : 'border-transparent text-zinc-500 hover:text-zinc-700')
+            }
+          >
+            Targets
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('workers')}
+            className={
+              'border-b-2 px-3 py-2 text-sm font-medium transition-colors ' +
+              (view === 'workers'
+                ? 'border-zinc-900 text-zinc-900'
+                : 'border-transparent text-zinc-500 hover:text-zinc-700')
+            }
+          >
+            Workers
+          </button>
         </div>
       </div>
 
       {view === 'browse' && <BrowsePanel />}
+      {view === 'targets' && <TargetsPanel authedFetch={authedFetch} />}
+      {view === 'workers' && <WorkersPanel authedFetch={authedFetch} />}
 
       {view === 'review' && (
         <>
