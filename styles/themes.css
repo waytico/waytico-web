@@ -51,8 +51,8 @@
   --chip-ink:   #C4622D;
 
   --font-display: var(--font-serif), "Cormorant Garamond", "EB Garamond", Georgia, serif;
-  --font-body:    var(--font-sans), "DM Sans", system-ui, sans-serif;
-  --font-mono:    var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+  --font-body:    var(--font-sans), "DM Sans", var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-mono:    var(--font-dm-mono), "DM Mono", var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace;
 
   --display-weight: 500;
   --display-tracking: -0.01em;
@@ -185,7 +185,7 @@
 
   --font-display: var(--font-serif), "Cormorant Garamond", Georgia, serif;
   --font-body:    var(--font-inter), "Inter", system-ui, sans-serif;
-  --font-mono:    var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+  --font-mono:    var(--font-dm-mono), "DM Mono", var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace;
 
   --display-weight: 500;
   --display-tracking: -0.005em;

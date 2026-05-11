@@ -16,7 +16,7 @@ import './globals.css'
 
 // Default trip-page typography (editorial theme + global brand chrome)
 const cormorant = Cormorant_Garamond({
-  subsets: ['latin'],
+  subsets: ['latin', 'cyrillic'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-serif',
   display: 'swap',
@@ -47,7 +47,7 @@ const archivoBlack = Archivo_Black({
 })
 
 const inter = Inter({
-  subsets: ['latin'],
+  subsets: ['latin', 'cyrillic'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-inter',
   display: 'swap',
@@ -55,7 +55,7 @@ const inter = Inter({
 })
 
 const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
+  subsets: ['latin', 'cyrillic'],
   weight: ['400', '500'],
   variable: '--font-jetbrains-mono',
   display: 'swap',

@@ -1,54 +1,14 @@
 /**
- * Shared trip-page UI strings.
+ * Shared trip-page UI strings — legacy entry point.
  *
- * Per TZ-6 §2.2: section labels and small invariant copy are IDENTICAL
- * across all three themes. No theme is allowed to invent decorative
- * text ("Chapter I", "§ 01 — BRIEFING", etc.) — anything visible to
- * the reader lives here.
+ * @deprecated Use `getStrings(language)` (server) or `useStrings(language)`
+ *   (client) from `@/lib/i18n/strings`. This shim points at the English
+ *   dictionary so existing call sites keep working while components are
+ *   migrated to language-aware lookup.
  */
 
-export const UI = {
-  sectionLabels: {
-    overview: 'Overview',
-    itinerary: 'Itinerary',
-    accommodations: 'Accommodations',
-    included: "What's included",
-    price: 'Price',
-    terms: 'Terms',
-    contacts: 'Contacts',
-  },
-  perTraveler: 'per traveler',
-  forTheGroup: 'for the group',
-  travelers: 'travelers',
-  traveler: 'traveler',
-  group: 'Group',
-  days: 'days',
-  day: 'day',
-  notIncluded: 'Not included',
-  included: 'Included',
-  proposal: 'Issued',
-  validUntil: 'Valid until',
-  expired: 'Expired',
-  totalPrice: 'Total',
-  bookCta: 'Reserve dates',
-  contactsHeading: 'Questions about this trip?',
-  contactsSubheading: "Reach out — I'd love to hear from you.",
-  emptyList: 'Nothing listed.',
-  segType: {
-    transport: 'Transport',
-    activity: 'Activity',
-    meal: 'Meal',
-    accommodation: 'Accommodation',
-    free_time: 'Free time',
-    other: 'Note',
-  } as Record<string, string>,
-  status: {
-    draft: 'Draft',
-    quoted: 'Quoted',
-    active: 'Active',
-    completed: 'Completed',
-    archived: 'Archived',
-  } as Record<string, string>,
-} as const
+import { STRINGS } from './i18n/strings'
+
+export const UI = STRINGS.en
 
 export type SectionLabel = keyof typeof UI.sectionLabels

@@ -36,14 +36,42 @@ function toDateHead(v: string | null | undefined): string | null {
   return ISO_DATE_HEAD_RE.test(head) ? head : null
 }
 
-/** "Jun 18–21, 2026" if same month, else "Jun 18 – Jul 2, 2026". */
-export function fmtDateRange(startISO: string | null | undefined, endISO: string | null | undefined): string | null {
+/** "Jun 18–21, 2026" if same month, else "Jun 18 – Jul 2, 2026".
+ *
+ *  Language-aware via Intl.DateTimeFormat.formatRange. For non-English
+ *  locales the runtime emits locale-appropriate month abbreviations and
+ *  separators. Falls back to the original English-only formatter if Intl
+ *  refuses the locale or formatRange isn't available. */
+export function fmtDateRange(
+  startISO: string | null | undefined,
+  endISO: string | null | undefined,
+  language?: string | null,
+): string | null {
   const a = toDateHead(startISO)
   const b = toDateHead(endISO)
   if (!a || !b) return null
   const s = new Date(`${a}T00:00:00`)
   const e = new Date(`${b}T00:00:00`)
   if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null
+  const lang = language && language.length > 0 ? language : 'en'
+  if (lang !== 'en' && lang !== 'en-US') {
+    try {
+      const fmt = new Intl.DateTimeFormat(lang, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+      const range = (fmt as Intl.DateTimeFormat & {
+        formatRange?: (a: Date, b: Date) => string
+      }).formatRange
+      if (typeof range === 'function') {
+        return range.call(fmt, s, e)
+      }
+      return fmt.format(s)
+    } catch {
+      // fall through to English
+    }
+  }
   const sameMonth = s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()
   if (sameMonth) {
     return `${MONTH_SHORT[s.getMonth()]} ${s.getDate()}–${e.getDate()}, ${s.getFullYear()}`
@@ -64,6 +92,7 @@ export function fmtDateRange(startISO: string | null | undefined, endISO: string
 export function fmtDateRangeLong(
   startISO: string | null | undefined,
   endISO: string | null | undefined,
+  language?: string | null,
 ): string | null {
   const a = toDateHead(startISO)
   const b = toDateHead(endISO)
@@ -71,6 +100,25 @@ export function fmtDateRangeLong(
   const s = new Date(`${a}T00:00:00`)
   const e = new Date(`${b}T00:00:00`)
   if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null
+  const lang = language && language.length > 0 ? language : 'en'
+  if (lang !== 'en' && lang !== 'en-US') {
+    try {
+      const fmt = new Intl.DateTimeFormat(lang, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+      const range = (fmt as Intl.DateTimeFormat & {
+        formatRange?: (a: Date, b: Date) => string
+      }).formatRange
+      if (typeof range === 'function') {
+        return range.call(fmt, s, e)
+      }
+      return fmt.format(s)
+    } catch {
+      // fall through to English
+    }
+  }
   const sameYear = s.getFullYear() === e.getFullYear()
   const startMon = MONTH_SHORT[s.getMonth()]
   const endMon = MONTH_SHORT[e.getMonth()]
@@ -139,10 +187,28 @@ export function coercePrice(value: unknown): number | null {
   return null
 }
 
-/** "€3,450". Falls back to bare number if currency is unknown. */
-export function fmtPrice(amount: number | null | undefined, currency: string | null | undefined): string | null {
+/** "€3,450" (en) / "3 450 €" (ru). Falls back to glyph + en-US formatted
+ *  number if currency is unknown or Intl rejects the locale. */
+export function fmtPrice(
+  amount: number | null | undefined,
+  currency: string | null | undefined,
+  language?: string | null,
+): string | null {
   if (amount == null) return null
-  const glyph = currency ? (CURRENCY_GLYPH[currency.toUpperCase()] || `${currency.toUpperCase()} `) : ''
+  const lang = language && language.length > 0 ? language : 'en'
+  const cur = currency ? currency.toUpperCase() : ''
+  if (cur && lang !== 'en' && lang !== 'en-US') {
+    try {
+      return new Intl.NumberFormat(lang, {
+        style: 'currency',
+        currency: cur,
+        maximumFractionDigits: 0,
+      }).format(amount)
+    } catch {
+      // fall through to glyph + en-US
+    }
+  }
+  const glyph = currency ? (CURRENCY_GLYPH[cur] || `${cur} `) : ''
   return glyph + amount.toLocaleString('en-US')
 }
 
@@ -218,10 +284,22 @@ const TEENS_WORDS = [
 ]
 const TENS_WORDS = ['', '', 'TWENTY', 'THIRTY']
 
-export function numberToWords(n: number | null | undefined): string | null {
+export function numberToWords(
+  n: number | null | undefined,
+  language?: string | null,
+): string | null {
   if (n == null || !Number.isFinite(n)) return null
   if (!Number.isInteger(n)) return null
-  if (n < 1 || n > 30) return null
+  if (n < 1) return null
+  const lang = language && language.length > 0 ? language : 'en'
+  // Non-English locales: render the digit. Cross-language number-word
+  // spelling (declension in Russian, gender in Spanish, etc.) is its
+  // own can of worms and well outside the Magazine i18n scope. The
+  // numeric form reads cleanly in every locale we care about.
+  if (lang !== 'en' && lang !== 'en-US') {
+    return String(n)
+  }
+  if (n > 30) return null
   if (n < 10) return ONES_WORDS[n]
   if (n < 20) return TEENS_WORDS[n - 10]
   const tens = Math.floor(n / 10)
