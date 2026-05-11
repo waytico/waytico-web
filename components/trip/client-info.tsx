@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '@clerk/nextjs'
 import { Lock, X } from 'lucide-react'
@@ -62,8 +62,32 @@ export function ClientInfo({
   const [createDraft, setCreateDraft] = useState<Partial<Client> | undefined>(undefined)
   const [editOpen, setEditOpen] = useState(false)
   const [switchOpen, setSwitchOpen] = useState(false)
+  const rootRef = useRef<HTMLElement>(null)
 
   useEffect(() => setLocalClient(client), [client])
+
+  // Click outside the card closes it (alongside the × button and the
+  // Client pill in TripActionBar). Only active when the toggle pattern
+  // is in play (onClose provided). Suppressed while any modal sitting
+  // on top of the card is open — including the SmartClientPicker
+  // dropdown which mounts in a portal and would otherwise read as
+  // "outside" the card. The Client trigger button in the action bar
+  // carries data-client-info-trigger so its own click doesn't fire a
+  // close-then-reopen race.
+  useEffect(() => {
+    if (!onClose) return
+    if (createOpen || editOpen || switchOpen) return
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null
+      if (!target) return
+      if (rootRef.current?.contains(target)) return
+      if (target.closest('[data-client-info-trigger]')) return
+      if (target.closest('[data-smart-picker-dropdown="1"]')) return
+      onClose()
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    return () => document.removeEventListener('mousedown', onMouseDown)
+  }, [onClose, createOpen, editOpen, switchOpen])
 
   async function handleLink(picked: Client) {
     const ok = await saveProjectPatch({ clientId: picked.id })
@@ -121,7 +145,7 @@ export function ClientInfo({
   }
 
   return (
-    <section aria-label="Client info — operator only" className="w-full">
+    <section ref={rootRef} aria-label="Client info — operator only" className="w-full">
       {/* No client → compact card with accent header strip + search input
           (mirrors ThemeSwitcher dropdown / OnboardingTip pattern) */}
       {!localClient && (

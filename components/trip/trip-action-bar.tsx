@@ -170,6 +170,7 @@ export function TripActionBar({
               onClick={onToggleClientInfo}
               aria-pressed={clientInfoOpen ? 'true' : 'false'}
               aria-label={clientInfoOpen ? 'Hide client info' : 'Show client info'}
+              data-client-info-trigger=""
               className={
                 'inline-flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded-full text-sm transition-colors ' +
                 (clientInfoOpen
@@ -408,7 +409,7 @@ function SendOrSaveControl({
           onClick={handleSave}
           disabled={busy}
           className="inline-flex items-center gap-1.5 px-2.5 lg:px-3 py-1 rounded-full text-sm font-medium bg-secondary text-foreground hover:bg-secondary/80 transition-colors whitespace-nowrap disabled:opacity-60"
-          title="Publish updates to the client view (silent)"
+          title="Updates the trip page without notifying your client"
         >
           Save
         </button>
@@ -417,7 +418,6 @@ function SendOrSaveControl({
           onClick={handleSaveAndNotify}
           disabled={busy}
           className="inline-flex items-center gap-1.5 px-2.5 lg:px-3 py-1 rounded-full text-sm font-medium bg-accent text-accent-foreground hover:bg-accent/90 transition-colors whitespace-nowrap disabled:opacity-60"
-          title="Publish updates and share the link"
         >
           Save & notify
         </button>

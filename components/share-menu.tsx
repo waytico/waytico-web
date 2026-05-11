@@ -165,7 +165,9 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
           className="absolute right-0 mt-2 w-56 rounded-xl bg-background border border-border shadow-lg z-20 overflow-hidden"
         >
           <OnboardingTip>
-            Send the trip page link to your client.
+            {mode === 'update'
+              ? 'Notify your client that the trip page has been updated.'
+              : 'Send the trip page link to your client.'}
           </OnboardingTip>
           <div className="py-1">
           <a
