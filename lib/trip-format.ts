@@ -24,13 +24,19 @@ function isRussian(language?: string | null): boolean {
 }
 
 const CURRENCY_GLYPH: Record<string, string> = {
-  EUR: '€',
-  USD: '$',
-  GBP: '£',
-  CAD: 'CA$',
   AUD: 'A$',
+  CAD: 'CA$',
   CHF: 'CHF ',
+  EUR: '€',
+  GBP: '£',
+  MXN: 'MX$',
+  NZD: 'NZ$',
   RUB: '₽',
+  USD: '$',
+  // DKK / NOK / SEK all share the "kr" glyph in their home countries,
+  // which reads ambiguous on a public trip page; let them fall through
+  // to the "{code} " fallback in currencyGlyph() so the trip page
+  // shows "SEK 2,000" / "NOK 2,000" / "DKK 2,000" unambiguously.
 }
 
 /** Glyph for a currency code, or the uppercased code as fallback. */

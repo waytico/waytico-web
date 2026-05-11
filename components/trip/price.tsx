@@ -185,25 +185,61 @@ function HeadlineAmountEditor({
         {/* Glyph is the currency picker. The native <select> sits on
             top of it as a transparent overlay so a click anywhere on
             the glyph opens the OS dropdown — no separate UI element,
-            no popover. The visual character (\$, €, …) is the trigger. */}
+            no popover. The visual character ($, €, …) is the trigger.
+            The "Other…" entry at the bottom prompts for any ISO 4217
+            code so operators can use markets we don't curate in
+            SUPPORTED_CURRENCIES (TRY, AED, SGD, etc.). If the current
+            currency is one of those custom codes, we surface it as the
+            first option so the select reflects state correctly. */}
         <span className="tp-price-currency-trigger">
           <span aria-hidden="true">{glyph}</span>
           <select
             className="tp-price-currency-overlay"
             aria-label="Currency"
-            value={currency.toUpperCase()}
+            value={
+              SUPPORTED_CURRENCIES.some((c) => c.code === currency.toUpperCase())
+                ? currency.toUpperCase()
+                : currency.toUpperCase()
+            }
             onChange={async (e) => {
               const next = e.target.value
+              if (next === CUSTOM_CURRENCY) {
+                const raw = window.prompt(
+                  'Enter currency code (3 letters, ISO 4217 — e.g. TRY, AED, SGD)',
+                  '',
+                )
+                if (raw == null) return
+                const trimmed = raw.trim().toUpperCase()
+                if (!/^[A-Z]{3}$/.test(trimmed)) {
+                  // Silently ignore invalid input — operator can re-open
+                  // the picker and try again. Toast/alert here would be
+                  // overkill for a one-off operator action.
+                  return
+                }
+                if (trimmed !== currency.toUpperCase()) {
+                  await onSaveCurrency(trimmed)
+                }
+                return
+              }
               if (next !== currency.toUpperCase()) {
                 await onSaveCurrency(next)
               }
             }}
           >
+            {!SUPPORTED_CURRENCIES.some(
+              (c) => c.code === currency.toUpperCase(),
+            ) &&
+              /^[A-Z]{3}$/.test(currency.toUpperCase()) && (
+                <option value={currency.toUpperCase()}>
+                  {currency.toUpperCase()}
+                </option>
+              )}
             {SUPPORTED_CURRENCIES.map((c) => (
               <option key={c.code} value={c.code}>
                 {c.label}
               </option>
             ))}
+            <option value={CUSTOM_CURRENCY}>Other…</option>
           </select>
         </span>
         <span
@@ -351,15 +387,28 @@ function PriceModeSuffix({
 // Mirrors lib/trip-format.ts:CURRENCY_GLYPH so the formatter and the
 // picker stay in lock-step. The glyph itself is the trigger — no
 // standalone select component.
+//
+// Order is alphabetical by ISO code so the dropdown reads like a
+// reference list. The trailing "Other…" entry opens a prompt for any
+// ISO 4217 code that's not in the list — covers operators working in
+// markets outside the curated set (TRY, AED, PLN, SGD, …) without us
+// having to maintain an ever-growing menu.
+
+const CUSTOM_CURRENCY = '__custom__'
 
 const SUPPORTED_CURRENCIES: Array<{ code: string; label: string }> = [
-  { code: 'USD', label: 'USD ($)' },
+  { code: 'AUD', label: 'AUD (A$)' },
+  { code: 'CAD', label: 'CAD (CA$)' },
+  { code: 'CHF', label: 'CHF' },
+  { code: 'DKK', label: 'DKK' },
   { code: 'EUR', label: 'EUR (€)' },
   { code: 'GBP', label: 'GBP (£)' },
-  { code: 'CAD', label: 'CAD (CA$)' },
-  { code: 'AUD', label: 'AUD (A$)' },
-  { code: 'CHF', label: 'CHF' },
+  { code: 'MXN', label: 'MXN (MX$)' },
+  { code: 'NOK', label: 'NOK' },
+  { code: 'NZD', label: 'NZD (NZ$)' },
   { code: 'RUB', label: 'RUB (₽)' },
+  { code: 'SEK', label: 'SEK' },
+  { code: 'USD', label: 'USD ($)' },
 ]
 
 /* ── Magazine variant ─────────────────────────────────────────────── */
