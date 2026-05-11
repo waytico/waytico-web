@@ -159,14 +159,13 @@ export type StringSet = {
    *  variants drive different operator intents:
    *    `newTrip`     — first share or re-share without changes (Send).
    *    `tripUpdated` — re-share after edits (Save & notify).
-   *  `{label}` is replaced with the operator's `contact_label`
-   *  (Profile → "How clients address you"), falling back to
-   *  `defaultAgent` when the field is blank or the trip is anonymous.
+   *  Both are intentionally label-free: a chat message already carries
+   *  the sender's identity in the recipient's chat list, and naming
+   *  the operator inline runs into Russian declension issues anyway.
    */
   linkPreview: {
     newTrip: string
     tripUpdated: string
-    defaultAgent: string
   }
 }
 
@@ -271,9 +270,8 @@ export const STRINGS: Record<LanguageId, StringSet> = {
       couldNotCopy: 'Could not copy',
     },
     linkPreview: {
-      newTrip: 'You got a trip from {label}',
-      tripUpdated: '{label} updated the trip',
-      defaultAgent: 'an agent',
+      newTrip: 'You got a new trip',
+      tripUpdated: 'Trip updated',
     },
   },
 
@@ -377,9 +375,8 @@ export const STRINGS: Record<LanguageId, StringSet> = {
       couldNotCopy: 'Не удалось скопировать',
     },
     linkPreview: {
-      newTrip: 'Вы получили тур от {label}',
-      tripUpdated: '{label} обновил тур',
-      defaultAgent: 'агента',
+      newTrip: 'Новый тур для вас',
+      tripUpdated: 'Тур обновлён',
     },
   },
 }

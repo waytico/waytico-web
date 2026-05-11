@@ -110,10 +110,19 @@ export default function ShareMenu({ title, url, publicStatus, forceOpen, onOpenC
   }
   const shareUrl = buildShareUrl()
 
-  const message = `${title} — ${shareUrl}`
+  // Channel hand-off URLs.
+  //
+  // Pre-filled message text deliberately carries ONLY the URL — no
+  // trip title. The OG link-preview card that appears below the
+  // message already shows the title, country, day count and dates;
+  // including the title in the message body too produces a visible
+  // duplicate in the chat ("Vancouver in three days — https://…"
+  // above the preview card whose description also leads with
+  // "Vancouver in three days"). Email keeps the title as a subject
+  // since email previews don't render OG cards the same way.
   const mailto = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(shareUrl)}`
-  const whatsapp = `https://wa.me/?text=${encodeURIComponent(message)}`
-  const telegram = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title)}`
+  const whatsapp = `https://wa.me/?text=${encodeURIComponent(shareUrl)}`
+  const telegram = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}`
 
   /** Common click handler for share channels — kicks off the publish
    *  (if anything to publish), closes the menu, and lets the native
