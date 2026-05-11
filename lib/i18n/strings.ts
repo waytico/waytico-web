@@ -53,6 +53,11 @@ export type StringSet = {
   contactsSubheading: string
   emptyList: string
 
+  /** Magazine-only label for the combined "what's included / not included"
+   *  section eyebrow. Reads as "DETAILS" (CSS uppercase). Distinct from
+   *  `sectionLabels.included` which is the editorial section title. */
+  magazineDetailsEyebrow: string
+
   // Internal status (operator-facing, but mirrored here so the shim
   // stays type-equivalent to the legacy UI export).
   status: Record<string, string>
@@ -144,6 +149,7 @@ export const STRINGS: Record<LanguageId, StringSet> = {
     contactsHeading: 'Questions about this trip?',
     contactsSubheading: "Reach out — I'd love to hear from you.",
     emptyList: 'Nothing listed.',
+    magazineDetailsEyebrow: 'Details',
     status: {
       draft: 'Draft',
       quoted: 'Quoted',
@@ -229,6 +235,7 @@ export const STRINGS: Record<LanguageId, StringSet> = {
     contactsHeading: 'Есть вопросы?',
     contactsSubheading: 'Напишите в любой удобный мессенджер',
     emptyList: 'Ничего не указано.',
+    magazineDetailsEyebrow: 'Детали',
     status: {
       draft: 'Черновик',
       quoted: 'Предложение',

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Mail, Phone, MapPin, Globe, Eye, EyeOff } from 'lucide-react'
-import { UI } from '@/lib/ui-strings'
+import { getStrings } from '@/lib/i18n/strings'
 import { EditableField } from '@/components/editable/editable-field'
 import {
   WhatsAppIcon,
@@ -25,6 +25,9 @@ type Props = {
    *  resolution + EyeOff/inline-edit semantics, restyled wrapper +
    *  identity panel. Other values keep the editorial layout. */
   theme?: ThemeId
+  /** ISO 639-1 language for client-facing labels (heading / subheading
+   *  / section eyebrow). Defaults to English. */
+  language?: string | null
 }
 
 type ChannelKey =
@@ -146,7 +149,8 @@ const CHANNELS: Channel[] = [
  *   - small hint at the bottom linking to /dashboard for adding the
  *     channels not configured on the brand yet.
  */
-export function TripContacts({ owner, operatorContact, editable, saveProjectPatch, theme }: Props) {
+export function TripContacts({ owner, operatorContact, editable, saveProjectPatch, theme, language }: Props) {
+  const t = getStrings(language)
   if (theme === 'magazine') {
     return (
       <ContactsMagazine
@@ -154,6 +158,7 @@ export function TripContacts({ owner, operatorContact, editable, saveProjectPatc
         operatorContact={operatorContact}
         editable={editable}
         saveProjectPatch={saveProjectPatch}
+        t={t}
       />
     )
   }
@@ -246,13 +251,13 @@ export function TripContacts({ owner, operatorContact, editable, saveProjectPatc
                 as="text"
                 editable={editable}
                 value={
-                  operatorContact?.heading?.trim() || UI.contactsHeading
+                  operatorContact?.heading?.trim() || t.contactsHeading
                 }
-                placeholder={UI.contactsHeading}
+                placeholder={t.contactsHeading}
                 onSave={(v) => {
                   const trimmed = v.trim()
                   const next =
-                    !trimmed || trimmed === UI.contactsHeading ? null : trimmed
+                    !trimmed || trimmed === t.contactsHeading ? null : trimmed
                   return saveValue('heading', next, operatorContact, saveProjectPatch)
                 }}
                 maxLength={120}
@@ -264,13 +269,13 @@ export function TripContacts({ owner, operatorContact, editable, saveProjectPatc
                 editable={editable}
                 value={
                   operatorContact?.subheading?.trim() ||
-                  UI.contactsSubheading
+                  t.contactsSubheading
                 }
-                placeholder={UI.contactsSubheading}
+                placeholder={t.contactsSubheading}
                 onSave={(v) => {
                   const trimmed = v.trim()
                   const next =
-                    !trimmed || trimmed === UI.contactsSubheading ? null : trimmed
+                    !trimmed || trimmed === t.contactsSubheading ? null : trimmed
                   return saveValue('subheading', next, operatorContact, saveProjectPatch)
                 }}
                 maxLength={200}
@@ -553,11 +558,13 @@ function ContactsMagazine({
   operatorContact,
   editable,
   saveProjectPatch,
+  t,
 }: {
   owner: OwnerBrand
   operatorContact: OperatorContact
   editable: boolean
   saveProjectPatch?: Mutations['saveProjectPatch']
+  t: ReturnType<typeof getStrings>
 }) {
   const resolved = resolveContacts(owner, operatorContact)
   const hidden = new Set(operatorContact?.hidden_channels || [])
@@ -590,7 +597,7 @@ function ContactsMagazine({
       <div className="tp-mag-container">
         <header className="tp-mag-contacts__header">
           <hr className="tp-mag-rule" />
-          <p className="tp-mag-eyebrow tp-mag-contacts__eyebrow">CONTACTS</p>
+          <p className="tp-mag-eyebrow tp-mag-contacts__eyebrow">{t.sectionLabels.contacts}</p>
         </header>
         <div className="tp-mag-contacts__grid">
           <div className="tp-mag-contacts__identity">
@@ -671,13 +678,13 @@ function ContactsMagazine({
                 as="text"
                 editable={editable}
                 value={
-                  operatorContact?.heading?.trim() || UI.contactsHeading
+                  operatorContact?.heading?.trim() || t.contactsHeading
                 }
-                placeholder={UI.contactsHeading}
+                placeholder={t.contactsHeading}
                 onSave={(v) => {
                   const trimmed = v.trim()
                   const next =
-                    !trimmed || trimmed === UI.contactsHeading ? null : trimmed
+                    !trimmed || trimmed === t.contactsHeading ? null : trimmed
                   return saveValue('heading', next, operatorContact, saveProjectPatch)
                 }}
                 maxLength={120}
@@ -689,13 +696,13 @@ function ContactsMagazine({
                 editable={editable}
                 value={
                   operatorContact?.subheading?.trim() ||
-                  UI.contactsSubheading
+                  t.contactsSubheading
                 }
-                placeholder={UI.contactsSubheading}
+                placeholder={t.contactsSubheading}
                 onSave={(v) => {
                   const trimmed = v.trim()
                   const next =
-                    !trimmed || trimmed === UI.contactsSubheading ? null : trimmed
+                    !trimmed || trimmed === t.contactsSubheading ? null : trimmed
                   return saveValue('subheading', next, operatorContact, saveProjectPatch)
                 }}
                 maxLength={200}

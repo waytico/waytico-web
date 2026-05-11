@@ -13,31 +13,17 @@
  * `onPhoto` flips to a high-contrast light variant for the Cinematic
  * overlay theme, where the strip lays over a full-bleed hero photo.
  */
-import { UI } from '@/lib/ui-strings'
+import { getStrings } from '@/lib/i18n/strings'
 
 type Status = 'quoted' | 'active' | 'completed'
 
 const PUBLIC_STATUSES: Status[] = ['quoted', 'active', 'completed']
 
-/**
- * Public-side labels — distinct from UI.status which is the owner-side
- * string ("Quoted" reads as a state in the action bar). On the traveler-
- * facing hero strip the pill names the document, not the state, so
- * "Quote · R10FNU" reads as "this is a Quote, code R10FNU" rather than
- * "the Quoted-status thing, code R10FNU". Same shift would apply to a
- * future "Booking" or "Trip" surface; keeping the map separate makes
- * that future change a one-line edit here.
- */
-const PUBLIC_STATUS_LABELS: Record<Status, string> = {
-  quoted: 'Quote',
-  active: 'Active',
-  completed: 'Completed',
-}
-
 export function PublicStatusPill({
   status,
   onPhoto = false,
   code,
+  language,
 }: {
   status: string | null | undefined
   onPhoto?: boolean
@@ -47,11 +33,18 @@ export function PublicStatusPill({
    * stage and a stable shortcode. Hidden when null/undefined.
    */
   code?: string | null
+  /** ISO 639-1 language for the status label. Defaults to English. */
+  language?: string | null
 }) {
   if (!status) return null
   if (!PUBLIC_STATUSES.includes(status as Status)) return null
   const s = status as Status
-  const label = PUBLIC_STATUS_LABELS[s]
+  const t = getStrings(language)
+  // Public-side labels — distinct from owner-side `status` strings.
+  // On the traveler-facing hero strip the pill names the document
+  // ("Quote · R10FNU"), not the lifecycle state.
+  const publicLabel = t.publicStatus[s === 'quoted' ? 'quote' : s]
+  const ariaLabel = t.status[s] || s
 
   const color = onPhoto
     ? 'rgba(255,255,255,0.92)'
@@ -77,7 +70,7 @@ export function PublicStatusPill({
         color,
         textShadow: onPhoto ? '0 1px 4px rgba(0,0,0,0.4)' : undefined,
       }}
-      aria-label={`Trip status: ${UI.status[s] || s}${code ? `, code ${code}` : ''}`}
+      aria-label={`${ariaLabel}${code ? `, ${code}` : ''}`}
     >
       <span
         aria-hidden="true"
@@ -89,7 +82,7 @@ export function PublicStatusPill({
           flexShrink: 0,
         }}
       />
-      <span>{label}</span>
+      <span>{publicLabel}</span>
       {code && (
         <>
           <span aria-hidden="true" style={{ opacity: 0.5 }}>·</span>

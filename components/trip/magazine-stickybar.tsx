@@ -6,10 +6,11 @@ import { toast } from 'sonner'
 import { WhatsAppIcon, TelegramIcon } from '@/lib/contact-icons'
 import {
   channelHref,
-  CHANNEL_LABEL,
+  getChannelLabel,
   getVisibleChannels,
   type ChannelKey,
 } from '@/lib/contact-resolution'
+import { getStrings } from '@/lib/i18n/strings'
 import type {
   OperatorContact,
   OwnerBrand,
@@ -67,6 +68,9 @@ type Props = {
   /** Outer gate — false suppresses the bar entirely (e.g. on owner
    *  pages where TripCommandBar takes the sticky-bottom slot). */
   visible: boolean
+  /** ISO 639-1 language for share-menu labels, toasts, aria-labels and
+   *  channel labels. Defaults to English. */
+  language?: string | null
 }
 
 /** Channels surfaced in the sticky bar, in render order. Order is
@@ -88,7 +92,9 @@ export function MagazineStickyBar({
   url,
   status,
   visible,
+  language,
 }: Props) {
+  const t = getStrings(language)
   // Footer-visibility observer — see header comment.
   const [footerVisible, setFooterVisible] = useState(false)
   useEffect(() => {
@@ -153,9 +159,9 @@ export function MagazineStickyBar({
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(url)
-      toast.success('Link copied')
+      toast.success(t.share.linkCopied)
     } catch {
-      toast.error('Could not copy')
+      toast.error(t.share.couldNotCopy)
     }
     setShareOpen(false)
   }
@@ -172,7 +178,7 @@ export function MagazineStickyBar({
           (footerVisible ? ' tp-mag-stickybar--hidden' : '')
         }
         role="region"
-        aria-label="Share and contact"
+        aria-label={t.a11y.shareAndContact}
         aria-hidden={footerVisible || undefined}
       >
         <div className="tp-mag-stickybar__inner">
@@ -182,7 +188,7 @@ export function MagazineStickyBar({
                 type="button"
                 onClick={() => setShareOpen((v) => !v)}
                 className="tp-mag-stickybar__btn"
-                aria-label="Share trip"
+                aria-label={t.a11y.shareTrip}
                 aria-haspopup="menu"
                 aria-expanded={shareOpen}
               >
@@ -199,7 +205,7 @@ export function MagazineStickyBar({
                     onClick={() => setShareOpen(false)}
                     className="tp-mag-stickybar__menuitem"
                   >
-                    Email
+                    {t.share.email}
                   </a>
                   <a
                     role="menuitem"
@@ -209,7 +215,7 @@ export function MagazineStickyBar({
                     onClick={() => setShareOpen(false)}
                     className="tp-mag-stickybar__menuitem"
                   >
-                    WhatsApp
+                    {t.share.whatsapp}
                   </a>
                   <a
                     role="menuitem"
@@ -219,7 +225,7 @@ export function MagazineStickyBar({
                     onClick={() => setShareOpen(false)}
                     className="tp-mag-stickybar__menuitem"
                   >
-                    Telegram
+                    {t.share.telegram}
                   </a>
                   <button
                     type="button"
@@ -227,7 +233,7 @@ export function MagazineStickyBar({
                     onClick={copyLink}
                     className="tp-mag-stickybar__menuitem tp-mag-stickybar__menuitem--button"
                   >
-                    Copy link
+                    {t.share.copyLink}
                   </button>
                 </div>
               )}
@@ -248,7 +254,7 @@ export function MagazineStickyBar({
                     : 'noopener noreferrer'
                 }
                 className="tp-mag-stickybar__btn tp-mag-stickybar__btn--link"
-                aria-label={CHANNEL_LABEL[key]}
+                aria-label={getChannelLabel(key, language)}
               >
                 <Icon size={20} aria-hidden="true" />
               </a>

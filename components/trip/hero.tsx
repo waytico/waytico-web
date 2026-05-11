@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { UI } from '@/lib/ui-strings'
+import { getStrings } from '@/lib/i18n/strings'
 import { AttributionPopover } from './attribution-popover'
 import type { ThemeId } from '@/lib/themes'
 import { HERO_STYLE } from '@/lib/themes'
@@ -98,6 +99,10 @@ type HeroProps = {
    *  Currently only the Magazine theme renders these — other themes
    *  ignore the prop. */
   highlightsSlots?: ReactNode[]
+  /** ISO 639-1 language for translation of hero strings (proposal /
+   *  valid-until labels in the top strip, Magazine bottom-eyebrow "days"
+   *  word, highlights aria-label, etc). Defaults to English. */
+  language?: string | null
 }
 
 /**
@@ -125,6 +130,7 @@ function HeroTopStrip({
   code,
   ownerStatusLabel = 'Quote',
   onPhoto = false,
+  language,
 }: {
   status?: string | null
   proposalDate?: string | null
@@ -135,7 +141,9 @@ function HeroTopStrip({
   code?: string | null
   ownerStatusLabel?: string
   onPhoto?: boolean
+  language?: string | null
 }) {
+  const t = getStrings(language)
   const hasStatus = !!status && ['quoted', 'active', 'completed'].includes(status)
   const hasProposal = !!(proposalDate || proposalSlot)
   const hasValidUntil = !!(validUntil || validUntilSlot)
@@ -230,7 +238,7 @@ function HeroTopStrip({
             className="order-1 sm:order-none sm:col-start-1 sm:justify-self-start sm:flex sm:items-center"
             style={{ pointerEvents: 'auto', lineHeight: 1.2 }}
           >
-            <PublicStatusPill status={status} onPhoto={onPhoto} code={code} />
+            <PublicStatusPill status={status} onPhoto={onPhoto} code={code} language={language} />
           </div>
         )}
 
@@ -265,7 +273,7 @@ function HeroTopStrip({
           >
             {hasProposal && (
               <>
-                <span>{UI.proposal}</span>
+                <span>{t.proposal}</span>
                 <span>{proposalSlot ?? (proposalDate ? fmtDate(proposalDate) : null)}</span>
               </>
             )}
@@ -276,8 +284,8 @@ function HeroTopStrip({
               <>
                 <span>
                   {validUntil && isDateInPast(validUntil)
-                    ? UI.expired
-                    : UI.validUntil}
+                    ? t.expired
+                    : t.validUntil}
                 </span>
                 <span>{validUntilSlot ?? (validUntil ? fmtDate(validUntil) : null)}</span>
               </>
@@ -384,6 +392,7 @@ export function TripHero(props: HeroProps) {
           code={props.code}
           ownerStatusLabel={props.ownerStatusLabel}
           onPhoto={!!heroPhoto}
+          language={props.language}
         />
         <div className="tp-container" style={{ position: 'relative', zIndex: 1 }}>
           <div className="tp-hero-meta">{meta}</div>
@@ -405,6 +414,7 @@ export function TripHero(props: HeroProps) {
           contactAgentSlot={props.contactAgentSlot}
           code={props.code}
           ownerStatusLabel={props.ownerStatusLabel}
+          language={props.language}
         />
         <div className="tp-container tp-hero--card">
           <div className="tp-hero-meta" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -465,6 +475,7 @@ export function TripHero(props: HeroProps) {
         contactAgentSlot={props.contactAgentSlot}
         code={props.code}
           ownerStatusLabel={props.ownerStatusLabel}
+        language={props.language}
       />
       <div className="tp-container tp-hero--split">
         <div className="tp-hero-meta">{meta}</div>
@@ -584,7 +595,9 @@ function HeroMagazine(props: HeroProps) {
     ownerOverlay,
     code,
     highlightsSlots,
+    language,
   } = props
+  const t = getStrings(language)
 
   // Bottom eyebrow lives on TWO lines:
   //
@@ -604,7 +617,7 @@ function HeroMagazine(props: HeroProps) {
   // Each line hides independently when its source data is empty.
   const bottomCountry = country ? country.toUpperCase() : null
   const durationWord =
-    durationDays != null ? numberToWords(durationDays) : null
+    durationDays != null ? numberToWords(durationDays, language) : null
   const durationDisplay =
     durationDays != null ? durationWord ?? String(durationDays) : null
   // Magazine intentionally ignores any inbound durationStatSlot. Owner and
@@ -612,7 +625,7 @@ function HeroMagazine(props: HeroProps) {
   // line reads consistently — no stat-tile clickable digit here.
   const bottomDuration: ReactNode =
     durationDisplay != null
-      ? `${durationDisplay} ${UI.days.toUpperCase()}`
+      ? `${durationDisplay} ${t.days.toUpperCase()}`
       : null
   const bottomDates: ReactNode = dateStatSlot ?? dateRange ?? null
 
@@ -690,6 +703,7 @@ function HeroMagazine(props: HeroProps) {
         code={code}
         ownerStatusLabel={props.ownerStatusLabel}
         onPhoto={true}
+        language={language}
       />
 
       <div className="tp-mag-hero__bottom">
@@ -715,7 +729,7 @@ function HeroMagazine(props: HeroProps) {
             <MagazineHeroTitle titleSlot={titleSlot} />
           </div>
           {highlightsSlots && highlightsSlots.some(Boolean) && (
-            <ul className="tp-mag-hero__highlights" aria-label="Trip highlights">
+            <ul className="tp-mag-hero__highlights" aria-label={t.hero.tripHighlightsAria}>
               {highlightsSlots.map((slot, i) =>
                 slot ? (
                   <li key={i} className="tp-mag-hero__highlights-item">

@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
 import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
-import { UI } from '@/lib/ui-strings'
+import { getStrings } from '@/lib/i18n/strings'
 import type { Accommodation, Mutations } from './trip-types'
 import { uploadAccommodationPhoto, ALLOWED_MIME, MAX_FILE_SIZE } from '@/lib/upload-photo'
 import { fmtDayDate } from '@/lib/trip-format'
@@ -70,6 +70,7 @@ export function TripAccommodations({
   // operator-written block note — neither cards nor a freestanding
   // marketing line, so nothing to show).
   if (!editable && !hasAny && !note) return null
+  const t = getStrings(language)
 
   if (theme === 'magazine') {
     return (
@@ -92,7 +93,7 @@ export function TripAccommodations({
     <section className="tp-section" id="accommodations">
       <div className="tp-container">
         <header className="tp-section-head">
-          <h2 className="tp-display tp-section-title">{UI.sectionLabels.accommodations}</h2>
+          <h2 className="tp-display tp-section-title">{t.sectionLabels.accommodations}</h2>
         </header>
 
         {hasAny && (
@@ -521,13 +522,14 @@ function AccommodationsMagazine({
   const placeholderCount = editable
     ? Math.max(1, 3 - accommodations.length)
     : 0
+  const t = getStrings(language)
 
   return (
     <section className="tp-mag-section tp-mag-acc" id="accommodations">
       <div className="tp-mag-container">
         <header className="tp-mag-acc__header">
           <hr className="tp-mag-rule" />
-          <p className="tp-mag-eyebrow tp-mag-acc__eyebrow">ACCOMMODATION</p>
+          <p className="tp-mag-eyebrow tp-mag-acc__eyebrow">{t.sectionLabels.accommodations}</p>
           {/* Section subtitle deliberately omitted — the eyebrow alone
               introduces the hotel cards, and the AI-generated narrative
               ("Best hotels in Vancouver.") read as filler. The

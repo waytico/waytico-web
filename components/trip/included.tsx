@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { UI } from '@/lib/ui-strings'
+import { getStrings } from '@/lib/i18n/strings'
 import type { ThemeId } from '@/lib/themes'
 
 type IncludedProps = {
@@ -20,6 +20,8 @@ type IncludedProps = {
   theme?: ThemeId
   /** Magazine-only narrative subtitle slot under the eyebrow. */
   subtitleSlot?: ReactNode
+  /** ISO 639-1 language for translation of eyebrow / labels. Defaults to English. */
+  language?: string | null
 }
 
 /**
@@ -28,8 +30,9 @@ type IncludedProps = {
  * Per TZ-6 §6.5: the section stays visible in public mode IFF at least one
  * side has content. Owner mode always shows it (so they can add items).
  */
-export function TripIncluded({ includedBodySlot, notIncludedBodySlot, visible, theme, subtitleSlot }: IncludedProps) {
+export function TripIncluded({ includedBodySlot, notIncludedBodySlot, visible, theme, subtitleSlot, language }: IncludedProps) {
   if (!visible) return null
+  const t = getStrings(language)
 
   if (theme === 'magazine') {
     return (
@@ -37,6 +40,7 @@ export function TripIncluded({ includedBodySlot, notIncludedBodySlot, visible, t
         includedBodySlot={includedBodySlot}
         notIncludedBodySlot={notIncludedBodySlot}
         subtitleSlot={subtitleSlot}
+        t={t}
       />
     )
   }
@@ -45,16 +49,16 @@ export function TripIncluded({ includedBodySlot, notIncludedBodySlot, visible, t
     <section className="tp-section" id="included">
       <div className="tp-container">
         <header className="tp-section-head">
-          <h2 className="tp-display tp-section-title">{UI.sectionLabels.included}</h2>
+          <h2 className="tp-display tp-section-title">{t.sectionLabels.included}</h2>
         </header>
         <div className="tp-incl-grid">
           <div className="tp-incl-card">
-            <h4>{UI.included}</h4>
-            {includedBodySlot ? includedBodySlot : <p className="tp-incl-empty">{UI.emptyList}</p>}
+            <h4>{t.included}</h4>
+            {includedBodySlot ? includedBodySlot : <p className="tp-incl-empty">{t.emptyList}</p>}
           </div>
           <div className="tp-incl-card">
-            <h4>{UI.notIncluded}</h4>
-            {notIncludedBodySlot ? notIncludedBodySlot : <p className="tp-incl-empty">{UI.emptyList}</p>}
+            <h4>{t.notIncluded}</h4>
+            {notIncludedBodySlot ? notIncludedBodySlot : <p className="tp-incl-empty">{t.emptyList}</p>}
           </div>
         </div>
       </div>
@@ -102,17 +106,19 @@ function IncludedMagazine({
   includedBodySlot,
   notIncludedBodySlot,
   subtitleSlot,
+  t,
 }: {
   includedBodySlot: ReactNode
   notIncludedBodySlot: ReactNode
   subtitleSlot?: ReactNode
+  t: ReturnType<typeof getStrings>
 }) {
   return (
     <section className="tp-mag-section tp-mag-incl" id="included">
       <div className="tp-mag-container">
         <header className="tp-mag-incl__header">
           <hr className="tp-mag-rule" />
-          <p className="tp-mag-eyebrow tp-mag-incl__eyebrow">DETAILS</p>
+          <p className="tp-mag-eyebrow tp-mag-incl__eyebrow">{t.magazineDetailsEyebrow}</p>
           {subtitleSlot && (
             <h2 className="tp-mag-display tp-mag-section-subtitle">
               {subtitleSlot}
@@ -122,7 +128,7 @@ function IncludedMagazine({
 
         <div className="tp-mag-incl__grid">
           <div className="tp-mag-incl__col">
-            <p className="tp-mag-incl__col-eyebrow">INCLUDED</p>
+            <p className="tp-mag-incl__col-eyebrow">{t.included}</p>
             <div className="tp-mag-incl__body">
               {includedBodySlot ? (
                 includedBodySlot
@@ -132,7 +138,7 @@ function IncludedMagazine({
             </div>
           </div>
           <div className="tp-mag-incl__col">
-            <p className="tp-mag-incl__col-eyebrow">NOT INCLUDED</p>
+            <p className="tp-mag-incl__col-eyebrow">{t.notIncluded}</p>
             <div className="tp-mag-incl__body">
               {notIncludedBodySlot ? (
                 notIncludedBodySlot

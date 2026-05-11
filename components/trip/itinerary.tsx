@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { UI } from '@/lib/ui-strings'
 import type { ThemeId } from '@/lib/themes'
 import { ITINERARY_STYLE } from '@/lib/themes'
 import type { Day, MediaLite } from './trip-types'
 import { AttributionPopover } from './attribution-popover'
 import { pad2, fmtDayDate, addDaysISO, normalizeMagazineTitle } from '@/lib/trip-format'
+import { getStrings } from '@/lib/i18n/strings'
 import {
   DndContext,
   closestCenter,
@@ -139,12 +139,13 @@ export function TripItinerary(props: ItineraryProps) {
   const { theme, itinerary, datesStart, language, editable, onReorder, onDayInsertAbove, onDayRemove } = props
   if (!Array.isArray(itinerary) || itinerary.length === 0) return null
   const itineraryStyle = ITINERARY_STYLE[theme]
+  const t = getStrings(language)
 
   const head = (
     <header className="tp-section-head">
-      <h2 className="tp-display tp-section-title">{UI.sectionLabels.itinerary}</h2>
+      <h2 className="tp-display tp-section-title">{t.sectionLabels.itinerary}</h2>
       <span className="tp-section-num">
-        {itinerary.length} {UI.days}
+        {itinerary.length} {t.days}
       </span>
     </header>
   )
@@ -790,6 +791,7 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
   }
 
   const dayIds = items.map((d) => d.id || `day-${d.dayNumber}`)
+  const t = getStrings(language)
 
   // Section opens with a hairline rule + ITINERARY eyebrow, mirroring
   // the Accommodation block's header on the same page. Visually the
@@ -803,7 +805,7 @@ function ItineraryMagazine(props: ItineraryMagazineProps) {
   const sectionLead = (
     <header className="tp-mag-itin__header">
       <hr className="tp-mag-rule" />
-      <p className="tp-mag-eyebrow tp-mag-itin__eyebrow">ITINERARY</p>
+      <p className="tp-mag-eyebrow tp-mag-itin__eyebrow">{t.sectionLabels.itinerary}</p>
     </header>
   )
 
@@ -931,7 +933,8 @@ function MagazineDay(props: {
 
   const isReverse = idx % 2 === 1
   const dayDateLabel = fmtDayDate(resolveDayDate(day, datesStart), language)
-  const eyebrowText = `${UI.day.toUpperCase()} ${pad2(day.dayNumber)}`
+  const t = getStrings(language)
+  const eyebrowText = `${t.day.toUpperCase()} ${pad2(day.dayNumber)}`
 
   // Photo block: render only when there is something to show.
   // Public + no photo → no block at all (clean reading layout).

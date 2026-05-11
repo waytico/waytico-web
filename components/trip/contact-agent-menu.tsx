@@ -12,10 +12,11 @@ import {
 } from '@/lib/contact-icons'
 import {
   channelHref,
-  CHANNEL_LABEL,
+  getChannelLabel,
   getVisibleChannels,
   type ChannelKey,
 } from '@/lib/contact-resolution'
+import { getStrings } from '@/lib/i18n/strings'
 import { OnboardingTip } from '@/components/onboarding-tip'
 import type { OperatorContact, OwnerBrand } from './trip-types'
 
@@ -36,6 +37,9 @@ type Props = {
    *  preview-as-client surface. The owner-side wrapper
    *  (ContactPillEditor) is the only legitimate caller that flips it on. */
   showOnboardingTip?: boolean
+  /** ISO 639-1 language for the trigger label and channel labels.
+   *  Defaults to English. */
+  language?: string | null
 }
 
 const ICON: Record<ChannelKey, React.ComponentType<any>> = {
@@ -68,11 +72,12 @@ const ICON: Record<ChannelKey, React.ComponentType<any>> = {
  * trips where the operator hasn't filled their brand profile yet, the
  * dropdown disappears (instead of showing an empty menu).
  */
-export function ContactAgentMenu({ owner, operatorContact, onPhoto = false, label, showOnboardingTip = false }: Props) {
+export function ContactAgentMenu({ owner, operatorContact, onPhoto = false, label, showOnboardingTip = false, language }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   const channels = getVisibleChannels(owner, operatorContact)
+  const t = getStrings(language)
 
   useEffect(() => {
     if (!open) return
@@ -116,7 +121,7 @@ export function ContactAgentMenu({ owner, operatorContact, onPhoto = false, labe
         aria-expanded={open}
       >
         <span className="border-b border-current/0 group-hover:border-current/40 transition-colors">
-          {label ?? 'Contact agent'}
+          {label ?? t.contactAgent.defaultLabel}
         </span>
         <ChevronDown size={11} aria-hidden="true" />
       </button>
@@ -143,8 +148,8 @@ export function ContactAgentMenu({ owner, operatorContact, onPhoto = false, labe
                   target={key === 'email' || key === 'phone' ? undefined : '_blank'}
                   rel={key === 'email' || key === 'phone' ? undefined : 'noopener noreferrer'}
                   onClick={() => setOpen(false)}
-                  aria-label={CHANNEL_LABEL[key]}
-                  title={CHANNEL_LABEL[key]}
+                  aria-label={getChannelLabel(key, language)}
+                  title={getChannelLabel(key, language)}
                   className="flex items-center justify-center w-9 h-9 rounded-full text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
                 >
                   <Icon size={16} aria-hidden="true" />

@@ -1,3 +1,4 @@
+import { getStrings } from '@/lib/i18n/strings'
 import type { OperatorContact, OwnerBrand } from '@/components/trip/trip-types'
 
 /**
@@ -101,6 +102,20 @@ export const CHANNEL_LABEL: Record<ChannelKey, string> = {
   facebook: 'Facebook',
   youtube: 'YouTube',
   tiktok: 'TikTok',
+}
+
+/**
+ * Language-aware label for a contact channel. Single source of truth for
+ * `aria-label` / `title` text on channel icon buttons across the app —
+ * keeps i18n localised to one helper rather than dozens of per-component
+ * dictionary reads. Falls back to the English label when an unknown
+ * language is passed (via resolveLanguage inside getStrings).
+ */
+export function getChannelLabel(
+  key: ChannelKey,
+  language: string | null | undefined,
+): string {
+  return getStrings(language).contacts[key]
 }
 
 function pick(

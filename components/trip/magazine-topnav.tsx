@@ -1,6 +1,6 @@
 'use client'
 
-import { UI } from '@/lib/ui-strings'
+import { getStrings } from '@/lib/i18n/strings'
 
 /**
  * Magazine TopNav — desktop ≥1024px sticky navigation.
@@ -35,21 +35,22 @@ type Visibility = {
 
 type Props = {
   visibility?: Partial<Visibility>
-  /** Reserved for future i18n. Currently unused — section labels come from
-   *  `UI.sectionLabels` so they stay in sync with the rest of the trip page. */
+  /** ISO 639-1 language for nav-label translations. Resolved via the
+   *  i18n dictionary; unknown values fall back to English. */
   currentLanguage?: string | null
 }
 
-const ITEMS: Array<{ key: keyof Visibility; href: string; anchor: string; label: string }> = [
-  { key: 'overview',       href: '#overview',       anchor: 'overview',       label: UI.sectionLabels.overview },
-  { key: 'itinerary',      href: '#itinerary',      anchor: 'itinerary',      label: UI.sectionLabels.itinerary },
-  { key: 'accommodations', href: '#accommodations', anchor: 'accommodations', label: UI.sectionLabels.accommodations },
-  { key: 'price',          href: '#price',          anchor: 'price',          label: UI.sectionLabels.price },
-  { key: 'terms',          href: '#terms',          anchor: 'terms',          label: UI.sectionLabels.terms },
-  { key: 'contacts',       href: '#contacts',       anchor: 'contacts',       label: UI.sectionLabels.contacts },
-]
+export function MagazineTopNav({ visibility, currentLanguage }: Props) {
+  const t = getStrings(currentLanguage)
+  const items: Array<{ key: keyof Visibility; href: string; anchor: string; label: string }> = [
+    { key: 'overview',       href: '#overview',       anchor: 'overview',       label: t.sectionLabels.overview },
+    { key: 'itinerary',      href: '#itinerary',      anchor: 'itinerary',      label: t.sectionLabels.itinerary },
+    { key: 'accommodations', href: '#accommodations', anchor: 'accommodations', label: t.sectionLabels.accommodations },
+    { key: 'price',          href: '#price',          anchor: 'price',          label: t.sectionLabels.price },
+    { key: 'terms',          href: '#terms',          anchor: 'terms',          label: t.sectionLabels.terms },
+    { key: 'contacts',       href: '#contacts',       anchor: 'contacts',       label: t.sectionLabels.contacts },
+  ]
 
-export function MagazineTopNav({ visibility }: Props) {
   // Default: all visible (legacy callers w/ no visibility prop see them all).
   // Public viewers pass real flags; only true items render.
   const v: Visibility = {
@@ -60,7 +61,7 @@ export function MagazineTopNav({ visibility }: Props) {
     terms:          visibility?.terms          ?? true,
     contacts:       visibility?.contacts       ?? true,
   }
-  const visible = ITEMS.filter((it) => v[it.key])
+  const visible = items.filter((it) => v[it.key])
   if (visible.length === 0) return null
 
   function handleNavClick(e: React.MouseEvent<HTMLAnchorElement>, anchor: string) {
@@ -71,7 +72,7 @@ export function MagazineTopNav({ visibility }: Props) {
   }
 
   return (
-    <nav className="tp-mag-topnav" aria-label="Magazine sections">
+    <nav className="tp-mag-topnav" aria-label={t.a11y.magazineSections}>
       <div className="tp-mag-topnav__inner">
         <div className="tp-mag-topnav__links">
           {visible.map((item) => (

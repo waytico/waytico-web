@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import TripPageClient from './trip-page-client'
+import { getStrings } from '@/lib/i18n/strings'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
@@ -34,10 +35,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : undefined
   if (!data) return { title: 'Trip — Waytico', robots }
   const p = data.project
+  const locale = getStrings(p.language).bcp47Locale
   return {
     title: `${p.title} — Waytico`,
     description: p.description?.slice(0, 160) || `${p.title} — trip proposal`,
     robots,
+    openGraph: { locale },
   }
 }
 

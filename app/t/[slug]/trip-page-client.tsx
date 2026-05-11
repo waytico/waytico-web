@@ -53,7 +53,7 @@ import { TripFooter } from '@/components/trip/trip-footer'
 
 import { apiFetch } from '@/lib/api'
 import { resolveTheme, type ThemeId } from '@/lib/themes'
-import { UI } from '@/lib/ui-strings'
+import { resolveLanguage, getStrings } from '@/lib/i18n/strings'
 import {
   fmtDateRange,
   fmtDateRangeLong,
@@ -89,10 +89,12 @@ function DateStartEditor({
   datesStart,
   datesEnd,
   onSave,
+  language,
 }: {
   datesStart: string | null
   datesEnd: string | null
   onSave: (v: string) => Promise<boolean>
+  language?: string | null
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
@@ -115,7 +117,7 @@ function DateStartEditor({
     }
   }, [editing, startIso])
 
-  const formatted = fmtDateRangeLong(datesStart, datesEnd)
+  const formatted = fmtDateRangeLong(datesStart, datesEnd, language)
 
   const commit = async () => {
     setEditing(false)
@@ -1222,8 +1224,24 @@ export default function TripPageClient({ slug, initialData }: Props) {
   // exactly once at the top of trip-page-client before forwarding to children.
   const pricePerPersonNum = coercePrice(p.price_per_person)
   const priceTotalNum = coercePrice(p.price_total)
-  const priceFormatted = fmtPrice(pricePerPersonNum, p.currency)
-  const totalFormatted = fmtPrice(priceTotalNum, p.currency)
+  const tripLanguage = p.language ?? null
+  const tripLanguageResolved = resolveLanguage(tripLanguage)
+  const t = getStrings(tripLanguage)
+  // Magazine i18n: sync the document root <html lang> with the trip's
+  // language so screen readers and Lighthouse pick up the right locale.
+  // Next 14 App Router doesn't expose dynamic per-page <html lang>, so
+  // the SSR snapshot stays 'en' from app/layout.tsx — we patch it
+  // client-side on mount, which is what assistive tech reads in practice.
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const previous = document.documentElement.lang
+    document.documentElement.lang = tripLanguageResolved
+    return () => {
+      document.documentElement.lang = previous
+    }
+  }, [tripLanguageResolved])
+  const priceFormatted = fmtPrice(pricePerPersonNum, p.currency, tripLanguage)
+  const totalFormatted = fmtPrice(priceTotalNum, p.currency, tripLanguage)
 
   // Hero stat tile + Price block share a "headline price" — the side
   // (per-person vs total) selected by pricing_mode. Backend keeps both
@@ -1231,13 +1249,13 @@ export default function TripPageClient({ slug, initialData }: Props) {
   const pricingMode = (p.pricing_mode || 'per_group') as PricingMode
   const heroHeadlineNum =
     pricingMode === 'per_traveler' ? pricePerPersonNum : priceTotalNum
-  const heroHeadlineFormatted = fmtPrice(heroHeadlineNum, p.currency)
+  const heroHeadlineFormatted = fmtPrice(heroHeadlineNum, p.currency, tripLanguage)
   const heroPriceLabel =
     pricingMode === 'per_traveler'
-      ? UI.perTraveler
+      ? t.perTraveler
       : pricingMode === 'other'
-        ? p.pricing_label || UI.forTheGroup
-        : UI.forTheGroup
+        ? p.pricing_label || t.forTheGroup
+        : t.forTheGroup
   const resolvedTheme = resolveTheme(p.design_theme)
 
   // Magazine renders DATES on its own serif italic sub-line where the
@@ -1247,8 +1265,8 @@ export default function TripPageClient({ slug, initialData }: Props) {
   // where horizontal width matters.
   const dateRange =
     resolvedTheme === 'magazine'
-      ? fmtDateRangeLong(p.dates_start, p.dates_end)
-      : fmtDateRange(p.dates_start, p.dates_end)
+      ? fmtDateRangeLong(p.dates_start, p.dates_end, tripLanguage)
+      : fmtDateRange(p.dates_start, p.dates_end, tripLanguage)
 
   const heroPhoto = media.find((m) => m.placement === 'hero') || null
 
@@ -1621,6 +1639,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
       datesStart={p.dates_start ?? null}
       datesEnd={p.dates_end ?? null}
       onSave={async (v) => saveProjectPatch({ datesStart: v })}
+      language={tripLanguage}
     />
   ) : undefined
 
@@ -1646,7 +1665,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           }}
         >
           {p.duration_days != null
-            ? `${p.duration_days} ${UI.days}`
+            ? `${p.duration_days} ${t.days}`
             : <span style={{ color: 'var(--ink-mute)' }}>—</span>}
         </a>
       )
@@ -1661,7 +1680,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         placeholder="0"
         onSave={(v) => saveProjectPatch({ groupSize: v })}
       />
-      <span style={{ color: 'var(--ink-mute)' }}>{UI.travelers}</span>
+      <span style={{ color: 'var(--ink-mute)' }}>{t.travelers}</span>
     </span>
   ) : undefined
 
@@ -2158,6 +2177,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           Owner edit UX rides through via slot props; structural variants
           (split/overlay/card hero, timeline/photo-cards/grid itinerary) live
           inside Hero.tsx / Itinerary.tsx as `if (heroStyle === ...)` branches. */}
+      <div lang={tripLanguageResolved}>
       <ThemeRoot theme={p.design_theme}>
         <HeroDropZone
           enabled={showOwnerUI}
@@ -2168,6 +2188,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         >
           <TripHero
             theme={resolvedTheme}
+            language={tripLanguage}
             heroPhoto={heroPhoto?.url || null}
             heroAttributionHtml={
               (heroPhoto as any)?.attribution_html ??
@@ -2235,6 +2256,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                         owner={owner}
                         operatorContact={operatorContact}
                         onPhoto={onPhoto}
+                        language={tripLanguage}
                       />
                     )
                   : undefined
@@ -2251,6 +2273,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                         owner={owner}
                         operatorContact={operatorContact}
                         onPhoto={onPhoto}
+                        language={tripLanguage}
                         label={
                           owner?.contact_label
                             ? `Contact ${owner.contact_label}`
@@ -2413,6 +2436,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
         <TripPrice
           theme={resolvedTheme}
+          language={tripLanguage}
           owner={owner}
           operatorContact={operatorContact}
           pricingMode={pricingMode}
@@ -2451,6 +2475,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
         {resolvedTheme !== 'magazine' && (
           <TripIncluded
             theme={resolvedTheme}
+            language={tripLanguage}
             includedBodySlot={includedBodySlot}
             notIncludedBodySlot={notIncludedBodySlot}
             visible={includedVisible}
@@ -2460,6 +2485,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
         <TripTerms
           theme={resolvedTheme}
+          language={tripLanguage}
           bodySlot={termsBodySlot}
           visible={termsVisible}
           collapsible={!ed}
@@ -2499,6 +2525,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
 
         <TripContacts
           theme={resolvedTheme}
+          language={tripLanguage}
           owner={owner}
           operatorContact={operatorContact}
           editable={ed}
@@ -2559,8 +2586,10 @@ export default function TripPageClient({ slug, initialData }: Props) {
           url={shareUrl}
           status={p.status || ''}
           visible={!(showOwnerUI && !isShowcase && !isAnonCreator)}
+          language={tripLanguage}
         />
       )}
+      </div>
 
       <PhotoLightbox
         media={lightbox.media}

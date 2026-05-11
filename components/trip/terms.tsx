@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
-import { UI } from '@/lib/ui-strings'
+import { getStrings } from '@/lib/i18n/strings'
 import type { ThemeId } from '@/lib/themes'
 
 type TermsProps = {
@@ -22,6 +22,9 @@ type TermsProps = {
   theme?: ThemeId
   /** Magazine-only narrative subtitle slot under the eyebrow. */
   subtitleSlot?: ReactNode
+  /** ISO 639-1 language for translation of section labels + toggle copy.
+   *  Defaults to English. */
+  language?: string | null
 }
 
 /**
@@ -41,8 +44,9 @@ type TermsProps = {
  * trip-page-client.tsx and arrives via `bodySlot`. The Magazine variant
  * only restyles the wrapper.
  */
-export function TripTerms({ bodySlot, visible, ownerHint, collapsible, theme, subtitleSlot }: TermsProps) {
+export function TripTerms({ bodySlot, visible, ownerHint, collapsible, theme, subtitleSlot, language }: TermsProps) {
   if (!visible) return null
+  const t = getStrings(language)
 
   if (theme === 'magazine') {
     return (
@@ -51,12 +55,13 @@ export function TripTerms({ bodySlot, visible, ownerHint, collapsible, theme, su
         ownerHint={ownerHint}
         collapsible={!!collapsible}
         subtitleSlot={subtitleSlot}
+        t={t}
       />
     )
   }
 
   if (collapsible) {
-    return <CollapsibleTerms bodySlot={bodySlot} />
+    return <CollapsibleTerms bodySlot={bodySlot} t={t} />
   }
 
   return (
@@ -64,7 +69,7 @@ export function TripTerms({ bodySlot, visible, ownerHint, collapsible, theme, su
       <div className="tp-container">
         <header className="tp-section-head" style={{ marginBottom: 24 }}>
           <h2 className="tp-display" style={{ fontSize: 28 }}>
-            {UI.sectionLabels.terms}
+            {t.sectionLabels.terms}
           </h2>
           {ownerHint && (
             <p
@@ -85,7 +90,7 @@ export function TripTerms({ bodySlot, visible, ownerHint, collapsible, theme, su
   )
 }
 
-function CollapsibleTerms({ bodySlot }: { bodySlot: ReactNode }) {
+function CollapsibleTerms({ bodySlot, t }: { bodySlot: ReactNode; t: ReturnType<typeof getStrings> }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -93,7 +98,7 @@ function CollapsibleTerms({ bodySlot }: { bodySlot: ReactNode }) {
       <div className="tp-container">
         <header className="tp-section-head" style={{ marginBottom: 24 }}>
           <h2 className="tp-display" style={{ fontSize: 28 }}>
-            {UI.sectionLabels.terms}
+            {t.sectionLabels.terms}
           </h2>
         </header>
 
@@ -114,7 +119,7 @@ function CollapsibleTerms({ bodySlot }: { bodySlot: ReactNode }) {
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
           >
-            {open ? 'Show less' : 'Read full terms'}
+            {open ? t.terms.showLess : t.terms.readFull}
             <span className={'tp-terms-toggle-caret' + (open ? ' is-up' : '')} aria-hidden="true" />
           </button>
         </div>
@@ -137,11 +142,13 @@ function TermsMagazine({
   ownerHint,
   collapsible,
   subtitleSlot,
+  t,
 }: {
   bodySlot: ReactNode
   ownerHint?: ReactNode
   collapsible: boolean
   subtitleSlot?: ReactNode
+  t: ReturnType<typeof getStrings>
 }) {
   const [open, setOpen] = useState(false)
 
@@ -150,7 +157,7 @@ function TermsMagazine({
       <div className="tp-mag-container">
         <header className="tp-mag-terms__header">
           <hr className="tp-mag-rule" />
-          <p className="tp-mag-eyebrow tp-mag-terms__eyebrow">TERMS</p>
+          <p className="tp-mag-eyebrow tp-mag-terms__eyebrow">{t.sectionLabels.terms}</p>
           {ownerHint && (
             <p className="tp-mag-terms__hint">{ownerHint}</p>
           )}
@@ -176,7 +183,7 @@ function TermsMagazine({
                 onClick={() => setOpen((v) => !v)}
                 aria-expanded={open}
               >
-                {open ? 'Show less' : 'Read full terms'}
+                {open ? t.terms.showLess : t.terms.readFull}
                 <span
                   className={
                     'tp-mag-terms__toggle-caret' + (open ? ' is-up' : '')

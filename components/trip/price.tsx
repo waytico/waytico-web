@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { UI } from '@/lib/ui-strings'
+import { getStrings } from '@/lib/i18n/strings'
 import type { PricingMode, Mutations, OperatorContact, OwnerBrand } from './trip-types'
 import type { ThemeId } from '@/lib/themes'
 import { fmtPrice, currencyGlyph } from '@/lib/trip-format'
@@ -56,6 +56,10 @@ type PriceProps = {
   notIncluded?: string | null
   onSaveIncluded?: (next: string) => Promise<boolean>
   onSaveNotIncluded?: (next: string) => Promise<boolean>
+  /** ISO 639-1 language for client-facing copy in the price block
+   *  (section heading, per-traveler / for-the-group suffixes, etc).
+   *  Defaults to English. */
+  language?: string | null
 }
 
 /**
@@ -79,26 +83,27 @@ export function TripPrice(props: PriceProps) {
     return <PriceMagazine {...props} />
   }
 
+  const t = getStrings(props.language)
   const mode: PricingMode = props.pricingMode ?? 'per_group'
   const headline =
     mode === 'per_traveler' ? props.pricePerPerson : props.priceTotal
-  const headlineFormatted = fmtPrice(headline, props.currency || 'USD')
+  const headlineFormatted = fmtPrice(headline, props.currency || 'USD', props.language)
 
   const secondary =
     mode === 'per_traveler'
       ? props.priceTotal
       : props.pricePerPerson
-  const secondaryFormatted = fmtPrice(secondary, props.currency || 'USD')
+  const secondaryFormatted = fmtPrice(secondary, props.currency || 'USD', props.language)
   const secondaryLabel =
     mode === 'per_traveler'
-      ? UI.totalPrice
-      : UI.perTraveler
+      ? t.totalPrice
+      : t.perTraveler
 
   return (
     <section className="tp-section" id="price">
       <div className="tp-container">
         <header className="tp-section-head">
-          <h2 className="tp-display tp-section-title">{UI.sectionLabels.price}</h2>
+          <h2 className="tp-display tp-section-title">{t.sectionLabels.price}</h2>
         </header>
         <div className="tp-price-block">
           {/* Headline row: amount + suffix (suffix is a dropdown in owner mode). */}
@@ -130,6 +135,7 @@ export function TripPrice(props: PriceProps) {
               pricingLabel={props.pricingLabel}
               editable={props.editable}
               saveProjectPatch={props.saveProjectPatch}
+              t={t}
             />
           </div>
 
@@ -144,7 +150,7 @@ export function TripPrice(props: PriceProps) {
                 {secondaryFormatted}
               </span>
               {mode === 'per_traveler' && props.groupSize != null && (
-                <> · {props.groupSize} {UI.travelers}</>
+                <> · {props.groupSize} {t.travelers}</>
               )}
             </p>
           )}
@@ -251,11 +257,13 @@ function PriceModeSuffix({
   pricingLabel,
   editable,
   saveProjectPatch,
+  t,
 }: {
   mode: PricingMode
   pricingLabel: string | null
   editable: boolean
   saveProjectPatch?: Mutations['saveProjectPatch']
+  t: ReturnType<typeof getStrings>
 }) {
   const [editingLabel, setEditingLabel] = useState(false)
   const [labelDraft, setLabelDraft] = useState(pricingLabel || '')
@@ -265,10 +273,10 @@ function PriceModeSuffix({
     return (
       <p className="tp-price-meta">
         {mode === 'per_traveler'
-          ? UI.perTraveler
+          ? t.perTraveler
           : mode === 'other'
-            ? pricingLabel || UI.forTheGroup
-            : UI.forTheGroup}
+            ? pricingLabel || t.forTheGroup
+            : t.forTheGroup}
       </p>
     )
   }
@@ -287,8 +295,8 @@ function PriceModeSuffix({
           await saveProjectPatch({ pricingMode: next })
         }}
       >
-        <option value="per_group">{UI.forTheGroup}</option>
-        <option value="per_traveler">{UI.perTraveler}</option>
+        <option value="per_group">{t.forTheGroup}</option>
+        <option value="per_traveler">{t.perTraveler}</option>
         <option value="other">Other (custom label)</option>
       </select>
 
@@ -380,16 +388,17 @@ const SUPPORTED_CURRENCIES: Array<{ code: string; label: string }> = [
  * editors keep their existing behaviour.
  */
 function PriceMagazine(props: PriceProps) {
+  const t = getStrings(props.language)
   const mode: PricingMode = props.pricingMode ?? 'per_group'
   const headline =
     mode === 'per_traveler' ? props.pricePerPerson : props.priceTotal
-  const headlineFormatted = fmtPrice(headline, props.currency || 'USD')
+  const headlineFormatted = fmtPrice(headline, props.currency || 'USD', props.language)
 
   const secondary =
     mode === 'per_traveler' ? props.priceTotal : props.pricePerPerson
-  const secondaryFormatted = fmtPrice(secondary, props.currency || 'USD')
+  const secondaryFormatted = fmtPrice(secondary, props.currency || 'USD', props.language)
   const secondaryLabel =
-    mode === 'per_traveler' ? UI.totalPrice : UI.perTraveler
+    mode === 'per_traveler' ? t.totalPrice : t.perTraveler
 
   // Public-mode suffix copy — group-aware, never shown in owner mode
   // (owner has the dropdown widget instead).
@@ -403,9 +412,9 @@ function PriceMagazine(props: PriceProps) {
       return null
     }
     if (mode === 'per_traveler') {
-      return `per person in your group of ${props.groupSize} people`
+      return `${t.perTraveler}`
     }
-    return `for your group of ${props.groupSize} people`
+    return `${t.forTheGroup}`
   })()
 
   return (
@@ -413,7 +422,7 @@ function PriceMagazine(props: PriceProps) {
       <div className="tp-mag-container">
         <header className="tp-mag-price__header">
           <hr className="tp-mag-rule" />
-          <p className="tp-mag-eyebrow tp-mag-price__eyebrow">PRICE</p>
+          <p className="tp-mag-eyebrow tp-mag-price__eyebrow">{t.sectionLabels.price}</p>
         </header>
 
         <div className="tp-mag-price__grid">
@@ -452,6 +461,7 @@ function PriceMagazine(props: PriceProps) {
                   pricingLabel={props.pricingLabel}
                   editable={props.editable}
                   saveProjectPatch={props.saveProjectPatch}
+                  t={t}
                 />
               </div>
             ) : publicSuffix ? (
@@ -472,7 +482,7 @@ function PriceMagazine(props: PriceProps) {
 
             {props.editable && (
               <p className="tp-mag-price__group">
-                {UI.group.toUpperCase()} ·{' '}
+                {t.group.toUpperCase()} ·{' '}
                 <span style={{ fontFamily: 'var(--font-mono)' }}>
                   <EditableField
                     as="number"
@@ -484,7 +494,7 @@ function PriceMagazine(props: PriceProps) {
                       return props.saveProjectPatch({ groupSize: v })
                     }}
                   />
-                  {' '}{UI.travelers.toUpperCase()}
+                  {' '}{t.travelers.toUpperCase()}
                 </span>
               </p>
             )}
