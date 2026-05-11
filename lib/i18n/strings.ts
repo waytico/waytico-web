@@ -44,11 +44,36 @@ export type StringSet = {
   daysMany: string
   traveler: string
   travelers: string
+  /** Plural-aware traveler/person word for the owner-side GROUP editor
+   *  ("GROUP · 4 ЧЕЛОВЕКА"). Same shape as days: en uses one/many, ru
+   *  uses three forms (1 человек / 2-4 человека / 5+ человек). */
+  travelersOne: string
+  travelersFew: string
+  travelersMany: string
+  /** Plural-aware "person/people" word for embedding inside group
+   *  suffix templates ("for your group of N people"). In English this
+   *  is a different word from "traveler" (person/people vs traveler/
+   *  travelers); in Russian both collapse to "человек / человека /
+   *  человек". Separate keys keep the en grammar correct. */
+  peopleOne: string
+  peopleFew: string
+  peopleMany: string
   group: string
   included: string
   notIncluded: string
   perTraveler: string
   forTheGroup: string
+  /** Public-suffix templates rendered under the Magazine headline price.
+   *  {n} is the integer group size, {people} the pluralised person word.
+   *  EN: "for your group of 4 people" / "per person in your group of 4 people".
+   *  RU: "для вашей группы из 4 человек" / "с человека в группе из 4 человек". */
+  forYourGroupOfN: string
+  perPersonInGroupOfN: string
+  /** Pricing-mode dropdown — "Other" option label + the inline custom-
+   *  label editor's placeholder (input) and empty-state hint (span). */
+  priceModeOther: string
+  priceModeOtherPlaceholder: string
+  priceModeOtherClickAdd: string
   totalPrice: string
   proposal: string
   validUntil: string
@@ -164,11 +189,22 @@ export const STRINGS: Record<LanguageId, StringSet> = {
     daysMany: 'days',
     traveler: 'traveler',
     travelers: 'travelers',
+    travelersOne: 'traveler',
+    travelersFew: 'travelers',
+    travelersMany: 'travelers',
+    peopleOne: 'person',
+    peopleFew: 'people',
+    peopleMany: 'people',
     group: 'Group',
     included: 'Included',
     notIncluded: 'Not included',
     perTraveler: 'per traveler',
     forTheGroup: 'for the group',
+    forYourGroupOfN: 'for your group of {n} {people}',
+    perPersonInGroupOfN: 'per person in your group of {n} {people}',
+    priceModeOther: 'Other (custom label)',
+    priceModeOtherPlaceholder: 'e.g. for 2 adults + 1 child',
+    priceModeOtherClickAdd: 'Click to add a label',
     totalPrice: 'Total',
     proposal: 'Issued',
     validUntil: 'Valid until',
@@ -259,11 +295,22 @@ export const STRINGS: Record<LanguageId, StringSet> = {
     daysMany: 'дней',
     traveler: 'человек',
     travelers: 'человек',
+    travelersOne: 'человек',
+    travelersFew: 'человека',
+    travelersMany: 'человек',
+    peopleOne: 'человека',
+    peopleFew: 'человек',
+    peopleMany: 'человек',
     group: 'Группа',
     included: 'Включено',
     notIncluded: 'Не включено',
     perTraveler: 'с человека',
     forTheGroup: 'за группу',
+    forYourGroupOfN: 'для вашей группы из {n} {people}',
+    perPersonInGroupOfN: 'с человека в группе из {n} {people}',
+    priceModeOther: 'Другое (своя подпись)',
+    priceModeOtherPlaceholder: 'напр., для двоих взрослых и ребёнка',
+    priceModeOtherClickAdd: 'Нажмите чтобы ввести подпись',
     totalPrice: 'Всего',
     proposal: 'Создано',
     validUntil: 'Действует до',

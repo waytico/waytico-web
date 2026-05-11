@@ -3,10 +3,34 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { getStrings } from '@/lib/i18n/strings'
+import { pluralize } from '@/lib/i18n/plural'
 import type { PricingMode, Mutations, OperatorContact, OwnerBrand } from './trip-types'
 import type { ThemeId } from '@/lib/themes'
 import { fmtPrice, currencyGlyph } from '@/lib/trip-format'
 import { EditableField } from '@/components/editable/editable-field'
+
+/**
+ * Build the Magazine public-suffix string by substituting the operator's
+ * group size into the localised template + adding the correctly-plural
+ * "person/people" word. Russian needs three forms (1 человека / 2-4
+ * человек / 5+ человек), English uses one/many. Templates live in the
+ * i18n dictionary so adding a new language is a single-file change.
+ */
+function buildGroupSuffix(
+  template: string,
+  language: string | null | undefined,
+  t: ReturnType<typeof getStrings>,
+  groupSize: number,
+): string {
+  const people = pluralize(language, groupSize, {
+    one: t.peopleOne,
+    few: t.peopleFew,
+    many: t.peopleMany,
+  })
+  return template
+    .replace('{n}', String(groupSize))
+    .replace('{people}', people)
+}
 
 type PriceProps = {
   pricingMode: PricingMode | null
@@ -333,7 +357,7 @@ function PriceModeSuffix({
       >
         <option value="per_group">{t.forTheGroup}</option>
         <option value="per_traveler">{t.perTraveler}</option>
-        <option value="other">Other (custom label)</option>
+        <option value="other">{t.priceModeOther}</option>
       </select>
 
       {mode === 'other' && (
@@ -343,7 +367,7 @@ function PriceModeSuffix({
               className="tp-price-mode-label-input"
               value={labelDraft}
               autoFocus
-              placeholder="e.g. for 2 adults + 1 child"
+              placeholder={t.priceModeOtherPlaceholder}
               maxLength={100}
               onChange={(e) => setLabelDraft(e.target.value)}
               onBlur={async () => {
@@ -371,7 +395,7 @@ function PriceModeSuffix({
             >
               {pricingLabel || (
                 <span style={{ color: 'var(--ink-mute)' }}>
-                  Click to add a label
+                  {t.priceModeOtherClickAdd}
                 </span>
               )}
             </span>
@@ -460,10 +484,9 @@ function PriceMagazine(props: PriceProps) {
       // No group-size set → just the price, no suffix.
       return null
     }
-    if (mode === 'per_traveler') {
-      return `${t.perTraveler}`
-    }
-    return `${t.forTheGroup}`
+    const template =
+      mode === 'per_traveler' ? t.perPersonInGroupOfN : t.forYourGroupOfN
+    return buildGroupSuffix(template, props.language, t, props.groupSize)
   })()
 
   return (
@@ -543,7 +566,12 @@ function PriceMagazine(props: PriceProps) {
                       return props.saveProjectPatch({ groupSize: v })
                     }}
                   />
-                  {' '}{t.travelers.toUpperCase()}
+                  {' '}
+                  {pluralize(props.language, props.groupSize ?? 0, {
+                    one: t.travelersOne,
+                    few: t.travelersFew,
+                    many: t.travelersMany,
+                  }).toUpperCase()}
                 </span>
               </p>
             )}
