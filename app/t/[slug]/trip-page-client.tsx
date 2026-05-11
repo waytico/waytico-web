@@ -55,6 +55,7 @@ import { apiFetch } from '@/lib/api'
 import { resolveTheme, type ThemeId } from '@/lib/themes'
 import { resolveLanguage, getStrings } from '@/lib/i18n/strings'
 import {
+  fmtDate,
   fmtDateRange,
   fmtDateRangeLong,
   fmtPrice,
@@ -2233,6 +2234,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   as="date"
                   editable
                   value={proposalDateISO}
+                  formatDisplay={(iso) => fmtDate(iso, tripLanguage) ?? iso}
                   onSave={(v) => saveProjectPatch({ proposalDate: v || null })}
                 />
               ) : undefined
@@ -2243,6 +2245,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                   as="date"
                   editable
                   value={validUntilISO}
+                  formatDisplay={(iso) => fmtDate(iso, tripLanguage) ?? iso}
                   onSave={(v) => saveProjectPatch({ validUntil: v || null })}
                 />
               ) : undefined
@@ -2276,7 +2279,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
                         language={tripLanguage}
                         label={
                           owner?.contact_label
-                            ? `Contact ${owner.contact_label}`
+                            ? `${t.contactAgent.namedPrefix} ${owner.contact_label}`
                             : undefined
                         }
                       />

@@ -81,6 +81,10 @@ export type StringSet = {
   contactAgent: {
     defaultLabel: string
     inquireLabel: string
+    /** Prefix used when the operator has set a contact handle/name
+     *  (`owner.contact_label`) — final label = `${namedPrefix} ${handle}`.
+     *  EN: "Contact Vadim". RU: "Напиши Вадим". */
+    namedPrefix: string
   }
 
   // Terms section
@@ -176,6 +180,7 @@ export const STRINGS: Record<LanguageId, StringSet> = {
     contactAgent: {
       defaultLabel: 'Contact agent',
       inquireLabel: 'Inquire',
+      namedPrefix: 'Contact',
     },
     terms: {
       showLess: 'Show less',
@@ -262,6 +267,7 @@ export const STRINGS: Record<LanguageId, StringSet> = {
     contactAgent: {
       defaultLabel: 'Связаться с агентом',
       inquireLabel: 'Запросить',
+      namedPrefix: 'Напиши',
     },
     terms: {
       showLess: 'Свернуть',
