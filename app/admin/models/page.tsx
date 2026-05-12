@@ -91,10 +91,14 @@ function numToString(n: number | null | undefined): string {
   return String(n)
 }
 
-function fmtPrice(n: number): string {
-  // Show 2 decimals; if the model has sub-cent precision (rare),
-  // toFixed(2) rounds — acceptable for a display formatter.
-  return n.toFixed(2)
+function fmtPrice(n: number | string | null | undefined): string {
+  // node-pg can return NUMERIC as a string. Coerce defensively so a
+  // single typed-as-number value being a string at runtime doesn't
+  // crash the whole page via `.toFixed is not a function`.
+  if (n === null || n === undefined || n === '') return '—'
+  const num = typeof n === 'number' ? n : parseFloat(String(n))
+  if (!Number.isFinite(num)) return '—'
+  return num.toFixed(2)
 }
 
 export default function AdminModelsPage() {
