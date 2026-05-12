@@ -66,6 +66,8 @@ interface CatalogRow {
   enabled: boolean
   sort_order: number
   notes: string | null
+  price_input_per_1m: number | null
+  price_output_per_1m: number | null
   created_at: string
   updated_at: string
 }
@@ -87,6 +89,12 @@ function tempToString(t: number | string | null): string {
 function numToString(n: number | null | undefined): string {
   if (n === null || n === undefined) return ''
   return String(n)
+}
+
+function fmtPrice(n: number): string {
+  // Show 2 decimals; if the model has sub-cent precision (rare),
+  // toFixed(2) rounds — acceptable for a display formatter.
+  return n.toFixed(2)
 }
 
 export default function AdminModelsPage() {
@@ -523,6 +531,8 @@ function ModelCatalogSection({
       label: string
       enabled: boolean
       notes: string
+      priceIn: string
+      priceOut: string
     }) => {
       try {
         const res = await authFetch('/api/admin/ai-catalog', {
@@ -534,6 +544,8 @@ function ModelCatalogSection({
             label: body.label || null,
             enabled: body.enabled,
             notes: body.notes || null,
+            price_input_per_1m: body.priceIn === '' ? null : Number(body.priceIn),
+            price_output_per_1m: body.priceOut === '' ? null : Number(body.priceOut),
           }),
         })
         const j = await res.json().catch(() => ({}))
@@ -574,10 +586,11 @@ function ModelCatalogSection({
       {addOpen && <CatalogAddForm providers={providers} onSubmit={addRow} />}
 
       <div className="rounded-lg border border-zinc-200 bg-white">
-        <div className="grid grid-cols-[24px_140px_1fr_1fr_72px_36px] gap-2 border-b border-zinc-100 bg-zinc-50 px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
+        <div className="grid grid-cols-[24px_140px_1fr_140px_1fr_72px_36px] gap-2 border-b border-zinc-100 bg-zinc-50 px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
           <div></div>
           <div>Provider</div>
           <div>Model / Label</div>
+          <div>Price ($/1M)</div>
           <div>Notes</div>
           <div className="text-center">Enabled</div>
           <div></div>
@@ -637,12 +650,33 @@ function CatalogRowView({
   const [labelDraft, setLabelDraft] = useState(row.label ?? '')
   const [editingNotes, setEditingNotes] = useState(false)
   const [notesDraft, setNotesDraft] = useState(row.notes ?? '')
+  const [editingPrice, setEditingPrice] = useState(false)
+  const [priceInDraft, setPriceInDraft] = useState(
+    row.price_input_per_1m?.toString() ?? '',
+  )
+  const [priceOutDraft, setPriceOutDraft] = useState(
+    row.price_output_per_1m?.toString() ?? '',
+  )
+
+  const commitPrice = () => {
+    setEditingPrice(false)
+    const nextIn = priceInDraft.trim() === '' ? null : Number(priceInDraft)
+    const nextOut = priceOutDraft.trim() === '' ? null : Number(priceOutDraft)
+    const changed =
+      nextIn !== row.price_input_per_1m || nextOut !== row.price_output_per_1m
+    if (changed) {
+      onPatch({
+        price_input_per_1m: nextIn,
+        price_output_per_1m: nextOut,
+      })
+    }
+  }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="grid grid-cols-[24px_140px_1fr_1fr_72px_36px] items-center gap-2 px-3 py-2 text-sm"
+      className="grid grid-cols-[24px_140px_1fr_140px_1fr_72px_36px] items-center gap-2 px-3 py-2 text-sm"
     >
       <button
         type="button"
@@ -688,6 +722,80 @@ function CatalogRowView({
             className="mt-0.5 block max-w-full truncate text-left text-xs text-zinc-500 hover:text-zinc-900"
           >
             {row.label || <span className="italic text-zinc-400">add label</span>}
+          </button>
+        )}
+      </div>
+
+      <div>
+        {editingPrice ? (
+          <div className="flex items-center gap-1">
+            <input
+              autoFocus
+              type="number"
+              step="0.01"
+              min={0}
+              value={priceInDraft}
+              placeholder="in"
+              onChange={(e) => setPriceInDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                if (e.key === 'Escape') {
+                  setPriceInDraft(row.price_input_per_1m?.toString() ?? '')
+                  setPriceOutDraft(row.price_output_per_1m?.toString() ?? '')
+                  setEditingPrice(false)
+                }
+              }}
+              onBlur={(e) => {
+                // Only commit when focus leaves the whole pair.
+                const next = e.relatedTarget as HTMLElement | null
+                if (next?.dataset?.pricepair !== row.id) commitPrice()
+              }}
+              data-pricepair={row.id}
+              className="w-16 rounded border border-zinc-300 bg-white px-1 py-0.5 text-xs tabular-nums"
+            />
+            <span className="text-xs text-zinc-400">/</span>
+            <input
+              type="number"
+              step="0.01"
+              min={0}
+              value={priceOutDraft}
+              placeholder="out"
+              onChange={(e) => setPriceOutDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                if (e.key === 'Escape') {
+                  setPriceInDraft(row.price_input_per_1m?.toString() ?? '')
+                  setPriceOutDraft(row.price_output_per_1m?.toString() ?? '')
+                  setEditingPrice(false)
+                }
+              }}
+              onBlur={(e) => {
+                const next = e.relatedTarget as HTMLElement | null
+                if (next?.dataset?.pricepair !== row.id) commitPrice()
+              }}
+              data-pricepair={row.id}
+              className="w-16 rounded border border-zinc-300 bg-white px-1 py-0.5 text-xs tabular-nums"
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setPriceInDraft(row.price_input_per_1m?.toString() ?? '')
+              setPriceOutDraft(row.price_output_per_1m?.toString() ?? '')
+              setEditingPrice(true)
+            }}
+            className="block max-w-full truncate text-left text-xs tabular-nums text-zinc-700 hover:text-zinc-900"
+            title="Price per 1M tokens (input / output)"
+          >
+            {row.price_input_per_1m !== null && row.price_output_per_1m !== null ? (
+              <>
+                ${fmtPrice(row.price_input_per_1m)}{' '}
+                <span className="text-zinc-400">/</span> ${fmtPrice(row.price_output_per_1m)}
+              </>
+            ) : (
+              <span className="italic text-zinc-400">set price</span>
+            )}
           </button>
         )}
       </div>
@@ -757,6 +865,8 @@ function CatalogAddForm({
     label: string
     enabled: boolean
     notes: string
+    priceIn: string
+    priceOut: string
   }) => void
 }) {
   const [provider, setProvider] = useState(providers[0] ?? '')
@@ -764,6 +874,8 @@ function CatalogAddForm({
   const [label, setLabel] = useState('')
   const [enabled, setEnabled] = useState(true)
   const [notes, setNotes] = useState('')
+  const [priceIn, setPriceIn] = useState('')
+  const [priceOut, setPriceOut] = useState('')
 
   return (
     <div className="space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
@@ -811,6 +923,30 @@ function CatalogAddForm({
             className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm"
           />
         </label>
+        <label className="flex flex-col gap-1 text-xs text-zinc-600">
+          Input price ($/1M tokens)
+          <input
+            type="number"
+            step="0.01"
+            min={0}
+            value={priceIn}
+            onChange={(e) => setPriceIn(e.target.value)}
+            placeholder="0.20"
+            className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm tabular-nums"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-zinc-600">
+          Output price ($/1M tokens)
+          <input
+            type="number"
+            step="0.01"
+            min={0}
+            value={priceOut}
+            onChange={(e) => setPriceOut(e.target.value)}
+            placeholder="1.25"
+            className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm tabular-nums"
+          />
+        </label>
       </div>
 
       <div className="flex items-center gap-5">
@@ -833,6 +969,8 @@ function CatalogAddForm({
                 label: label.trim(),
                 enabled,
                 notes: notes.trim(),
+                priceIn: priceIn.trim(),
+                priceOut: priceOut.trim(),
               })
             }
             className="rounded bg-zinc-900 px-4 py-2 text-xs text-white hover:bg-zinc-700 disabled:opacity-40"
