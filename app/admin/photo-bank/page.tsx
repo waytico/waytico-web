@@ -19,6 +19,7 @@ import { listGlobalCountries } from '@/lib/photo-bank-api'
 import { BrowsePanel } from './_components/browse-panel'
 import { TargetsPanel } from './_components/targets-panel'
 import { WorkersPanel } from './_components/workers-panel'
+import { ModelTestPanel } from './_components/model-test-panel'
 
 const PER_PAGE_OPTIONS = [25, 50, 100] as const
 
@@ -97,10 +98,10 @@ export default function AdminPhotoBankPage() {
   // Stage 11 — view mode. Browse mode hides the review queue UI and
   // renders the country/city navigator instead. URL-controlled so a
   // bookmark like ?view=browse keeps you in the right tab on reload.
-  const viewQuery = searchParams.get('view') as 'review' | 'browse' | 'targets' | 'workers' | null
-  const view: 'review' | 'browse' | 'targets' | 'workers' =
-    viewQuery === 'browse' || viewQuery === 'targets' || viewQuery === 'workers' ? viewQuery : 'review'
-  const setView = (next: 'review' | 'browse' | 'targets' | 'workers') => {
+  const viewQuery = searchParams.get('view') as 'review' | 'browse' | 'targets' | 'workers' | 'model-test' | null
+  const view: 'review' | 'browse' | 'targets' | 'workers' | 'model-test' =
+    viewQuery === 'browse' || viewQuery === 'targets' || viewQuery === 'workers' || viewQuery === 'model-test' ? viewQuery : 'review'
+  const setView = (next: 'review' | 'browse' | 'targets' | 'workers' | 'model-test') => {
     const sp = new URLSearchParams(searchParams.toString())
     if (next === 'review') sp.delete('view')
     else sp.set('view', next)
@@ -160,12 +161,25 @@ export default function AdminPhotoBankPage() {
           >
             Workers
           </button>
+          <button
+            type="button"
+            onClick={() => setView('model-test')}
+            className={
+              'border-b-2 px-3 py-2 text-sm font-medium transition-colors ' +
+              (view === 'model-test'
+                ? 'border-zinc-900 text-zinc-900'
+                : 'border-transparent text-zinc-500 hover:text-zinc-700')
+            }
+          >
+            Model test
+          </button>
         </div>
       </div>
 
       {view === 'browse' && <BrowsePanel />}
       {view === 'targets' && <TargetsPanel authedFetch={authedFetch} />}
       {view === 'workers' && <WorkersPanel authedFetch={authedFetch} />}
+      {view === 'model-test' && <ModelTestPanel authedFetch={authedFetch} />}
 
       {view === 'review' && (
         <>
