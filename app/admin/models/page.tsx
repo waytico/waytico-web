@@ -3,21 +3,17 @@
 /**
  * Admin Models page.
  *
- * TOP section — per-role provider/model assignment (existing).
- *   GET /api/admin/models                  → { rows, roles, providers }
- *   PATCH /api/admin/models/:role          → save one row
+ * TOP — Per-role configuration. One row per role. Auto-saves on field
+ * blur / select change. No Save button, no Refresh, no Updated column.
+ * Model is a real <select> (not a datalist) whose options are pulled
+ * from the catalog, filtered to:
+ *   - the currently chosen provider
+ *   - supports_image=TRUE if the role is a vision role
+ *     (photo_classifier, photo_cleanup, document_parser),
+ *     supports_text=TRUE otherwise
  *
- * BOTTOM section — AI model catalog (Pass-4 extended).
- *   GET /api/admin/ai-catalog              → { rows }
- *   POST /api/admin/ai-catalog             → create
- *   PATCH /api/admin/ai-catalog/:id        → toggle enabled / edit label / etc
- *   DELETE /api/admin/ai-catalog/:id       → drop
- *   POST /api/admin/ai-catalog/reorder     → bulk re-sort
- *
- * The catalog feeds the top section: the Model input pulls its
- * autocomplete suggestions from enabled catalog rows whose provider
- * matches the row being edited. Catalog also feeds the Photo Bank
- * "model test" tab.
+ * BOTTOM — AI model catalog. Drag-to-reorder list with two capability
+ * flags per row (text, image) plus enabled toggle. Add form below.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -45,6 +41,15 @@ import { CSS } from '@dnd-kit/utilities'
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
+/** Roles that consume images. Their Model dropdown filters by supports_image. */
+const IMAGE_ROLES = new Set([
+  'photo_classifier',
+  'photo_cleanup',
+  'document_parser',
+])
+
+const DEFAULT_MAX_TOKENS = 2000
+
 interface ModelRow {
   role: string
   provider: string
@@ -65,7 +70,8 @@ interface CatalogRow {
   provider: string
   model: string
   label: string | null
-  supports_vision: boolean
+  supports_text: boolean
+  supports_image: boolean
   enabled: boolean
   sort_order: number
   notes: string | null
@@ -80,20 +86,6 @@ interface RowDraft {
   maxTokens: string
   saving: boolean
   error: string | null
-}
-
-function fmtRelative(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  const then = new Date(iso).getTime()
-  const now = Date.now()
-  const diffSec = Math.max(0, Math.floor((now - then) / 1000))
-  if (diffSec < 60) return `${diffSec}s ago`
-  const m = Math.floor(diffSec / 60)
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  const d = Math.floor(h / 24)
-  return `${d}d ago`
 }
 
 function tempToString(t: number | string | null): string {
@@ -175,22 +167,6 @@ export default function AdminModelsPage() {
     return m
   }, [data])
 
-  // Per-provider list of enabled catalog model strings — feeds the
-  // <datalist> below each Model input so operators pick from the
-  // curated list instead of typing model names from memory.
-  const enabledByProvider = useMemo(() => {
-    const m = new Map<string, CatalogRow[]>()
-    if (catalog) {
-      for (const c of catalog) {
-        if (!c.enabled) continue
-        const arr = m.get(c.provider) ?? []
-        arr.push(c)
-        m.set(c.provider, arr)
-      }
-    }
-    return m
-  }, [catalog])
-
   const getDraft = useCallback(
     (role: string): RowDraft => {
       return (
@@ -198,7 +174,7 @@ export default function AdminModelsPage() {
           provider: '',
           model: '',
           temperature: '',
-          maxTokens: '',
+          maxTokens: String(DEFAULT_MAX_TOKENS),
           saving: false,
           error: null,
         }
@@ -217,57 +193,38 @@ export default function AdminModelsPage() {
     [getDraft],
   )
 
-  const isDirty = useCallback(
-    (role: string): boolean => {
-      const d = getDraft(role)
+  // Save IF the draft is valid and differs from the persisted row.
+  // Called from select onChange and input onBlur.
+  const maybeSave = useCallback(
+    async (role: string, draft: RowDraft) => {
+      if (!draft.provider) return
+      if (!draft.model.trim()) return
       const r = rowMap.get(role)
-      if (!r) {
-        return (
-          d.provider !== '' ||
-          d.model !== '' ||
-          d.temperature !== '' ||
-          d.maxTokens !== ''
-        )
-      }
-      return (
-        d.provider !== r.provider ||
-        d.model !== r.model ||
-        d.temperature !== tempToString(r.temperature) ||
-        d.maxTokens !== numToString(r.max_tokens)
-      )
-    },
-    [getDraft, rowMap],
-  )
+      const equal =
+        r &&
+        draft.provider === r.provider &&
+        draft.model === r.model &&
+        draft.temperature === tempToString(r.temperature) &&
+        draft.maxTokens === numToString(r.max_tokens)
+      if (equal) return
 
-  const save = useCallback(
-    async (role: string) => {
-      const d = getDraft(role)
-      if (!d.provider) {
-        setDraftField(role, { error: 'Provider is required' })
-        return
-      }
-      if (!d.model.trim()) {
-        setDraftField(role, { error: 'Model is required' })
-        return
-      }
       setDraftField(role, { saving: true, error: null })
       try {
         const body: Record<string, unknown> = {
-          provider: d.provider,
-          model: d.model.trim(),
+          provider: draft.provider,
+          model: draft.model.trim(),
           temperature:
-            d.temperature.trim() === '' ? null : Number(d.temperature),
+            draft.temperature.trim() === '' ? null : Number(draft.temperature),
           maxTokens:
-            d.maxTokens.trim() === '' ? null : Number(d.maxTokens),
+            draft.maxTokens.trim() === ''
+              ? DEFAULT_MAX_TOKENS
+              : Number(draft.maxTokens),
         }
-        const res = await authFetch(
-          `/api/admin/models/${encodeURIComponent(role)}`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          },
-        )
+        const res = await authFetch(`/api/admin/models/${encodeURIComponent(role)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
         const j = await res.json().catch(() => ({}))
         if (!res.ok) {
           throw new Error((j as { error?: string }).error || `HTTP ${res.status}`)
@@ -276,7 +233,7 @@ export default function AdminModelsPage() {
         setData((prev) => {
           if (!prev) return prev
           const rows = [...prev.rows]
-          const idx = rows.findIndex((r) => r.role === updated.role)
+          const idx = rows.findIndex((x) => x.role === updated.role)
           if (idx >= 0) rows[idx] = updated
           else rows.push(updated)
           return { ...prev, rows }
@@ -289,13 +246,13 @@ export default function AdminModelsPage() {
           saving: false,
           error: null,
         })
-        toast.success(`Saved ${role}`)
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'Save failed'
         setDraftField(role, { saving: false, error: msg })
+        toast.error(`${role}: ${msg}`)
       }
     },
-    [authFetch, getDraft, setDraftField],
+    [authFetch, rowMap, setDraftField],
   )
 
   if (loading && !data) {
@@ -326,15 +283,8 @@ export default function AdminModelsPage() {
 
   return (
     <div className="space-y-8">
-      <header className="flex items-center justify-between">
+      <header>
         <h1 className="text-xl font-medium text-zinc-900">Models</h1>
-        <button
-          type="button"
-          onClick={load}
-          className="rounded border border-zinc-300 bg-white px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
-        >
-          Refresh
-        </button>
       </header>
 
       {/* ── Per-role configuration ───────────────────────────────── */}
@@ -342,13 +292,13 @@ export default function AdminModelsPage() {
         <div>
           <h2 className="text-sm font-medium text-zinc-700">Per-role configuration</h2>
           <p className="text-xs text-zinc-500">
-            One row per role. Changes apply within 5 minutes (cache TTL) without
-            redeploy. The row&apos;s provider must have its API key in ENV.
-            Model suggestions come from the catalog below.
+            Saves automatically when you change a field. Changes apply within
+            5 minutes (cache TTL) without redeploy. Model list comes from the
+            catalog below — add a model there if it&apos;s missing.
           </p>
         </div>
 
-        <div className="rounded-lg border border-zinc-200 bg-white">
+        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs uppercase tracking-wider text-zinc-500">
@@ -357,32 +307,41 @@ export default function AdminModelsPage() {
                 <th className="px-3 py-2 text-left font-normal">Model</th>
                 <th className="px-3 py-2 text-left font-normal">Temp</th>
                 <th className="px-3 py-2 text-left font-normal">Max tokens</th>
-                <th className="px-3 py-2 text-right font-normal">Updated</th>
-                <th className="px-3 py-2 text-right font-normal">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {data.roles.map((role) => {
-                const row = rowMap.get(role)
                 const d = getDraft(role)
-                const dirty = isDirty(role)
-                const datalistId = `models-${role}`
-                const providerSuggestions =
-                  d.provider ? enabledByProvider.get(d.provider) ?? [] : []
+                const isImageRole = IMAGE_ROLES.has(role)
+                const modelOptions =
+                  d.provider && catalog
+                    ? catalog.filter(
+                        (c) =>
+                          c.enabled &&
+                          c.provider === d.provider &&
+                          (isImageRole ? c.supports_image : c.supports_text),
+                      )
+                    : []
+                // include the persisted model even if not in catalog (orphan)
+                const modelOptionStrings = new Set(modelOptions.map((c) => c.model))
+                const orphanModel =
+                  d.model && !modelOptionStrings.has(d.model) ? d.model : null
                 return (
-                  <tr key={role} className="align-top">
+                  <tr key={role} className="align-middle">
                     <td className="px-3 py-2 font-mono text-xs text-zinc-900">
                       {role}
                     </td>
                     <td className="px-3 py-2">
                       <select
                         value={d.provider}
-                        onChange={(e) =>
-                          setDraftField(role, { provider: e.target.value })
-                        }
+                        onChange={(e) => {
+                          // Provider change resets model — operator must pick from new list.
+                          // Do NOT auto-save until model is chosen.
+                          setDraftField(role, { provider: e.target.value, model: '' })
+                        }}
                         className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm"
                       >
-                        <option value="">{row ? '—' : '(not set)'}</option>
+                        <option value="">—</option>
                         {data.providers.map((p) => (
                           <option key={p} value={p}>
                             {p}
@@ -391,22 +350,39 @@ export default function AdminModelsPage() {
                       </select>
                     </td>
                     <td className="px-3 py-2">
-                      <input
-                        type="text"
-                        list={datalistId}
+                      <select
                         value={d.model}
-                        onChange={(e) =>
+                        disabled={!d.provider}
+                        onChange={(e) => {
+                          const next = { ...d, model: e.target.value }
                           setDraftField(role, { model: e.target.value })
-                        }
-                        className="w-64 rounded border border-zinc-300 bg-white px-2 py-1 font-mono text-xs"
-                      />
-                      <datalist id={datalistId}>
-                        {providerSuggestions.map((c) => (
+                          maybeSave(role, next)
+                        }}
+                        className="w-40 rounded border border-zinc-300 bg-white px-2 py-1 font-mono text-xs disabled:bg-zinc-50"
+                      >
+                        <option value="">— pick —</option>
+                        {modelOptions.map((c) => (
                           <option key={c.id} value={c.model}>
                             {c.label ?? c.model}
                           </option>
                         ))}
-                      </datalist>
+                        {orphanModel && (
+                          <option value={orphanModel}>{orphanModel} (not in catalog)</option>
+                        )}
+                      </select>
+                      {d.provider && modelOptions.length === 0 && !orphanModel && (
+                        <div className="mt-0.5 text-xs text-zinc-400">
+                          no {isImageRole ? 'image' : 'text'} models for {d.provider}
+                        </div>
+                      )}
+                      {d.saving && (
+                        <span className="ml-2 inline-block align-middle text-xs text-zinc-400">
+                          <Loader2 className="inline h-3 w-3 animate-spin" />
+                        </span>
+                      )}
+                      {d.error && (
+                        <div className="mt-0.5 text-xs text-rose-700">{d.error}</div>
+                      )}
                     </td>
                     <td className="px-3 py-2">
                       <input
@@ -418,6 +394,10 @@ export default function AdminModelsPage() {
                         onChange={(e) =>
                           setDraftField(role, { temperature: e.target.value })
                         }
+                        onBlur={() => maybeSave(role, getDraft(role))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                        }}
                         className="w-20 rounded border border-zinc-300 bg-white px-2 py-1 text-sm tabular-nums"
                       />
                     </td>
@@ -425,33 +405,18 @@ export default function AdminModelsPage() {
                       <input
                         type="number"
                         min={1}
+                        step={100}
+                        placeholder={String(DEFAULT_MAX_TOKENS)}
                         value={d.maxTokens}
                         onChange={(e) =>
                           setDraftField(role, { maxTokens: e.target.value })
                         }
+                        onBlur={() => maybeSave(role, getDraft(role))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                        }}
                         className="w-24 rounded border border-zinc-300 bg-white px-2 py-1 text-sm tabular-nums"
                       />
-                    </td>
-                    <td className="px-3 py-2 text-right text-xs text-zinc-500">
-                      {fmtRelative(row?.updated_at)}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => save(role)}
-                        disabled={!dirty || d.saving}
-                        className="inline-flex items-center gap-1 rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-50 disabled:opacity-40"
-                      >
-                        {d.saving && (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        )}
-                        Save
-                      </button>
-                      {d.error && (
-                        <div className="mt-1 text-xs text-rose-700">
-                          {d.error}
-                        </div>
-                      )}
                     </td>
                   </tr>
                 )
@@ -502,7 +467,7 @@ function ModelCatalogSection({
       const newIdx = catalog.findIndex((c) => c.id === over.id)
       if (oldIdx < 0 || newIdx < 0) return
       const next = arrayMove(catalog, oldIdx, newIdx)
-      onChange(next) // optimistic
+      onChange(next)
       try {
         const res = await authFetch('/api/admin/ai-catalog/reorder', {
           method: 'POST',
@@ -510,9 +475,9 @@ function ModelCatalogSection({
           body: JSON.stringify({ ids: next.map((c) => c.id) }),
         })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      } catch (e) {
+      } catch {
         toast.error('Failed to save order — reverting')
-        onChange(catalog) // rollback
+        onChange(catalog)
       }
     },
     [authFetch, catalog, onChange],
@@ -531,9 +496,7 @@ function ModelCatalogSection({
           throw new Error((j as { error?: string }).error || `HTTP ${res.status}`)
         }
         const row = (j as { row: CatalogRow }).row
-        if (catalog) {
-          onChange(catalog.map((c) => (c.id === id ? row : c)))
-        }
+        if (catalog) onChange(catalog.map((c) => (c.id === id ? row : c)))
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Save failed')
       }
@@ -560,7 +523,8 @@ function ModelCatalogSection({
       provider: string
       model: string
       label: string
-      supports_vision: boolean
+      supports_text: boolean
+      supports_image: boolean
       enabled: boolean
       notes: string
     }) => {
@@ -572,7 +536,8 @@ function ModelCatalogSection({
             provider: body.provider,
             model: body.model,
             label: body.label || null,
-            supports_vision: body.supports_vision,
+            supports_text: body.supports_text,
+            supports_image: body.supports_image,
             enabled: body.enabled,
             notes: body.notes || null,
           }),
@@ -597,9 +562,9 @@ function ModelCatalogSection({
         <div>
           <h2 className="text-sm font-medium text-zinc-700">Model catalog</h2>
           <p className="text-xs text-zinc-500">
-            Full list of available (provider, model) pairs across the platform.
-            Drag rows to reorder. Disabled rows are hidden from the role picker
-            above and from the Photo Bank model-test tab.
+            Full list of (provider, model) pairs across the platform. Drag rows
+            to reorder. Disabled rows are hidden from the role picker above and
+            from the Photo Bank model-test tab.
           </p>
         </div>
         <button
@@ -611,17 +576,16 @@ function ModelCatalogSection({
         </button>
       </div>
 
-      {addOpen && (
-        <CatalogAddForm providers={providers} onSubmit={addRow} />
-      )}
+      {addOpen && <CatalogAddForm providers={providers} onSubmit={addRow} />}
 
       <div className="rounded-lg border border-zinc-200 bg-white">
-        <div className="grid grid-cols-[24px_140px_1fr_1fr_72px_72px_36px] gap-2 border-b border-zinc-100 bg-zinc-50 px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
+        <div className="grid grid-cols-[24px_140px_1fr_1fr_64px_64px_64px_36px] gap-2 border-b border-zinc-100 bg-zinc-50 px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
           <div></div>
           <div>Provider</div>
           <div>Model / Label</div>
           <div>Notes</div>
-          <div className="text-center">Vision</div>
+          <div className="text-center">Text</div>
+          <div className="text-center">Image</div>
           <div className="text-center">Enabled</div>
           <div></div>
         </div>
@@ -685,7 +649,7 @@ function CatalogRowView({
     <div
       ref={setNodeRef}
       style={style}
-      className="grid grid-cols-[24px_140px_1fr_1fr_72px_72px_36px] items-center gap-2 px-3 py-2 text-sm"
+      className="grid grid-cols-[24px_140px_1fr_1fr_64px_64px_64px_36px] items-center gap-2 px-3 py-2 text-sm"
     >
       <button
         type="button"
@@ -773,8 +737,15 @@ function CatalogRowView({
       <div className="text-center">
         <input
           type="checkbox"
-          checked={row.supports_vision}
-          onChange={(e) => onPatch({ supports_vision: e.target.checked })}
+          checked={row.supports_text}
+          onChange={(e) => onPatch({ supports_text: e.target.checked })}
+        />
+      </div>
+      <div className="text-center">
+        <input
+          type="checkbox"
+          checked={row.supports_image}
+          onChange={(e) => onPatch({ supports_image: e.target.checked })}
         />
       </div>
       <div className="text-center">
@@ -805,7 +776,8 @@ function CatalogAddForm({
     provider: string
     model: string
     label: string
-    supports_vision: boolean
+    supports_text: boolean
+    supports_image: boolean
     enabled: boolean
     notes: string
   }) => void
@@ -813,90 +785,104 @@ function CatalogAddForm({
   const [provider, setProvider] = useState(providers[0] ?? '')
   const [model, setModel] = useState('')
   const [label, setLabel] = useState('')
-  const [supportsVision, setSupportsVision] = useState(true)
+  const [supportsText, setSupportsText] = useState(true)
+  const [supportsImage, setSupportsImage] = useState(false)
   const [enabled, setEnabled] = useState(true)
   const [notes, setNotes] = useState('')
 
   return (
-    <div className="grid grid-cols-2 gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 sm:grid-cols-4">
-      <label className="flex flex-col gap-1 text-xs text-zinc-600">
-        Provider
-        <select
-          value={provider}
-          onChange={(e) => setProvider(e.target.value)}
-          className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm"
-        >
-          {providers.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="flex flex-col gap-1 text-xs text-zinc-600">
-        Model
-        <input
-          type="text"
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-          placeholder="e.g. gemini-2.5-flash-lite"
-          className="rounded border border-zinc-300 bg-white px-2 py-1 font-mono text-xs"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-xs text-zinc-600">
-        Label (optional)
-        <input
-          type="text"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder="Gemini 2.5 Flash-Lite"
-          className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-xs text-zinc-600">
-        Notes (optional)
-        <input
-          type="text"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm"
-        />
-      </label>
+    <div className="space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-xs text-zinc-600">
+          Provider
+          <select
+            value={provider}
+            onChange={(e) => setProvider(e.target.value)}
+            className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm"
+          >
+            {providers.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-zinc-600">
+          Model
+          <input
+            type="text"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder="e.g. gemini-2.5-flash-lite"
+            className="rounded border border-zinc-300 bg-white px-3 py-2 font-mono text-xs"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-zinc-600">
+          Label (optional)
+          <input
+            type="text"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="Gemini 2.5 Flash-Lite"
+            className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-zinc-600">
+          Notes (optional)
+          <input
+            type="text"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm"
+          />
+        </label>
+      </div>
 
-      <label className="flex items-center gap-2 text-xs text-zinc-700">
-        <input
-          type="checkbox"
-          checked={supportsVision}
-          onChange={(e) => setSupportsVision(e.target.checked)}
-        />
-        Supports vision
-      </label>
-      <label className="flex items-center gap-2 text-xs text-zinc-700">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => setEnabled(e.target.checked)}
-        />
-        Enabled
-      </label>
-      <div className="col-span-2 flex items-end justify-end">
-        <button
-          type="button"
-          disabled={!provider || !model.trim()}
-          onClick={() =>
-            onSubmit({
-              provider,
-              model: model.trim(),
-              label: label.trim(),
-              supports_vision: supportsVision,
-              enabled,
-              notes: notes.trim(),
-            })
-          }
-          className="rounded bg-zinc-900 px-3 py-1.5 text-xs text-white hover:bg-zinc-700 disabled:opacity-40"
-        >
-          Add to catalog
-        </button>
+      <div className="flex items-center gap-5">
+        <label className="flex items-center gap-2 text-xs text-zinc-700">
+          <input
+            type="checkbox"
+            checked={supportsText}
+            onChange={(e) => setSupportsText(e.target.checked)}
+          />
+          Text
+        </label>
+        <label className="flex items-center gap-2 text-xs text-zinc-700">
+          <input
+            type="checkbox"
+            checked={supportsImage}
+            onChange={(e) => setSupportsImage(e.target.checked)}
+          />
+          Image
+        </label>
+        <label className="flex items-center gap-2 text-xs text-zinc-700">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+          />
+          Enabled
+        </label>
+        <div className="ml-auto">
+          <button
+            type="button"
+            disabled={!provider || !model.trim()}
+            onClick={() =>
+              onSubmit({
+                provider,
+                model: model.trim(),
+                label: label.trim(),
+                supports_text: supportsText,
+                supports_image: supportsImage,
+                enabled,
+                notes: notes.trim(),
+              })
+            }
+            className="rounded bg-zinc-900 px-4 py-2 text-xs text-white hover:bg-zinc-700 disabled:opacity-40"
+          >
+            Add to catalog
+          </button>
+        </div>
       </div>
     </div>
   )
