@@ -41,13 +41,6 @@ import { CSS } from '@dnd-kit/utilities'
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
-/** Roles that consume images. Their Model dropdown filters by supports_image. */
-const IMAGE_ROLES = new Set([
-  'photo_classifier',
-  'photo_cleanup',
-  'document_parser',
-])
-
 const DEFAULT_MAX_TOKENS = 2000
 
 interface ModelRow {
@@ -72,7 +65,6 @@ interface CatalogRow {
   label: string | null
   supports_text: boolean
   supports_image: boolean
-  enabled: boolean
   sort_order: number
   notes: string | null
   created_at: string
@@ -144,7 +136,12 @@ export default function AdminModelsPage() {
           provider: r.provider,
           model: r.model,
           temperature: tempToString(r.temperature),
-          maxTokens: numToString(r.max_tokens),
+          // null max_tokens → pre-fill the operator-chosen default so
+          // the first save persists a real value instead of NULL.
+          maxTokens:
+            r.max_tokens === null
+              ? String(DEFAULT_MAX_TOKENS)
+              : numToString(r.max_tokens),
           saving: false,
           error: null,
         }
@@ -312,17 +309,16 @@ export default function AdminModelsPage() {
             <tbody className="divide-y divide-zinc-100">
               {data.roles.map((role) => {
                 const d = getDraft(role)
-                const isImageRole = IMAGE_ROLES.has(role)
+                // Filter the dropdown by provider only — capability flags are
+                // informational, not a hard filter. The operator can still
+                // assign a text-only model to a vision role on their own
+                // responsibility. If the persisted model is NOT in the
+                // catalog at all, append it as "(not in catalog)" so it
+                // stays selectable.
                 const modelOptions =
                   d.provider && catalog
-                    ? catalog.filter(
-                        (c) =>
-                          c.enabled &&
-                          c.provider === d.provider &&
-                          (isImageRole ? c.supports_image : c.supports_text),
-                      )
+                    ? catalog.filter((c) => c.provider === d.provider)
                     : []
-                // include the persisted model even if not in catalog (orphan)
                 const modelOptionStrings = new Set(modelOptions.map((c) => c.model))
                 const orphanModel =
                   d.model && !modelOptionStrings.has(d.model) ? d.model : null
@@ -372,7 +368,7 @@ export default function AdminModelsPage() {
                       </select>
                       {d.provider && modelOptions.length === 0 && !orphanModel && (
                         <div className="mt-0.5 text-xs text-zinc-400">
-                          no {isImageRole ? 'image' : 'text'} models for {d.provider}
+                          no models for {d.provider} in catalog
                         </div>
                       )}
                       {d.saving && (
@@ -404,9 +400,7 @@ export default function AdminModelsPage() {
                     <td className="px-3 py-2">
                       <input
                         type="number"
-                        min={1}
                         step={100}
-                        placeholder={String(DEFAULT_MAX_TOKENS)}
                         value={d.maxTokens}
                         onChange={(e) =>
                           setDraftField(role, { maxTokens: e.target.value })
@@ -525,7 +519,6 @@ function ModelCatalogSection({
       label: string
       supports_text: boolean
       supports_image: boolean
-      enabled: boolean
       notes: string
     }) => {
       try {
@@ -538,7 +531,6 @@ function ModelCatalogSection({
             label: body.label || null,
             supports_text: body.supports_text,
             supports_image: body.supports_image,
-            enabled: body.enabled,
             notes: body.notes || null,
           }),
         })
@@ -558,15 +550,16 @@ function ModelCatalogSection({
 
   return (
     <section className="space-y-3">
-      <div className="flex items-end justify-between">
-        <div>
-          <h2 className="text-sm font-medium text-zinc-700">Model catalog</h2>
-          <p className="text-xs text-zinc-500">
-            Full list of (provider, model) pairs across the platform. Drag rows
-            to reorder. Disabled rows are hidden from the role picker above and
-            from the Photo Bank model-test tab.
-          </p>
-        </div>
+      <div>
+        <h2 className="text-sm font-medium text-zinc-700">Model catalog</h2>
+        <p className="text-xs text-zinc-500">
+          Full list of (provider, model) pairs across the platform. Drag rows
+          to reorder. To hide a model from a picker, untick its capability
+          checkboxes.
+        </p>
+      </div>
+
+      <div className="flex justify-start">
         <button
           type="button"
           onClick={() => setAddOpen((v) => !v)}
@@ -579,14 +572,13 @@ function ModelCatalogSection({
       {addOpen && <CatalogAddForm providers={providers} onSubmit={addRow} />}
 
       <div className="rounded-lg border border-zinc-200 bg-white">
-        <div className="grid grid-cols-[24px_140px_1fr_1fr_64px_64px_64px_36px] gap-2 border-b border-zinc-100 bg-zinc-50 px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
+        <div className="grid grid-cols-[24px_140px_1fr_1fr_64px_64px_36px] gap-2 border-b border-zinc-100 bg-zinc-50 px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
           <div></div>
           <div>Provider</div>
           <div>Model / Label</div>
           <div>Notes</div>
           <div className="text-center">Text</div>
           <div className="text-center">Image</div>
-          <div className="text-center">Enabled</div>
           <div></div>
         </div>
 
@@ -649,7 +641,7 @@ function CatalogRowView({
     <div
       ref={setNodeRef}
       style={style}
-      className="grid grid-cols-[24px_140px_1fr_1fr_64px_64px_64px_36px] items-center gap-2 px-3 py-2 text-sm"
+      className="grid grid-cols-[24px_140px_1fr_1fr_64px_64px_36px] items-center gap-2 px-3 py-2 text-sm"
     >
       <button
         type="button"
@@ -748,13 +740,6 @@ function CatalogRowView({
           onChange={(e) => onPatch({ supports_image: e.target.checked })}
         />
       </div>
-      <div className="text-center">
-        <input
-          type="checkbox"
-          checked={row.enabled}
-          onChange={(e) => onPatch({ enabled: e.target.checked })}
-        />
-      </div>
       <button
         type="button"
         onClick={onDelete}
@@ -778,7 +763,6 @@ function CatalogAddForm({
     label: string
     supports_text: boolean
     supports_image: boolean
-    enabled: boolean
     notes: string
   }) => void
 }) {
@@ -787,7 +771,6 @@ function CatalogAddForm({
   const [label, setLabel] = useState('')
   const [supportsText, setSupportsText] = useState(true)
   const [supportsImage, setSupportsImage] = useState(false)
-  const [enabled, setEnabled] = useState(true)
   const [notes, setNotes] = useState('')
 
   return (
@@ -855,14 +838,6 @@ function CatalogAddForm({
           />
           Image
         </label>
-        <label className="flex items-center gap-2 text-xs text-zinc-700">
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={(e) => setEnabled(e.target.checked)}
-          />
-          Enabled
-        </label>
         <div className="ml-auto">
           <button
             type="button"
@@ -874,7 +849,6 @@ function CatalogAddForm({
                 label: label.trim(),
                 supports_text: supportsText,
                 supports_image: supportsImage,
-                enabled,
                 notes: notes.trim(),
               })
             }
