@@ -63,7 +63,7 @@ interface CatalogRow {
   provider: string
   model: string
   label: string | null
-  supports_image: boolean
+  enabled: boolean
   sort_order: number
   notes: string | null
   created_at: string
@@ -308,19 +308,24 @@ export default function AdminModelsPage() {
             <tbody className="divide-y divide-zinc-100">
               {data.roles.map((role) => {
                 const d = getDraft(role)
-                // Filter the dropdown by provider only — capability flags are
-                // informational, not a hard filter. The operator can still
-                // assign a text-only model to a vision role on their own
-                // responsibility. If the persisted model is NOT in the
-                // catalog at all, append it as "(not in catalog)" so it
-                // stays selectable.
+                // Filter the dropdown by provider AND enabled. Operator
+                // controls which models are usable on each role from the
+                // catalog below (Enabled checkbox). If the persisted model
+                // is NOT in the catalog at all OR is currently disabled,
+                // append it as "(disabled)" / "(not in catalog)" so it
+                // stays selectable until the operator chooses another.
                 const modelOptions =
                   d.provider && catalog
-                    ? catalog.filter((c) => c.provider === d.provider)
+                    ? catalog.filter((c) => c.provider === d.provider && c.enabled)
                     : []
                 const modelOptionStrings = new Set(modelOptions.map((c) => c.model))
-                const orphanModel =
-                  d.model && !modelOptionStrings.has(d.model) ? d.model : null
+                let orphanLabel: string | null = null
+                if (d.model && !modelOptionStrings.has(d.model)) {
+                  const inCatalog = catalog?.find(
+                    (c) => c.provider === d.provider && c.model === d.model,
+                  )
+                  orphanLabel = inCatalog ? `${d.model} (disabled)` : `${d.model} (not in catalog)`
+                }
                 return (
                   <tr key={role} className="align-middle">
                     <td className="px-3 py-2 font-mono text-xs text-zinc-900">
@@ -361,13 +366,13 @@ export default function AdminModelsPage() {
                             {c.label ?? c.model}
                           </option>
                         ))}
-                        {orphanModel && (
-                          <option value={orphanModel}>{orphanModel} (not in catalog)</option>
+                        {orphanLabel && (
+                          <option value={d.model}>{orphanLabel}</option>
                         )}
                       </select>
-                      {d.provider && modelOptions.length === 0 && !orphanModel && (
+                      {d.provider && modelOptions.length === 0 && !orphanLabel && (
                         <div className="mt-0.5 text-xs text-zinc-400">
-                          no models for {d.provider} in catalog
+                          no enabled models for {d.provider} in catalog
                         </div>
                       )}
                       {d.saving && (
@@ -516,7 +521,7 @@ function ModelCatalogSection({
       provider: string
       model: string
       label: string
-      supports_image: boolean
+      enabled: boolean
       notes: string
     }) => {
       try {
@@ -527,7 +532,7 @@ function ModelCatalogSection({
             provider: body.provider,
             model: body.model,
             label: body.label || null,
-            supports_image: body.supports_image,
+            enabled: body.enabled,
             notes: body.notes || null,
           }),
         })
@@ -551,8 +556,8 @@ function ModelCatalogSection({
         <h2 className="text-sm font-medium text-zinc-700">Model catalog</h2>
         <p className="text-xs text-zinc-500">
           Full list of (provider, model) pairs across the platform. Drag rows
-          to reorder. To hide a model from a picker, untick its capability
-          checkboxes.
+          to reorder. Untick Enabled to hide a model from the role dropdown
+          and from the Photo Bank model-test picker.
         </p>
       </div>
 
@@ -569,12 +574,12 @@ function ModelCatalogSection({
       {addOpen && <CatalogAddForm providers={providers} onSubmit={addRow} />}
 
       <div className="rounded-lg border border-zinc-200 bg-white">
-        <div className="grid grid-cols-[24px_140px_1fr_1fr_64px_36px] gap-2 border-b border-zinc-100 bg-zinc-50 px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
+        <div className="grid grid-cols-[24px_140px_1fr_1fr_72px_36px] gap-2 border-b border-zinc-100 bg-zinc-50 px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
           <div></div>
           <div>Provider</div>
           <div>Model / Label</div>
           <div>Notes</div>
-          <div className="text-center">Image</div>
+          <div className="text-center">Enabled</div>
           <div></div>
         </div>
 
@@ -637,7 +642,7 @@ function CatalogRowView({
     <div
       ref={setNodeRef}
       style={style}
-      className="grid grid-cols-[24px_140px_1fr_1fr_64px_36px] items-center gap-2 px-3 py-2 text-sm"
+      className="grid grid-cols-[24px_140px_1fr_1fr_72px_36px] items-center gap-2 px-3 py-2 text-sm"
     >
       <button
         type="button"
@@ -725,8 +730,8 @@ function CatalogRowView({
       <div className="text-center">
         <input
           type="checkbox"
-          checked={row.supports_image}
-          onChange={(e) => onPatch({ supports_image: e.target.checked })}
+          checked={row.enabled}
+          onChange={(e) => onPatch({ enabled: e.target.checked })}
         />
       </div>
       <button
@@ -750,14 +755,14 @@ function CatalogAddForm({
     provider: string
     model: string
     label: string
-    supports_image: boolean
+    enabled: boolean
     notes: string
   }) => void
 }) {
   const [provider, setProvider] = useState(providers[0] ?? '')
   const [model, setModel] = useState('')
   const [label, setLabel] = useState('')
-  const [supportsImage, setSupportsImage] = useState(false)
+  const [enabled, setEnabled] = useState(true)
   const [notes, setNotes] = useState('')
 
   return (
@@ -812,11 +817,10 @@ function CatalogAddForm({
         <label className="flex items-center gap-2 text-xs text-zinc-700">
           <input
             type="checkbox"
-            checked={supportsImage}
-            onChange={(e) => setSupportsImage(e.target.checked)}
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
           />
-          Image
-          <span className="text-zinc-500">— show in Photo Bank model-test picker</span>
+          Enabled
         </label>
         <div className="ml-auto">
           <button
@@ -827,7 +831,7 @@ function CatalogAddForm({
                 provider,
                 model: model.trim(),
                 label: label.trim(),
-                supports_image: supportsImage,
+                enabled,
                 notes: notes.trim(),
               })
             }

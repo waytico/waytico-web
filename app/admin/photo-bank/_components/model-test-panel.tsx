@@ -35,7 +35,7 @@ interface CatalogRow {
   provider: string
   model: string
   label: string | null
-  supports_image: boolean
+  enabled: boolean
   sort_order: number
 }
 
@@ -90,7 +90,7 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
   }, [file])
 
   const visionModels = useMemo(
-    () => (catalog ?? []).filter((c) => c.supports_image),
+    () => (catalog ?? []).filter((c) => c.enabled),
     [catalog],
   )
 
