@@ -758,6 +758,57 @@ export default function TripPageClient({ slug, initialData }: Props) {
     disableOwnerFetch: isPreviewIframe,
   })
 
+  // Iframe-side state mirror.
+  //
+  // When loaded inside DevicePreview's iframe (?previewAs=client), we
+  // can't trust our own SSR payload to stay fresh — the operator on
+  // the parent tab is making unsaved edits that never round-trip
+  // through the server. So instead, we announce ourselves ('ready')
+  // and let DevicePreview shove its current in-memory snapshot into
+  // our setters whenever it changes. From the iframe's perspective
+  // this looks like data arriving from a fast loopback: it's the same
+  // setData / setTasks / setMedia path the rest of the page already
+  // drives, so every themed component re-renders correctly without
+  // any further changes elsewhere.
+  //
+  // Owner-mode mutators (setOwner, owner-detect, polling, agent
+  // refresh) are all neutered in the preview iframe — disableOwnerFetch
+  // on useTripData, anon-claim regex won't match an empty hash,
+  // generating-status polling is moot for a quoted trip — so nothing
+  // contends for these setters and parent's snapshot is always the
+  // last writer.
+  //
+  // Origin lock matches the scroll-sync handler above. Ready is sent
+  // *once* per mount: subsequent state arrives via the state-sync
+  // listener registered alongside.
+  useEffect(() => {
+    if (!isPreviewIframe) return
+    if (typeof window === 'undefined') return
+    // Avoid posting to ourselves if for some reason this page is opened
+    // top-level with ?previewAs=client — there's no parent to handshake
+    // with and we don't want to talk to our own window.
+    if (window.parent === window) return
+    const origin = window.location.origin
+    try {
+      window.parent.postMessage({ type: 'waytico:preview-ready' }, origin)
+    } catch {
+      /* parent gone; nothing to do */
+    }
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== origin) return
+      const d = e.data
+      if (!d || d.type !== 'waytico:state-sync') return
+      if (d.data) setData(d.data)
+      if (Array.isArray(d.tasks)) setTasks(d.tasks)
+      if (Array.isArray(d.media)) setMedia(d.media as MediaRecord[])
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+    // setData/setTasks/setMedia are stable React setters; isPreviewIframe
+    // is the only thing that can flip the gate at runtime.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPreviewIframe])
+
   const {
     saveProjectPatch,
     saveHighlightSlot,
@@ -1974,7 +2025,7 @@ export default function TripPageClient({ slug, initialData }: Props) {
           =client, which the trip-page-client (this file) detects via
           isPreviewIframe at the top and short-circuits all owner UI. */}
       {isOwner && previewAsClient && !isShowcase && !isAnonCreator && (
-        <DevicePreview slug={slug} />
+        <DevicePreview slug={slug} data={data} tasks={tasks} media={media} />
       )}
       {isShowcase && <ShowcaseBanner />}
       {isShowcase && showOwnerUI && p.id && (

@@ -138,9 +138,30 @@ const buildSrc = (slug: string) =>
 type Props = {
   /** URL slug of the trip; iframe loads /t/{slug}?previewAs=client */
   slug: string
+  /**
+   * Live trip payload mirrored from the desktop trip-page-client.
+   *
+   * The iframe fetches its own server-rendered HTML at mount, which
+   * reflects whatever was persisted to the DB at that moment. To make
+   * the preview reflect *unsaved* edits the operator is making on the
+   * desktop side (a new accommodation card, an edited title, a moved
+   * day) we postMessage the current in-memory snapshot whenever it
+   * changes. The iframe replaces its own state from these messages.
+   *
+   * Sent shapes deliberately mirror trip-page-client's own state slots
+   * (one combined `data` object holding project + accommodations +
+   * misc; tasks and media as their own arrays) so the iframe-side
+   * listener can call setData / setTasks / setMedia directly.
+   *
+   * `any` to keep this loose — the parent is already authoring
+   * project / tasks / media as `any` throughout trip-page-client.
+   */
+  data: any
+  tasks: any[]
+  media: any[]
 }
 
-export function DevicePreview({ slug }: Props) {
+export function DevicePreview({ slug, data, tasks, media }: Props) {
   const [corner, setCorner] = useState<Corner>('br')
 
   // Refs to both iframes so the parent-side scroll listener (below)
@@ -223,6 +244,77 @@ export function DevicePreview({ slug }: Props) {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  // Parent → iframe state mirror.
+  //
+  // The iframe boots from the server-rendered version of the trip at
+  // mount, which only knows whatever was last persisted. To let the
+  // operator preview *unsaved* edits — adding an accommodation card,
+  // renaming a day, dragging photos — we shove the current in-memory
+  // snapshot from the desktop side into both iframes whenever it
+  // changes. The iframe-side listener (trip-page-client.tsx, gated by
+  // ?previewAs=client) drops the payload into its own setData /
+  // setTasks / setMedia, and the preview re-renders against that.
+  //
+  // Strictly unidirectional (parent emits, iframes consume). No write
+  // path back to the parent: the iframe is a viewer.
+  //
+  // Why a separate effect per concern (this one vs the scroll-sync
+  // above): scroll-sync emits at rAF cadence and dedupes by hash;
+  // state-sync emits per React commit and ships the full payload.
+  // Different rhythms, different payloads, different listeners on
+  // the iframe side. Folding them together would muddy both.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const msg = { type: 'waytico:state-sync', data, tasks, media }
+    const origin = window.location.origin
+    try {
+      thumbnailIframeRef.current?.contentWindow?.postMessage(msg, origin)
+    } catch {
+      /* iframe not ready yet — its ready-handshake (below) will
+         request a fresh snapshot the moment its JS comes up. */
+    }
+    try {
+      fullscreenIframeRef.current?.contentWindow?.postMessage(msg, origin)
+    } catch {
+      /* same as above */
+    }
+  }, [data, tasks, media])
+
+  // Initial-state handshake.
+  //
+  // The state-sync effect above fires on every prop change including
+  // first mount, but the very first emission almost certainly misses:
+  // when DevicePreview commits, the iframe element is in the DOM but
+  // its document is still loading, so its message listener doesn't
+  // exist yet and the postMessage hits nothing. To close that race,
+  // the iframe sends a 'waytico:preview-ready' message once its own
+  // listener is wired up, and we reply with the current snapshot to
+  // exactly that iframe (identified via e.source).
+  //
+  // Closure captures the latest data/tasks/media because this effect
+  // re-registers on every change. The listener is re-attached cheaply;
+  // 'ready' is iframe-load-rare anyway.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return
+      const d = e.data
+      if (!d || d.type !== 'waytico:preview-ready') return
+      const msg = { type: 'waytico:state-sync', data, tasks, media }
+      const origin = window.location.origin
+      // Reply only to whichever iframe just announced itself.
+      // (When both iframes are alive — i.e. fullscreen is open — they
+      // each send their own ready, so each gets its own reply.)
+      if (e.source === thumbnailIframeRef.current?.contentWindow) {
+        thumbnailIframeRef.current?.contentWindow?.postMessage(msg, origin)
+      } else if (e.source === fullscreenIframeRef.current?.contentWindow) {
+        fullscreenIframeRef.current?.contentWindow?.postMessage(msg, origin)
+      }
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [data, tasks, media])
 
   const cycleCorner = () => {
     setCorner((cur) => {
