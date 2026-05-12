@@ -63,7 +63,6 @@ interface CatalogRow {
   provider: string
   model: string
   label: string | null
-  supports_text: boolean
   supports_image: boolean
   sort_order: number
   notes: string | null
@@ -517,7 +516,6 @@ function ModelCatalogSection({
       provider: string
       model: string
       label: string
-      supports_text: boolean
       supports_image: boolean
       notes: string
     }) => {
@@ -529,7 +527,6 @@ function ModelCatalogSection({
             provider: body.provider,
             model: body.model,
             label: body.label || null,
-            supports_text: body.supports_text,
             supports_image: body.supports_image,
             notes: body.notes || null,
           }),
@@ -572,12 +569,11 @@ function ModelCatalogSection({
       {addOpen && <CatalogAddForm providers={providers} onSubmit={addRow} />}
 
       <div className="rounded-lg border border-zinc-200 bg-white">
-        <div className="grid grid-cols-[24px_140px_1fr_1fr_64px_64px_36px] gap-2 border-b border-zinc-100 bg-zinc-50 px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
+        <div className="grid grid-cols-[24px_140px_1fr_1fr_64px_36px] gap-2 border-b border-zinc-100 bg-zinc-50 px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
           <div></div>
           <div>Provider</div>
           <div>Model / Label</div>
           <div>Notes</div>
-          <div className="text-center">Text</div>
           <div className="text-center">Image</div>
           <div></div>
         </div>
@@ -641,7 +637,7 @@ function CatalogRowView({
     <div
       ref={setNodeRef}
       style={style}
-      className="grid grid-cols-[24px_140px_1fr_1fr_64px_64px_36px] items-center gap-2 px-3 py-2 text-sm"
+      className="grid grid-cols-[24px_140px_1fr_1fr_64px_36px] items-center gap-2 px-3 py-2 text-sm"
     >
       <button
         type="button"
@@ -729,13 +725,6 @@ function CatalogRowView({
       <div className="text-center">
         <input
           type="checkbox"
-          checked={row.supports_text}
-          onChange={(e) => onPatch({ supports_text: e.target.checked })}
-        />
-      </div>
-      <div className="text-center">
-        <input
-          type="checkbox"
           checked={row.supports_image}
           onChange={(e) => onPatch({ supports_image: e.target.checked })}
         />
@@ -761,7 +750,6 @@ function CatalogAddForm({
     provider: string
     model: string
     label: string
-    supports_text: boolean
     supports_image: boolean
     notes: string
   }) => void
@@ -769,7 +757,6 @@ function CatalogAddForm({
   const [provider, setProvider] = useState(providers[0] ?? '')
   const [model, setModel] = useState('')
   const [label, setLabel] = useState('')
-  const [supportsText, setSupportsText] = useState(true)
   const [supportsImage, setSupportsImage] = useState(false)
   const [notes, setNotes] = useState('')
 
@@ -825,18 +812,11 @@ function CatalogAddForm({
         <label className="flex items-center gap-2 text-xs text-zinc-700">
           <input
             type="checkbox"
-            checked={supportsText}
-            onChange={(e) => setSupportsText(e.target.checked)}
-          />
-          Text
-        </label>
-        <label className="flex items-center gap-2 text-xs text-zinc-700">
-          <input
-            type="checkbox"
             checked={supportsImage}
             onChange={(e) => setSupportsImage(e.target.checked)}
           />
           Image
+          <span className="text-zinc-500">— show in Photo Bank model-test picker</span>
         </label>
         <div className="ml-auto">
           <button
@@ -847,7 +827,6 @@ function CatalogAddForm({
                 provider,
                 model: model.trim(),
                 label: label.trim(),
-                supports_text: supportsText,
                 supports_image: supportsImage,
                 notes: notes.trim(),
               })

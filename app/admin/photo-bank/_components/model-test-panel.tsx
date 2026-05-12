@@ -35,7 +35,6 @@ interface CatalogRow {
   provider: string
   model: string
   label: string | null
-  supports_text: boolean
   supports_image: boolean
   sort_order: number
 }
