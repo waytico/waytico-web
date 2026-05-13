@@ -10,11 +10,10 @@
  *      enabled rows show up)
  *   4. Run → server fires all calls in parallel → results render
  *      side-by-side as cards: provider, model, latency, tokens, raw
- *      output text (or error)
+ *      output text (or error), plus estimated cost projected onto
+ *      1,000 photos using the catalog's per-1M-token prices.
  *
  * The image is held in memory only — never written to S3 or DB.
- * Costs aren't shown here intentionally — operator sees tokens_in /
- * tokens_out and converts using current provider rates.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -27,6 +26,29 @@ const API_URL =
 
 const MAX_PICK = 8
 
+// node-pg returns NUMERIC as string. Coerce defensively.
+function coerceNum(v: number | string | null | undefined): number | null {
+  if (v === null || v === undefined || v === '') return null
+  const n = typeof v === 'number' ? v : parseFloat(String(v))
+  return Number.isFinite(n) ? n : null
+}
+
+// Project the per-photo cost to 1,000 photos using catalog prices
+// (USD per 1M tokens). Returns null when either side of the price is
+// missing — the UI then shows "—" instead of a misleading $0.00.
+function costFor1000Photos(
+  tokensIn: number | null,
+  tokensOut: number | null,
+  priceIn: number | null,
+  priceOut: number | null,
+): number | null {
+  if (priceIn == null || priceOut == null) return null
+  const ti = tokensIn ?? 0
+  const to = tokensOut ?? 0
+  const perCall = (ti * priceIn + to * priceOut) / 1_000_000
+  return perCall * 1000
+}
+
 type PromptKey = 'photo_bank_classify' | 'photo_cleanup'
 type RunMode = PromptKey | 'both'
 
@@ -37,6 +59,8 @@ interface CatalogRow {
   label: string | null
   enabled: boolean
   sort_order: number
+  price_input_per_1m?: number | string | null
+  price_output_per_1m?: number | string | null
 }
 
 interface RunResult {
@@ -354,6 +378,25 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
                     <div>
                       {r.tokens_in ?? '—'} in / {r.tokens_out ?? '—'} out
                     </div>
+                    {(() => {
+                      const row = catalog?.find(
+                        (c) => c.provider === r.provider && c.model === r.model,
+                      )
+                      const c = costFor1000Photos(
+                        r.tokens_in,
+                        r.tokens_out,
+                        coerceNum(row?.price_input_per_1m ?? null),
+                        coerceNum(row?.price_output_per_1m ?? null),
+                      )
+                      return (
+                        <div
+                          className="font-medium text-zinc-700"
+                          title="Estimated cost for 1,000 photos at current catalog prices"
+                        >
+                          {c == null ? '—' : `$${c.toFixed(2)}`} / 1k
+                        </div>
+                      )
+                    })()}
                   </div>
                 </header>
                 {r.ok ? (

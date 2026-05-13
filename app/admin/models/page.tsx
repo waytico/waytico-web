@@ -6,19 +6,22 @@
  * TOP — Per-role configuration. One row per role. Auto-saves on field
  * blur / select change. No Save button, no Refresh, no Updated column.
  * Model is a real <select> (not a datalist) whose options are pulled
- * from the catalog, filtered to:
- *   - the currently chosen provider
- *   - supports_image=TRUE if the role is a vision role
- *     (photo_classifier, photo_cleanup, document_parser),
- *     supports_text=TRUE otherwise
+ * from the catalog, filtered to the currently chosen provider and to
+ * non-archived enabled rows only.
  *
- * BOTTOM — AI model catalog. Drag-to-reorder list with two capability
- * flags per row (text, image) plus enabled toggle. Add form below.
+ * BOTTOM — AI model catalog. Drag-to-reorder list of all (provider,
+ * model) pairs the platform knows about. Each row has a single Enabled
+ * toggle (hide/show in pickers) and an Archive button (moves the row
+ * to a separate archive section — hard delete is intentionally not
+ * exposed because historical ai_call_log entries still reference the
+ * pair). Columns are sortable; the price column is heat-mapped from
+ * green (cheapest) to red (most expensive) so the operator can scan
+ * cost at a glance.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { GripVertical, Loader2, Trash2 } from 'lucide-react'
+import { GripVertical, Loader2, Archive, RotateCcw, ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   DndContext,
@@ -68,6 +71,8 @@ interface CatalogRow {
   notes: string | null
   price_input_per_1m: number | null
   price_output_per_1m: number | null
+  archived: boolean
+  archived_at: string | null
   created_at: string
   updated_at: string
 }
@@ -127,7 +132,7 @@ export default function AdminModelsPage() {
     try {
       const [mRes, cRes] = await Promise.all([
         authFetch('/api/admin/models'),
-        authFetch('/api/admin/ai-catalog'),
+        authFetch('/api/admin/ai-catalog?include_archived=1'),
       ])
       if (!mRes.ok) {
         const j = await mRes.json().catch(() => ({}))
@@ -514,15 +519,40 @@ function ModelCatalogSection({
     [authFetch, catalog, onChange],
   )
 
-  const deleteRow = useCallback(
+  const archiveRow = useCallback(
     async (id: string) => {
-      if (!confirm('Delete this model from the catalog?')) return
+      if (!confirm('Archive this model? It will be hidden from pickers but kept in the database.')) return
       try {
-        const res = await authFetch(`/api/admin/ai-catalog/${id}`, { method: 'DELETE' })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        if (catalog) onChange(catalog.filter((c) => c.id !== id))
+        const res = await authFetch(`/api/admin/ai-catalog/${id}/archive`, {
+          method: 'POST',
+        })
+        const j = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          throw new Error((j as { error?: string }).error || `HTTP ${res.status}`)
+        }
+        const row = (j as { row?: CatalogRow }).row
+        if (catalog && row) onChange(catalog.map((c) => (c.id === id ? row : c)))
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Delete failed')
+        toast.error(e instanceof Error ? e.message : 'Archive failed')
+      }
+    },
+    [authFetch, catalog, onChange],
+  )
+
+  const restoreRow = useCallback(
+    async (id: string) => {
+      try {
+        const res = await authFetch(`/api/admin/ai-catalog/${id}/restore`, {
+          method: 'POST',
+        })
+        const j = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          throw new Error((j as { error?: string }).error || `HTTP ${res.status}`)
+        }
+        const row = (j as { row?: CatalogRow }).row
+        if (catalog && row) onChange(catalog.map((c) => (c.id === id ? row : c)))
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Restore failed')
       }
     },
     [authFetch, catalog, onChange],
@@ -566,18 +596,136 @@ function ModelCatalogSection({
     [authFetch, catalog, onChange],
   )
 
+  // Sorting state for the live catalog list. `null` = use the operator
+  // drag-to-reorder order (the catalog as returned by the API). Picking
+  // a sortable column overrides drag order until the operator clears
+  // it. Drag-to-reorder is only meaningful when sortKey === null, so
+  // the GripVertical handles are hidden otherwise.
+  type SortKey = 'provider' | 'price' | 'enabled' | null
+  type SortDir = 'asc' | 'desc'
+  const [sortKey, setSortKey] = useState<SortKey>(null)
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const [showArchive, setShowArchive] = useState(false)
+
+  const toggleSort = (key: Exclude<SortKey, null>) => {
+    if (sortKey !== key) {
+      setSortKey(key)
+      setSortDir('asc')
+      return
+    }
+    if (sortDir === 'asc') {
+      setSortDir('desc')
+      return
+    }
+    // Third click: clear sort and return to drag order.
+    setSortKey(null)
+    setSortDir('asc')
+  }
+
+  // Average of input+output price; used both for sort and for the
+  // heat-map gradient. Null treated as +Infinity in sort (pushed to
+  // bottom) and skipped from the heat-map domain.
+  const avgPrice = (r: CatalogRow): number | null => {
+    if (r.price_input_per_1m == null || r.price_output_per_1m == null) return null
+    return (r.price_input_per_1m + r.price_output_per_1m) / 2
+  }
+
+  const live = useMemo(
+    () => (catalog ?? []).filter((c) => !c.archived),
+    [catalog],
+  )
+  const archived = useMemo(
+    () => (catalog ?? []).filter((c) => c.archived),
+    [catalog],
+  )
+
+  // Sorted view of `live` for rendering. Original drag-order is preserved
+  // in `live`; we only re-sort the rendered copy.
+  const liveSorted = useMemo(() => {
+    if (sortKey === null) return live
+    const arr = [...live]
+    const factor = sortDir === 'asc' ? 1 : -1
+    arr.sort((a, b) => {
+      if (sortKey === 'provider') {
+        const cmp = a.provider.localeCompare(b.provider)
+        return cmp !== 0 ? cmp * factor : a.model.localeCompare(b.model) * factor
+      }
+      if (sortKey === 'enabled') {
+        const av = a.enabled ? 1 : 0
+        const bv = b.enabled ? 1 : 0
+        return (av - bv) * factor
+      }
+      // price
+      const av = avgPrice(a)
+      const bv = avgPrice(b)
+      // Push nulls to the bottom regardless of direction.
+      if (av == null && bv == null) return 0
+      if (av == null) return 1
+      if (bv == null) return -1
+      return (av - bv) * factor
+    })
+    return arr
+  }, [live, sortKey, sortDir])
+
+  // Heat-map domain: min/max average price across *live* rows that
+  // have a price. Re-computed whenever the catalog changes.
+  const priceDomain = useMemo(() => {
+    const xs = live
+      .map((r) => avgPrice(r))
+      .filter((v): v is number => v != null)
+    if (xs.length === 0) return null
+    return { min: Math.min(...xs), max: Math.max(...xs) }
+  }, [live])
+
+  const SortHeader = ({
+    label,
+    sk,
+    align,
+  }: {
+    label: string
+    sk: Exclude<SortKey, null>
+    align?: 'left' | 'center' | 'right'
+  }) => {
+    const active = sortKey === sk
+    const Icon = !active ? ArrowUpDown : sortDir === 'asc' ? ArrowUp : ArrowDown
+    return (
+      <button
+        type="button"
+        onClick={() => toggleSort(sk)}
+        className={
+          'flex items-center gap-1 text-xs uppercase tracking-wider ' +
+          (active ? 'text-zinc-900' : 'text-zinc-500 hover:text-zinc-700') +
+          (align === 'center' ? ' justify-center' : '')
+        }
+        title={
+          active
+            ? sortDir === 'asc'
+              ? 'Sorted ascending — click for descending'
+              : 'Sorted descending — click to clear'
+            : `Sort by ${label.toLowerCase()}`
+        }
+      >
+        <span>{label}</span>
+        <Icon className="h-3 w-3" />
+      </button>
+    )
+  }
+
   return (
     <section className="space-y-3">
       <div>
         <h2 className="text-sm font-medium text-zinc-700">Model catalog</h2>
         <p className="text-xs text-zinc-500">
           Full list of (provider, model) pairs across the platform. Drag rows
-          to reorder. Untick Enabled to hide a model from the role dropdown
-          and from the Photo Bank model-test picker.
+          to reorder (only when no column-sort is active). Untick Enabled to
+          hide a model from the role dropdown and from the Photo Bank
+          model-test picker. Archived rows move to a separate section
+          below — historical AI-call logs still reference them, so the
+          rows are kept rather than deleted.
         </p>
       </div>
 
-      <div className="flex justify-start">
+      <div className="flex justify-start gap-2">
         <button
           type="button"
           onClick={() => setAddOpen((v) => !v)}
@@ -585,6 +733,15 @@ function ModelCatalogSection({
         >
           {addOpen ? 'Cancel' : '+ Add model'}
         </button>
+        {archived.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowArchive((v) => !v)}
+            className="rounded border border-zinc-300 bg-white px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
+          >
+            {showArchive ? 'Hide archive' : `Show archive (${archived.length})`}
+          </button>
+        )}
       </div>
 
       {addOpen && <CatalogAddForm providers={providers} onSubmit={addRow} />}
@@ -592,11 +749,13 @@ function ModelCatalogSection({
       <div className="rounded-lg border border-zinc-200 bg-white">
         <div className="grid grid-cols-[24px_140px_1fr_140px_1fr_72px_36px] gap-2 border-b border-zinc-100 bg-zinc-50 px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
           <div></div>
-          <div>Provider</div>
+          <SortHeader label="Provider" sk="provider" />
           <div>Model / Label</div>
-          <div>Price ($/1M)</div>
+          <SortHeader label="Price ($/1M)" sk="price" />
           <div>Notes</div>
-          <div className="text-center">Enabled</div>
+          <div className="text-center">
+            <SortHeader label="Enabled" sk="enabled" align="center" />
+          </div>
           <div></div>
         </div>
 
@@ -604,23 +763,25 @@ function ModelCatalogSection({
           <div className="px-3 py-6 text-center text-sm text-zinc-500">
             <Loader2 className="mx-auto h-4 w-4 animate-spin" />
           </div>
-        ) : catalog.length === 0 ? (
+        ) : live.length === 0 ? (
           <div className="px-3 py-6 text-center text-sm text-zinc-500">
             Catalog is empty. Add your first model with the button above.
           </div>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext
-              items={catalog.map((c) => c.id)}
+              items={liveSorted.map((c) => c.id)}
               strategy={verticalListSortingStrategy}
             >
               <div className="divide-y divide-zinc-100">
-                {catalog.map((c) => (
+                {liveSorted.map((c) => (
                   <CatalogRowView
                     key={c.id}
                     row={c}
+                    priceDomain={priceDomain}
+                    dragDisabled={sortKey !== null}
                     onPatch={(b) => patchRow(c.id, b)}
-                    onDelete={() => deleteRow(c.id)}
+                    onArchive={() => archiveRow(c.id)}
                   />
                 ))}
               </div>
@@ -628,18 +789,39 @@ function ModelCatalogSection({
           </DndContext>
         )}
       </div>
+
+      {showArchive && archived.length > 0 && (
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50">
+          <div className="border-b border-zinc-200 px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
+            Archive
+          </div>
+          <div className="divide-y divide-zinc-200">
+            {archived.map((c) => (
+              <ArchivedRowView
+                key={c.id}
+                row={c}
+                onRestore={() => restoreRow(c.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   )
 }
 
 function CatalogRowView({
   row,
+  priceDomain,
+  dragDisabled,
   onPatch,
-  onDelete,
+  onArchive,
 }: {
   row: CatalogRow
+  priceDomain: { min: number; max: number } | null
+  dragDisabled: boolean
   onPatch: (body: Partial<CatalogRow>) => void
-  onDelete: () => void
+  onArchive: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: row.id })
@@ -649,6 +831,23 @@ function CatalogRowView({
     transition,
     opacity: isDragging ? 0.5 : 1,
   }
+
+  // Heat-map gradient for the price cell. Green at min, yellow in the
+  // middle, red at max. Uses the catalog-wide min/max so adding a new
+  // model or changing a price re-balances every cell.
+  const priceBg = (() => {
+    if (!priceDomain) return undefined
+    if (row.price_input_per_1m == null || row.price_output_per_1m == null) return undefined
+    const v = (row.price_input_per_1m + row.price_output_per_1m) / 2
+    if (priceDomain.max === priceDomain.min) {
+      // All models priced the same — neutral colour, no gradient.
+      return 'rgba(34, 197, 94, 0.10)'
+    }
+    const t = Math.max(0, Math.min(1, (v - priceDomain.min) / (priceDomain.max - priceDomain.min)))
+    // HSL hue 120 (green) → 0 (red), keeping saturation/lightness gentle.
+    const hue = 120 - 120 * t
+    return `hsl(${hue.toFixed(0)}, 60%, 92%)`
+  })()
 
   const [editingLabel, setEditingLabel] = useState(false)
   const [labelDraft, setLabelDraft] = useState(row.label ?? '')
@@ -682,15 +881,24 @@ function CatalogRowView({
       style={style}
       className="grid grid-cols-[24px_140px_1fr_140px_1fr_72px_36px] items-center gap-2 px-3 py-2 text-sm"
     >
-      <button
-        type="button"
-        className="cursor-grab text-zinc-400 hover:text-zinc-700"
-        {...attributes}
-        {...listeners}
-        title="Drag to reorder"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
+      {dragDisabled ? (
+        <span
+          className="flex h-4 w-4 items-center justify-center text-zinc-200"
+          title="Clear column sort to enable drag-reorder"
+        >
+          <GripVertical className="h-4 w-4" />
+        </span>
+      ) : (
+        <button
+          type="button"
+          className="cursor-grab text-zinc-400 hover:text-zinc-700"
+          {...attributes}
+          {...listeners}
+          title="Drag to reorder"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+      )}
 
       <div className="text-xs text-zinc-700">{row.provider}</div>
 
@@ -730,7 +938,10 @@ function CatalogRowView({
         )}
       </div>
 
-      <div>
+      <div
+        className="-mx-1 rounded px-1"
+        style={priceBg ? { background: priceBg } : undefined}
+      >
         {editingPrice ? (
           <div className="flex items-center gap-1">
             <input
@@ -848,11 +1059,52 @@ function CatalogRowView({
       </div>
       <button
         type="button"
-        onClick={onDelete}
-        className="text-zinc-400 hover:text-rose-600"
-        title="Delete from catalog"
+        onClick={onArchive}
+        className="text-zinc-400 hover:text-amber-600"
+        title="Archive (hide from pickers; history is kept)"
       >
-        <Trash2 className="h-4 w-4" />
+        <Archive className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
+function ArchivedRowView({
+  row,
+  onRestore,
+}: {
+  row: CatalogRow
+  onRestore: () => void
+}) {
+  const ts = row.archived_at
+    ? new Date(row.archived_at).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : null
+  return (
+    <div className="flex items-center gap-3 px-3 py-2 text-sm">
+      <div className="w-[140px] text-xs text-zinc-500">{row.provider}</div>
+      <div className="flex-1 min-w-0">
+        <div className="truncate font-mono text-xs text-zinc-700">{row.model}</div>
+        {row.label && (
+          <div className="truncate text-xs text-zinc-500">{row.label}</div>
+        )}
+      </div>
+      {ts && (
+        <div className="text-xs text-zinc-400" title={row.archived_at ?? undefined}>
+          archived {ts}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={onRestore}
+        className="flex items-center gap-1 rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
+        title="Restore — bring back to the live catalog"
+      >
+        <RotateCcw className="h-3 w-3" />
+        Restore
       </button>
     </div>
   )

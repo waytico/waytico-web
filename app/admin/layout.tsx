@@ -69,7 +69,12 @@ export default async function AdminLayout({
       <main className="flex-1">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:flex-row">
           <aside className="md:w-56 shrink-0">
-            <AdminSidebar />
+            {/* sticky-меню: sidebar остаётся на месте при прокрутке
+                основного контента. `top-20` оставляет зазор под
+                глобальный sticky <Header /> (`sticky top-0` ~ 56–64px). */}
+            <div className="md:sticky md:top-20">
+              <AdminSidebar />
+            </div>
           </aside>
           <section className="flex-1 min-w-0">{children}</section>
         </div>
