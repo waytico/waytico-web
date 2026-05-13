@@ -31,7 +31,10 @@ import type { AuthedFetch } from '@/hooks/use-admin-photo-review'
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
-const MAX_PICK = 20
+// Per-run cap is the full count of enabled models — operator may want
+// to compare them all. The backend has a defensive cap on the zod
+// schema; if the operator picks more than that, the run will fail
+// with a clear error.
 
 // node-pg returns NUMERIC as string. Coerce defensively.
 function coerceNum(v: number | string | null | undefined): number | null {
@@ -72,9 +75,15 @@ function heatmapBg(
   v: number | null,
   domain: { min: number; max: number } | null,
 ): string | undefined {
-  if (v == null || !domain) return undefined
+  if (v == null || v <= 0 || !domain) return undefined
   if (domain.max === domain.min) return 'hsl(130, 55%, 90%)'
-  const t = Math.max(0, Math.min(1, (v - domain.min) / (domain.max - domain.min)))
+  // Logarithmic scale. With catalog prices spanning ~$0.18..$15.00,
+  // a linear scale dumps two-thirds of the models into the first
+  // bucket (everyone looks the same green). Log spreads them out so
+  // each step in the 9-band palette actually gets populated.
+  const lo = Math.log(domain.min)
+  const hi = Math.log(domain.max)
+  const t = Math.max(0, Math.min(1, (Math.log(v) - lo) / (hi - lo)))
   const STEPS = 9
   const stepIdx = Math.min(STEPS - 1, Math.floor(t * STEPS))
   const hue = 130 - (130 * stepIdx) / (STEPS - 1)
@@ -115,8 +124,12 @@ interface RunResult {
 function tryParseJson(raw: string): Record<string, unknown> | null {
   if (!raw) return null
   let s = raw.trim()
-  // Strip ```json ... ``` or ``` ... ``` fences
-  const fence = s.match(/^```(?:json)?\s*([\s\S]*?)```$/)
+  // Strip ```json ... ``` or ``` ... ``` fences. Use a permissive
+  // match: some providers don't actually close the fence, or emit
+  // trailing whitespace / prose after the closing backticks. We grab
+  // the largest plausible inner span.
+  let fence = s.match(/^```(?:json)?\s*([\s\S]*?)```\s*$/i)
+  if (!fence) fence = s.match(/^```(?:json)?\s*([\s\S]+?)(?:```|$)/i)
   if (fence) s = fence[1].trim()
   // First try direct parse
   try {
@@ -197,10 +210,9 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
         const next = new Set(prev)
         if (next.has(id)) next.delete(id)
         else {
-          if (next.size >= MAX_PICK) {
-            toast.error(`At most ${MAX_PICK} models per run`)
-            return prev
-          }
+          // No artificial cap — visionModels is the universe of enabled
+          // catalog rows; operator can tick all of them.
+
           next.add(id)
         }
         return next
@@ -324,6 +336,19 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
         </div>
       </div>
 
+      {/* ── Results (rendered above the picker so the operator can scroll
+          comparison results without losing sight of which models were
+          selected) ─────────────────────────────────────────────────────── */}
+      {results !== null && (
+        <ResultsGrid
+          results={results}
+          catalog={catalog ?? []}
+          priceDomain={priceDomain}
+          imageUrl={previewUrl}
+          file={file}
+        />
+      )}
+
       {/* ── Model picker ───────────────────────────────────────── */}
       <div className="rounded-lg border border-zinc-200 bg-white p-4">
         <div className="mb-2 flex items-center justify-between">
@@ -331,7 +356,7 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
             Models <span className="text-zinc-400">(catalog order)</span>
           </div>
           <span className="text-xs text-zinc-500">
-            {picked.size}/{MAX_PICK} picked
+            {picked.size}/{visionModels.length} picked
           </span>
         </div>
         {!catalog ? (
@@ -379,16 +404,6 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
         )}
       </div>
 
-      {/* ── Results ─────────────────────────────────────────────── */}
-      {results !== null && (
-        <ResultsGrid
-          results={results}
-          catalog={catalog ?? []}
-          priceDomain={priceDomain}
-          imageUrl={previewUrl}
-          file={file}
-        />
-      )}
     </div>
   )
 }
@@ -406,15 +421,50 @@ function UploadCard({
   previewUrl: string | null
   onPickFile: (f: File | null) => void
 }) {
+  const [dragOver, setDragOver] = useState(false)
+
+  // Drag-and-drop wiring. preventDefault is required on dragenter +
+  // dragover for the drop event to fire. We accept the first image
+  // file from the drop payload and ignore the rest.
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!dragOver) setDragOver(true)
+  }
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOver(false)
+  }
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOver(false)
+    const f = e.dataTransfer.files?.[0]
+    if (f) onPickFile(f)
+  }
+
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4">
+    <div
+      className="rounded-lg border border-zinc-200 bg-white p-4"
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
       <div className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
         Image
       </div>
       {!file ? (
-        <label className="flex h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded border border-dashed border-zinc-300 text-sm text-zinc-500 hover:bg-zinc-50">
+        <label
+          className={
+            'flex h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded border border-dashed text-sm transition-colors ' +
+            (dragOver
+              ? 'border-zinc-700 bg-zinc-50 text-zinc-700'
+              : 'border-zinc-300 text-zinc-500 hover:bg-zinc-50')
+          }
+        >
           <Upload className="h-5 w-5" />
-          <span>Pick or drop an image (≤15 MB)</span>
+          <span>{dragOver ? 'Drop to upload' : 'Drag-and-drop or click (≤15 MB)'}</span>
           <input
             type="file"
             accept="image/*"
@@ -423,7 +473,11 @@ function UploadCard({
           />
         </label>
       ) : (
-        <div className="relative">
+        <div
+          className={
+            'relative rounded ' + (dragOver ? 'outline outline-2 outline-zinc-700' : '')
+          }
+        >
           {previewUrl && (
             <img
               src={previewUrl}
@@ -439,7 +493,9 @@ function UploadCard({
           >
             <X className="h-4 w-4" />
           </button>
-          <div className="mt-2 truncate text-xs text-zinc-500">{file.name}</div>
+          <div className="mt-2 truncate text-xs text-zinc-500">
+            {file.name} <span className="text-zinc-400">— drop another image to replace</span>
+          </div>
         </div>
       )}
     </div>

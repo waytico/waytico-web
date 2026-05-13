@@ -833,19 +833,22 @@ function CatalogRowView({
   }
 
   // Heat-map for the price cell. Nine discrete steps so the transition
-  // from cheap → expensive reads at a glance instead of all rows
-  // looking near-identical green. Hue goes from 130 (green) through 60
-  // (yellow) to 0 (red); lightness moves from 93% to 78% so the deepest
-  // red is genuinely red, not pink. Uses the catalog-wide min/max so
-  // adding/removing/repricing a model re-balances every cell.
+  // from cheap → expensive reads at a glance. Logarithmic scale: the
+  // catalog spans roughly $0.18..$15 (avg price/1M), and a linear
+  // mapping pushes two-thirds of the models into the cheapest band.
+  // Log spreads them out so the 9-band palette is actually visible.
+  // Domain rebalances when prices change.
   const priceBg = (() => {
     if (!priceDomain) return undefined
     if (row.price_input_per_1m == null || row.price_output_per_1m == null) return undefined
     const v = (row.price_input_per_1m + row.price_output_per_1m) / 2
+    if (v <= 0) return undefined
     if (priceDomain.max === priceDomain.min) {
       return 'hsl(130, 55%, 90%)'
     }
-    const t = Math.max(0, Math.min(1, (v - priceDomain.min) / (priceDomain.max - priceDomain.min)))
+    const lo = Math.log(priceDomain.min)
+    const hi = Math.log(priceDomain.max)
+    const t = Math.max(0, Math.min(1, (Math.log(v) - lo) / (hi - lo)))
     const STEPS = 9
     const stepIdx = Math.min(STEPS - 1, Math.floor(t * STEPS))
     // 0 = cheapest (green), 8 = most expensive (red).
