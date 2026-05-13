@@ -707,18 +707,29 @@ function DecisionBadge({
   }
   const parsed = tryParseJson(result.output ?? '')
   if (promptKey === 'photo_cleanup') {
-    // Pass-2 schema: { decision: "keep" | "reject", reason: "..." }
-    const decision = parsed && typeof parsed.decision === 'string'
-      ? parsed.decision.toLowerCase()
-      : null
-    if (decision === 'reject') {
+    // Pass-2 schema as defined in the prompt seed:
+    //   { keep: true | false, reason: "..." }
+    // Some earlier prompt revisions / model improvisations emit
+    // { decision: "keep" | "reject" }, so we accept both shapes.
+    const keepBool = parsed && typeof parsed.keep === 'boolean' ? parsed.keep : null
+    const decision =
+      parsed && typeof parsed.decision === 'string'
+        ? parsed.decision.toLowerCase()
+        : null
+    const verdict: 'keep' | 'reject' | null =
+      keepBool === true || decision === 'keep'
+        ? 'keep'
+        : keepBool === false || decision === 'reject'
+        ? 'reject'
+        : null
+    if (verdict === 'reject') {
       return (
         <span className="inline-block rounded bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-800">
           REJECTED
         </span>
       )
     }
-    if (decision === 'keep') {
+    if (verdict === 'keep') {
       return (
         <span className="inline-block rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
           KEPT
@@ -775,7 +786,7 @@ function ParsedOutput({
     'landmarks', 'ai_landmarks',
     'quality_score', 'quality', 'ai_quality_score',
     'is_hero_candidate', 'hero_candidate',
-    'decision', // surfaced via the badge
+    'decision', 'keep', // both forms of Pass-2 verdict — surfaced via the badge
   ])
   const extras = Object.entries(parsed).filter(([k]) => !consumed.has(k))
 
