@@ -910,8 +910,8 @@ function CatalogRowView({
 
       <div className="text-xs text-zinc-700">{row.provider}</div>
 
-      <div>
-        <div className="font-mono text-xs text-zinc-900">{row.model}</div>
+      <div className="min-w-0">
+        <div className="truncate font-mono text-xs text-zinc-900">{row.model}</div>
         {editingLabel ? (
           <input
             autoFocus
@@ -947,7 +947,7 @@ function CatalogRowView({
       </div>
 
       <div
-        className="-mx-1 rounded px-1"
+        className="-mx-1 min-w-0 rounded px-1"
         style={priceBg ? { background: priceBg } : undefined}
       >
         {editingPrice ? (
@@ -1023,7 +1023,7 @@ function CatalogRowView({
         )}
       </div>
 
-      <div>
+      <div className="min-w-0">
         {editingNotes ? (
           <input
             autoFocus
