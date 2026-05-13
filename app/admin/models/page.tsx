@@ -832,21 +832,26 @@ function CatalogRowView({
     opacity: isDragging ? 0.5 : 1,
   }
 
-  // Heat-map gradient for the price cell. Green at min, yellow in the
-  // middle, red at max. Uses the catalog-wide min/max so adding a new
-  // model or changing a price re-balances every cell.
+  // Heat-map for the price cell. Nine discrete steps so the transition
+  // from cheap → expensive reads at a glance instead of all rows
+  // looking near-identical green. Hue goes from 130 (green) through 60
+  // (yellow) to 0 (red); lightness moves from 93% to 78% so the deepest
+  // red is genuinely red, not pink. Uses the catalog-wide min/max so
+  // adding/removing/repricing a model re-balances every cell.
   const priceBg = (() => {
     if (!priceDomain) return undefined
     if (row.price_input_per_1m == null || row.price_output_per_1m == null) return undefined
     const v = (row.price_input_per_1m + row.price_output_per_1m) / 2
     if (priceDomain.max === priceDomain.min) {
-      // All models priced the same — neutral colour, no gradient.
-      return 'rgba(34, 197, 94, 0.10)'
+      return 'hsl(130, 55%, 90%)'
     }
     const t = Math.max(0, Math.min(1, (v - priceDomain.min) / (priceDomain.max - priceDomain.min)))
-    // HSL hue 120 (green) → 0 (red), keeping saturation/lightness gentle.
-    const hue = 120 - 120 * t
-    return `hsl(${hue.toFixed(0)}, 60%, 92%)`
+    const STEPS = 9
+    const stepIdx = Math.min(STEPS - 1, Math.floor(t * STEPS))
+    // 0 = cheapest (green), 8 = most expensive (red).
+    const hue = 130 - (130 * stepIdx) / (STEPS - 1)
+    const light = 93 - (15 * stepIdx) / (STEPS - 1)
+    return `hsl(${hue.toFixed(0)}, 60%, ${light.toFixed(0)}%)`
   })()
 
   const [editingLabel, setEditingLabel] = useState(false)

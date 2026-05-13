@@ -4,14 +4,21 @@
  * Photo Bank → Model test panel.
  *
  * Operator workflow:
- *   1. Upload one image (file input or drag-and-drop)
- *   2. Pick which prompt to run: Pass-1 classify, Pass-2 cleanup, or both
- *   3. Tick up to 8 models from the catalog (only vision-capable
- *      enabled rows show up)
- *   4. Run → server fires all calls in parallel → results render
- *      side-by-side as cards: provider, model, latency, tokens, raw
- *      output text (or error), plus estimated cost projected onto
- *      1,000 photos using the catalog's per-1M-token prices.
+ *   1. Upload one image (file input or drag-and-drop).
+ *   2. Pick which prompt to run: Pass-1 classify, Pass-2 cleanup, or both.
+ *   3. Tick up to 20 models from the catalog (only enabled rows).
+ *      Each picker tile is heat-mapped by price using the same 9-step
+ *      palette as /admin/models so cost is visible while picking.
+ *   4. Run → server fires all calls in parallel → results render as
+ *      side-by-side columns of equal width. Each column has the same
+ *      vertical structure (image / decision badge / description /
+ *      categories / tags / landmarks / metrics) and the rows align
+ *      across columns so the operator can compare like-for-like.
+ *
+ * When the model returns JSON (the default for Pass-1 and Pass-2
+ * prompts), the panel parses it and shows each field as a labelled
+ * block — much easier to skim than a raw JSON dump. If parsing fails,
+ * the raw text is shown instead.
  *
  * The image is held in memory only — never written to S3 or DB.
  */
@@ -24,7 +31,7 @@ import type { AuthedFetch } from '@/hooks/use-admin-photo-review'
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
-const MAX_PICK = 8
+const MAX_PICK = 20
 
 // node-pg returns NUMERIC as string. Coerce defensively.
 function coerceNum(v: number | string | null | undefined): number | null {
@@ -47,6 +54,32 @@ function costFor1000Photos(
   const to = tokensOut ?? 0
   const perCall = (ti * priceIn + to * priceOut) / 1_000_000
   return perCall * 1000
+}
+
+// Average input+output price for a catalog row. Mirrors what
+// /admin/models uses for sort + heat-map so colours stay consistent.
+function avgPrice(row: CatalogRow): number | null {
+  const pi = coerceNum(row.price_input_per_1m)
+  const po = coerceNum(row.price_output_per_1m)
+  if (pi == null || po == null) return null
+  return (pi + po) / 2
+}
+
+// 9-step heat-map identical to the catalog page: cheapest = green,
+// most expensive = red, nine discrete bands so the transition reads
+// at a glance.
+function heatmapBg(
+  v: number | null,
+  domain: { min: number; max: number } | null,
+): string | undefined {
+  if (v == null || !domain) return undefined
+  if (domain.max === domain.min) return 'hsl(130, 55%, 90%)'
+  const t = Math.max(0, Math.min(1, (v - domain.min) / (domain.max - domain.min)))
+  const STEPS = 9
+  const stepIdx = Math.min(STEPS - 1, Math.floor(t * STEPS))
+  const hue = 130 - (130 * stepIdx) / (STEPS - 1)
+  const light = 93 - (15 * stepIdx) / (STEPS - 1)
+  return `hsl(${hue.toFixed(0)}, 60%, ${light.toFixed(0)}%)`
 }
 
 type PromptKey = 'photo_bank_classify' | 'photo_cleanup'
@@ -73,6 +106,37 @@ interface RunResult {
   tokens_in: number | null
   tokens_out: number | null
   prompt_key?: PromptKey // injected client-side when running 'both'
+}
+
+// Best-effort extraction of a JSON object from a model response. The
+// prompts ask for JSON but providers often wrap it in ```json fences,
+// pad it with prose, or quote it differently. We strip fences and try
+// to find the outermost {...} block before parsing.
+function tryParseJson(raw: string): Record<string, unknown> | null {
+  if (!raw) return null
+  let s = raw.trim()
+  // Strip ```json ... ``` or ``` ... ``` fences
+  const fence = s.match(/^```(?:json)?\s*([\s\S]*?)```$/)
+  if (fence) s = fence[1].trim()
+  // First try direct parse
+  try {
+    const v = JSON.parse(s)
+    return typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : null
+  } catch {
+    // ignore
+  }
+  // Fall back: take the outermost {...}
+  const first = s.indexOf('{')
+  const last = s.lastIndexOf('}')
+  if (first !== -1 && last !== -1 && last > first) {
+    try {
+      const v = JSON.parse(s.slice(first, last + 1))
+      return typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : null
+    } catch {
+      // ignore
+    }
+  }
+  return null
 }
 
 export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
@@ -117,6 +181,15 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
     () => (catalog ?? []).filter((c) => c.enabled),
     [catalog],
   )
+
+  // Heat-map domain for picker tiles + result cards. Computed across
+  // the enabled (visible) catalog so colours match what the operator
+  // sees on /admin/models.
+  const priceDomain = useMemo(() => {
+    const xs = visionModels.map(avgPrice).filter((v): v is number => v != null)
+    if (xs.length === 0) return null
+    return { min: Math.min(...xs), max: Math.max(...xs) }
+  }, [visionModels])
 
   const togglePick = useCallback(
     (id: string) => {
@@ -166,33 +239,30 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
     setResults(null)
     try {
       const pickedRows = visionModels.filter((c) => picked.has(c.id))
+      const modelsPayload = pickedRows.map((c) => ({
+        provider: c.provider,
+        model: c.model,
+      }))
       const passes: PromptKey[] =
         mode === 'both' ? ['photo_bank_classify', 'photo_cleanup'] : [mode]
-
-      const aggregated: RunResult[] = []
-      for (const pk of passes) {
+      const allResults: RunResult[] = []
+      for (const promptKey of passes) {
         const fd = new FormData()
         fd.append('image', file)
-        fd.append('prompt_key', pk)
-        fd.append(
-          'models',
-          JSON.stringify(pickedRows.map((r) => ({ provider: r.provider, model: r.model }))),
-        )
+        fd.append('models', JSON.stringify(modelsPayload))
+        fd.append('prompt_key', promptKey)
         const res = await authedFetch(`${API_URL}/api/admin/photo-bank/model-test`, {
           method: 'POST',
           body: fd,
         })
-        const j = await res.json().catch(() => ({}))
-        if (!res.ok) {
-          throw new Error(
-            (j as { error?: string }).error || `HTTP ${res.status} on ${pk}`,
-          )
+        const j = (await res.json()) as { results?: RunResult[]; error?: string }
+        if (!res.ok) throw new Error(j.error || `HTTP ${res.status}`)
+        for (const r of j.results ?? []) {
+          allResults.push({ ...r, prompt_key: promptKey })
         }
-        const r = (j as { results: RunResult[] }).results
-        for (const row of r) aggregated.push({ ...row, prompt_key: pk })
       }
-      setResults(aggregated)
-    } catch (e: unknown) {
+      setResults(allResults)
+    } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Run failed')
     } finally {
       setRunning(false)
@@ -200,61 +270,15 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
   }, [authedFetch, file, mode, picked, visionModels])
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-sm font-medium text-zinc-700">Model test</h2>
-        <p className="text-xs text-zinc-500">
-          Run one image through several vision models side-by-side. Image is
-          held in memory only — nothing is stored.
-        </p>
-      </div>
-
-      {/* ── Input row: image + prompt mode ──────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div className="space-y-4">
+      {/* ── Image upload + mode picker ─────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <UploadCard file={file} previewUrl={previewUrl} onPickFile={onPickFile} />
         <div className="rounded-lg border border-zinc-200 bg-white p-4">
           <div className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
-            Image
+            Prompt
           </div>
-          {previewUrl ? (
-            <div className="space-y-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewUrl}
-                alt="preview"
-                className="max-h-64 w-full rounded object-contain"
-              />
-              <div className="flex items-center justify-between text-xs text-zinc-500">
-                <span>
-                  {file?.name} — {Math.round((file?.size ?? 0) / 1024)} KB
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onPickFile(null)}
-                  className="flex items-center gap-1 text-zinc-500 hover:text-rose-600"
-                >
-                  <X className="h-3 w-3" /> remove
-                </button>
-              </div>
-            </div>
-          ) : (
-            <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded border border-dashed border-zinc-300 px-4 py-10 text-xs text-zinc-500 hover:bg-zinc-50">
-              <Upload className="h-4 w-4" />
-              Click to pick an image
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
-              />
-            </label>
-          )}
-        </div>
-
-        <div className="rounded-lg border border-zinc-200 bg-white p-4">
-          <div className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
-            Run mode
-          </div>
-          <div className="space-y-2 text-sm">
+          <div className="flex flex-col gap-2 text-sm">
             <label className="flex items-center gap-2">
               <input
                 type="radio"
@@ -263,7 +287,7 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
                 onChange={() => setMode('photo_bank_classify')}
               />
               Pass-1: classify
-              <span className="text-xs text-zinc-500">— tags, landmarks, quality, description</span>
+              <span className="text-xs text-zinc-500">— description, tags, landmarks</span>
             </label>
             <label className="flex items-center gap-2">
               <input
@@ -316,103 +340,532 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
           </div>
         ) : visionModels.length === 0 ? (
           <div className="py-6 text-center text-sm text-zinc-500">
-            No vision-capable models in the catalog. Add some on /admin/models.
+            No enabled models in the catalog. Add some on /admin/models.
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {visionModels.map((c) => (
-              <label
-                key={c.id}
-                className="flex cursor-pointer items-start gap-2 rounded border border-zinc-200 px-3 py-2 text-sm hover:bg-zinc-50"
-              >
-                <input
-                  type="checkbox"
-                  checked={picked.has(c.id)}
-                  onChange={() => togglePick(c.id)}
-                  className="mt-0.5"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-zinc-900">
-                    {c.label ?? c.model}
+            {visionModels.map((c) => {
+              const v = avgPrice(c)
+              const bg = heatmapBg(v, priceDomain)
+              return (
+                <label
+                  key={c.id}
+                  className="flex cursor-pointer items-start gap-2 rounded border border-zinc-200 px-3 py-2 text-sm hover:brightness-95"
+                  style={bg ? { background: bg } : undefined}
+                  title={
+                    v == null
+                      ? 'No price set'
+                      : `Avg $${v.toFixed(2)} / 1M tokens (input+output)`
+                  }
+                >
+                  <input
+                    type="checkbox"
+                    checked={picked.has(c.id)}
+                    onChange={() => togglePick(c.id)}
+                    className="mt-0.5"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-zinc-900">
+                      {c.label ?? c.model}
+                    </div>
+                    <div className="font-mono text-xs text-zinc-600">
+                      {c.provider} / {c.model}
+                    </div>
                   </div>
-                  <div className="font-mono text-xs text-zinc-500">
-                    {c.provider} / {c.model}
-                  </div>
-                </div>
-              </label>
-            ))}
+                </label>
+              )
+            })}
           </div>
         )}
       </div>
 
       {/* ── Results ─────────────────────────────────────────────── */}
       {results !== null && (
-        <div className="space-y-3">
-          <div className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-            Results
-          </div>
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {results.map((r, idx) => (
-              <article
-                key={`${r.provider}_${r.model}_${r.prompt_key}_${idx}`}
-                className={
-                  'rounded-lg border bg-white p-3 ' +
-                  (r.ok ? 'border-zinc-200' : 'border-rose-300 bg-rose-50')
-                }
-              >
-                <header className="mb-2 flex items-center justify-between text-xs">
-                  <div>
-                    <div className="font-medium text-zinc-900">
-                      {r.provider} / {r.model}
-                    </div>
-                    {r.prompt_key && (
-                      <div className="text-zinc-500">
-                        {r.prompt_key === 'photo_bank_classify'
-                          ? 'Pass-1 classify'
-                          : 'Pass-2 cleanup'}
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-right text-zinc-500">
-                    <div>{r.latency_ms} ms</div>
-                    <div>
-                      {r.tokens_in ?? '—'} in / {r.tokens_out ?? '—'} out
-                    </div>
-                    {(() => {
-                      const row = catalog?.find(
-                        (c) => c.provider === r.provider && c.model === r.model,
-                      )
-                      const c = costFor1000Photos(
-                        r.tokens_in,
-                        r.tokens_out,
-                        coerceNum(row?.price_input_per_1m ?? null),
-                        coerceNum(row?.price_output_per_1m ?? null),
-                      )
-                      return (
-                        <div
-                          className="font-medium text-zinc-700"
-                          title="Estimated cost for 1,000 photos at current catalog prices"
-                        >
-                          {c == null ? '—' : `$${c.toFixed(2)}`} / 1k
-                        </div>
-                      )
-                    })()}
-                  </div>
-                </header>
-                {r.ok ? (
-                  <pre className="whitespace-pre-wrap break-words rounded bg-zinc-50 p-2 font-mono text-xs text-zinc-800">
-                    {r.output}
-                  </pre>
-                ) : (
-                  <pre className="whitespace-pre-wrap break-words rounded bg-white p-2 font-mono text-xs text-rose-800">
-                    {r.error}
-                  </pre>
-                )}
-              </article>
-            ))}
-          </div>
+        <ResultsGrid
+          results={results}
+          catalog={catalog ?? []}
+          priceDomain={priceDomain}
+          imageUrl={previewUrl}
+          file={file}
+        />
+      )}
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Subcomponents
+// ──────────────────────────────────────────────────────────────────
+
+function UploadCard({
+  file,
+  previewUrl,
+  onPickFile,
+}: {
+  file: File | null
+  previewUrl: string | null
+  onPickFile: (f: File | null) => void
+}) {
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-white p-4">
+      <div className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+        Image
+      </div>
+      {!file ? (
+        <label className="flex h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded border border-dashed border-zinc-300 text-sm text-zinc-500 hover:bg-zinc-50">
+          <Upload className="h-5 w-5" />
+          <span>Pick or drop an image (≤15 MB)</span>
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
+          />
+        </label>
+      ) : (
+        <div className="relative">
+          {previewUrl && (
+            <img
+              src={previewUrl}
+              alt="preview"
+              className="max-h-64 w-full rounded object-contain"
+            />
+          )}
+          <button
+            type="button"
+            onClick={() => onPickFile(null)}
+            className="absolute right-2 top-2 rounded bg-white/90 p-1 text-zinc-600 hover:bg-white"
+            title="Remove image"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <div className="mt-2 truncate text-xs text-zinc-500">{file.name}</div>
         </div>
       )}
     </div>
   )
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Results: equal-width side-by-side columns with aligned rows.
+// ──────────────────────────────────────────────────────────────────
+
+function ResultsGrid({
+  results,
+  catalog,
+  priceDomain,
+  imageUrl,
+  file,
+}: {
+  results: RunResult[]
+  catalog: CatalogRow[]
+  priceDomain: { min: number; max: number } | null
+  imageUrl: string | null
+  file: File | null
+}) {
+  // Group by prompt_key so Pass-1 and Pass-2 render as separate side-
+  // by-side strips when the operator picked "Both".
+  const groups = useMemo(() => {
+    const map = new Map<string, RunResult[]>()
+    for (const r of results) {
+      const k = r.prompt_key ?? 'unknown'
+      const arr = map.get(k) ?? []
+      arr.push(r)
+      map.set(k, arr)
+    }
+    return Array.from(map.entries())
+  }, [results])
+
+  return (
+    <div className="space-y-4">
+      <div className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+        Results
+      </div>
+      {groups.map(([promptKey, rows]) => (
+        <ResultsStrip
+          key={promptKey}
+          promptKey={promptKey as PromptKey}
+          rows={rows}
+          catalog={catalog}
+          priceDomain={priceDomain}
+          imageUrl={imageUrl}
+          file={file}
+        />
+      ))}
+    </div>
+  )
+}
+
+function ResultsStrip({
+  promptKey,
+  rows,
+  catalog,
+  priceDomain,
+  imageUrl,
+  file,
+}: {
+  promptKey: PromptKey | 'unknown'
+  rows: RunResult[]
+  catalog: CatalogRow[]
+  priceDomain: { min: number; max: number } | null
+  imageUrl: string | null
+  file: File | null
+}) {
+  // Column width — fixed-ish so 5+ columns trigger horizontal scroll
+  // while still keeping every column the same width as the others.
+  // Up to 3 columns fit naturally on a wide screen.
+  const colW = 'min-w-[280px]'
+  const passLabel =
+    promptKey === 'photo_bank_classify'
+      ? 'Pass-1 classify'
+      : promptKey === 'photo_cleanup'
+      ? 'Pass-2 cleanup'
+      : 'Result'
+
+  return (
+    <div className="space-y-2">
+      <div className="text-xs font-medium text-zinc-700">{passLabel}</div>
+      <div className="overflow-x-auto">
+        <div
+          className="grid auto-cols-fr gap-3"
+          style={{
+            gridTemplateColumns: `repeat(${rows.length}, minmax(280px, 1fr))`,
+            gridTemplateRows:
+              'auto auto auto auto auto auto auto auto',
+          }}
+        >
+          {/* Header row: provider/model + metrics */}
+          {rows.map((r, i) => {
+            const row = catalog.find((c) => c.provider === r.provider && c.model === r.model)
+            const v = row ? avgPrice(row) : null
+            const bg = heatmapBg(v, priceDomain)
+            return (
+              <div
+                key={`h_${i}`}
+                className="rounded-t border border-b-0 border-zinc-200 px-3 py-2 text-xs"
+                style={bg ? { background: bg } : undefined}
+              >
+                <div className="font-medium text-zinc-900">
+                  {row?.label ?? r.model}
+                </div>
+                <div className="font-mono text-zinc-700">
+                  {r.provider} / {r.model}
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Image row — identical thumbnail in every column so rows
+              below line up regardless of model output. */}
+          {rows.map((_, i) => (
+            <div key={`img_${i}`} className={`border-x border-zinc-200 ${colW}`}>
+              {imageUrl && (
+                <img
+                  src={imageUrl}
+                  alt={file?.name ?? 'photo'}
+                  className="block h-32 w-full object-cover"
+                />
+              )}
+            </div>
+          ))}
+
+          {/* Decision badge row (Pass-2 reads reject/keep; Pass-1
+              shows status only). */}
+          {rows.map((r, i) => (
+            <div
+              key={`badge_${i}`}
+              className={`border-x border-zinc-200 px-3 py-2 ${colW}`}
+            >
+              <DecisionBadge result={r} promptKey={promptKey} />
+            </div>
+          ))}
+
+          {/* Parsed/raw output row */}
+          {rows.map((r, i) => (
+            <div
+              key={`out_${i}`}
+              className={`border-x border-zinc-200 px-3 py-2 text-xs ${colW}`}
+            >
+              {r.ok ? (
+                <ParsedOutput raw={r.output ?? ''} promptKey={promptKey} />
+              ) : (
+                <div className="whitespace-pre-wrap break-words rounded bg-rose-50 p-2 font-mono text-rose-800">
+                  {r.error}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Metrics row */}
+          {rows.map((r, i) => {
+            const row = catalog.find((c) => c.provider === r.provider && c.model === r.model)
+            const cost = costFor1000Photos(
+              r.tokens_in,
+              r.tokens_out,
+              coerceNum(row?.price_input_per_1m ?? null),
+              coerceNum(row?.price_output_per_1m ?? null),
+            )
+            return (
+              <div
+                key={`m_${i}`}
+                className={`flex flex-col gap-0.5 rounded-b border border-t-0 border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-700 ${colW}`}
+              >
+                <div>
+                  <span className="text-zinc-500">Latency: </span>
+                  {r.latency_ms} ms
+                </div>
+                <div>
+                  <span className="text-zinc-500">Tokens: </span>
+                  {r.tokens_in ?? '—'} in / {r.tokens_out ?? '—'} out
+                </div>
+                <div className="font-medium">
+                  <span className="text-zinc-500 font-normal">Cost / 1k photos: </span>
+                  {cost == null ? '—' : `$${cost.toFixed(2)}`}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Decision badge — surfaces reject/keep from Pass-2 prominently.
+// ──────────────────────────────────────────────────────────────────
+
+function DecisionBadge({
+  result,
+  promptKey,
+}: {
+  result: RunResult
+  promptKey: PromptKey | 'unknown'
+}) {
+  if (!result.ok) {
+    return (
+      <span className="inline-block rounded bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-800">
+        FAILED
+      </span>
+    )
+  }
+  const parsed = tryParseJson(result.output ?? '')
+  if (promptKey === 'photo_cleanup') {
+    // Pass-2 schema: { decision: "keep" | "reject", reason: "..." }
+    const decision = parsed && typeof parsed.decision === 'string'
+      ? parsed.decision.toLowerCase()
+      : null
+    if (decision === 'reject') {
+      return (
+        <span className="inline-block rounded bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-800">
+          REJECTED
+        </span>
+      )
+    }
+    if (decision === 'keep') {
+      return (
+        <span className="inline-block rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+          KEPT
+        </span>
+      )
+    }
+    return (
+      <span className="inline-block rounded bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
+        no decision parsed
+      </span>
+    )
+  }
+  return (
+    <span className="inline-block rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+      OK
+    </span>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Parsed output — renders well-known JSON fields as labelled blocks;
+// falls back to raw text when parsing fails.
+// ──────────────────────────────────────────────────────────────────
+
+function ParsedOutput({
+  raw,
+  promptKey,
+}: {
+  raw: string
+  promptKey: PromptKey | 'unknown'
+}) {
+  const parsed = tryParseJson(raw)
+  if (!parsed) {
+    return (
+      <div className="whitespace-pre-wrap break-words rounded bg-zinc-50 p-2 font-mono text-zinc-800">
+        {raw || <span className="italic text-zinc-400">(empty)</span>}
+      </div>
+    )
+  }
+  const desc = stringField(parsed, ['description', 'caption', 'summary'])
+  const reason = stringField(parsed, ['reason', 'rationale', 'explanation'])
+  const cats = arrayField(parsed, ['categories', 'category'])
+  const tags = arrayField(parsed, ['tags', 'ai_tags'])
+  const landmarks = arrayField(parsed, ['landmarks', 'ai_landmarks'])
+  const quality = numberField(parsed, ['quality_score', 'quality', 'ai_quality_score'])
+  const hero = boolField(parsed, ['is_hero_candidate', 'hero_candidate'])
+
+  // Track which fields we've consumed so any extras can be dumped
+  // below as raw key/value pairs.
+  const consumed = new Set([
+    'description', 'caption', 'summary',
+    'reason', 'rationale', 'explanation',
+    'categories', 'category', 'tags', 'ai_tags',
+    'landmarks', 'ai_landmarks',
+    'quality_score', 'quality', 'ai_quality_score',
+    'is_hero_candidate', 'hero_candidate',
+    'decision', // surfaced via the badge
+  ])
+  const extras = Object.entries(parsed).filter(([k]) => !consumed.has(k))
+
+  return (
+    <div className="space-y-2 text-zinc-800">
+      {desc && (
+        <Field label="Description">
+          <p className="leading-snug">{desc}</p>
+        </Field>
+      )}
+      {promptKey === 'photo_cleanup' && reason && (
+        <Field label="Reason">
+          <p className="leading-snug">{reason}</p>
+        </Field>
+      )}
+      {cats && cats.length > 0 && (
+        <Field label="Categories">
+          <Chips items={cats} />
+        </Field>
+      )}
+      {tags && tags.length > 0 && (
+        <Field label="Tags">
+          <Chips items={tags} />
+        </Field>
+      )}
+      {landmarks && landmarks.length > 0 && (
+        <Field label="Landmarks">
+          <Chips items={landmarks} />
+        </Field>
+      )}
+      {(quality != null || hero != null) && (
+        <Field label="Quality">
+          <div className="flex flex-wrap gap-2">
+            {quality != null && (
+              <span className="inline-block rounded bg-zinc-100 px-2 py-0.5 text-xs">
+                score: {quality}
+              </span>
+            )}
+            {hero === true && (
+              <span className="inline-block rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+                hero candidate
+              </span>
+            )}
+          </div>
+        </Field>
+      )}
+      {extras.length > 0 && (
+        <Field label="Other fields">
+          <dl className="space-y-1 text-xs">
+            {extras.map(([k, v]) => (
+              <div key={k} className="flex gap-2">
+                <dt className="font-medium text-zinc-600">{k}:</dt>
+                <dd className="text-zinc-800 break-words">{formatValue(v)}</dd>
+              </div>
+            ))}
+          </dl>
+        </Field>
+      )}
+    </div>
+  )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="mb-0.5 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+        {label}
+      </div>
+      <div>{children}</div>
+    </div>
+  )
+}
+
+function Chips({ items }: { items: string[] }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {items.map((it, i) => (
+        <span
+          key={`${it}_${i}`}
+          className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700"
+        >
+          {it}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+// ── tiny helpers ─────────────────────────────────────────────────
+
+function stringField(o: Record<string, unknown>, keys: string[]): string | null {
+  for (const k of keys) {
+    const v = o[k]
+    if (typeof v === 'string' && v.trim()) return v.trim()
+  }
+  return null
+}
+
+function arrayField(o: Record<string, unknown>, keys: string[]): string[] | null {
+  for (const k of keys) {
+    const v = o[k]
+    if (Array.isArray(v)) {
+      const arr = v.map((x) => (typeof x === 'string' ? x : String(x))).filter(Boolean)
+      if (arr.length > 0) return arr
+    }
+    // Sometimes a stringified list is returned — split on commas.
+    if (typeof v === 'string' && v.trim()) {
+      const arr = v.split(',').map((s) => s.trim()).filter(Boolean)
+      if (arr.length > 0) return arr
+    }
+  }
+  return null
+}
+
+function numberField(o: Record<string, unknown>, keys: string[]): number | null {
+  for (const k of keys) {
+    const v = o[k]
+    if (typeof v === 'number' && Number.isFinite(v)) return v
+    if (typeof v === 'string' && v.trim() !== '') {
+      const n = Number(v)
+      if (Number.isFinite(n)) return n
+    }
+  }
+  return null
+}
+
+function boolField(o: Record<string, unknown>, keys: string[]): boolean | null {
+  for (const k of keys) {
+    const v = o[k]
+    if (typeof v === 'boolean') return v
+    if (typeof v === 'string') {
+      const s = v.trim().toLowerCase()
+      if (s === 'true') return true
+      if (s === 'false') return false
+    }
+  }
+  return null
+}
+
+function formatValue(v: unknown): string {
+  if (v == null) return '—'
+  if (typeof v === 'string') return v
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v)
+  try {
+    return JSON.stringify(v)
+  } catch {
+    return String(v)
+  }
 }
