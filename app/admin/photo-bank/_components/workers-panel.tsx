@@ -71,11 +71,11 @@ export function WorkersPanel({ authedFetch }: Props) {
     }
   }, [authedFetch, refreshTick])
 
-  // Auto-refresh every 10 seconds while the panel is open.
-  useEffect(() => {
-    const t = setInterval(() => setRefreshTick((x) => x + 1), 10_000)
-    return () => clearInterval(t)
-  }, [])
+  // No auto-refresh: the panel loads once and after each pause/resume
+  // toggle. Use the Refresh button for an on-demand reload. The workers
+  // were polling every 10s before, which made the screen flicker even
+  // while both workers sat idle — pointless churn against a static
+  // backend.
 
   const toggle = useCallback(
     async (kind: WorkerRow['kind'], target: 'pause' | 'resume') => {
