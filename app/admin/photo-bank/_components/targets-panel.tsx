@@ -103,6 +103,7 @@ export function TargetsPanel({ authedFetch }: Props) {
       <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-lg font-medium">Photo bank — targets</h1>
         <div className="flex items-center gap-2 text-sm">
+          <GenerateButton authedFetch={authedFetch} onAfter={() => setRefreshTick((t) => t + 1)} />
           <input
             placeholder="Country filter"
             value={country}
@@ -162,11 +163,9 @@ export function TargetsPanel({ authedFetch }: Props) {
         </div>
       ) : rows.length === 0 ? (
         <div className="rounded border border-zinc-200 bg-zinc-50 px-3 py-4 text-sm text-zinc-500">
-          No targets yet. Run{' '}
-          <code className="rounded bg-zinc-100 px-1">
-            npx tsx src/scripts/generate-photo-targets.ts
-          </code>{' '}
-          on the backend (Render Shell) to populate.
+          No targets yet. Press <strong>Generate targets</strong> above to ask the
+          model for a seed list — runs in the background; refresh this panel to
+          watch new rows appear.
         </div>
       ) : (
         <div className="overflow-x-auto rounded border border-zinc-200">
@@ -263,6 +262,169 @@ export function TargetsPanel({ authedFetch }: Props) {
           Next
         </button>
       </div>
+    </div>
+  )
+}
+
+interface GeneratorState {
+  status: 'idle' | 'running' | 'completed' | 'cancelled' | 'failed'
+  startedAt: string | null
+  finishedAt: string | null
+  totalCountries: number
+  processedCountries: number
+  currentCountry: string | null
+  citiesAdded: number
+  landmarksAdded: number
+  errors: Array<{ country: string; message: string }>
+  fatalError: string | null
+}
+
+/**
+ * Inline "Generate targets" button + lightweight status pill.
+ *
+ * Kicks off the singleton target-generator job on the backend and
+ * polls its status every 4 seconds while it's running. The button
+ * itself collapses to a status pill while a job is in flight; clicking
+ * the pill cancels.
+ *
+ * No country picker — the backend uses its built-in default list (one
+ * sweep ≈ a few minutes). Operators can still adjust target_count and
+ * search_query per row after the rows arrive.
+ */
+function GenerateButton({
+  authedFetch,
+  onAfter,
+}: {
+  authedFetch: AuthedFetch
+  onAfter: () => void
+}) {
+  const [state, setState] = useState<GeneratorState | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  // Read current state once on mount in case a job is already running
+  // (e.g. someone left the page open). After that, only poll while the
+  // local view shows running.
+  useEffect(() => {
+    let cancelled = false
+    authedFetch(`${API_URL}/api/admin/photo-bank/targets/generate-status`)
+      .then(async (res) => {
+        if (!res.ok) return
+        const data = (await res.json()) as { state: GeneratorState }
+        if (!cancelled) setState(data.state)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [authedFetch])
+
+  useEffect(() => {
+    if (state?.status !== 'running') return
+    const t = setInterval(() => {
+      authedFetch(`${API_URL}/api/admin/photo-bank/targets/generate-status`)
+        .then(async (res) => {
+          if (!res.ok) return
+          const data = (await res.json()) as { state: GeneratorState }
+          setState((prev) => {
+            if (
+              prev?.status === 'running' &&
+              data.state.status !== 'running'
+            ) {
+              onAfter()
+            }
+            return data.state
+          })
+        })
+        .catch(() => {})
+    }, 4_000)
+    return () => clearInterval(t)
+  }, [state?.status, authedFetch, onAfter])
+
+  const start = useCallback(async () => {
+    if (busy) return
+    setBusy(true)
+    setErr(null)
+    try {
+      const res = await authedFetch(
+        `${API_URL}/api/admin/photo-bank/targets/generate`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        },
+      )
+      const data = (await res.json()) as { state?: GeneratorState; error?: string }
+      if (!res.ok) {
+        setErr(data?.error || `HTTP ${res.status}`)
+        if (data?.state) setState(data.state)
+      } else if (data?.state) {
+        setState(data.state)
+      }
+    } catch (e) {
+      setErr((e as Error)?.message || 'request failed')
+    } finally {
+      setBusy(false)
+    }
+  }, [authedFetch, busy])
+
+  const cancel = useCallback(async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const res = await authedFetch(
+        `${API_URL}/api/admin/photo-bank/targets/generate-cancel`,
+        { method: 'POST' },
+      )
+      const data = (await res.json()) as { state?: GeneratorState }
+      if (data?.state) setState(data.state)
+    } catch {
+      // soft fail — the polling loop will still pick up the new status.
+    } finally {
+      setBusy(false)
+    }
+  }, [authedFetch, busy])
+
+  if (state?.status === 'running') {
+    const total = state.totalCountries || 1
+    return (
+      <span className="inline-flex items-center gap-2 rounded border border-amber-300 bg-amber-50 px-3 py-1 text-sm text-amber-900">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        Generating · {state.processedCountries}/{total}
+        {state.currentCountry ? ` · ${state.currentCountry}` : ''} · +
+        {state.citiesAdded + state.landmarksAdded} rows
+        <button
+          type="button"
+          onClick={cancel}
+          disabled={busy}
+          className="ml-1 rounded border border-amber-300 px-2 py-0.5 text-xs hover:bg-amber-100 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      </span>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={start}
+        disabled={busy}
+        className="rounded border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50 disabled:opacity-50"
+      >
+        Generate targets
+      </button>
+      {state &&
+        (state.status === 'completed' ||
+          state.status === 'cancelled' ||
+          state.status === 'failed') && (
+          <span className="text-xs text-zinc-500">
+            Last run: {state.status} · +{state.citiesAdded + state.landmarksAdded}
+            {state.errors.length > 0 ? ` · ${state.errors.length} errors` : ''}
+          </span>
+        )}
+      {err && <span className="text-xs text-rose-700">{err}</span>}
     </div>
   )
 }
