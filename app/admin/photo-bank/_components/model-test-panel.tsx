@@ -5,7 +5,9 @@
  *
  * Operator workflow:
  *   1. Upload one image (file input or drag-and-drop).
- *   2. Pick which prompt to run: Pass-1 classify, Pass-2 cleanup, or both.
+ *   2. Pick which prompt to run: Pass-2 cleanup, Pass-1 classify, or
+ *      both. In "both" mode the passes run in production order —
+ *      cleanup first, classify second.
  *   3. Tick up to 20 models from the catalog (only enabled rows).
  *      Each picker tile is heat-mapped by price using the same 9-step
  *      palette as /admin/models so cost is visible while picking.
@@ -157,7 +159,7 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [file, setFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [mode, setMode] = useState<RunMode>('photo_bank_classify')
+  const [mode, setMode] = useState<RunMode>('photo_cleanup')
   const [running, setRunning] = useState(false)
   const [results, setResults] = useState<RunResult[] | null>(null)
 
@@ -255,8 +257,12 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
         provider: c.provider,
         model: c.model,
       }))
+      // Pass order mirrors the production ai-worker: Pass-2 cleanup
+      // runs first, Pass-1 classify second. Keeping the test tool in
+      // step with the live pipeline means a side-by-side run reflects
+      // what the worker actually does.
       const passes: PromptKey[] =
-        mode === 'both' ? ['photo_bank_classify', 'photo_cleanup'] : [mode]
+        mode === 'both' ? ['photo_cleanup', 'photo_bank_classify'] : [mode]
       const allResults: RunResult[] = []
       for (const promptKey of passes) {
         const fd = new FormData()
@@ -295,21 +301,21 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
               <input
                 type="radio"
                 name="mode"
-                checked={mode === 'photo_bank_classify'}
-                onChange={() => setMode('photo_bank_classify')}
-              />
-              Pass-1: classify
-              <span className="text-xs text-zinc-500">— description, tags, landmarks</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="mode"
                 checked={mode === 'photo_cleanup'}
                 onChange={() => setMode('photo_cleanup')}
               />
               Pass-2: cleanup
               <span className="text-xs text-zinc-500">— keep or reject decision</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="mode"
+                checked={mode === 'photo_bank_classify'}
+                onChange={() => setMode('photo_bank_classify')}
+              />
+              Pass-1: classify
+              <span className="text-xs text-zinc-500">— description, tags, landmarks</span>
             </label>
             <label className="flex items-center gap-2">
               <input
