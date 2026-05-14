@@ -7,9 +7,10 @@
  * Library tab — the same filter strip handles country / city / search
  * / reviewed-state, and every card has Keep / Delete / inline edit.
  *
- * Adjacent tabs: Targets (the plan), Workers (live status), Model
- * test (utility). Each tab is URL-controlled via ?view= so a bookmark
- * lands on the right view.
+ * Adjacent tabs: Collector (workers status + targets plan in one
+ * place), Model test (utility). Each tab is URL-controlled via
+ * ?view= so a bookmark lands on the right view. Legacy bookmarks to
+ * the old separate Targets / Workers views fold into Collector.
  */
 
 import { useCallback, useMemo } from 'react'
@@ -18,11 +19,10 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import type { AuthedFetch } from '@/hooks/use-admin-photo-review'
 import { LibraryPanel } from './_components/library-panel'
-import { TargetsPanel } from './_components/targets-panel'
-import { WorkersPanel } from './_components/workers-panel'
+import { CollectorPanel } from './_components/collector-panel'
 import { ModelTestPanel } from './_components/model-test-panel'
 
-type View = 'library' | 'targets' | 'workers' | 'model-test'
+type View = 'library' | 'collector' | 'model-test'
 
 export default function AdminPhotoBankPage() {
   const { getToken } = useAuth()
@@ -62,15 +62,18 @@ export default function AdminPhotoBankPage() {
     | null
 
   // ── View tab state ──────────────────────────────────────────────
-  // Legacy URLs: ?view=review and ?view=browse both fold into the
-  // unified Library tab, so old bookmarks keep working.
+  // Legacy URLs:
+  //   ?view=review / ?view=browse → Library (the older split)
+  //   ?view=targets / ?view=workers → Collector (the current merge)
   const viewQuery = searchParams.get('view')
   const view: View =
+    viewQuery === 'collector' ||
     viewQuery === 'targets' ||
-    viewQuery === 'workers' ||
-    viewQuery === 'model-test'
-      ? viewQuery
-      : 'library'
+    viewQuery === 'workers'
+      ? 'collector'
+      : viewQuery === 'model-test'
+        ? 'model-test'
+        : 'library'
 
   const setView = (next: View) => {
     const sp = new URLSearchParams(searchParams.toString())
@@ -100,27 +103,15 @@ export default function AdminPhotoBankPage() {
           </button>
           <button
             type="button"
-            onClick={() => setView('targets')}
+            onClick={() => setView('collector')}
             className={
               'border-b-2 px-3 py-2 text-sm font-medium transition-colors ' +
-              (view === 'targets'
+              (view === 'collector'
                 ? 'border-zinc-900 text-zinc-900'
                 : 'border-transparent text-zinc-500 hover:text-zinc-700')
             }
           >
-            Targets
-          </button>
-          <button
-            type="button"
-            onClick={() => setView('workers')}
-            className={
-              'border-b-2 px-3 py-2 text-sm font-medium transition-colors ' +
-              (view === 'workers'
-                ? 'border-zinc-900 text-zinc-900'
-                : 'border-transparent text-zinc-500 hover:text-zinc-700')
-            }
-          >
-            Workers
+            Collector
           </button>
           <button
             type="button"
@@ -162,8 +153,7 @@ export default function AdminPhotoBankPage() {
         </>
       )}
 
-      {view === 'targets' && <TargetsPanel authedFetch={authedFetch} />}
-      {view === 'workers' && <WorkersPanel authedFetch={authedFetch} />}
+      {view === 'collector' && <CollectorPanel authedFetch={authedFetch} />}
       {view === 'model-test' && <ModelTestPanel authedFetch={authedFetch} />}
     </div>
   )
