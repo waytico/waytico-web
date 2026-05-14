@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { NotifyToggle } from '../_components/notify-toggle'
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
@@ -194,13 +195,19 @@ export default function AdminProjectsPage() {
     <div className="space-y-4">
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-medium text-zinc-900">Projects</h1>
-        <button
-          type="button"
-          onClick={load}
-          className="rounded border border-zinc-300 bg-white px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
-        >
-          Refresh
-        </button>
+        <div className="flex items-center gap-4">
+          <NotifyToggle
+            field="newDraft"
+            label="Notify admin in Telegram on new draft"
+          />
+          <button
+            type="button"
+            onClick={load}
+            className="rounded border border-zinc-300 bg-white px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
+          >
+            Refresh
+          </button>
+        </div>
       </header>
 
       <section className="rounded-lg border border-zinc-200 bg-white p-3">
