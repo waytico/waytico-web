@@ -25,7 +25,8 @@ type Props = {
  * for the rest of this page session — even on F5 they get a fresh shot
  * (we intentionally don't persist).
  *
- * Two paths inside: share immediately, or register free for full features.
+ * Two paths inside: register free for full features (primary), or
+ * share the quote as-is (secondary link at the bottom).
  */
 export default function AnonUpsellModal({
   tripTitle,
@@ -79,81 +80,63 @@ export default function AnonUpsellModal({
   if (!visible) return null
 
   return (
-    <>
-      {/* ── Modal ── */}
-      {visible && (
-        <div
-          ref={overlayRef}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.45)' }}
-          onMouseDown={(e) => {
-            if (e.target === overlayRef.current) dismissWithFloat()
-          }}
+    <div
+      ref={overlayRef}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.45)' }}
+      onMouseDown={(e) => {
+        if (e.target === overlayRef.current) dismissWithFloat()
+      }}
+    >
+      <div className="relative w-full max-w-sm rounded-2xl bg-background border border-border shadow-2xl p-6 pt-12">
+        {/* Close */}
+        <button
+          type="button"
+          onClick={dismissWithFloat}
+          aria-label="Close"
+          className="absolute top-3 right-3 p-1.5 text-foreground/70 hover:text-foreground hover:bg-secondary rounded-full transition-colors"
         >
-          <div className="relative w-full max-w-sm rounded-2xl bg-background border border-border shadow-2xl p-6 pt-12">
-            {/* Close */}
-            <button
-              type="button"
-              onClick={dismissWithFloat}
-              aria-label="Close"
-              className="absolute top-3 right-3 p-1.5 text-foreground/70 hover:text-foreground hover:bg-secondary rounded-full transition-colors"
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Primary CTA — register free */}
+        <a
+          href={signUpUrl}
+          className="block w-full mb-5 py-3 px-4 rounded-xl bg-accent text-accent-foreground font-serif text-xl text-center hover:bg-accent/90 transition-colors"
+        >
+          Sign up free for:
+        </a>
+
+        {/* Feature list */}
+        <ul className="space-y-2.5 mb-5">
+          {[
+            'Upload or replace photos for each day',
+            'Edit on the page or with the AI assistant',
+            'Add your brand — logo, tagline, terms',
+            'Keep all your quotes and clients in one place',
+          ].map((item) => (
+            <li
+              key={item}
+              className="flex items-start gap-2 text-sm text-foreground/80"
             >
-              <X className="w-5 h-5" />
-            </button>
+              <span className="mt-1 text-accent leading-none">•</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
 
-            {/* Primary action */}
-            <button
-              type="button"
-              onClick={handleShare}
-              className="w-full mb-4 py-3 px-4 rounded-xl bg-accent text-accent-foreground font-semibold text-sm hover:bg-accent/90 transition-colors"
-            >
-              Send to your client as is →
-            </button>
-
-            {/* Divider */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground">or</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-
-            {/* Register CTA */}
-            <a
-              href={signUpUrl}
-              className="block text-center font-semibold text-accent hover:text-accent/80 underline underline-offset-2 text-sm mb-4"
-            >
-              Sign up free for:
-            </a>
-
-            {/* Feature list */}
-            <ul className="space-y-2 mb-5">
-              {[
-                'Upload photos for each day',
-                'Edit on the page or with the AI assistant',
-                'Pick a visual theme that fits the vibe',
-                'Keep all your quotes in one place',
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm text-foreground/80">
-                  <span className="mt-0.5 text-accent">•</span>
-                  {item}
-                </li>
-              ))}
-              <li className="flex items-start gap-2 text-sm text-muted-foreground">
-                <span className="mt-0.5">•</span>
-                Full tour management
-                <span className="ml-1 text-xs font-medium bg-secondary px-1.5 py-0.5 rounded-full">
-                  Coming soon
-                </span>
-              </li>
-            </ul>
-
-            <p className="text-xs text-muted-foreground text-center">
-              No credit card. Free forever for quote creation.
-            </p>
-          </div>
-        </div>
-      )}
-
-    </>
+        {/* Secondary — share the quote as-is */}
+        <p className="text-center text-xs text-muted-foreground">
+          or{' '}
+          <button
+            type="button"
+            onClick={handleShare}
+            className="underline underline-offset-2 hover:text-foreground transition-colors"
+          >
+            send to your client as is
+          </button>
+        </p>
+      </div>
+    </div>
   )
 }
