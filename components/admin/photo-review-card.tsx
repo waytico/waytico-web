@@ -47,6 +47,12 @@ export interface ReviewPhoto {
   is_hero_candidate?: boolean
   ai_processed?: boolean
   cleanup_processed?: boolean
+  /** L1 — single dominant scene_type the v4 classifier picked from
+   *  the controlled vocabulary in backend src/lib/photo-scenes.ts.
+   *  NULL on legacy rows. */
+  scene_type?: string | null
+  /** L1 — season as a first-class column. NULL on legacy rows. */
+  season?: string | null
   width?: number | null
   height?: number | null
   file_size?: number | null
@@ -393,6 +399,33 @@ export function PhotoReviewCard(props: PhotoReviewCardProps) {
                 <span className="rounded bg-zinc-100 px-1.5 py-0.5">{orientation}</span>
               )}
               {sizeLabel && <span>· {sizeLabel}</span>}
+            </div>
+          )}
+
+          {/* L1 — what the suggest scorer reads. scene_type is the
+              single dominant scene the classifier picked; season is the
+              real-column promotion of the old tag-hack. Rendered as
+              visually distinct sky-blue chips so the operator sees at a
+              glance whether the row has its L1 signals filled. NULL on
+              rows classified before the v4 split — chip hidden. */}
+          {(photo.scene_type || photo.season) && (
+            <div className="flex flex-wrap gap-1">
+              {photo.scene_type && (
+                <span
+                  title="Scene type (L1)"
+                  className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800"
+                >
+                  {photo.scene_type.replace(/_/g, ' ')}
+                </span>
+              )}
+              {photo.season && (
+                <span
+                  title="Season (L1)"
+                  className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800"
+                >
+                  ☀ {photo.season}
+                </span>
+              )}
             </div>
           )}
 

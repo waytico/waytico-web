@@ -36,6 +36,13 @@ export interface GlobalPhotoItem {
   is_hero_candidate: boolean
   ai_processed?: boolean
   cleanup_processed?: boolean
+  /** L1 — single dominant scene_type from the v4 classifier vocabulary
+   *  (mountain_landscape, cityscape, restaurant_interior, …). NULL on
+   *  rows classified before the L1/L2 split — UI renders no L1 badge. */
+  scene_type?: string | null
+  /** L1 — season as a first-class column ("winter" | "summer" |
+   *  "spring" | "fall" | "any"). NULL on legacy rows. */
+  season?: string | null
   width?: number | null
   height?: number | null
   file_size?: number | null
