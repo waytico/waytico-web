@@ -46,6 +46,78 @@ const API_URL =
 
 const DEFAULT_MAX_TOKENS = 2000
 
+/**
+ * Human-readable labels and grouping for the role table.
+ *
+ * Source of truth for roles is `config_ai_models` on the backend (returned
+ * via /api/admin/models as `roles: string[]`). The map below is purely
+ * presentational. If the backend adds a new role not listed here, it falls
+ * through to the "Other" group with the raw role string as its label —
+ * no UI breakage, just a missing nice name.
+ */
+const ROLE_LABELS: Record<string, string> = {
+  // Trip Creation
+  briefing: 'Briefing chat',
+  pipeline_hero: 'Hero block',
+  pipeline_days: 'Itinerary days',
+  pipeline_accommodations: 'Accommodations',
+  pipeline_overview: 'Trip overview',
+  pipeline_section_subtitles: 'Section subtitles',
+  pipeline_validate: 'Plan validation',
+  pipeline_signal_extractor: 'Photo signal extractor',
+  // Trip Editing & Activation
+  trip_editor: 'AI trip editor',
+  pipeline_what_to_bring: 'What to bring (dormant)',
+  pipeline_tasks: 'Prep tasks (dormant)',
+  // Document Parsing
+  document_parser: 'Document parser',
+  // Photo Bank
+  photo_target_countries: 'Country targets (Pass 1)',
+  photo_target_locations: 'Location targets (Pass 2)',
+  photo_classifier: 'Photo classifier (Pass 1)',
+  photo_cleanup: 'Photo cleanup (Pass 2)',
+  // Internal
+  showcase_chat: 'Showcase demo chat',
+  eval_judge: 'Eval judge',
+}
+
+const ROLE_GROUPS: { title: string; roles: string[] }[] = [
+  {
+    title: 'Trip Creation',
+    roles: [
+      'briefing',
+      'pipeline_hero',
+      'pipeline_days',
+      'pipeline_accommodations',
+      'pipeline_overview',
+      'pipeline_section_subtitles',
+      'pipeline_validate',
+      'pipeline_signal_extractor',
+    ],
+  },
+  {
+    title: 'Trip Editing & Activation',
+    roles: ['trip_editor', 'pipeline_what_to_bring', 'pipeline_tasks'],
+  },
+  {
+    title: 'Document Parsing',
+    roles: ['document_parser'],
+  },
+  {
+    title: 'Photo Bank',
+    roles: [
+      'photo_target_countries',
+      'photo_target_locations',
+      'photo_classifier',
+      'photo_cleanup',
+    ],
+  },
+  {
+    title: 'Internal',
+    roles: ['showcase_chat', 'eval_judge'],
+  },
+]
+
 interface ModelRow {
   role: string
   provider: string
@@ -323,119 +395,153 @@ export default function AdminModelsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {data.roles.map((role) => {
-                const d = getDraft(role)
-                // Filter the dropdown by provider AND enabled. Operator
-                // controls which models are usable on each role from the
-                // catalog below (Enabled checkbox). If the persisted model
-                // is NOT in the catalog at all OR is currently disabled,
-                // append it as "(disabled)" / "(not in catalog)" so it
-                // stays selectable until the operator chooses another.
-                const modelOptions =
-                  d.provider && catalog
-                    ? catalog.filter((c) => c.provider === d.provider && c.enabled)
-                    : []
-                const modelOptionStrings = new Set(modelOptions.map((c) => c.model))
-                let orphanLabel: string | null = null
-                if (d.model && !modelOptionStrings.has(d.model)) {
-                  const inCatalog = catalog?.find(
-                    (c) => c.provider === d.provider && c.model === d.model,
-                  )
-                  orphanLabel = inCatalog ? `${d.model} (disabled)` : `${d.model} (not in catalog)`
-                }
-                return (
-                  <tr key={role} className="align-middle">
-                    <td className="px-3 py-2 font-mono text-xs text-zinc-900">
-                      {role}
-                    </td>
-                    <td className="px-3 py-2">
-                      <select
-                        value={d.provider}
-                        onChange={(e) => {
-                          // Provider change resets model — operator must pick from new list.
-                          // Do NOT auto-save until model is chosen.
-                          setDraftField(role, { provider: e.target.value, model: '' })
-                        }}
-                        className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm"
-                      >
-                        <option value="">—</option>
-                        {data.providers.map((p) => (
-                          <option key={p} value={p}>
-                            {p}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-3 py-2">
-                      <select
-                        value={d.model}
-                        disabled={!d.provider}
-                        onChange={(e) => {
-                          const next = { ...d, model: e.target.value }
-                          setDraftField(role, { model: e.target.value })
-                          maybeSave(role, next)
-                        }}
-                        className="w-40 rounded border border-zinc-300 bg-white px-2 py-1 font-mono text-xs disabled:bg-zinc-50"
-                      >
-                        <option value="">— pick —</option>
-                        {modelOptions.map((c) => (
-                          <option key={c.id} value={c.model}>
-                            {c.label ?? c.model}
-                          </option>
-                        ))}
-                        {orphanLabel && (
-                          <option value={d.model}>{orphanLabel}</option>
-                        )}
-                      </select>
-                      {d.provider && modelOptions.length === 0 && !orphanLabel && (
-                        <div className="mt-0.5 text-xs text-zinc-400">
-                          no enabled models for {d.provider} in catalog
+              {(() => {
+                // Build groups from the static map, intersected with the
+                // roles actually returned by the backend. Roles not listed
+                // in any group fall through to "Other" so a backend-only
+                // addition still shows up (with raw key as label).
+                const known = new Set<string>(ROLE_GROUPS.flatMap((g) => g.roles))
+                const backendRoles = new Set(data.roles)
+                const groups = ROLE_GROUPS.map((g) => ({
+                  title: g.title,
+                  roles: g.roles.filter((r) => backendRoles.has(r)),
+                })).filter((g) => g.roles.length > 0)
+                const other = data.roles.filter((r) => !known.has(r))
+                if (other.length > 0) groups.push({ title: 'Other', roles: other })
+
+                const renderRoleRow = (role: string) => {
+                  const d = getDraft(role)
+                  // Filter the dropdown by provider AND enabled. Operator
+                  // controls which models are usable on each role from the
+                  // catalog below (Enabled checkbox). If the persisted model
+                  // is NOT in the catalog at all OR is currently disabled,
+                  // append it as "(disabled)" / "(not in catalog)" so it
+                  // stays selectable until the operator chooses another.
+                  const modelOptions =
+                    d.provider && catalog
+                      ? catalog.filter((c) => c.provider === d.provider && c.enabled)
+                      : []
+                  const modelOptionStrings = new Set(modelOptions.map((c) => c.model))
+                  let orphanLabel: string | null = null
+                  if (d.model && !modelOptionStrings.has(d.model)) {
+                    const inCatalog = catalog?.find(
+                      (c) => c.provider === d.provider && c.model === d.model,
+                    )
+                    orphanLabel = inCatalog
+                      ? `${d.model} (disabled)`
+                      : `${d.model} (not in catalog)`
+                  }
+                  return (
+                    <tr key={role} className="align-middle">
+                      <td className="px-3 py-2">
+                        <div className="text-sm leading-tight text-zinc-900">
+                          {ROLE_LABELS[role] ?? role}
                         </div>
-                      )}
-                      {d.saving && (
-                        <span className="ml-2 inline-block align-middle text-xs text-zinc-400">
-                          <Loader2 className="inline h-3 w-3 animate-spin" />
-                        </span>
-                      )}
-                      {d.error && (
-                        <div className="mt-0.5 text-xs text-rose-700">{d.error}</div>
-                      )}
+                        <div className="font-mono text-[11px] leading-tight text-zinc-400">
+                          {role}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <select
+                          value={d.provider}
+                          onChange={(e) => {
+                            // Provider change resets model — operator must pick from new list.
+                            // Do NOT auto-save until model is chosen.
+                            setDraftField(role, { provider: e.target.value, model: '' })
+                          }}
+                          className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm"
+                        >
+                          <option value="">—</option>
+                          {data.providers.map((p) => (
+                            <option key={p} value={p}>
+                              {p}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-3 py-2">
+                        <select
+                          value={d.model}
+                          disabled={!d.provider}
+                          onChange={(e) => {
+                            const next = { ...d, model: e.target.value }
+                            setDraftField(role, { model: e.target.value })
+                            maybeSave(role, next)
+                          }}
+                          className="w-40 rounded border border-zinc-300 bg-white px-2 py-1 font-mono text-xs disabled:bg-zinc-50"
+                        >
+                          <option value="">— pick —</option>
+                          {modelOptions.map((c) => (
+                            <option key={c.id} value={c.model}>
+                              {c.label ?? c.model}
+                            </option>
+                          ))}
+                          {orphanLabel && (
+                            <option value={d.model}>{orphanLabel}</option>
+                          )}
+                        </select>
+                        {d.provider && modelOptions.length === 0 && !orphanLabel && (
+                          <div className="mt-0.5 text-xs text-zinc-400">
+                            no enabled models for {d.provider} in catalog
+                          </div>
+                        )}
+                        {d.saving && (
+                          <span className="ml-2 inline-block align-middle text-xs text-zinc-400">
+                            <Loader2 className="inline h-3 w-3 animate-spin" />
+                          </span>
+                        )}
+                        {d.error && (
+                          <div className="mt-0.5 text-xs text-rose-700">{d.error}</div>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min={0}
+                          max={2}
+                          value={d.temperature}
+                          onChange={(e) =>
+                            setDraftField(role, { temperature: e.target.value })
+                          }
+                          onBlur={() => maybeSave(role, getDraft(role))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                          }}
+                          className="w-20 rounded border border-zinc-300 bg-white px-2 py-1 text-sm tabular-nums"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          step={100}
+                          value={d.maxTokens}
+                          onChange={(e) =>
+                            setDraftField(role, { maxTokens: e.target.value })
+                          }
+                          onBlur={() => maybeSave(role, getDraft(role))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                          }}
+                          className="w-24 rounded border border-zinc-300 bg-white px-2 py-1 text-sm tabular-nums"
+                        />
+                      </td>
+                    </tr>
+                  )
+                }
+
+                return groups.flatMap((g) => [
+                  <tr key={`__group_${g.title}`} className="bg-zinc-50">
+                    <td
+                      colSpan={5}
+                      className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+                    >
+                      {g.title}
                     </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        step="0.1"
-                        min={0}
-                        max={2}
-                        value={d.temperature}
-                        onChange={(e) =>
-                          setDraftField(role, { temperature: e.target.value })
-                        }
-                        onBlur={() => maybeSave(role, getDraft(role))}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                        }}
-                        className="w-20 rounded border border-zinc-300 bg-white px-2 py-1 text-sm tabular-nums"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        step={100}
-                        value={d.maxTokens}
-                        onChange={(e) =>
-                          setDraftField(role, { maxTokens: e.target.value })
-                        }
-                        onBlur={() => maybeSave(role, getDraft(role))}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                        }}
-                        className="w-24 rounded border border-zinc-300 bg-white px-2 py-1 text-sm tabular-nums"
-                      />
-                    </td>
-                  </tr>
-                )
-              })}
+                  </tr>,
+                  ...g.roles.map((r) => renderRoleRow(r)),
+                ])
+              })()}
             </tbody>
           </table>
         </div>
