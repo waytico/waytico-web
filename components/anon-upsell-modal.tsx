@@ -7,10 +7,26 @@ type Props = {
   tripTitle: string
   tripUrl: string
   signUpUrl: string
+  /**
+   * Fraction of the page (0..1) the visitor must scroll past before
+   * the modal triggers. Default: 0.5 — once they've seen half the page
+   * we know they're engaged enough that a soft pitch lands instead of
+   * interrupts. The older time-based trigger felt arbitrary; scroll-
+   * based maps to actual reading.
+   */
   scrollFraction?: number
   onShareClick: () => void
 }
 
+/**
+ * AnonUpsellModal — appears after trip generation for unauthenticated
+ * agents, the first time they scroll past `scrollFraction` of the page.
+ * Once shown (or once the user dismisses it), it does not show again
+ * for the rest of this page session — even on F5 they get a fresh shot
+ * (we intentionally don't persist).
+ *
+ * Two paths inside: share immediately, or register free for full features.
+ */
 export default function AnonUpsellModal({
   tripTitle,
   tripUrl,
@@ -19,6 +35,9 @@ export default function AnonUpsellModal({
   onShareClick,
 }: Props) {
   const [visible, setVisible] = useState(false)
+  // Latch — once we've shown the modal once we never show it again in
+  // this page lifetime, regardless of whether the user dismissed it,
+  // shared, or scrolled back up and down.
   const shownRef = useRef(false)
   const overlayRef = useRef<HTMLDivElement>(null)
 
@@ -34,6 +53,10 @@ export default function AnonUpsellModal({
       }
     }
     window.addEventListener('scroll', onScroll, { passive: true })
+    // Pages where content fits in one viewport (max <= 0) won't fire
+    // scroll — fall back to a long timer so the modal is still
+    // discoverable. 30s is intentionally past the 8s of the prior
+    // build: short pages aren't the common path.
     const fallback = setTimeout(() => {
       if (!shownRef.current) {
         shownRef.current = true
@@ -46,7 +69,7 @@ export default function AnonUpsellModal({
     }
   }, [scrollFraction])
 
-  const dismiss = () => setVisible(false)
+  const dismissWithFloat = () => setVisible(false)
 
   const handleShare = () => {
     setVisible(false)
@@ -56,59 +79,81 @@ export default function AnonUpsellModal({
   if (!visible) return null
 
   return (
-    <div
-      ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.45)' }}
-      onMouseDown={(e) => {
-        if (e.target === overlayRef.current) dismiss()
-      }}
-    >
-      <div className="relative w-full max-w-sm rounded-2xl bg-background border border-border shadow-2xl p-6 pt-8">
-        {/* Close */}
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label="Close"
-          className="absolute top-3 right-3 p-1.5 text-foreground/70 hover:text-foreground hover:bg-secondary rounded-full transition-colors"
+    <>
+      {/* ── Modal ── */}
+      {visible && (
+        <div
+          ref={overlayRef}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.45)' }}
+          onMouseDown={(e) => {
+            if (e.target === overlayRef.current) dismissWithFloat()
+          }}
         >
-          <X className="w-5 h-5" />
-        </button>
+          <div className="relative w-full max-w-sm rounded-2xl bg-background border border-border shadow-2xl p-6 pt-12">
+            {/* Close */}
+            <button
+              type="button"
+              onClick={dismissWithFloat}
+              aria-label="Close"
+              className="absolute top-3 right-3 p-1.5 text-foreground/70 hover:text-foreground hover:bg-secondary rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
-        {/* Orange CTA block */}
-        <a
-          href={signUpUrl}
-          className="block w-full mb-5 py-4 px-4 rounded-xl bg-accent text-accent-foreground font-semibold text-center text-lg font-serif hover:bg-accent/90 transition-colors"
-        >
-          Sign up free for:
-        </a>
+            {/* Primary action */}
+            <button
+              type="button"
+              onClick={handleShare}
+              className="w-full mb-4 py-3 px-4 rounded-xl bg-accent text-accent-foreground font-semibold text-sm hover:bg-accent/90 transition-colors"
+            >
+              Send to your client as is →
+            </button>
 
-        {/* Feature list */}
-        <ul className="space-y-2.5 mb-5">
-          {[
-            'Upload or replace photos for each day',
-            'Edit on the page or with the AI assistant',
-            'Add your brand — logo, tagline, terms',
-            'Keep all your quotes and clients in one place',
-          ].map((item) => (
-            <li key={item} className="flex items-start gap-2 text-sm text-foreground/80">
-              <span className="mt-0.5 text-accent">•</span>
-              {item}
-            </li>
-          ))}
-        </ul>
+            {/* Divider */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
 
-        <p className="text-xs text-muted-foreground text-center">
-          or{' '}
-          <button
-            type="button"
-            onClick={handleShare}
-            className="underline underline-offset-2 hover:text-foreground/60 transition-colors"
-          >
-            send to your client as is
-          </button>
-        </p>
-      </div>
-    </div>
+            {/* Register CTA */}
+            <a
+              href={signUpUrl}
+              className="block text-center font-semibold text-accent hover:text-accent/80 underline underline-offset-2 text-sm mb-4"
+            >
+              Sign up free for:
+            </a>
+
+            {/* Feature list */}
+            <ul className="space-y-2 mb-5">
+              {[
+                'Upload photos for each day',
+                'Edit on the page or with the AI assistant',
+                'Pick a visual theme that fits the vibe',
+                'Keep all your quotes in one place',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2 text-sm text-foreground/80">
+                  <span className="mt-0.5 text-accent">•</span>
+                  {item}
+                </li>
+              ))}
+              <li className="flex items-start gap-2 text-sm text-muted-foreground">
+                <span className="mt-0.5">•</span>
+                Full tour management
+                <span className="ml-1 text-xs font-medium bg-secondary px-1.5 py-0.5 rounded-full">
+                  Coming soon
+                </span>
+              </li>
+            </ul>
+
+            <p className="text-xs text-muted-foreground text-center">
+              No credit card. Free forever for quote creation.
+            </p>
+          </div>
+        </div>
+      )}
+
+    </>
   )
 }
