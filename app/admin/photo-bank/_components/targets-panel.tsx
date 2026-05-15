@@ -3,21 +3,36 @@
 /**
  * Photo Bank v2 — admin Targets panel.
  *
- * Listing of /api/admin/photo-bank/targets. Each row shows country /
- * name / kind / priority / scores / photos / goal / last attempt. Goal
- * is inline-editable (click the number). Exhausted targets get a red
- * row tint — the legend sits above the table. The header carries a
- * country picker, an in-country target picker, a name-contains box,
- * kind filter, CSV export, and the single Top-up-targets entry point
- * (all countries via the model, or one country picked from a dropdown).
+ * Title sits on its own line; filters and the Top-up action share a
+ * single row below it. The country picker is a custom dropdown so long
+ * country names can wrap onto two lines (native <option> can't wrap).
+ *
+ * Single-action model for Top-up: there is no popover. Pick the country
+ * (or the explicit "All countries" entry) in the same dropdown that
+ * filters the table, set `extra` inline, click Top up. With no country
+ * picked the button is disabled — clicking it accidentally does nothing.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { Loader2 } from 'lucide-react'
 import type { AuthedFetch } from '@/hooks/use-admin-photo-review'
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
+
+/**
+ * Sentinel value for the country picker. '' = nothing chosen (placeholder
+ * "Choose country" — table shows everything, Top-up is disabled).
+ * ALL_COUNTRIES = explicit "All countries" — table still unfiltered, but
+ * Top-up fires the full sweep (with a confirm).
+ */
+const ALL_COUNTRIES = '__all__'
 
 interface TargetRow {
   id: string
@@ -53,8 +68,8 @@ export function TargetsPanel({ authedFetch }: Props) {
   const [perPage] = useState(50)
   const [totalCount, setTotalCount] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
-  const [country, setCountry] = useState<string>('')
-  const [targetName, setTargetName] = useState<string>('') // exact name (in-country picker)
+  const [country, setCountry] = useState<string>('') // '' | ALL_COUNTRIES | <name>
+  const [targetName, setTargetName] = useState<string>('')
   const [kind, setKind] = useState<'all' | 'city' | 'landmark'>('all')
   const [nameLike, setNameLike] = useState('')
   const [sort, setSort] = useState<SortKey>('priority')
@@ -71,22 +86,19 @@ export function TargetsPanel({ authedFetch }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
 
-  const filterActive =
-    country !== '' ||
-    kind !== 'all' ||
-    nameLike.trim() !== '' ||
-    targetName !== ''
+  // "Specific country" = neither empty nor the All-countries sentinel.
+  const isSpecificCountry = country !== '' && country !== ALL_COUNTRIES
+  const filterCountry = isSpecificCountry ? country : ''
 
-  // Shared query string for the listing + CSV export (no pagination here).
   const queryString = useMemo(() => {
     const sp = new URLSearchParams()
-    if (country) sp.set('country', country)
+    if (filterCountry) sp.set('country', filterCountry)
     if (targetName) sp.set('name', targetName)
     if (kind !== 'all') sp.set('kind', kind)
     if (nameLike.trim()) sp.set('name_like', nameLike.trim())
     if (sort !== 'priority') sp.set('sort', sort)
     return sp.toString()
-  }, [country, targetName, kind, nameLike, sort])
+  }, [filterCountry, targetName, kind, nameLike, sort])
 
   // Country list — refreshed alongside the table so a freshly generated
   // country appears in the picker.
@@ -104,19 +116,17 @@ export function TargetsPanel({ authedFetch }: Props) {
     }
   }, [authedFetch, refreshTick])
 
-  // Per-country target list — populates the second picker.
+  // Per-country target list — only meaningful for a specific country.
   useEffect(() => {
-    if (!country) {
+    if (!isSpecificCountry) {
       setTargetsForCountry([])
       setTargetName('')
       return
     }
     let cancelled = false
     const sp = new URLSearchParams()
-    sp.set('country', country)
+    sp.set('country', filterCountry)
     sp.set('perPage', '200')
-    // Use a sort that's name-friendly server-side: priority DESC is the
-    // default; for the picker we sort A→Z client-side after fetching.
     authedFetch(`${API_URL}/api/admin/photo-bank/targets?${sp.toString()}`)
       .then(async (res) => {
         if (!res.ok) return
@@ -131,7 +141,7 @@ export function TargetsPanel({ authedFetch }: Props) {
     return () => {
       cancelled = true
     }
-  }, [authedFetch, country, refreshTick])
+  }, [authedFetch, filterCountry, isSpecificCountry, refreshTick])
 
   useEffect(() => {
     let cancelled = false
@@ -186,7 +196,6 @@ export function TargetsPanel({ authedFetch }: Props) {
     [authedFetch],
   )
 
-  // Inline Goal edit — commit on Enter / blur, cancel on Esc.
   const startEditGoal = useCallback((row: TargetRow) => {
     setEditingId(row.id)
     setEditingValue(String(row.target_count))
@@ -200,23 +209,19 @@ export function TargetsPanel({ authedFetch }: Props) {
       const n = parseInt(editingValue, 10)
       setEditingId(null)
       if (!Number.isFinite(n) || n < 1) return
-      if (n === row.target_count) return // no-op
+      if (n === row.target_count) return
       patch(row.id, { target_count: n })
     },
     [editingValue, patch],
   )
 
-  // Bulk apply: one change to every row matching the current filter.
   const bulkApply = useCallback(
     async (patchBody: Record<string, unknown>) => {
       setBulkBusy(true)
       setError(null)
       try {
-        // Bulk uses name_like (substring) not exact name — the exact
-        // picker is for inspecting one row; bulk operates on the wider
-        // free-text + country / kind filter set.
         const filter: Record<string, string> = {}
-        if (country) filter.country = country
+        if (filterCountry) filter.country = filterCountry
         if (kind !== 'all') filter.kind = kind
         if (nameLike.trim()) filter.name_like = nameLike.trim()
         const res = await authedFetch(
@@ -235,7 +240,7 @@ export function TargetsPanel({ authedFetch }: Props) {
         setBulkBusy(false)
       }
     },
-    [authedFetch, country, kind, nameLike],
+    [authedFetch, filterCountry, kind, nameLike],
   )
 
   const applyBulkGoal = useCallback(() => {
@@ -251,49 +256,41 @@ export function TargetsPanel({ authedFetch }: Props) {
     setPage(1)
   }, [])
 
-  // The exact-name picker only makes sense for the bulk-bar set when a
-  // country is chosen — bulk hits a country/kind/name_like filter; the
-  // single exact pick is shown but not bulkable. So bulk-bar is hidden
-  // when only a target-name is selected (would touch exactly one row).
   const bulkBarVisible =
-    country !== '' || kind !== 'all' || nameLike.trim() !== ''
+    filterCountry !== '' || kind !== 'all' || nameLike.trim() !== ''
 
   return (
     <div>
-      <header className="mb-3 flex items-center justify-between gap-2">
-        <h1 className="text-lg font-medium">Photo bank — targets</h1>
+      <header className="mb-3">
+        <h1 className="mb-2 text-lg font-medium">Photo bank — targets</h1>
         <div className="flex items-center gap-2 text-sm">
-          <select
+          <CountryDropdown
             value={country}
-            onChange={(e) => {
-              setCountry(e.target.value)
-              setTargetName('')
+            countries={countries}
+            onChange={(v) => {
+              setCountry(v)
               setPage(1)
             }}
-            className="rounded border border-zinc-300 px-2 py-1 text-sm"
-          >
-            <option value="">All countries</option>
-            {countries.map((c) => (
-              <option key={c.country} value={c.country}>
-                {c.country} ({c.count})
-              </option>
-            ))}
-          </select>
+          />
           <select
             value={targetName}
             onChange={(e) => {
               setTargetName(e.target.value)
               setPage(1)
             }}
-            disabled={!country}
-            className="rounded border border-zinc-300 px-2 py-1 text-sm disabled:bg-zinc-50 disabled:text-zinc-400"
-            title={country ? `Targets in ${country}` : 'Pick a country first'}
+            disabled={!isSpecificCountry}
+            className="w-40 truncate rounded border border-zinc-300 px-2 py-1 text-sm disabled:bg-zinc-50 disabled:text-zinc-400"
+            title={
+              isSpecificCountry
+                ? `Targets in ${filterCountry}`
+                : 'Pick a country first'
+            }
           >
-            {!country ? (
+            {!isSpecificCountry ? (
               <option value="">Pick a country first</option>
             ) : (
               <>
-                <option value="">All targets in {country}</option>
+                <option value="">All in {filterCountry}</option>
                 {targetsForCountry.map((n) => (
                   <option key={n} value={n}>
                     {n}
@@ -309,7 +306,7 @@ export function TargetsPanel({ authedFetch }: Props) {
               setNameLike(e.target.value)
               setPage(1)
             }}
-            className="rounded border border-zinc-300 px-2 py-1 text-sm"
+            className="w-36 rounded border border-zinc-300 px-2 py-1 text-sm"
           />
           <select
             value={kind}
@@ -317,7 +314,7 @@ export function TargetsPanel({ authedFetch }: Props) {
               setKind(e.target.value as typeof kind)
               setPage(1)
             }}
-            className="rounded border border-zinc-300 px-2 py-1 text-sm"
+            className="w-24 rounded border border-zinc-300 px-2 py-1 text-sm"
           >
             <option value="all">All kinds</option>
             <option value="city">Cities</option>
@@ -325,7 +322,7 @@ export function TargetsPanel({ authedFetch }: Props) {
           </select>
           <GeneratorControls
             authedFetch={authedFetch}
-            countries={countries}
+            country={country}
             onAfter={() => setRefreshTick((t) => t + 1)}
           />
         </div>
@@ -385,9 +382,8 @@ export function TargetsPanel({ authedFetch }: Props) {
         </div>
       ) : rows.length === 0 ? (
         <div className="rounded border border-zinc-200 bg-zinc-50 px-3 py-4 text-sm text-zinc-500">
-          No targets match. Use <strong>Top up targets</strong> above to ask
-          the model for more places — runs in the background; refresh to watch
-          rows appear.
+          No targets match. Pick a country and press <strong>Top up</strong> to
+          ask the model for more places — runs in the background.
         </div>
       ) : (
         <div className="overflow-x-auto rounded border border-zinc-200">
@@ -412,7 +408,10 @@ export function TargetsPanel({ authedFetch }: Props) {
                 <th className="px-3 py-2" title="Photos collected so far">
                   Photos
                 </th>
-                <th className="px-3 py-2" title="Target photo count — click to edit">
+                <th
+                  className="px-3 py-2"
+                  title="Target photo count — click to edit"
+                >
                   Goal
                 </th>
                 <th className="px-3 py-2">
@@ -436,7 +435,11 @@ export function TargetsPanel({ authedFetch }: Props) {
                     'border-t border-zinc-100 ' +
                     (row.exhausted ? 'bg-rose-50' : '')
                   }
-                  title={row.exhausted ? 'Exhausted — Wikimedia has no more photos for this target' : undefined}
+                  title={
+                    row.exhausted
+                      ? 'Exhausted — Wikimedia has no more photos for this target'
+                      : undefined
+                  }
                 >
                   <td className="px-3 py-2">{row.country}</td>
                   <td className="px-3 py-2">{row.name}</td>
@@ -512,6 +515,136 @@ export function TargetsPanel({ authedFetch }: Props) {
   )
 }
 
+/**
+ * Searchable country dropdown with line-wrapping options.
+ *
+ * Native <select>'s <option> elements can't wrap to multiple lines in
+ * Chrome/Edge — long country names like "Saint Vincent and the
+ * Grenadines" get clipped at the right edge of a narrow trigger. This
+ * component renders options as <button>s instead, which lets us set
+ * whitespace-normal + break-words and have them flow to two lines
+ * naturally. A search input at the top filters the (~190-entry) list
+ * by substring. Closes on outside-click or Esc.
+ */
+function CountryDropdown({
+  value,
+  countries,
+  onChange,
+}: {
+  value: string
+  countries: CountryEntry[]
+  onChange: (v: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onMouseDown = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return countries
+    const q = query.trim().toLowerCase()
+    return countries.filter((c) => c.country.toLowerCase().includes(q))
+  }, [countries, query])
+
+  const display =
+    value === ALL_COUNTRIES
+      ? 'All countries'
+      : value === ''
+        ? 'Choose country'
+        : value
+
+  const pick = (v: string) => {
+    onChange(v)
+    setOpen(false)
+    setQuery('')
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={
+          'flex w-40 items-center justify-between gap-1 rounded border border-zinc-300 px-2 py-1 text-left text-sm leading-tight ' +
+          (value === '' ? 'text-zinc-400' : 'text-zinc-900')
+        }
+        title={display}
+      >
+        <span className="break-words">{display}</span>
+        <span className="text-xs text-zinc-400">▾</span>
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-20 mt-1 w-60 rounded border border-zinc-300 bg-white shadow-md">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search country…"
+            autoFocus
+            className="w-full border-b border-zinc-200 px-2 py-1 text-sm outline-none"
+          />
+          <div className="max-h-72 overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => pick('')}
+              className={
+                'block w-full whitespace-normal break-words px-2 py-1 text-left text-sm leading-tight hover:bg-zinc-50 ' +
+                (value === '' ? 'bg-zinc-100' : '')
+              }
+            >
+              <span className="text-zinc-500">Choose country</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => pick(ALL_COUNTRIES)}
+              className={
+                'block w-full whitespace-normal break-words border-t border-zinc-100 px-2 py-1 text-left text-sm leading-tight hover:bg-zinc-50 ' +
+                (value === ALL_COUNTRIES ? 'bg-zinc-100' : '')
+              }
+            >
+              All countries{' '}
+              <span className="text-xs text-zinc-400">(top up all)</span>
+            </button>
+            {filtered.map((c) => (
+              <button
+                key={c.country}
+                type="button"
+                onClick={() => pick(c.country)}
+                className={
+                  'block w-full whitespace-normal break-words border-t border-zinc-100 px-2 py-1 text-left text-sm leading-tight hover:bg-zinc-50 ' +
+                  (value === c.country ? 'bg-zinc-100' : '')
+                }
+              >
+                {c.country}{' '}
+                <span className="text-xs text-zinc-400">({c.count})</span>
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <div className="px-2 py-2 text-sm text-zinc-400">
+                No matches.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface GeneratorState {
   status: 'idle' | 'running' | 'completed' | 'cancelled' | 'failed'
   startedAt: string | null
@@ -525,30 +658,32 @@ interface GeneratorState {
 }
 
 /**
- * Single "Top up targets" entry point — covers both the full sweep and
- * the single-country top-up via one dropdown:
- *   - "All countries"       → POST /generate          (pass 1 + pass 2)
- *   - one country           → POST /generate-country  (pass 2 only)
+ * Inline Top-up control — `extra` input + Top-up button, no popover.
  *
- * The `extra` number is `target_count` for new places either way. Both
- * routes drive the same singleton backend job — one status pill covers
- * either run.
+ * Scope is whatever's in the parent's country picker:
+ *   ''             → button disabled (placeholder mode, accidental
+ *                    clicks do nothing).
+ *   ALL_COUNTRIES  → POST /generate          (pass 1 + pass 2). Confirm.
+ *   one country    → POST /generate-country  (pass 2 only). Cheap; no
+ *                    confirm.
+ *
+ * Both routes drive the same singleton backend job — one running pill
+ * covers either run. `extra` left empty means: backend uses the default
+ * per-target plan from config_settings.
  */
 function GeneratorControls({
   authedFetch,
-  countries,
+  country,
   onAfter,
 }: {
   authedFetch: AuthedFetch
-  countries: CountryEntry[]
+  country: string
   onAfter: () => void
 }) {
   const [state, setState] = useState<GeneratorState | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
-  const [open, setOpen] = useState(false)
-  const [scope, setScope] = useState<string>('') // '' = All, otherwise country name
-  const [extra, setExtra] = useState('5')
+  const [extra, setExtra] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -585,11 +720,10 @@ function GeneratorControls({
 
   const start = useCallback(async () => {
     if (busy) return
-    // Safety: a full sweep across all countries is expensive (1 + N LLM
-    // calls, minutes of work). Confirm before firing. Single-country
-    // top-up is cheap (one LLM call) — no confirm needed.
+    if (country === '') return // defensive: button is also disabled
+    const isFullSweep = country === ALL_COUNTRIES
     if (
-      scope === '' &&
+      isFullSweep &&
       !confirm(
         'Run a full top-up across all countries? This makes ~1 + N LLM calls and takes a few minutes.',
       )
@@ -600,7 +734,7 @@ function GeneratorControls({
     const n = parseInt(extra, 10)
     try {
       let res: Response
-      if (scope === '') {
+      if (isFullSweep) {
         const body: { target_count?: number } = {}
         if (Number.isFinite(n) && n >= 1) body.target_count = n
         res = await authedFetch(
@@ -612,7 +746,7 @@ function GeneratorControls({
           },
         )
       } else {
-        const body: { country: string; extra_count?: number } = { country: scope }
+        const body: { country: string; extra_count?: number } = { country }
         if (Number.isFinite(n) && n >= 1) body.extra_count = n
         res = await authedFetch(
           `${API_URL}/api/admin/photo-bank/targets/generate-country`,
@@ -632,14 +766,13 @@ function GeneratorControls({
         if (data?.state) setState(data.state)
       } else if (data?.state) {
         setState(data.state)
-        setOpen(false)
       }
     } catch (e) {
       setErr((e as Error)?.message || 'request failed')
     } finally {
       setBusy(false)
     }
-  }, [authedFetch, busy, extra, scope])
+  }, [authedFetch, busy, country, extra])
 
   const cancel = useCallback(async () => {
     if (busy) return
@@ -686,62 +819,52 @@ function GeneratorControls({
     )
   }
 
-  // Last-run summary lives in the button tooltip — no visible text
-  // eating space in the filter row.
-  const lastRunTitle =
+  const lastRunHint =
     state && state.status !== 'idle'
       ? `Last run: ${state.status} · +${state.locationsAdded}` +
         (state.errors.length > 0 ? ` · ${state.errors.length} errors` : '') +
         (state.fatalError ? ` · ${state.fatalError}` : '')
-      : 'Top up targets — ask the model for more places (all countries or one)'
+      : ''
+  const disabled = busy || country === ''
+  const buttonTitle = disabled
+    ? country === ''
+      ? 'Pick a country first'
+      : 'Working…'
+    : lastRunHint ||
+      (country === ALL_COUNTRIES
+        ? 'Top up all countries (full sweep)'
+        : `Top up ${country}`)
 
   return (
-    <span className="relative inline-flex items-center gap-2">
+    <>
+      <input
+        type="number"
+        min={1}
+        max={1000}
+        placeholder="extra"
+        value={extra}
+        onChange={(e) => setExtra(e.target.value)}
+        className="w-16 rounded border border-zinc-300 px-2 py-1 text-sm"
+        title="How many new places to add (leave blank for the configured default)"
+      />
       <button
         type="button"
         onClick={() => {
-          setOpen((o) => !o)
           setErr(null)
+          void start()
         }}
-        title={lastRunTitle}
-        className="rounded border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50"
+        disabled={disabled}
+        title={buttonTitle}
+        className={
+          'rounded border px-3 py-1 text-sm ' +
+          (disabled
+            ? 'border-zinc-200 bg-zinc-50 text-zinc-400'
+            : 'border-zinc-300 hover:bg-zinc-50')
+        }
       >
-        Top up targets
+        Top up
       </button>
-      {open && (
-        <div className="absolute right-0 top-full z-10 mt-1 flex items-center gap-2 whitespace-nowrap rounded border border-zinc-300 bg-white px-2 py-2 shadow-md">
-          <select
-            value={scope}
-            onChange={(e) => setScope(e.target.value)}
-            className="rounded border border-zinc-300 px-2 py-1 text-sm"
-          >
-            <option value="">All countries</option>
-            {countries.map((c) => (
-              <option key={c.country} value={c.country}>
-                {c.country} ({c.count})
-              </option>
-            ))}
-          </select>
-          <label className="text-xs text-zinc-600">extra</label>
-          <input
-            type="number"
-            min={1}
-            max={1000}
-            value={extra}
-            onChange={(e) => setExtra(e.target.value)}
-            className="w-20 rounded border border-zinc-300 px-2 py-1 text-sm"
-          />
-          <button
-            type="button"
-            onClick={start}
-            disabled={busy}
-            className="rounded border border-emerald-400 bg-emerald-50 px-3 py-1 text-sm text-emerald-900 hover:bg-emerald-100 disabled:opacity-50"
-          >
-            Top up
-          </button>
-          {err && <span className="ml-1 text-xs text-rose-700">{err}</span>}
-        </div>
-      )}
-    </span>
+      {err && <span className="text-xs text-rose-700">{err}</span>}
+    </>
   )
 }
