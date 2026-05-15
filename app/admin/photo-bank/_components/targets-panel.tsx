@@ -3,11 +3,13 @@
 /**
  * Photo Bank v2 — admin Targets panel.
  *
- * Lists rows from /api/admin/photo-bank/targets with a country dropdown,
- * a name filter, kind / state filters and a sortable Last-attempt column.
- * Per-row Reset / Set-target, a bulk "apply to the whole filtered set"
- * bar, and CSV export. The header carries the generator controls — full
- * two-pass sweep and single-country top-up.
+ * Listing of /api/admin/photo-bank/targets. Each row shows country /
+ * name / kind / priority / scores / photos / goal / last attempt. Goal
+ * is inline-editable (click the number). Exhausted targets get a red
+ * row tint — the legend sits above the table. The header carries a
+ * country picker, an in-country target picker, a name-contains box,
+ * kind filter, CSV export, and the single Top-up-targets entry point
+ * (all countries via the model, or one country picked from a dropdown).
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -52,12 +54,13 @@ export function TargetsPanel({ authedFetch }: Props) {
   const [totalCount, setTotalCount] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [country, setCountry] = useState<string>('')
+  const [targetName, setTargetName] = useState<string>('') // exact name (in-country picker)
   const [kind, setKind] = useState<'all' | 'city' | 'landmark'>('all')
-  const [exhausted, setExhausted] = useState<'all' | 'true' | 'false'>('all')
   const [nameLike, setNameLike] = useState('')
   const [sort, setSort] = useState<SortKey>('priority')
   const [refreshTick, setRefreshTick] = useState(0)
   const [countries, setCountries] = useState<CountryEntry[]>([])
+  const [targetsForCountry, setTargetsForCountry] = useState<string[]>([])
 
   // Bulk-bar local controls.
   const [bulkValue, setBulkValue] = useState('')
@@ -65,25 +68,29 @@ export function TargetsPanel({ authedFetch }: Props) {
   const [bulkBusy, setBulkBusy] = useState(false)
   const [csvBusy, setCsvBusy] = useState(false)
 
+  // Inline-edit state for the Goal column.
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingValue, setEditingValue] = useState('')
+
   const filterActive =
     country !== '' ||
     kind !== 'all' ||
-    exhausted !== 'all' ||
-    nameLike.trim() !== ''
+    nameLike.trim() !== '' ||
+    targetName !== ''
 
   // Shared query string for the listing + CSV export (no pagination here).
   const queryString = useMemo(() => {
     const sp = new URLSearchParams()
     if (country) sp.set('country', country)
+    if (targetName) sp.set('name', targetName)
     if (kind !== 'all') sp.set('kind', kind)
-    if (exhausted !== 'all') sp.set('exhausted', exhausted)
     if (nameLike.trim()) sp.set('name_like', nameLike.trim())
     if (sort !== 'priority') sp.set('sort', sort)
     return sp.toString()
-  }, [country, kind, exhausted, nameLike, sort])
+  }, [country, targetName, kind, nameLike, sort])
 
-  // Country list for the dropdowns — refreshed alongside the table so a
-  // freshly generated country appears in the picker.
+  // Country list — refreshed alongside the table so a freshly generated
+  // country appears in the picker.
   useEffect(() => {
     let cancelled = false
     authedFetch(`${API_URL}/api/admin/photo-bank/targets/countries`)
@@ -97,6 +104,35 @@ export function TargetsPanel({ authedFetch }: Props) {
       cancelled = true
     }
   }, [authedFetch, refreshTick])
+
+  // Per-country target list — populates the second picker.
+  useEffect(() => {
+    if (!country) {
+      setTargetsForCountry([])
+      setTargetName('')
+      return
+    }
+    let cancelled = false
+    const sp = new URLSearchParams()
+    sp.set('country', country)
+    sp.set('perPage', '200')
+    // Use a sort that's name-friendly server-side: priority DESC is the
+    // default; for the picker we sort A→Z client-side after fetching.
+    authedFetch(`${API_URL}/api/admin/photo-bank/targets?${sp.toString()}`)
+      .then(async (res) => {
+        if (!res.ok) return
+        const data = (await res.json()) as { targets: TargetRow[] }
+        if (cancelled) return
+        const names = (data.targets || [])
+          .map((t) => t.name)
+          .sort((a, b) => a.localeCompare(b))
+        setTargetsForCountry(names)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [authedFetch, country, refreshTick])
 
   useEffect(() => {
     let cancelled = false
@@ -151,16 +187,38 @@ export function TargetsPanel({ authedFetch }: Props) {
     [authedFetch],
   )
 
+  // Inline Goal edit — commit on Enter / blur, cancel on Esc.
+  const startEditGoal = useCallback((row: TargetRow) => {
+    setEditingId(row.id)
+    setEditingValue(String(row.target_count))
+  }, [])
+  const cancelEditGoal = useCallback(() => {
+    setEditingId(null)
+    setEditingValue('')
+  }, [])
+  const commitEditGoal = useCallback(
+    (row: TargetRow) => {
+      const n = parseInt(editingValue, 10)
+      setEditingId(null)
+      if (!Number.isFinite(n) || n < 1) return
+      if (n === row.target_count) return // no-op
+      patch(row.id, { target_count: n })
+    },
+    [editingValue, patch],
+  )
+
   // Bulk apply: one change to every row matching the current filter.
   const bulkApply = useCallback(
     async (patchBody: Record<string, unknown>) => {
       setBulkBusy(true)
       setError(null)
       try {
+        // Bulk uses name_like (substring) not exact name — the exact
+        // picker is for inspecting one row; bulk operates on the wider
+        // free-text + country / kind filter set.
         const filter: Record<string, string> = {}
         if (country) filter.country = country
         if (kind !== 'all') filter.kind = kind
-        if (exhausted !== 'all') filter.state = exhausted
         if (nameLike.trim()) filter.name_like = nameLike.trim()
         const res = await authedFetch(
           `${API_URL}/api/admin/photo-bank/targets/bulk`,
@@ -178,10 +236,10 @@ export function TargetsPanel({ authedFetch }: Props) {
         setBulkBusy(false)
       }
     },
-    [authedFetch, country, kind, exhausted, nameLike],
+    [authedFetch, country, kind, nameLike],
   )
 
-  const applyBulkTargetCount = useCallback(() => {
+  const applyBulkGoal = useCallback(() => {
     const n = parseInt(bulkValue, 10)
     if (!Number.isFinite(n)) return
     bulkApply(
@@ -189,7 +247,6 @@ export function TargetsPanel({ authedFetch }: Props) {
     )
   }, [bulkApply, bulkValue, bulkMode])
 
-  // CSV export of the whole filtered set (pagination ignored server-side).
   const exportCsv = useCallback(async () => {
     setCsvBusy(true)
     setError(null)
@@ -220,6 +277,13 @@ export function TargetsPanel({ authedFetch }: Props) {
     setPage(1)
   }, [])
 
+  // The exact-name picker only makes sense for the bulk-bar set when a
+  // country is chosen — bulk hits a country/kind/name_like filter; the
+  // single exact pick is shown but not bulkable. So bulk-bar is hidden
+  // when only a target-name is selected (would touch exactly one row).
+  const bulkBarVisible =
+    country !== '' || kind !== 'all' || nameLike.trim() !== ''
+
   return (
     <div>
       <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -234,6 +298,7 @@ export function TargetsPanel({ authedFetch }: Props) {
             value={country}
             onChange={(e) => {
               setCountry(e.target.value)
+              setTargetName('')
               setPage(1)
             }}
             className="rounded border border-zinc-300 px-2 py-1 text-sm"
@@ -245,6 +310,23 @@ export function TargetsPanel({ authedFetch }: Props) {
               </option>
             ))}
           </select>
+          {country && targetsForCountry.length > 0 && (
+            <select
+              value={targetName}
+              onChange={(e) => {
+                setTargetName(e.target.value)
+                setPage(1)
+              }}
+              className="rounded border border-zinc-300 px-2 py-1 text-sm"
+            >
+              <option value="">All targets in {country}</option>
+              {targetsForCountry.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          )}
           <input
             placeholder="Name contains…"
             value={nameLike}
@@ -266,18 +348,6 @@ export function TargetsPanel({ authedFetch }: Props) {
             <option value="city">Cities</option>
             <option value="landmark">Landmarks</option>
           </select>
-          <select
-            value={exhausted}
-            onChange={(e) => {
-              setExhausted(e.target.value as typeof exhausted)
-              setPage(1)
-            }}
-            className="rounded border border-zinc-300 px-2 py-1 text-sm"
-          >
-            <option value="all">All states</option>
-            <option value="false">Active</option>
-            <option value="true">Exhausted</option>
-          </select>
           <button
             type="button"
             onClick={exportCsv}
@@ -296,11 +366,17 @@ export function TargetsPanel({ authedFetch }: Props) {
         </div>
       </header>
 
-      <div className="mb-2 text-sm text-zinc-500">
-        {totalCount} targets · page {page} of {Math.max(1, totalPages)}
+      <div className="mb-2 flex items-center justify-between text-sm text-zinc-500">
+        <span>
+          {totalCount} targets · page {page} of {Math.max(1, totalPages)}
+        </span>
+        <span className="text-xs">
+          <span className="mr-1 inline-block h-3 w-3 rounded-sm border border-rose-300 bg-rose-50 align-middle" />
+          red rows = exhausted (no more photos available from Wikimedia)
+        </span>
       </div>
 
-      {filterActive && (
+      {bulkBarVisible && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-sky-300 bg-sky-50 px-3 py-2 text-sm text-sky-900">
           <span className="font-medium">
             Bulk · {totalCount} filtered row{totalCount === 1 ? '' : 's'}
@@ -310,8 +386,8 @@ export function TargetsPanel({ authedFetch }: Props) {
             onChange={(e) => setBulkMode(e.target.value as 'set' | 'add')}
             className="rounded border border-sky-300 bg-white px-2 py-1 text-sm"
           >
-            <option value="set">Set target_count</option>
-            <option value="add">Add to target_count</option>
+            <option value="set">Set goal</option>
+            <option value="add">Add to goal</option>
           </select>
           <input
             type="number"
@@ -322,28 +398,11 @@ export function TargetsPanel({ authedFetch }: Props) {
           />
           <button
             type="button"
-            onClick={applyBulkTargetCount}
+            onClick={applyBulkGoal}
             disabled={bulkBusy || bulkValue.trim() === ''}
             className="rounded border border-sky-400 bg-white px-3 py-1 text-sm hover:bg-sky-100 disabled:opacity-50"
           >
             Apply to {totalCount}
-          </button>
-          <span className="text-sky-400">·</span>
-          <button
-            type="button"
-            onClick={() => bulkApply({ exhausted: true })}
-            disabled={bulkBusy}
-            className="rounded border border-sky-400 bg-white px-3 py-1 text-sm hover:bg-sky-100 disabled:opacity-50"
-          >
-            Mark exhausted
-          </button>
-          <button
-            type="button"
-            onClick={() => bulkApply({ exhausted: false })}
-            disabled={bulkBusy}
-            className="rounded border border-sky-400 bg-white px-3 py-1 text-sm hover:bg-sky-100 disabled:opacity-50"
-          >
-            Mark active
           </button>
           {bulkBusy && <Loader2 className="h-4 w-4 animate-spin" />}
         </div>
@@ -361,9 +420,9 @@ export function TargetsPanel({ authedFetch }: Props) {
         </div>
       ) : rows.length === 0 ? (
         <div className="rounded border border-zinc-200 bg-zinc-50 px-3 py-4 text-sm text-zinc-500">
-          No targets match. Use <strong>Generate all</strong> for a full
-          sweep, or <strong>Top up country</strong> to add more places to one
-          country — both run in the background; refresh to watch rows appear.
+          No targets match. Use <strong>Top up targets</strong> above to ask
+          the model for more places — runs in the background; refresh to watch
+          rows appear.
         </div>
       ) : (
         <div className="overflow-x-auto rounded border border-zinc-200">
@@ -385,7 +444,12 @@ export function TargetsPanel({ authedFetch }: Props) {
                 >
                   Scores
                 </th>
-                <th className="px-3 py-2">Progress</th>
+                <th className="px-3 py-2" title="Photos collected so far">
+                  Photos
+                </th>
+                <th className="px-3 py-2" title="Target photo count — click to edit">
+                  Goal
+                </th>
                 <th className="px-3 py-2">
                   <button
                     type="button"
@@ -397,13 +461,18 @@ export function TargetsPanel({ authedFetch }: Props) {
                     {sort === 'last_attempt' ? ' ▲' : ''}
                   </button>
                 </th>
-                <th className="px-3 py-2">State</th>
-                <th className="px-3 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id} className="border-t border-zinc-100">
+                <tr
+                  key={row.id}
+                  className={
+                    'border-t border-zinc-100 ' +
+                    (row.exhausted ? 'bg-rose-50' : '')
+                  }
+                  title={row.exhausted ? 'Exhausted — Wikimedia has no more photos for this target' : undefined}
+                >
                   <td className="px-3 py-2">{row.country}</td>
                   <td className="px-3 py-2">{row.name}</td>
                   <td className="px-3 py-2">{row.kind}</td>
@@ -412,70 +481,39 @@ export function TargetsPanel({ authedFetch }: Props) {
                     {row.country_score} · {row.location_score}
                   </td>
                   <td className="px-3 py-2 text-zinc-700">
-                    {row.collected_count} / {row.target_count}
+                    {row.collected_count}
+                  </td>
+                  <td className="px-3 py-2">
+                    {editingId === row.id ? (
+                      <input
+                        type="number"
+                        min={1}
+                        max={1000}
+                        value={editingValue}
+                        autoFocus
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onBlur={() => commitEditGoal(row)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') commitEditGoal(row)
+                          else if (e.key === 'Escape') cancelEditGoal()
+                        }}
+                        className="w-20 rounded border border-zinc-300 px-1 py-0.5 text-sm"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => startEditGoal(row)}
+                        className="rounded px-1 py-0.5 hover:bg-zinc-100"
+                        title="Click to edit"
+                      >
+                        {row.target_count}
+                      </button>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-zinc-500">
                     {row.last_attempt_at
                       ? new Date(row.last_attempt_at).toLocaleString()
                       : '—'}
-                  </td>
-                  <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setExhausted(row.exhausted ? 'true' : 'false')
-                        setPage(1)
-                      }}
-                      title="Filter by this state"
-                    >
-                      {row.exhausted ? (
-                        <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-900 hover:bg-amber-200">
-                          exhausted
-                        </span>
-                      ) : (
-                        <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-900 hover:bg-emerald-200">
-                          active
-                        </span>
-                      )}
-                    </button>
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const v = prompt(
-                            'New target_count',
-                            String(row.target_count),
-                          )
-                          if (v == null) return
-                          const n = parseInt(v, 10)
-                          if (!Number.isFinite(n) || n < 1) return
-                          patch(row.id, { target_count: n })
-                        }}
-                        className="rounded border border-zinc-300 px-2 py-0.5 text-xs hover:bg-zinc-50"
-                      >
-                        Set target
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (
-                            !confirm(
-                              `Reset "${row.name}"? collected_count → 0, exhausted → off. The collector will re-attempt this target.`,
-                            )
-                          )
-                            return
-                          patch(row.id, {
-                            collected_count: 0,
-                            exhausted: false,
-                          })
-                        }}
-                        className="rounded border border-zinc-300 px-2 py-0.5 text-xs hover:bg-zinc-50"
-                      >
-                        Reset target
-                      </button>
-                    </div>
                   </td>
                 </tr>
               ))}
@@ -522,13 +560,14 @@ interface GeneratorState {
 }
 
 /**
- * Generator controls — full two-pass sweep + single-country top-up.
+ * Single "Top up targets" entry point — covers both the full sweep and
+ * the single-country top-up via one dropdown:
+ *   - "All countries"       → POST /generate          (pass 1 + pass 2)
+ *   - one country           → POST /generate-country  (pass 2 only)
  *
- * Both actions drive the same singleton backend job, so one status
- * poller covers them. While a job runs, the controls collapse to a
- * status pill with a Cancel button. "Generate all" opens an inline
- * panel for the per-run target_count; "Top up country" opens one for a
- * country + how many places to add.
+ * The `extra` number is `target_count` for new places either way. Both
+ * routes drive the same singleton backend job — one status pill covers
+ * either run.
  */
 function GeneratorControls({
   authedFetch,
@@ -542,11 +581,9 @@ function GeneratorControls({
   const [state, setState] = useState<GeneratorState | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
-  const [genOpen, setGenOpen] = useState(false)
-  const [topOpen, setTopOpen] = useState(false)
-  const [targetCount, setTargetCount] = useState('5')
-  const [topCountry, setTopCountry] = useState('')
-  const [extraCount, setExtraCount] = useState('5')
+  const [open, setOpen] = useState(false)
+  const [scope, setScope] = useState<string>('') // '' = All, otherwise country name
+  const [extra, setExtra] = useState('5')
 
   useEffect(() => {
     let cancelled = false
@@ -581,22 +618,36 @@ function GeneratorControls({
     return () => clearInterval(t)
   }, [state?.status, authedFetch, onAfter])
 
-  const startFull = useCallback(async () => {
+  const start = useCallback(async () => {
     if (busy) return
     setBusy(true)
     setErr(null)
+    const n = parseInt(extra, 10)
     try {
-      const n = parseInt(targetCount, 10)
-      const body: { target_count?: number } = {}
-      if (Number.isFinite(n) && n >= 1) body.target_count = n
-      const res = await authedFetch(
-        `${API_URL}/api/admin/photo-bank/targets/generate`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-      )
+      let res: Response
+      if (scope === '') {
+        const body: { target_count?: number } = {}
+        if (Number.isFinite(n) && n >= 1) body.target_count = n
+        res = await authedFetch(
+          `${API_URL}/api/admin/photo-bank/targets/generate`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          },
+        )
+      } else {
+        const body: { country: string; extra_count?: number } = { country: scope }
+        if (Number.isFinite(n) && n >= 1) body.extra_count = n
+        res = await authedFetch(
+          `${API_URL}/api/admin/photo-bank/targets/generate-country`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          },
+        )
+      }
       const data = (await res.json()) as {
         state?: GeneratorState
         error?: string
@@ -606,53 +657,14 @@ function GeneratorControls({
         if (data?.state) setState(data.state)
       } else if (data?.state) {
         setState(data.state)
-        setGenOpen(false)
+        setOpen(false)
       }
     } catch (e) {
       setErr((e as Error)?.message || 'request failed')
     } finally {
       setBusy(false)
     }
-  }, [authedFetch, busy, targetCount])
-
-  const startTopUp = useCallback(async () => {
-    if (busy) return
-    const c = topCountry.trim()
-    if (!c) {
-      setErr('Pick a country to top up')
-      return
-    }
-    setBusy(true)
-    setErr(null)
-    try {
-      const n = parseInt(extraCount, 10)
-      const body: { country: string; extra_count?: number } = { country: c }
-      if (Number.isFinite(n) && n >= 1) body.extra_count = n
-      const res = await authedFetch(
-        `${API_URL}/api/admin/photo-bank/targets/generate-country`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-      )
-      const data = (await res.json()) as {
-        state?: GeneratorState
-        error?: string
-      }
-      if (!res.ok) {
-        setErr(data?.error || `HTTP ${res.status}`)
-        if (data?.state) setState(data.state)
-      } else if (data?.state) {
-        setState(data.state)
-        setTopOpen(false)
-      }
-    } catch (e) {
-      setErr((e as Error)?.message || 'request failed')
-    } finally {
-      setBusy(false)
-    }
-  }, [authedFetch, busy, topCountry, extraCount])
+  }, [authedFetch, busy, extra, scope])
 
   const cancel = useCallback(async () => {
     if (busy) return
@@ -665,7 +677,7 @@ function GeneratorControls({
       const data = (await res.json()) as { state?: GeneratorState }
       if (data?.state) setState(data.state)
     } catch {
-      // soft fail — the polling loop will still pick up the new status.
+      // soft fail — the polling loop will pick up the new status.
     } finally {
       setBusy(false)
     }
@@ -676,7 +688,7 @@ function GeneratorControls({
     return (
       <span className="inline-flex items-center gap-2 rounded border border-amber-300 bg-amber-50 px-3 py-1 text-sm text-amber-900">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        Generating · {state.processedCountries}/{total}
+        Top-up · {state.processedCountries}/{total}
         {state.currentCountry ? ` · ${state.currentCountry}` : ''} · +
         {state.locationsAdded} rows
         <button
@@ -696,56 +708,22 @@ function GeneratorControls({
       <button
         type="button"
         onClick={() => {
-          setGenOpen((o) => !o)
-          setTopOpen(false)
+          setOpen((o) => !o)
           setErr(null)
         }}
         className="rounded border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50"
       >
-        Generate all
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          setTopOpen((o) => !o)
-          setGenOpen(false)
-          setErr(null)
-        }}
-        className="rounded border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50"
-      >
-        Top up country
+        Top up targets
       </button>
 
-      {genOpen && (
-        <div className="flex items-center gap-2 rounded border border-zinc-300 bg-zinc-50 px-2 py-1">
-          <label className="text-xs text-zinc-600">target_count</label>
-          <input
-            type="number"
-            min={1}
-            max={1000}
-            value={targetCount}
-            onChange={(e) => setTargetCount(e.target.value)}
-            className="w-20 rounded border border-zinc-300 px-2 py-1 text-sm"
-          />
-          <button
-            type="button"
-            onClick={startFull}
-            disabled={busy}
-            className="rounded border border-emerald-400 bg-emerald-50 px-3 py-1 text-sm text-emerald-900 hover:bg-emerald-100 disabled:opacity-50"
-          >
-            Start full sweep
-          </button>
-        </div>
-      )}
-
-      {topOpen && (
-        <div className="flex items-center gap-2 rounded border border-zinc-300 bg-zinc-50 px-2 py-1">
+      {open && (
+        <div className="flex flex-wrap items-center gap-2 rounded border border-zinc-300 bg-zinc-50 px-2 py-1">
           <select
-            value={topCountry}
-            onChange={(e) => setTopCountry(e.target.value)}
+            value={scope}
+            onChange={(e) => setScope(e.target.value)}
             className="rounded border border-zinc-300 px-2 py-1 text-sm"
           >
-            <option value="">Pick country…</option>
+            <option value="">All countries</option>
             {countries.map((c) => (
               <option key={c.country} value={c.country}>
                 {c.country} ({c.count})
@@ -757,13 +735,13 @@ function GeneratorControls({
             type="number"
             min={1}
             max={1000}
-            value={extraCount}
-            onChange={(e) => setExtraCount(e.target.value)}
+            value={extra}
+            onChange={(e) => setExtra(e.target.value)}
             className="w-20 rounded border border-zinc-300 px-2 py-1 text-sm"
           />
           <button
             type="button"
-            onClick={startTopUp}
+            onClick={start}
             disabled={busy}
             className="rounded border border-emerald-400 bg-emerald-50 px-3 py-1 text-sm text-emerald-900 hover:bg-emerald-100 disabled:opacity-50"
           >
