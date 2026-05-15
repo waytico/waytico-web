@@ -69,13 +69,11 @@ export function TargetsPanel({ authedFetch }: Props) {
   const [totalCount, setTotalCount] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [country, setCountry] = useState<string>('') // '' | ALL_COUNTRIES | <name>
-  const [targetName, setTargetName] = useState<string>('')
-  const [kind, setKind] = useState<'all' | 'city' | 'landmark'>('all')
-  const [nameLike, setNameLike] = useState('')
+  const [city, setCity] = useState<string>('')
   const [sort, setSort] = useState<SortKey>('priority')
   const [refreshTick, setRefreshTick] = useState(0)
   const [countries, setCountries] = useState<CountryEntry[]>([])
-  const [targetsForCountry, setTargetsForCountry] = useState<string[]>([])
+  const [citiesForCountry, setCitiesForCountry] = useState<string[]>([])
 
   // Bulk-bar local controls.
   const [bulkValue, setBulkValue] = useState('')
@@ -93,12 +91,9 @@ export function TargetsPanel({ authedFetch }: Props) {
   const queryString = useMemo(() => {
     const sp = new URLSearchParams()
     if (filterCountry) sp.set('country', filterCountry)
-    if (targetName) sp.set('name', targetName)
-    if (kind !== 'all') sp.set('kind', kind)
-    if (nameLike.trim()) sp.set('name_like', nameLike.trim())
     if (sort !== 'priority') sp.set('sort', sort)
     return sp.toString()
-  }, [filterCountry, targetName, kind, nameLike, sort])
+  }, [filterCountry, sort])
 
   // Country list — refreshed alongside the table so a freshly generated
   // country appears in the picker.
@@ -116,16 +111,19 @@ export function TargetsPanel({ authedFetch }: Props) {
     }
   }, [authedFetch, refreshTick])
 
-  // Per-country target list — only meaningful for a specific country.
+  // Per-country CITY list — populates the second dropdown (city scope
+  // for city-landmark top-up). Landmarks have no nested top-up so they
+  // don't appear in this dropdown.
   useEffect(() => {
     if (!isSpecificCountry) {
-      setTargetsForCountry([])
-      setTargetName('')
+      setCitiesForCountry([])
+      setCity('')
       return
     }
     let cancelled = false
     const sp = new URLSearchParams()
     sp.set('country', filterCountry)
+    sp.set('kind', 'city')
     sp.set('perPage', '200')
     authedFetch(`${API_URL}/api/admin/photo-bank/targets?${sp.toString()}`)
       .then(async (res) => {
@@ -135,7 +133,7 @@ export function TargetsPanel({ authedFetch }: Props) {
         const names = (data.targets || [])
           .map((t) => t.name)
           .sort((a, b) => a.localeCompare(b))
-        setTargetsForCountry(names)
+        setCitiesForCountry(names)
       })
       .catch(() => {})
     return () => {
@@ -222,8 +220,6 @@ export function TargetsPanel({ authedFetch }: Props) {
       try {
         const filter: Record<string, string> = {}
         if (filterCountry) filter.country = filterCountry
-        if (kind !== 'all') filter.kind = kind
-        if (nameLike.trim()) filter.name_like = nameLike.trim()
         const res = await authedFetch(
           `${API_URL}/api/admin/photo-bank/targets/bulk`,
           {
@@ -240,7 +236,7 @@ export function TargetsPanel({ authedFetch }: Props) {
         setBulkBusy(false)
       }
     },
-    [authedFetch, filterCountry, kind, nameLike],
+    [authedFetch, filterCountry],
   )
 
   const applyBulkGoal = useCallback(() => {
@@ -256,8 +252,7 @@ export function TargetsPanel({ authedFetch }: Props) {
     setPage(1)
   }, [])
 
-  const bulkBarVisible =
-    filterCountry !== '' || kind !== 'all' || nameLike.trim() !== ''
+  const bulkBarVisible = filterCountry !== ''
 
   return (
     <div>
@@ -273,16 +268,13 @@ export function TargetsPanel({ authedFetch }: Props) {
             }}
           />
           <select
-            value={targetName}
-            onChange={(e) => {
-              setTargetName(e.target.value)
-              setPage(1)
-            }}
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
             disabled={!isSpecificCountry}
             className="w-40 truncate rounded border border-zinc-300 px-2 py-1 text-sm disabled:bg-zinc-50 disabled:text-zinc-400"
             title={
               isSpecificCountry
-                ? `Targets in ${filterCountry}`
+                ? `City scope for Top up · ${filterCountry}`
                 : 'Pick a country first'
             }
           >
@@ -290,8 +282,8 @@ export function TargetsPanel({ authedFetch }: Props) {
               <option value="">Pick a country first</option>
             ) : (
               <>
-                <option value="">All in {filterCountry}</option>
-                {targetsForCountry.map((n) => (
+                <option value="">{`Country-level (no city)`}</option>
+                {citiesForCountry.map((n) => (
                   <option key={n} value={n}>
                     {n}
                   </option>
@@ -299,30 +291,10 @@ export function TargetsPanel({ authedFetch }: Props) {
               </>
             )}
           </select>
-          <input
-            placeholder="Name contains…"
-            value={nameLike}
-            onChange={(e) => {
-              setNameLike(e.target.value)
-              setPage(1)
-            }}
-            className="w-36 rounded border border-zinc-300 px-2 py-1 text-sm"
-          />
-          <select
-            value={kind}
-            onChange={(e) => {
-              setKind(e.target.value as typeof kind)
-              setPage(1)
-            }}
-            className="w-24 rounded border border-zinc-300 px-2 py-1 text-sm"
-          >
-            <option value="all">All kinds</option>
-            <option value="city">Cities</option>
-            <option value="landmark">Landmarks</option>
-          </select>
           <GeneratorControls
             authedFetch={authedFetch}
             country={country}
+            city={city}
             onAfter={() => setRefreshTick((t) => t + 1)}
           />
         </div>
@@ -674,10 +646,12 @@ interface GeneratorState {
 function GeneratorControls({
   authedFetch,
   country,
+  city,
   onAfter,
 }: {
   authedFetch: AuthedFetch
   country: string
+  city: string
   onAfter: () => void
 }) {
   const [state, setState] = useState<GeneratorState | null>(null)
@@ -722,6 +696,7 @@ function GeneratorControls({
     if (busy) return
     if (country === '') return // defensive: button is also disabled
     const isFullSweep = country === ALL_COUNTRIES
+    const isCityTopUp = !isFullSweep && city !== ''
     if (
       isFullSweep &&
       !confirm(
@@ -745,7 +720,22 @@ function GeneratorControls({
             body: JSON.stringify(body),
           },
         )
+      } else if (isCityTopUp) {
+        const body: { country: string; city: string; extra_count?: number } = {
+          country,
+          city,
+        }
+        if (Number.isFinite(n) && n >= 1) body.extra_count = n
+        res = await authedFetch(
+          `${API_URL}/api/admin/photo-bank/targets/generate-city-landmarks`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          },
+        )
       } else {
+        // Specific country, no city → country-level top-up.
         const body: { country: string; extra_count?: number } = { country }
         if (Number.isFinite(n) && n >= 1) body.extra_count = n
         res = await authedFetch(
@@ -772,7 +762,7 @@ function GeneratorControls({
     } finally {
       setBusy(false)
     }
-  }, [authedFetch, busy, country, extra])
+  }, [authedFetch, busy, country, city, extra])
 
   const cancel = useCallback(async () => {
     if (busy) return
@@ -819,21 +809,16 @@ function GeneratorControls({
     )
   }
 
-  const lastRunHint =
-    state && state.status !== 'idle'
-      ? `Last run: ${state.status} · +${state.locationsAdded}` +
-        (state.errors.length > 0 ? ` · ${state.errors.length} errors` : '') +
-        (state.fatalError ? ` · ${state.fatalError}` : '')
-      : ''
   const disabled = busy || country === ''
   const buttonTitle = disabled
     ? country === ''
       ? 'Pick a country first'
       : 'Working…'
-    : lastRunHint ||
-      (country === ALL_COUNTRIES
-        ? 'Top up all countries (full sweep)'
-        : `Top up ${country}`)
+    : country === ALL_COUNTRIES
+      ? 'Top up all countries (full sweep)'
+      : city !== ''
+        ? `Top up landmarks in ${city} (${country})`
+        : `Top up ${country} (country-level)`
 
   return (
     <>
