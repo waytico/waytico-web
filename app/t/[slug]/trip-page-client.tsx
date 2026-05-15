@@ -2131,23 +2131,23 @@ export default function TripPageClient({ slug, initialData }: Props) {
               className="max-w-7xl mx-auto px-4 flex items-center gap-3"
               style={{ height: 52 }}
             >
-              <div className="text-sm text-foreground/80 flex-1 min-w-0 leading-none">
+              <div className="text-sm text-foreground/80 flex-1 min-w-0">
                 <button
                   onClick={() => {
                     const redirectUrl = `/t/${slug}?claim=${projectIdForClaim}`
                     router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`)
                   }}
-                  className="font-semibold text-accent hover:text-accent/80 underline underline-offset-2"
+                  className="inline-flex items-center align-middle px-3.5 py-1.5 rounded-full bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 transition-colors whitespace-nowrap"
                 >
                   Sign up for free
                 </button>
-                <span> to edit, add photos, change design, and save to your account.</span>
+                <span className="align-middle">&nbsp; to edit, add photos, change design, and save to your account.</span>
               </div>
               <div className="relative flex-shrink-0 flex items-center">
                 <button
                   type="button"
                   onClick={() => setAnonShareOpen((v) => !v)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 transition-colors whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-accent text-accent text-sm font-semibold hover:bg-accent/10 transition-colors whitespace-nowrap"
                 >
                   Send as is →
                 </button>
