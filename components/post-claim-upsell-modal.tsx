@@ -15,8 +15,8 @@ type Props = {
  * PostClaimUpsellModal — fires once, in-memory, right after the
  * anon → register → claim handshake succeeds. Sits on top of the
  * just-created trip page (parent renders it after the claim
- * useEffect flips its flag) and walks the operator through five
- * non-obvious actions they can take on this quote.
+ * useEffect flips its flag) and walks the operator through what
+ * they can do with the quote now that it's saved.
  *
  * Closes via the × button, a click outside the card, or the
  * Let's go CTA in the footer. Visually matches AnonUpsellModal
@@ -53,44 +53,24 @@ export default function PostClaimUpsellModal({ show, onClose }: Props) {
           You&apos;re all set
         </h2>
         <p className="text-sm text-foreground/70 mb-5">
-          It&apos;s saved to your account. Now you can:
+          Draft saved to your account. Now you can:
         </p>
 
         {/* Feature list */}
         <ul className="space-y-2.5">
           {[
-            {
-              t: 'Edit it with AI',
-              d: 'type into the bar at the bottom — “add a rest day”, “polish day 3”…',
-            },
-            {
-              t: 'Click anything to refine',
-              d: 'text, dates, prices, the day-by-day plan',
-            },
-            {
-              t: 'Drop in your own photos',
-              d: 'for the hero and each day',
-            },
-            {
-              t: 'Pick a visual style',
-              d: 'Magazine, Serene, or Frontier',
-            },
-            {
-              t: 'Make it yours',
-              d: 'add your logo, business name, and contacts on the dashboard',
-            },
+            'Upload or replace photos for each day',
+            'Edit on the page or with the AI assistant',
+            'Add your brand — logo, tagline, terms',
+            'Keep all your quotes and clients in one place',
+            'Share the quote with your client — send them the link',
           ].map((item) => (
             <li
-              key={item.t}
+              key={item}
               className="flex items-start gap-2 text-sm text-foreground/80"
             >
               <span className="mt-1 text-accent leading-none">•</span>
-              <span>
-                <strong className="font-semibold text-foreground">
-                  {item.t}
-                </strong>{' '}
-                — <span className="text-foreground/70">{item.d}</span>
-              </span>
+              <span>{item}</span>
             </li>
           ))}
         </ul>
