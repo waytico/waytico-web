@@ -3,21 +3,23 @@
 /**
  * Photo Bank — Collector view.
  *
- * One tab that bundles the two operational concerns of the global
- * photo bank pipeline:
+ * Composes the three operational sub-panels of the global photo bank
+ * pipeline. Order is intentional, top to bottom:
  *
- *   - Workers (top) — live status of the collector + ai_cleanup +
- *     ai_classify processes with pause/resume and "Reclassify all"
- *     action.
- *   - Targets (bottom) — the per-country plan: which cities and
- *     landmarks to fetch, weights, progress, and the "Generate
- *     targets" generator entry point.
- *   - Settings (between) — the collector pacing knobs (tick interval,
- *     targets per cycle, oversample, per-kind minimums, default plan).
+ *   1. SettingsPanel (Collector control) — full-width. The collector
+ *      worker's own status pill + Pause/Resume sit at the top of this
+ *      panel, alongside the priority-collection and goal controls. The
+ *      pill is NOT also rendered in WorkersPanel — to avoid two places
+ *      with Resume buttons for the same worker.
+ *   2. WorkersPanel — half-width grid for the two AI workers
+ *      (Pass-2 cleanup + Pass-1 classify). The collector is excluded
+ *      from this row.
+ *   3. TargetsPanel — the per-country locations list with inline-edit
+ *      Goal and the Top-up entry point. Stays at the bottom because
+ *      it's the deepest configuration surface.
  *
- * The inner panels render unchanged — this component is a thin
- * compositional wrapper so each section keeps its own data fetching
- * and refresh cadence.
+ * Each panel keeps its own data fetching and refresh cadence — this
+ * component is a thin compositional wrapper, not a state hub.
  */
 
 import type { AuthedFetch } from '@/hooks/use-admin-photo-review'
@@ -32,8 +34,8 @@ interface Props {
 export function CollectorPanel({ authedFetch }: Props) {
   return (
     <div className="space-y-8">
-      <WorkersPanel authedFetch={authedFetch} />
       <SettingsPanel authedFetch={authedFetch} />
+      <WorkersPanel authedFetch={authedFetch} />
       <TargetsPanel authedFetch={authedFetch} />
     </div>
   )

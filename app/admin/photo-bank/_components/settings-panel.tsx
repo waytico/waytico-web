@@ -52,6 +52,7 @@ interface CollectorSettings {
 interface CollectorOverride {
   country: string | null
   kind: 'city' | 'landmark' | null
+  name: string | null
 }
 
 interface CountryEntry {
@@ -86,6 +87,7 @@ export function SettingsPanel({ authedFetch }: Props) {
   const [override, setOverride] = useState<CollectorOverride>({
     country: null,
     kind: null,
+    name: null,
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -101,10 +103,24 @@ export function SettingsPanel({ authedFetch }: Props) {
   const [workerBusy, setWorkerBusy] = useState(false)
 
   // ── Change-goal scope state ──────────────────────────────────────
+  // goalScope is an opaque encoded string:
+  //   ""              → no further filter (country-level)
+  //   "k:city"        → all cities of the country
+  //   "k:landmark"    → all landmarks of the country
+  //   "n:<Name>"      → exact target name
   const [goalCountry, setGoalCountry] = useState('')
-  const [goalCity, setGoalCity] = useState('')
+  const [goalScope, setGoalScope] = useState('')
   const [goalAdd, setGoalAdd] = useState('')
-  const [goalCitiesForCountry, setGoalCitiesForCountry] = useState<string[]>([])
+  // locationsForCountry feeds BOTH the Priority and Change-goal combo
+  // dropdowns when a country is picked in either. Lists every target
+  // row of the country (cities + landmarks) with its kind so each
+  // option can show the kind suffix.
+  const [locationsForCountry, setLocationsForCountry] = useState<
+    Array<{ name: string; kind: 'city' | 'landmark' }>
+  >([])
+  const [locationsForOverride, setLocationsForOverride] = useState<
+    Array<{ name: string; kind: 'city' | 'landmark' }>
+  >([])
   const [goalApplying, setGoalApplying] = useState(false)
   const [goalApplied, setGoalApplied] = useState<number | null>(null)
 
@@ -123,7 +139,7 @@ export function SettingsPanel({ authedFetch }: Props) {
       .then((data) => {
         if (cancelled) return
         setDraft(data.settings)
-        setOverride(data.override ?? { country: null, kind: null })
+        setOverride(data.override ?? { country: null, kind: null, name: null })
         setError(null)
       })
       .catch((err) => {
@@ -173,33 +189,70 @@ export function SettingsPanel({ authedFetch }: Props) {
     }
   }, [authedFetch, refreshTick])
 
-  // ── Cities for the change-goal country ───────────────────────────
+  // ── Cities + landmarks for the change-goal country ───────────────
+  // Loaded fresh whenever `goalCountry` changes; cleared when it
+  // resets. Shared shape with `locationsForOverride` below — both
+  // feed scope-combo dropdowns that list every target row of the
+  // country (city + landmark) with its kind so each option can show
+  // the kind suffix.
   useEffect(() => {
     if (!goalCountry) {
-      setGoalCitiesForCountry([])
-      setGoalCity('')
+      setLocationsForCountry([])
+      setGoalScope('')
       return
     }
     let cancelled = false
     const sp = new URLSearchParams()
     sp.set('country', goalCountry)
-    sp.set('kind', 'city')
-    sp.set('perPage', '200')
+    sp.set('perPage', '500')
     authedFetch(`${API_URL}/api/admin/photo-bank/targets?${sp.toString()}`)
       .then(async (res) => {
         if (!res.ok) return
-        const data = (await res.json()) as { targets: { name: string }[] }
+        const data = (await res.json()) as {
+          targets: Array<{ name: string; kind: 'city' | 'landmark' }>
+        }
         if (cancelled) return
-        const names = (data.targets || [])
-          .map((t) => t.name)
-          .sort((a, b) => a.localeCompare(b))
-        setGoalCitiesForCountry(names)
+        const list = (data.targets || [])
+          .map((t) => ({ name: t.name, kind: t.kind }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+        setLocationsForCountry(list)
       })
       .catch(() => {})
     return () => {
       cancelled = true
     }
   }, [authedFetch, goalCountry])
+
+  // Cities + landmarks for the Priority-override country. Same shape
+  // as above, separate state because the two sections can point at
+  // different countries simultaneously (Change-goal on France while
+  // Priority is on Canada is fine).
+  useEffect(() => {
+    if (!override.country) {
+      setLocationsForOverride([])
+      return
+    }
+    let cancelled = false
+    const sp = new URLSearchParams()
+    sp.set('country', override.country)
+    sp.set('perPage', '500')
+    authedFetch(`${API_URL}/api/admin/photo-bank/targets?${sp.toString()}`)
+      .then(async (res) => {
+        if (!res.ok) return
+        const data = (await res.json()) as {
+          targets: Array<{ name: string; kind: 'city' | 'landmark' }>
+        }
+        if (cancelled) return
+        const list = (data.targets || [])
+          .map((t) => ({ name: t.name, kind: t.kind }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+        setLocationsForOverride(list)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [authedFetch, override.country])
 
   // ── Field setter (numeric) ───────────────────────────────────────
   const setField = useCallback(
@@ -230,6 +283,7 @@ export function SettingsPanel({ authedFetch }: Props) {
             ...draft,
             overrideCountry: override.country,
             overrideKind: override.kind,
+            overrideName: override.name,
           }),
         },
       )
@@ -281,9 +335,19 @@ export function SettingsPanel({ authedFetch }: Props) {
     setError(null)
     setGoalApplied(null)
     try {
+      // goalScope decoding mirrors the dropdown encoding:
+      //   ""           -> country-level (no second filter)
+      //   "k:city"     -> filter.kind = 'city'
+      //   "k:landmark" -> filter.kind = 'landmark'
+      //   "n:<Name>"   -> filter.name = <Name>
       const filter: Record<string, string> = {}
       if (goalCountry) filter.country = goalCountry
-      if (goalCity) filter.name = goalCity
+      if (goalScope.startsWith('k:')) {
+        const k = goalScope.slice(2)
+        if (k === 'city' || k === 'landmark') filter.kind = k
+      } else if (goalScope.startsWith('n:')) {
+        filter.name = goalScope.slice(2)
+      }
       const res = await authedFetch(
         `${API_URL}/api/admin/photo-bank/targets/bulk`,
         {
@@ -307,9 +371,11 @@ export function SettingsPanel({ authedFetch }: Props) {
     } finally {
       setGoalApplying(false)
     }
-  }, [authedFetch, goalCountry, goalCity, goalAdd, goalApplying])
+  }, [authedFetch, goalCountry, goalScope, goalAdd, goalApplying])
 
-  const overrideActive = Boolean(override.country || override.kind)
+  const overrideActive = Boolean(
+    override.country || override.kind || override.name,
+  )
 
   // Auto-clear the "applied N rows" banner after a few seconds so it
   // doesn't sit forever between actions.
@@ -399,9 +465,13 @@ export function SettingsPanel({ authedFetch }: Props) {
                 value={override.country ?? ''}
                 onChange={(e) => {
                   setSaved(false)
+                  // Switching countries invalidates any previously
+                  // picked location name — drop it. Keep `kind` so a
+                  // "Cities only" filter survives a country switch.
                   setOverride((o) => ({
                     ...o,
                     country: e.target.value || null,
+                    name: null,
                   }))
                 }}
                 className="w-56 rounded border border-zinc-300 px-2 py-1 text-sm"
@@ -414,25 +484,78 @@ export function SettingsPanel({ authedFetch }: Props) {
                 ))}
               </select>
               <select
-                value={override.kind ?? ''}
+                value={
+                  // Selected encoding mirrors Change-goal's:
+                  //   ""            → no scope filter
+                  //   "k:<kind>"    → kind aggregation
+                  //   "n:<Name>"    → exact target
+                  // Name takes precedence when both are set in DB
+                  // (typical happy path: only one axis at a time).
+                  override.name
+                    ? `n:${override.name}`
+                    : override.kind
+                      ? `k:${override.kind}`
+                      : ''
+                }
                 onChange={(e) => {
                   setSaved(false)
                   const v = e.target.value
-                  setOverride((o) => ({
-                    ...o,
-                    kind: v === 'city' || v === 'landmark' ? v : null,
-                  }))
+                  if (v.startsWith('k:')) {
+                    const k = v.slice(2)
+                    setOverride((o) => ({
+                      ...o,
+                      kind: k === 'city' || k === 'landmark' ? k : null,
+                      name: null,
+                    }))
+                  } else if (v.startsWith('n:')) {
+                    setOverride((o) => ({
+                      ...o,
+                      kind: null,
+                      name: v.slice(2),
+                    }))
+                  } else {
+                    setOverride((o) => ({ ...o, kind: null, name: null }))
+                  }
                 }}
-                className="w-40 rounded border border-zinc-300 px-2 py-1 text-sm"
+                disabled={!override.country}
+                className="w-56 rounded border border-zinc-300 px-2 py-1 text-sm disabled:bg-zinc-50 disabled:text-zinc-400"
+                title={
+                  override.country
+                    ? `Narrow Priority within ${override.country}`
+                    : 'Pick a country first'
+                }
               >
-                <option value="">All kinds</option>
-                <option value="city">Cities only</option>
-                <option value="landmark">Landmarks only</option>
+                {!override.country ? (
+                  <option value="">(pick country first)</option>
+                ) : (
+                  <>
+                    <option value="">All locations</option>
+                    <option value="k:city">All cities</option>
+                    <option value="k:landmark">All landmarks</option>
+                    {locationsForOverride.length > 0 && (
+                      <option disabled value="__sep__">
+                        ──────────
+                      </option>
+                    )}
+                    {locationsForOverride.map((loc) => (
+                      <option
+                        key={`${loc.kind}:${loc.name}`}
+                        value={`n:${loc.name}`}
+                      >
+                        {loc.name} ({loc.kind})
+                      </option>
+                    ))}
+                  </>
+                )}
               </select>
               {overrideActive && (
                 <span className="rounded border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs text-amber-900">
                   Crawling only {override.country ?? 'any country'} ·{' '}
-                  {override.kind ?? 'any kind'}
+                  {override.name
+                    ? override.name
+                    : override.kind
+                      ? `${override.kind === 'city' ? 'cities' : 'landmarks'} only`
+                      : 'all locations'}
                 </span>
               )}
             </div>
@@ -453,7 +576,7 @@ export function SettingsPanel({ authedFetch }: Props) {
                 value={goalCountry}
                 onChange={(e) => {
                   setGoalCountry(e.target.value)
-                  setGoalCity('')
+                  setGoalScope('')
                 }}
                 className="w-56 rounded border border-zinc-300 px-2 py-1 text-sm"
               >
@@ -465,13 +588,13 @@ export function SettingsPanel({ authedFetch }: Props) {
                 ))}
               </select>
               <select
-                value={goalCity}
-                onChange={(e) => setGoalCity(e.target.value)}
+                value={goalScope}
+                onChange={(e) => setGoalScope(e.target.value)}
                 disabled={!goalCountry}
-                className="w-40 rounded border border-zinc-300 px-2 py-1 text-sm disabled:bg-zinc-50 disabled:text-zinc-400"
+                className="w-56 rounded border border-zinc-300 px-2 py-1 text-sm disabled:bg-zinc-50 disabled:text-zinc-400"
                 title={
                   goalCountry
-                    ? `Narrow to one city in ${goalCountry}`
+                    ? `Narrow scope within ${goalCountry}`
                     : 'Pick a country first'
                 }
               >
@@ -479,10 +602,20 @@ export function SettingsPanel({ authedFetch }: Props) {
                   <option value="">(pick country first)</option>
                 ) : (
                   <>
-                    <option value="">(country-level)</option>
-                    {goalCitiesForCountry.map((n) => (
-                      <option key={n} value={n}>
-                        {n}
+                    <option value="">All locations</option>
+                    <option value="k:city">All cities</option>
+                    <option value="k:landmark">All landmarks</option>
+                    {locationsForCountry.length > 0 && (
+                      <option disabled value="__sep__">
+                        ──────────
+                      </option>
+                    )}
+                    {locationsForCountry.map((loc) => (
+                      <option
+                        key={`${loc.kind}:${loc.name}`}
+                        value={`n:${loc.name}`}
+                      >
+                        {loc.name} ({loc.kind})
                       </option>
                     ))}
                   </>

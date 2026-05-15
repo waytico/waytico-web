@@ -173,8 +173,13 @@ export function WorkersPanel({ authedFetch }: Props) {
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {workers.map((w) => (
+        // Collector lives in its own Collector control panel above —
+        // here we only render the AI workers (cleanup + classify),
+        // half-width each so they sit side-by-side on a desktop.
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {workers
+            .filter((w) => w.kind !== 'collector')
+            .map((w) => (
             <div
               key={w.kind}
               className="rounded-lg border border-zinc-200 bg-white p-4"
