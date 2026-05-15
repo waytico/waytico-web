@@ -20,7 +20,9 @@ interface TargetRow {
   country: string
   name: string
   kind: 'city' | 'landmark'
-  weight: number
+  country_score: number
+  location_score: number
+  priority: number
   target_count: number
   collected_count: number
   exhausted: boolean
@@ -175,7 +177,8 @@ export function TargetsPanel({ authedFetch }: Props) {
                 <th className="px-3 py-2">Country</th>
                 <th className="px-3 py-2">Name</th>
                 <th className="px-3 py-2">Kind</th>
-                <th className="px-3 py-2">Weight</th>
+                <th className="px-3 py-2" title="country_score × location_score">Priority</th>
+                <th className="px-3 py-2" title="Country score · Location score (both 0–100)">Scores</th>
                 <th className="px-3 py-2">Progress</th>
                 <th className="px-3 py-2">Last attempt</th>
                 <th className="px-3 py-2">State</th>
@@ -188,7 +191,10 @@ export function TargetsPanel({ authedFetch }: Props) {
                   <td className="px-3 py-2">{row.country}</td>
                   <td className="px-3 py-2">{row.name}</td>
                   <td className="px-3 py-2">{row.kind}</td>
-                  <td className="px-3 py-2">{row.weight}</td>
+                  <td className="px-3 py-2 font-mono">{row.priority}</td>
+                  <td className="px-3 py-2 text-xs text-zinc-500">
+                    {row.country_score} · {row.location_score}
+                  </td>
                   <td className="px-3 py-2 text-zinc-700">
                     {row.collected_count} / {row.target_count}
                   </td>
@@ -273,8 +279,7 @@ interface GeneratorState {
   totalCountries: number
   processedCountries: number
   currentCountry: string | null
-  citiesAdded: number
-  landmarksAdded: number
+  locationsAdded: number
   errors: Array<{ country: string; message: string }>
   fatalError: string | null
 }
@@ -392,7 +397,7 @@ function GenerateButton({
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
         Generating · {state.processedCountries}/{total}
         {state.currentCountry ? ` · ${state.currentCountry}` : ''} · +
-        {state.citiesAdded + state.landmarksAdded} rows
+        {state.locationsAdded} rows
         <button
           type="button"
           onClick={cancel}
@@ -420,7 +425,7 @@ function GenerateButton({
           state.status === 'cancelled' ||
           state.status === 'failed') && (
           <span className="text-xs text-zinc-500">
-            Last run: {state.status} · +{state.citiesAdded + state.landmarksAdded}
+            Last run: {state.status} · +{state.locationsAdded}
             {state.errors.length > 0 ? ` · ${state.errors.length} errors` : ''}
           </span>
         )}
