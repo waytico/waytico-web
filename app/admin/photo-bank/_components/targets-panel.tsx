@@ -75,11 +75,6 @@ export function TargetsPanel({ authedFetch }: Props) {
   const [countries, setCountries] = useState<CountryEntry[]>([])
   const [citiesForCountry, setCitiesForCountry] = useState<string[]>([])
 
-  // Bulk-bar local controls.
-  const [bulkValue, setBulkValue] = useState('')
-  const [bulkMode, setBulkMode] = useState<'set' | 'add'>('set')
-  const [bulkBusy, setBulkBusy] = useState(false)
-
   // Inline-edit state for the Goal column.
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
@@ -213,51 +208,15 @@ export function TargetsPanel({ authedFetch }: Props) {
     [editingValue, patch],
   )
 
-  const bulkApply = useCallback(
-    async (patchBody: Record<string, unknown>) => {
-      setBulkBusy(true)
-      setError(null)
-      try {
-        const filter: Record<string, string> = {}
-        if (filterCountry) filter.country = filterCountry
-        const res = await authedFetch(
-          `${API_URL}/api/admin/photo-bank/targets/bulk`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filter, patch: patchBody }),
-          },
-        )
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        setRefreshTick((t) => t + 1)
-      } catch (err) {
-        setError((err as Error)?.message || 'bulk update failed')
-      } finally {
-        setBulkBusy(false)
-      }
-    },
-    [authedFetch, filterCountry],
-  )
-
-  const applyBulkGoal = useCallback(() => {
-    const n = parseInt(bulkValue, 10)
-    if (!Number.isFinite(n)) return
-    bulkApply(
-      bulkMode === 'set' ? { target_count_set: n } : { target_count_delta: n },
-    )
-  }, [bulkApply, bulkValue, bulkMode])
-
   const toggleSort = useCallback(() => {
     setSort((s) => (s === 'last_attempt' ? 'priority' : 'last_attempt'))
     setPage(1)
   }, [])
 
-  const bulkBarVisible = filterCountry !== ''
-
   return (
     <div>
       <header className="mb-3">
-        <h1 className="mb-2 text-lg font-medium">Photo bank — targets</h1>
+        <h1 className="mb-2 text-lg font-medium">Photo bank — locations</h1>
         <div className="flex items-center gap-2 text-sm">
           <CountryDropdown
             value={country}
@@ -302,45 +261,13 @@ export function TargetsPanel({ authedFetch }: Props) {
 
       <div className="mb-2 flex items-center justify-between text-sm text-zinc-500">
         <span>
-          {totalCount} targets · page {page} of {Math.max(1, totalPages)}
+          {totalCount} locations · page {page} of {Math.max(1, totalPages)}
         </span>
         <span className="text-xs">
           <span className="mr-1 inline-block h-3 w-3 rounded-sm border border-rose-300 bg-rose-50 align-middle" />
           red rows = exhausted (no more photos available from Wikimedia)
         </span>
       </div>
-
-      {bulkBarVisible && (
-        <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-sky-300 bg-sky-50 px-3 py-2 text-sm text-sky-900">
-          <span className="font-medium">
-            Bulk · {totalCount} filtered row{totalCount === 1 ? '' : 's'}
-          </span>
-          <select
-            value={bulkMode}
-            onChange={(e) => setBulkMode(e.target.value as 'set' | 'add')}
-            className="rounded border border-sky-300 bg-white px-2 py-1 text-sm"
-          >
-            <option value="set">Set goal</option>
-            <option value="add">Add to goal</option>
-          </select>
-          <input
-            type="number"
-            value={bulkValue}
-            onChange={(e) => setBulkValue(e.target.value)}
-            placeholder={bulkMode === 'set' ? '1–1000' : '±'}
-            className="w-24 rounded border border-sky-300 px-2 py-1 text-sm"
-          />
-          <button
-            type="button"
-            onClick={applyBulkGoal}
-            disabled={bulkBusy || bulkValue.trim() === ''}
-            className="rounded border border-sky-400 bg-white px-3 py-1 text-sm hover:bg-sky-100 disabled:opacity-50"
-          >
-            Apply to {totalCount}
-          </button>
-          {bulkBusy && <Loader2 className="h-4 w-4 animate-spin" />}
-        </div>
-      )}
 
       {error && (
         <div className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -354,7 +281,7 @@ export function TargetsPanel({ authedFetch }: Props) {
         </div>
       ) : rows.length === 0 ? (
         <div className="rounded border border-zinc-200 bg-zinc-50 px-3 py-4 text-sm text-zinc-500">
-          No targets match. Pick a country and press <strong>Top up</strong> to
+          No locations match. Pick a country and press <strong>Top up</strong> to
           ask the model for more places — runs in the background.
         </div>
       ) : (
@@ -409,7 +336,7 @@ export function TargetsPanel({ authedFetch }: Props) {
                   }
                   title={
                     row.exhausted
-                      ? 'Exhausted — Wikimedia has no more photos for this target'
+                      ? 'Exhausted — Wikimedia has no more photos for this location'
                       : undefined
                   }
                 >
