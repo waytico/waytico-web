@@ -6,8 +6,9 @@
  * One tab that bundles the two operational concerns of the global
  * photo bank pipeline:
  *
- *   - Workers (top) — live status of the collector + ai_worker
- *     processes with pause/resume and "Reclassify all" action.
+ *   - Workers (top) — live status of the collector + ai_cleanup +
+ *     ai_classify processes with pause/resume and "Reclassify all"
+ *     action.
  *   - Targets (bottom) — the per-country plan: which cities and
  *     landmarks to fetch, weights, progress, and the "Generate
  *     targets" generator entry point.

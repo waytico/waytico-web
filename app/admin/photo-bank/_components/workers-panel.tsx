@@ -6,8 +6,8 @@
  * Reads /api/admin/photo-bank/workers, renders one tile per worker
  * with status + last_tick_at + counters + pause/resume button. Also
  * exposes the "Reclassify all" action which flips ai_processed=FALSE
- * across all eligible rows — the AI worker picks them up automatically
- * on its next tick.
+ * (and cleanup_processed=FALSE) across all eligible rows — the
+ * ai_cleanup / ai_classify workers pick them up on their next tick.
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -18,13 +18,19 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'https://waytico-backend.onrender.com'
 
 interface WorkerRow {
-  kind: 'collector' | 'ai_worker'
+  kind: 'collector' | 'ai_cleanup' | 'ai_classify'
   status: 'running' | 'paused' | 'idle'
   last_tick_at: string | null
   ticks_total: number
   photos_collected: number
   photos_ai_processed: number
   photos_ai_failed: number
+}
+
+const WORKER_LABEL: Record<WorkerRow['kind'], string> = {
+  collector: 'Collector',
+  ai_cleanup: 'Cleanup (Pass-2)',
+  ai_classify: 'Classify (Pass-1)',
 }
 
 interface Props {
@@ -153,15 +159,15 @@ export function WorkersPanel({ authedFetch }: Props) {
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {workers.map((w) => (
             <div
               key={w.kind}
               className="rounded-lg border border-zinc-200 bg-white p-4"
             >
               <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-base font-semibold capitalize">
-                  {w.kind.replace('_', ' ')}
+                <h2 className="text-base font-semibold">
+                  {WORKER_LABEL[w.kind] ?? w.kind}
                 </h2>
                 <span
                   className={
@@ -191,7 +197,7 @@ export function WorkersPanel({ authedFetch }: Props) {
                     <dd className="text-zinc-800">{w.photos_collected}</dd>
                   </div>
                 )}
-                {w.kind === 'ai_worker' && (
+                {(w.kind === 'ai_cleanup' || w.kind === 'ai_classify') && (
                   <>
                     <div className="flex justify-between">
                       <dt className="text-zinc-500">AI processed</dt>

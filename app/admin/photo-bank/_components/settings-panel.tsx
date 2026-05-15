@@ -162,59 +162,64 @@ export function SettingsPanel({ authedFetch }: Props) {
   }, [authedFetch, draft, saving])
 
   return (
-    <div>
-      <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-lg font-medium">Photo bank — collector settings</h1>
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving || loading || !draft}
-          className="rounded border border-emerald-400 bg-emerald-50 px-3 py-1 text-sm text-emerald-900 hover:bg-emerald-100 disabled:opacity-50"
-        >
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-      </header>
+    <details className="rounded-lg border border-zinc-200 bg-white">
+      <summary className="cursor-pointer px-4 py-3 text-lg font-medium text-zinc-900">
+        Photo bank — collector settings
+        <span className="ml-2 text-xs font-normal text-zinc-400">
+          — collector pacing, rarely changed
+        </span>
+      </summary>
 
-      {error && (
-        <div className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {error}
+      <div className="border-t border-zinc-200 px-4 py-3">
+        <div className="mb-3 flex justify-end">
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving || loading || !draft}
+            className="rounded border border-emerald-400 bg-emerald-50 px-3 py-1 text-sm text-emerald-900 hover:bg-emerald-100 disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
         </div>
-      )}
-      {saved && !error && (
-        <div className="mb-3 rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-          Saved. Changes take effect on the collector&apos;s next cycle.
-        </div>
-      )}
 
-      {loading || !draft ? (
-        <div className="flex h-40 items-center justify-center text-zinc-500">
-          <Loader2 className="h-5 w-5 animate-spin" />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {FIELDS.map((f) => (
-            <label
-              key={f.key}
-              className="rounded-lg border border-zinc-200 bg-white p-3"
-            >
-              <div className="mb-1 text-sm font-medium text-zinc-800">
-                {f.label}
-              </div>
-              <input
-                type="number"
-                min={f.min}
-                max={f.max}
-                value={draft[f.key]}
-                onChange={(e) => setField(f.key, e.target.value)}
-                className="w-full rounded border border-zinc-300 px-2 py-1 text-sm"
-              />
-              <div className="mt-1 text-xs text-zinc-500">
-                {f.help} Range {f.min}–{f.max}.
-              </div>
-            </label>
-          ))}
-        </div>
-      )}
-    </div>
+        {error && (
+          <div className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            {error}
+          </div>
+        )}
+        {saved && !error && (
+          <div className="mb-3 rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+            Saved. Changes take effect on the collector&apos;s next cycle.
+          </div>
+        )}
+
+        {loading || !draft ? (
+          <div className="flex h-32 items-center justify-center text-zinc-500">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+            {FIELDS.map((f) => (
+              <label key={f.key} className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-zinc-800">
+                  {f.label}
+                </span>
+                <input
+                  type="number"
+                  min={f.min}
+                  max={f.max}
+                  value={draft[f.key]}
+                  onChange={(e) => setField(f.key, e.target.value)}
+                  className="w-full rounded border border-zinc-300 px-2 py-1 text-sm"
+                />
+                <span className="text-xs leading-snug text-zinc-500">
+                  {f.help} Range {f.min}–{f.max}.
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+    </details>
   )
 }
