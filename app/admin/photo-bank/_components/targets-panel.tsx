@@ -66,7 +66,6 @@ export function TargetsPanel({ authedFetch }: Props) {
   const [bulkValue, setBulkValue] = useState('')
   const [bulkMode, setBulkMode] = useState<'set' | 'add'>('set')
   const [bulkBusy, setBulkBusy] = useState(false)
-  const [csvBusy, setCsvBusy] = useState(false)
 
   // Inline-edit state for the Goal column.
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -247,31 +246,6 @@ export function TargetsPanel({ authedFetch }: Props) {
     )
   }, [bulkApply, bulkValue, bulkMode])
 
-  const exportCsv = useCallback(async () => {
-    setCsvBusy(true)
-    setError(null)
-    try {
-      const res = await authedFetch(
-        `${API_URL}/api/admin/photo-bank/targets?${queryString}`,
-        { headers: { Accept: 'text/csv' } },
-      )
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'photo-bank-targets.csv'
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
-    } catch (err) {
-      setError((err as Error)?.message || 'export failed')
-    } finally {
-      setCsvBusy(false)
-    }
-  }, [authedFetch, queryString])
-
   const toggleSort = useCallback(() => {
     setSort((s) => (s === 'last_attempt' ? 'priority' : 'last_attempt'))
     setPage(1)
@@ -286,14 +260,9 @@ export function TargetsPanel({ authedFetch }: Props) {
 
   return (
     <div>
-      <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <header className="mb-3 flex items-center justify-between gap-2">
         <h1 className="text-lg font-medium">Photo bank — targets</h1>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <GeneratorControls
-            authedFetch={authedFetch}
-            countries={countries}
-            onAfter={() => setRefreshTick((t) => t + 1)}
-          />
+        <div className="flex items-center gap-2 text-sm">
           <select
             value={country}
             onChange={(e) => {
@@ -310,23 +279,29 @@ export function TargetsPanel({ authedFetch }: Props) {
               </option>
             ))}
           </select>
-          {country && targetsForCountry.length > 0 && (
-            <select
-              value={targetName}
-              onChange={(e) => {
-                setTargetName(e.target.value)
-                setPage(1)
-              }}
-              className="rounded border border-zinc-300 px-2 py-1 text-sm"
-            >
-              <option value="">All targets in {country}</option>
-              {targetsForCountry.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          )}
+          <select
+            value={targetName}
+            onChange={(e) => {
+              setTargetName(e.target.value)
+              setPage(1)
+            }}
+            disabled={!country}
+            className="rounded border border-zinc-300 px-2 py-1 text-sm disabled:bg-zinc-50 disabled:text-zinc-400"
+            title={country ? `Targets in ${country}` : 'Pick a country first'}
+          >
+            {!country ? (
+              <option value="">Pick a country first</option>
+            ) : (
+              <>
+                <option value="">All targets in {country}</option>
+                {targetsForCountry.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </>
+            )}
+          </select>
           <input
             placeholder="Name contains…"
             value={nameLike}
@@ -348,21 +323,11 @@ export function TargetsPanel({ authedFetch }: Props) {
             <option value="city">Cities</option>
             <option value="landmark">Landmarks</option>
           </select>
-          <button
-            type="button"
-            onClick={exportCsv}
-            disabled={csvBusy}
-            className="rounded border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50 disabled:opacity-50"
-          >
-            {csvBusy ? 'Exporting…' : 'Export CSV'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setRefreshTick((t) => t + 1)}
-            className="rounded border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50"
-          >
-            Refresh
-          </button>
+          <GeneratorControls
+            authedFetch={authedFetch}
+            countries={countries}
+            onAfter={() => setRefreshTick((t) => t + 1)}
+          />
         </div>
       </header>
 
@@ -620,6 +585,16 @@ function GeneratorControls({
 
   const start = useCallback(async () => {
     if (busy) return
+    // Safety: a full sweep across all countries is expensive (1 + N LLM
+    // calls, minutes of work). Confirm before firing. Single-country
+    // top-up is cheap (one LLM call) — no confirm needed.
+    if (
+      scope === '' &&
+      !confirm(
+        'Run a full top-up across all countries? This makes ~1 + N LLM calls and takes a few minutes.',
+      )
+    )
+      return
     setBusy(true)
     setErr(null)
     const n = parseInt(extra, 10)
@@ -683,41 +658,58 @@ function GeneratorControls({
     }
   }, [authedFetch, busy])
 
+  // Compact running pill — keeps the single-row layout intact during a
+  // long generation. Full progress lives in the tooltip.
   if (state?.status === 'running') {
     const total = state.totalCountries || 1
+    const title =
+      `Top up running · ${state.processedCountries}/${total}` +
+      (state.currentCountry ? ` · ${state.currentCountry}` : '') +
+      ` · +${state.locationsAdded} rows`
     return (
-      <span className="inline-flex items-center gap-2 rounded border border-amber-300 bg-amber-50 px-3 py-1 text-sm text-amber-900">
+      <span
+        className="inline-flex items-center gap-1 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-sm text-amber-900"
+        title={title}
+      >
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        Top-up · {state.processedCountries}/{total}
-        {state.currentCountry ? ` · ${state.currentCountry}` : ''} · +
-        {state.locationsAdded} rows
+        {state.processedCountries}/{total}
         <button
           type="button"
           onClick={cancel}
           disabled={busy}
-          className="ml-1 rounded border border-amber-300 px-2 py-0.5 text-xs hover:bg-amber-100 disabled:opacity-50"
+          className="ml-1 rounded border border-amber-300 px-1 text-xs hover:bg-amber-100 disabled:opacity-50"
+          title="Cancel run"
         >
-          Cancel
+          ×
         </button>
       </span>
     )
   }
 
+  // Last-run summary lives in the button tooltip — no visible text
+  // eating space in the filter row.
+  const lastRunTitle =
+    state && state.status !== 'idle'
+      ? `Last run: ${state.status} · +${state.locationsAdded}` +
+        (state.errors.length > 0 ? ` · ${state.errors.length} errors` : '') +
+        (state.fatalError ? ` · ${state.fatalError}` : '')
+      : 'Top up targets — ask the model for more places (all countries or one)'
+
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <span className="relative inline-flex items-center gap-2">
       <button
         type="button"
         onClick={() => {
           setOpen((o) => !o)
           setErr(null)
         }}
+        title={lastRunTitle}
         className="rounded border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50"
       >
         Top up targets
       </button>
-
       {open && (
-        <div className="flex flex-wrap items-center gap-2 rounded border border-zinc-300 bg-zinc-50 px-2 py-1">
+        <div className="absolute right-0 top-full z-10 mt-1 flex items-center gap-2 whitespace-nowrap rounded border border-zinc-300 bg-white px-2 py-2 shadow-md">
           <select
             value={scope}
             onChange={(e) => setScope(e.target.value)}
@@ -747,20 +739,9 @@ function GeneratorControls({
           >
             Top up
           </button>
+          {err && <span className="ml-1 text-xs text-rose-700">{err}</span>}
         </div>
       )}
-
-      {state &&
-        (state.status === 'completed' ||
-          state.status === 'cancelled' ||
-          state.status === 'failed') && (
-          <span className="text-xs text-zinc-500">
-            Last run: {state.status} · +{state.locationsAdded}
-            {state.errors.length > 0 ? ` · ${state.errors.length} errors` : ''}
-            {state.fatalError ? ` · ${state.fatalError}` : ''}
-          </span>
-        )}
-      {err && <span className="text-xs text-rose-700">{err}</span>}
-    </div>
+    </span>
   )
 }
