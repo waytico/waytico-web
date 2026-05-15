@@ -33,6 +33,15 @@ const WORKER_LABEL: Record<WorkerRow['kind'], string> = {
   ai_classify: 'Classify (Pass-1)',
 }
 
+// Fixed left-to-right card order: collector → cleanup (Pass-2) →
+// classify (Pass-1). The backend lists rows ORDER BY kind (alphabetical),
+// so we re-sort on the client.
+const WORKER_ORDER: WorkerRow['kind'][] = [
+  'collector',
+  'ai_cleanup',
+  'ai_classify',
+]
+
 interface Props {
   authedFetch: AuthedFetch
 }
@@ -63,7 +72,12 @@ export function WorkersPanel({ authedFetch }: Props) {
       })
       .then((data) => {
         if (cancelled) return
-        setWorkers(data.workers)
+        setWorkers(
+          [...data.workers].sort(
+            (a, b) =>
+              WORKER_ORDER.indexOf(a.kind) - WORKER_ORDER.indexOf(b.kind),
+          ),
+        )
         setError(null)
       })
       .catch((err) => {
