@@ -78,6 +78,7 @@ export function TargetsPanel({ authedFetch }: Props) {
   // Inline-edit state for the Goal column.
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // "Specific country" = neither empty nor the All-countries sentinel.
   const isSpecificCountry = country !== '' && country !== ALL_COUNTRIES
@@ -197,6 +198,38 @@ export function TargetsPanel({ authedFetch }: Props) {
     setEditingId(null)
     setEditingValue('')
   }, [])
+
+  // Hard-delete a single target row. Confirms first because there is
+  // no undo path on the backend; on success refreshTick bump rerenders
+  // the table. Already-collected photos survive (ON DELETE SET NULL).
+  const deleteRow = useCallback(
+    async (row: TargetRow) => {
+      if (
+        !window.confirm(
+          `Delete "${row.name}" (${row.kind}) in ${row.country}?\n\nAlready-collected photos stay; only the targeting record is removed.`,
+        )
+      ) {
+        return
+      }
+      setDeletingId(row.id)
+      try {
+        const res = await authedFetch(
+          `${API_URL}/api/admin/photo-bank/targets/${row.id}`,
+          { method: 'DELETE' },
+        )
+        if (!res.ok && res.status !== 404) {
+          setError(`Delete failed: HTTP ${res.status}`)
+          return
+        }
+        setRefreshTick((t) => t + 1)
+      } catch (e: any) {
+        setError(`Delete failed: ${e?.message ?? 'unknown'}`)
+      } finally {
+        setDeletingId(null)
+      }
+    },
+    [authedFetch],
+  )
   const commitEditGoal = useCallback(
     (row: TargetRow) => {
       const n = parseInt(editingValue, 10)
@@ -307,6 +340,9 @@ export function TargetsPanel({ authedFetch }: Props) {
                     {sort === 'last_attempt' ? ' ▲' : ''}
                   </button>
                 </th>
+                <th className="px-3 py-2 text-right" title="Delete this location (asks for confirmation)">
+                  <span className="sr-only">Delete</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -364,6 +400,18 @@ export function TargetsPanel({ authedFetch }: Props) {
                     {row.last_attempt_at
                       ? new Date(row.last_attempt_at).toLocaleString()
                       : '—'}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => void deleteRow(row)}
+                      disabled={deletingId === row.id}
+                      title={`Delete ${row.name}`}
+                      className="rounded px-2 py-0.5 text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                      aria-label={`Delete ${row.name}`}
+                    >
+                      {deletingId === row.id ? '…' : '×'}
+                    </button>
                   </td>
                 </tr>
               ))}
