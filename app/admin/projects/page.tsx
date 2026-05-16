@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { Loader2 } from 'lucide-react'
+import { Loader2, FileText, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { NotifyToggle } from '../_components/notify-toggle'
 
@@ -31,10 +31,16 @@ interface AdminProject {
   deleted_at: string | null
   viewed_first_time_at: string | null
   activated_at: string | null
+  pipeline_mode: string | null
   owner_id: string | null
   owner_email: string | null
   owner_name: string | null
   owner_business_name: string | null
+  client_id: string | null
+  client_nickname: string | null
+  client_name: string | null
+  client_email: string | null
+  brief_text: string | null
 }
 
 const STATUS_OPTIONS = ['', 'draft', 'quoted', 'active', 'completed', 'archived']
@@ -47,6 +53,28 @@ function fmtDate(iso: string | null | undefined): string {
     month: 'short',
     day: 'numeric',
   })
+}
+
+// 6-char base36 suffix appended by generateSlug() on the backend.
+// `last segment after the final dash` covers every slug shape we
+// generate; if the slug somehow has no dash, falls back to the whole
+// string so the row stays identifiable.
+function slugCode(slug: string | null): string {
+  if (!slug) return '—'
+  const idx = slug.lastIndexOf('-')
+  const tail = idx >= 0 ? slug.slice(idx + 1) : slug
+  return tail.toUpperCase()
+}
+
+function clientLabel(p: AdminProject): string {
+  return p.client_nickname || p.client_name || p.client_email || '—'
+}
+
+function modePill(mode: string | null): string {
+  if (mode === 'thin') return 'bg-rose-100 text-rose-800'
+  if (mode === 'rich') return 'bg-emerald-100 text-emerald-800'
+  if (mode === 'mixed') return 'bg-sky-100 text-sky-800'
+  return 'bg-zinc-100 text-zinc-500'
 }
 
 function statusPill(status: string | null, deleted: boolean): string {
@@ -82,6 +110,7 @@ export default function AdminProjectsPage() {
   const [limit, setLimit] = useState<number>(200)
   const [search, setSearch] = useState('')
   const [restoringId, setRestoringId] = useState<string | null>(null)
+  const [briefViewing, setBriefViewing] = useState<AdminProject | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -127,6 +156,9 @@ export default function AdminProjectsPage() {
         p.owner_email,
         p.owner_name,
         p.owner_business_name,
+        p.client_nickname,
+        p.client_name,
+        p.client_email,
       ]
         .filter(Boolean)
         .join(' ')
@@ -281,21 +313,28 @@ export default function AdminProjectsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs uppercase tracking-wider text-zinc-500">
-                <th className="px-4 py-2 text-left font-normal">Title</th>
-                <th className="px-4 py-2 text-left font-normal">Status</th>
-                <th className="px-4 py-2 text-left font-normal">Owner</th>
-                <th className="px-4 py-2 text-left font-normal">Country</th>
-                <th className="px-4 py-2 text-right font-normal">Created</th>
-                <th className="px-4 py-2 text-right font-normal">Activated</th>
-                <th className="px-4 py-2 text-right font-normal">Actions</th>
+                <th className="px-3 py-2 text-left font-normal">Code</th>
+                <th className="px-3 py-2 text-left font-normal">Title</th>
+                <th className="px-3 py-2 text-left font-normal">Owner</th>
+                <th className="px-3 py-2 text-left font-normal">Client</th>
+                <th className="px-3 py-2 text-left font-normal">Status</th>
+                <th className="px-3 py-2 text-left font-normal">Viewed</th>
+                <th className="px-3 py-2 text-left font-normal">Mode</th>
+                <th className="px-3 py-2 text-right font-normal">Created</th>
+                <th className="px-3 py-2 text-right font-normal">Activated</th>
+                <th className="px-3 py-2 text-right font-normal">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {filtered.map((p) => {
                 const deleted = !!p.deleted_at
+                const hasBrief = !!(p.brief_text && p.brief_text.trim())
                 return (
                   <tr key={p.id} className="hover:bg-zinc-50">
-                    <td className="px-4 py-2">
+                    <td className="px-3 py-2 font-mono text-xs text-zinc-700">
+                      {slugCode(p.slug)}
+                    </td>
+                    <td className="px-3 py-2">
                       <div className="font-medium text-zinc-900">
                         {titleLabel(p)}
                       </div>
@@ -303,7 +342,15 @@ export default function AdminProjectsPage() {
                         <div className="text-xs text-zinc-500">{p.slug}</div>
                       )}
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-3 py-2 text-zinc-900">{ownerLabel(p)}</td>
+                    <td className="px-3 py-2 text-zinc-900">
+                      {p.client_id ? (
+                        clientLabel(p)
+                      ) : (
+                        <span className="text-zinc-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
                       <span
                         className={
                           'inline-block rounded-full px-2 py-0.5 text-xs ' +
@@ -318,18 +365,48 @@ export default function AdminProjectsPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-zinc-900">{ownerLabel(p)}</td>
-                    <td className="px-4 py-2 text-zinc-700">
-                      {p.country || p.region || '—'}
+                    <td className="px-3 py-2 text-xs">
+                      {p.viewed_first_time_at ? (
+                        <span className="text-emerald-700">
+                          ✓ {fmtDate(p.viewed_first_time_at)}
+                        </span>
+                      ) : (
+                        <span className="text-zinc-400">—</span>
+                      )}
                     </td>
-                    <td className="px-4 py-2 text-right text-xs text-zinc-500">
+                    <td className="px-3 py-2">
+                      <span
+                        className={
+                          'inline-block rounded-full px-2 py-0.5 text-xs ' +
+                          modePill(p.pipeline_mode)
+                        }
+                      >
+                        {p.pipeline_mode || '—'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-right text-xs text-zinc-500">
                       {fmtDate(p.created_at)}
                     </td>
-                    <td className="px-4 py-2 text-right text-xs text-zinc-500">
+                    <td className="px-3 py-2 text-right text-xs text-zinc-500">
                       {fmtDate(p.activated_at)}
                     </td>
-                    <td className="px-4 py-2 text-right">
+                    <td className="px-3 py-2 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => hasBrief && setBriefViewing(p)}
+                          disabled={!hasBrief}
+                          title={hasBrief ? 'View brief' : 'No brief'}
+                          className={
+                            'inline-flex items-center gap-1 rounded border px-2 py-1 text-xs ' +
+                            (hasBrief
+                              ? 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50'
+                              : 'border-zinc-200 bg-zinc-50 text-zinc-300 cursor-not-allowed')
+                          }
+                        >
+                          <FileText className="h-3 w-3" />
+                          Brief
+                        </button>
                         {p.slug && (
                           <a
                             href={`https://waytico.com/t/${p.slug}`}
@@ -362,6 +439,39 @@ export default function AdminProjectsPage() {
           </table>
         )}
       </section>
+
+      {briefViewing && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setBriefViewing(null)}
+        >
+          <div
+            className="max-h-[80vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+              <div>
+                <div className="text-sm font-medium text-zinc-900">
+                  Brief — {titleLabel(briefViewing)}
+                </div>
+                <div className="font-mono text-xs text-zinc-500">
+                  {slugCode(briefViewing.slug)}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBriefViewing(null)}
+                className="rounded p-1 text-zinc-500 hover:bg-zinc-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </header>
+            <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap px-4 py-4 text-sm text-zinc-800">
+              {briefViewing.brief_text || ''}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
