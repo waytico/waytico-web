@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { Loader2, FileText, X, ExternalLink, ChevronUp, ChevronDown } from 'lucide-react'
+import { Loader2, FileText, X, ExternalLink, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { NotifyToggle } from '../_components/notify-toggle'
 
@@ -81,10 +81,6 @@ function slugCode(slug: string | null): string {
   return tail.toUpperCase()
 }
 
-function clientLabel(p: AdminProject): string {
-  return p.client_nickname || p.client_name || p.client_email || '—'
-}
-
 function statusPill(status: string | null, deleted: boolean): string {
   let base = 'bg-zinc-100 text-zinc-700'
   if (status === 'draft' || status === 'quoted')
@@ -111,7 +107,6 @@ function titleLabel(p: AdminProject): string {
 type SortableKey =
   | 'title'
   | 'owner'
-  | 'client'
   | 'status'
   | 'language'
   | 'created_at'
@@ -149,12 +144,15 @@ function SortableTh({
         }
       >
         <span>{label}</span>
-        {active &&
-          (sortDir === 'asc' ? (
+        {active ? (
+          sortDir === 'asc' ? (
             <ChevronUp className="h-3 w-3" />
           ) : (
             <ChevronDown className="h-3 w-3" />
-          ))}
+          )
+        ) : (
+          <ChevronsUpDown className="h-3 w-3 opacity-30" />
+        )}
       </button>
     </th>
   )
@@ -177,7 +175,6 @@ export default function AdminProjectsPage() {
   type SortKey =
     | 'title'
     | 'owner'
-    | 'client'
     | 'status'
     | 'language'
     | 'created_at'
@@ -257,11 +254,6 @@ export default function AdminProjectsPage() {
           return (p.title || p.slug || '').toLowerCase()
         case 'owner':
           return ownerLabel(p).toLowerCase()
-        case 'client':
-          // Empty client sorts after non-empty regardless of direction:
-          // we want the "—" rows clustered at one end of meaningful data,
-          // not interleaved.
-          return p.client_id ? clientLabel(p).toLowerCase() : '\uffff'
         case 'status':
           return (p.status || '\uffff').toLowerCase()
         case 'language':
@@ -450,14 +442,6 @@ export default function AdminProjectsPage() {
                   className="px-2 py-2 whitespace-nowrap"
                 />
                 <SortableTh
-                  label="Client"
-                  k="client"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onClick={toggleSort}
-                  className="px-2 py-2 whitespace-nowrap"
-                />
-                <SortableTh
                   label="Status"
                   k="status"
                   sortKey={sortKey}
@@ -500,13 +484,6 @@ export default function AdminProjectsPage() {
                       </div>
                     </td>
                     <td className="px-2 py-2 text-zinc-900 whitespace-nowrap">{ownerLabel(p)}</td>
-                    <td className="px-2 py-2 text-zinc-900 whitespace-nowrap">
-                      {p.client_id ? (
-                        clientLabel(p)
-                      ) : (
-                        <span className="text-zinc-400">—</span>
-                      )}
-                    </td>
                     <td className="px-2 py-2 whitespace-nowrap">
                       <span
                         className={
