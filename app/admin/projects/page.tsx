@@ -84,13 +84,6 @@ function clientLabel(p: AdminProject): string {
   return p.client_nickname || p.client_name || p.client_email || '—'
 }
 
-function modePill(mode: string | null): string {
-  if (mode === 'thin') return 'bg-rose-100 text-rose-800'
-  if (mode === 'rich') return 'bg-emerald-100 text-emerald-800'
-  if (mode === 'mixed') return 'bg-sky-100 text-sky-800'
-  return 'bg-zinc-100 text-zinc-500'
-}
-
 function statusPill(status: string | null, deleted: boolean): string {
   let base = 'bg-zinc-100 text-zinc-700'
   if (status === 'draft' || status === 'quoted')
@@ -332,10 +325,7 @@ export default function AdminProjectsPage() {
                 <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Owner</th>
                 <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Client</th>
                 <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Status</th>
-                <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Viewed</th>
-                <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Mode</th>
                 <th className="px-2 py-2 text-right font-normal whitespace-nowrap">Created</th>
-                <th className="px-2 py-2 text-right font-normal whitespace-nowrap">Activated</th>
                 <th className="px-2 py-2 text-right font-normal whitespace-nowrap">Actions</th>
               </tr>
             </thead>
@@ -376,39 +366,11 @@ export default function AdminProjectsPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-2 py-2 text-xs whitespace-nowrap">
-                      {p.viewed_first_time_at ? (
-                        <span
-                          className="text-emerald-700"
-                          title={fmtDate(p.viewed_first_time_at)}
-                        >
-                          ✓ {fmtDateCompact(p.viewed_first_time_at)}
-                        </span>
-                      ) : (
-                        <span className="text-zinc-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-2 py-2 whitespace-nowrap">
-                      <span
-                        className={
-                          'inline-block rounded-full px-2 py-0.5 text-xs ' +
-                          modePill(p.pipeline_mode)
-                        }
-                      >
-                        {p.pipeline_mode || '—'}
-                      </span>
-                    </td>
                     <td
                       className="px-2 py-2 text-right text-xs text-zinc-500 whitespace-nowrap"
                       title={fmtDate(p.created_at)}
                     >
                       {fmtDateCompact(p.created_at)}
-                    </td>
-                    <td
-                      className="px-2 py-2 text-right text-xs text-zinc-500 whitespace-nowrap"
-                      title={p.activated_at ? fmtDate(p.activated_at) : undefined}
-                    >
-                      {fmtDateCompact(p.activated_at)}
                     </td>
                     <td className="px-2 py-2 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">
