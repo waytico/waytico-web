@@ -35,6 +35,7 @@ import {
 import { AttributionPopover } from '@/components/trip/attribution-popover'
 import { PHOTO_CATEGORIES } from '@/lib/photo-categories'
 import type { ReviewPhoto, PhotoPatch } from './photo-review-card'
+import { ReviewLightbox } from './photo-review-card'
 
 function orientationOf(w?: number | null, h?: number | null): string | null {
   if (!w || !h) return null
@@ -139,6 +140,7 @@ export function PhotoDetailsModal(props: PhotoDetailsModalProps) {
   const [heroCandidate, setHeroCandidate] = useState<boolean>(
     photo.is_hero_candidate === true,
   )
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   // Re-sync local edit state if the underlying row changes (e.g. after
   // a server-side save round-trip).
@@ -193,17 +195,18 @@ export function PhotoDetailsModal(props: PhotoDetailsModalProps) {
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Photo details"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4"
-      onClick={onClose}
-    >
+    <>
       <div
-        className="relative flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Photo details"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4"
+        onClick={onClose}
       >
+        <div
+          className="relative flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-2.5">
           <h2 className="text-sm font-semibold text-zinc-800">Photo details</h2>
@@ -224,8 +227,9 @@ export function PhotoDetailsModal(props: PhotoDetailsModalProps) {
             <img
               src={photo.cdn_url}
               alt={photo.ai_description || ''}
-              className="max-h-[80vh] w-full object-contain"
+              className="max-h-[80vh] w-full cursor-zoom-in object-contain"
               draggable={false}
+              onClick={() => setLightboxOpen(true)}
             />
             <span className="absolute left-3 top-3 rounded bg-zinc-900/80 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-white">
               {photo.license}
@@ -516,5 +520,14 @@ export function PhotoDetailsModal(props: PhotoDetailsModalProps) {
         </div>
       </div>
     </div>
+
+    {lightboxOpen && (
+      <ReviewLightbox
+        url={photo.cdn_url}
+        alt={photo.ai_description || ''}
+        onClose={() => setLightboxOpen(false)}
+      />
+    )}
+    </>
   )
 }

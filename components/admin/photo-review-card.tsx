@@ -108,8 +108,9 @@ function fmtFileSize(bytes?: number | null): string | null {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-/** Fullscreen master-image lightbox. */
-function ReviewLightbox({
+/** Fullscreen master-image lightbox. Exported so the details modal can
+ *  reuse it for "click photo → fullscreen" without duplicating markup. */
+export function ReviewLightbox({
   url,
   alt,
   onClose,
@@ -153,7 +154,6 @@ function ReviewLightbox({
 
 export function PhotoReviewCard(props: PhotoReviewCardProps) {
   const { photo, focused, busy, onApprove, onDelete, onSave } = props
-  const [lightboxOpen, setLightboxOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
 
   const notClassified = photo.ai_processed === false
@@ -182,9 +182,9 @@ export function PhotoReviewCard(props: PhotoReviewCardProps) {
           src={gridSrc}
           alt={photo.ai_description || ''}
           loading="lazy"
-          className="h-full w-full cursor-zoom-in object-cover"
+          className="h-full w-full cursor-pointer object-cover"
           draggable={false}
-          onClick={() => setLightboxOpen(true)}
+          onClick={() => setDetailsOpen(true)}
         />
         <span className="absolute left-1 top-1 rounded bg-zinc-900/75 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-white">
           {photo.license}
@@ -230,8 +230,8 @@ export function PhotoReviewCard(props: PhotoReviewCardProps) {
         </span>
         <button
           type="button"
-          onClick={() => setLightboxOpen(true)}
-          aria-label="Open full size"
+          onClick={() => setDetailsOpen(true)}
+          aria-label="Open details"
           className="absolute bottom-1 left-1 rounded bg-zinc-900/65 p-1 text-white opacity-0 transition-opacity hover:bg-zinc-900/85 group-hover:opacity-100"
         >
           <Maximize2 className="h-3 w-3" />
@@ -321,14 +321,6 @@ export function PhotoReviewCard(props: PhotoReviewCardProps) {
           <Settings2 className="h-3.5 w-3.5" /> Details
         </button>
       </div>
-
-      {lightboxOpen && (
-        <ReviewLightbox
-          url={photo.cdn_url}
-          alt={photo.ai_description || ''}
-          onClose={() => setLightboxOpen(false)}
-        />
-      )}
 
       {detailsOpen && (
         <PhotoDetailsModal
