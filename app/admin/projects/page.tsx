@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { Loader2, FileText, X, ExternalLink } from 'lucide-react'
+import { Loader2, FileText, X, ExternalLink, ChevronUp, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { NotifyToggle } from '../_components/notify-toggle'
 
@@ -32,6 +32,7 @@ interface AdminProject {
   viewed_first_time_at: string | null
   activated_at: string | null
   pipeline_mode: string | null
+  language: string | null
   owner_id: string | null
   owner_email: string | null
   owner_name: string | null
@@ -107,6 +108,58 @@ function titleLabel(p: AdminProject): string {
   return p.title || p.slug || p.id.slice(0, 8)
 }
 
+type SortableKey =
+  | 'title'
+  | 'owner'
+  | 'client'
+  | 'status'
+  | 'language'
+  | 'created_at'
+
+function SortableTh({
+  label,
+  k,
+  sortKey,
+  sortDir,
+  onClick,
+  className = '',
+  align = 'left',
+}: {
+  label: string
+  k: SortableKey
+  sortKey: SortableKey
+  sortDir: 'asc' | 'desc'
+  onClick: (k: SortableKey) => void
+  className?: string
+  align?: 'left' | 'right'
+}) {
+  const active = sortKey === k
+  const alignClass = align === 'right' ? 'text-right' : 'text-left'
+  return (
+    <th className={`font-normal ${alignClass} ${className}`}>
+      <button
+        type="button"
+        onClick={() => onClick(k)}
+        className={
+          'inline-flex items-center gap-0.5 uppercase tracking-wider ' +
+          (align === 'right' ? 'justify-end ' : '') +
+          (active
+            ? 'text-zinc-900'
+            : 'text-zinc-500 hover:text-zinc-700')
+        }
+      >
+        <span>{label}</span>
+        {active &&
+          (sortDir === 'asc' ? (
+            <ChevronUp className="h-3 w-3" />
+          ) : (
+            <ChevronDown className="h-3 w-3" />
+          ))}
+      </button>
+    </th>
+  )
+}
+
 export default function AdminProjectsPage() {
   const { getToken } = useAuth()
   const [projects, setProjects] = useState<AdminProject[] | null>(null)
@@ -118,6 +171,31 @@ export default function AdminProjectsPage() {
   const [search, setSearch] = useState('')
   const [restoringId, setRestoringId] = useState<string | null>(null)
   const [briefViewing, setBriefViewing] = useState<AdminProject | null>(null)
+
+  // Sortable columns. Code (random slug suffix) and Actions are
+  // intentionally excluded — sorting them carries no meaning.
+  type SortKey =
+    | 'title'
+    | 'owner'
+    | 'client'
+    | 'status'
+    | 'language'
+    | 'created_at'
+  type SortDir = 'asc' | 'desc'
+  const [sortKey, setSortKey] = useState<SortKey>('created_at')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+
+  const toggleSort = useCallback(
+    (key: SortKey) => {
+      if (sortKey === key) {
+        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+      } else {
+        setSortKey(key)
+        setSortDir('asc')
+      }
+    },
+    [sortKey],
+  )
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -155,8 +233,8 @@ export default function AdminProjectsPage() {
   const filtered = useMemo(() => {
     if (!projects) return []
     const q = search.trim().toLowerCase()
-    if (!q) return projects
-    return projects.filter((p) => {
+    const matchSearch = (p: AdminProject) => {
+      if (!q) return true
       const hay = [
         p.title,
         p.slug,
@@ -171,8 +249,42 @@ export default function AdminProjectsPage() {
         .join(' ')
         .toLowerCase()
       return hay.includes(q)
+    }
+
+    const sortValue = (p: AdminProject): string | number => {
+      switch (sortKey) {
+        case 'title':
+          return (p.title || p.slug || '').toLowerCase()
+        case 'owner':
+          return ownerLabel(p).toLowerCase()
+        case 'client':
+          // Empty client sorts after non-empty regardless of direction:
+          // we want the "—" rows clustered at one end of meaningful data,
+          // not interleaved.
+          return p.client_id ? clientLabel(p).toLowerCase() : '\uffff'
+        case 'status':
+          return (p.status || '\uffff').toLowerCase()
+        case 'language':
+          return (p.language || '\uffff').toLowerCase()
+        case 'created_at':
+          return p.created_at ? new Date(p.created_at).getTime() : 0
+      }
+    }
+
+    const rows = projects.filter(matchSearch)
+    const sorted = [...rows].sort((a, b) => {
+      const va = sortValue(a)
+      const vb = sortValue(b)
+      let cmp = 0
+      if (typeof va === 'number' && typeof vb === 'number') {
+        cmp = va - vb
+      } else {
+        cmp = String(va).localeCompare(String(vb))
+      }
+      return sortDir === 'asc' ? cmp : -cmp
     })
-  }, [projects, search])
+    return sorted
+  }, [projects, search, sortKey, sortDir])
 
   const doRestore = useCallback(
     async (p: AdminProject) => {
@@ -321,11 +433,55 @@ export default function AdminProjectsPage() {
             <thead>
               <tr className="text-xs uppercase tracking-wider text-zinc-500">
                 <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Code</th>
-                <th className="px-3 py-2 text-left font-normal min-w-[220px]">Title</th>
-                <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Owner</th>
-                <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Client</th>
-                <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Status</th>
-                <th className="px-2 py-2 text-right font-normal whitespace-nowrap">Created</th>
+                <SortableTh
+                  label="Title"
+                  k="title"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onClick={toggleSort}
+                  className="px-3 py-2 min-w-[220px]"
+                />
+                <SortableTh
+                  label="Owner"
+                  k="owner"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onClick={toggleSort}
+                  className="px-2 py-2 whitespace-nowrap"
+                />
+                <SortableTh
+                  label="Client"
+                  k="client"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onClick={toggleSort}
+                  className="px-2 py-2 whitespace-nowrap"
+                />
+                <SortableTh
+                  label="Status"
+                  k="status"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onClick={toggleSort}
+                  className="px-2 py-2 whitespace-nowrap"
+                />
+                <SortableTh
+                  label="Lang"
+                  k="language"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onClick={toggleSort}
+                  className="px-2 py-2 whitespace-nowrap"
+                />
+                <SortableTh
+                  label="Created"
+                  k="created_at"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onClick={toggleSort}
+                  align="right"
+                  className="px-2 py-2 whitespace-nowrap"
+                />
                 <th className="px-2 py-2 text-right font-normal whitespace-nowrap">Actions</th>
               </tr>
             </thead>
@@ -365,6 +521,9 @@ export default function AdminProjectsPage() {
                           (del)
                         </span>
                       )}
+                    </td>
+                    <td className="px-2 py-2 whitespace-nowrap font-mono text-xs uppercase text-zinc-600">
+                      {p.language || '—'}
                     </td>
                     <td
                       className="px-2 py-2 text-right text-xs text-zinc-500 whitespace-nowrap"
