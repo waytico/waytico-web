@@ -20,7 +20,7 @@
  *      country with landmarks ranging 5–15. Default-goal for newly
  *      generated locations sits in the same row but its value is part
  *      of the global Save below (not the bulk Apply).
- *   4. Pacing — Tick interval + Targets per cycle on top; the rarely
+ *   4. Pacing — Tick interval + Locations per cycle on top; the rarely
  *      touched Oversample / per-kind minimums sit in a nested
  *      `<details>` block (Advanced) — collapsed by default.
  *   5. Save — persists all settings (pacing + priority + default
@@ -386,14 +386,14 @@ export function SettingsPanel({ authedFetch }: Props) {
   }, [goalApplied])
 
   const statusPillClasses = (() => {
-    if (!collectorWorker) return 'bg-zinc-100 text-zinc-700 border-zinc-300'
+    if (!collectorWorker) return 'bg-zinc-100 text-zinc-700'
     switch (collectorWorker.status) {
       case 'running':
-        return 'bg-emerald-100 text-emerald-900 border-emerald-300'
+        return 'bg-emerald-100 text-emerald-900'
       case 'paused':
-        return 'bg-amber-100 text-amber-900 border-amber-300'
+        return 'bg-amber-100 text-amber-900'
       default:
-        return 'bg-zinc-100 text-zinc-700 border-zinc-300'
+        return 'bg-zinc-100 text-zinc-700'
     }
   })()
 
@@ -403,22 +403,29 @@ export function SettingsPanel({ authedFetch }: Props) {
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <h2 className="text-lg font-medium">Collector</h2>
         <span
-          className={`rounded border px-2 py-0.5 text-xs uppercase tracking-wide ${statusPillClasses}`}
+          className={`rounded px-2 py-0.5 text-xs font-medium ${statusPillClasses}`}
         >
           {collectorWorker?.status ?? 'loading…'}
         </span>
-        <button
-          type="button"
-          onClick={toggleWorker}
-          disabled={workerBusy || !collectorWorker}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm font-medium hover:bg-zinc-50 disabled:opacity-50"
-        >
-          {workerBusy
-            ? '…'
-            : collectorWorker?.status === 'paused'
-              ? 'Resume'
-              : 'Pause'}
-        </button>
+        {collectorWorker?.status === 'paused' ? (
+          <button
+            type="button"
+            onClick={toggleWorker}
+            disabled={workerBusy || !collectorWorker}
+            className="rounded border border-emerald-400 bg-emerald-50 px-3 py-1 text-sm text-emerald-900 hover:bg-emerald-100 disabled:opacity-50"
+          >
+            {workerBusy ? '…' : 'Resume'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={toggleWorker}
+            disabled={workerBusy || !collectorWorker}
+            className="rounded border border-amber-400 bg-amber-50 px-3 py-1 text-sm text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+          >
+            {workerBusy ? '…' : 'Pause'}
+          </button>
+        )}
         {collectorWorker && (
           <span className="text-xs text-zinc-500">
             last tick {formatRelative(collectorWorker.last_tick_at)} ·{' '}
@@ -637,7 +644,7 @@ export function SettingsPanel({ authedFetch }: Props) {
                 {goalApplying ? 'Applying…' : 'Apply'}
               </button>
               <span className="ml-3 inline-flex items-center gap-2 border-l border-zinc-200 pl-3 text-xs text-zinc-600">
-                Default for new locations:
+                Default:
                 <input
                   type="number"
                   min={1}
@@ -646,8 +653,8 @@ export function SettingsPanel({ authedFetch }: Props) {
                   onChange={(e) =>
                     setField('defaultTargetCount', e.target.value)
                   }
-                  className="w-16 rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-900"
-                  title="Initial target_count for locations created by Top up. Saved with the global Save button."
+                  className="w-14 rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-900"
+                  title="Initial target_count for locations created by Top up. Saved with the global Save button. Recommended 5."
                 />
               </span>
             </div>
@@ -671,12 +678,12 @@ export function SettingsPanel({ authedFetch }: Props) {
                 />
                 <span className="text-xs text-zinc-500">
                   Seconds between collector cycles. Lower = faster crawl. Range
-                  2–3600.
+                  2–3600. Recommended 5.
                 </span>
               </label>
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium text-zinc-800">
-                  Targets per cycle
+                  Locations per cycle
                 </span>
                 <input
                   type="number"
@@ -687,8 +694,8 @@ export function SettingsPanel({ authedFetch }: Props) {
                   className="w-full rounded border border-zinc-300 px-2 py-1 text-sm"
                 />
                 <span className="text-xs text-zinc-500">
-                  How many targets one cycle processes back-to-back. Range
-                  1–25.
+                  How many locations one cycle processes back-to-back. Range
+                  1–25. Recommended 5.
                 </span>
               </label>
             </div>
@@ -712,7 +719,7 @@ export function SettingsPanel({ authedFetch }: Props) {
                     />
                     <span className="text-xs text-zinc-500">
                       Wikimedia search results requested vs photos still
-                      needed. Range 1–10.
+                      needed. Range 1–10. Recommended 3.
                     </span>
                   </label>
                   <label className="flex flex-col gap-1">
@@ -729,7 +736,7 @@ export function SettingsPanel({ authedFetch }: Props) {
                     />
                     <span className="text-xs text-zinc-500">
                       Surviving photos before a city target may be marked
-                      exhausted. Range 1–100.
+                      exhausted. Range 1–100. Recommended 5.
                     </span>
                   </label>
                   <label className="flex flex-col gap-1">
@@ -746,7 +753,7 @@ export function SettingsPanel({ authedFetch }: Props) {
                     />
                     <span className="text-xs text-zinc-500">
                       Surviving photos before a landmark target may be marked
-                      exhausted. Range 1–100.
+                      exhausted. Range 1–100. Recommended 3.
                     </span>
                   </label>
                 </div>
