@@ -102,6 +102,7 @@ interface CatalogRow {
   model: string
   label: string | null
   enabled: boolean
+  archived: boolean
   sort_order: number
   price_input_per_1m?: number | string | null
   price_output_per_1m?: number | string | null
@@ -199,7 +200,7 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
   }, [file])
 
   const visionModels = useMemo(
-    () => (catalog ?? []).filter((c) => c.enabled),
+    () => (catalog ?? []).filter((c) => c.enabled && !c.archived),
     [catalog],
   )
 

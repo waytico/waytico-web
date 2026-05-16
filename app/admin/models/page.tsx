@@ -411,15 +411,20 @@ export default function AdminModelsPage() {
 
                 const renderRoleRow = (role: string) => {
                   const d = getDraft(role)
-                  // Filter the dropdown by provider AND enabled. Operator
-                  // controls which models are usable on each role from the
-                  // catalog below (Enabled checkbox). If the persisted model
-                  // is NOT in the catalog at all OR is currently disabled,
+                  // Filter the dropdown by provider, enabled, and not
+                  // archived. Operator controls which models are usable on
+                  // each role from the catalog below (Enabled checkbox).
+                  // Archived rows are kept in the catalog for historical
+                  // ai_call_log references but must never appear as
+                  // bindable options. If the persisted model is NOT in the
+                  // catalog at all OR is currently disabled/archived,
                   // append it as "(disabled)" / "(not in catalog)" so it
                   // stays selectable until the operator chooses another.
                   const modelOptions =
                     d.provider && catalog
-                      ? catalog.filter((c) => c.provider === d.provider && c.enabled)
+                      ? catalog.filter(
+                          (c) => c.provider === d.provider && c.enabled && !c.archived,
+                        )
                       : []
                   const modelOptionStrings = new Set(modelOptions.map((c) => c.model))
                   let orphanLabel: string | null = null
