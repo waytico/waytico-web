@@ -47,7 +47,8 @@ interface CollectorSettings {
   oversample: number
   minCity: number
   minLandmark: number
-  defaultTargetCount: number
+  defaultCityCount: number
+  defaultLandmarkCount: number
 }
 
 interface CollectorOverride {
@@ -645,17 +646,29 @@ export function SettingsPanel({ authedFetch }: Props) {
                 {goalApplying ? 'Applying…' : 'Apply'}
               </button>
               <span className="ml-3 inline-flex items-center gap-2 border-l border-zinc-200 pl-3 text-xs text-zinc-600">
-                Default:
+                Default city:
                 <input
                   type="number"
                   min={1}
                   max={1000}
-                  value={draft.defaultTargetCount}
+                  value={draft.defaultCityCount}
                   onChange={(e) =>
-                    setField('defaultTargetCount', e.target.value)
+                    setField('defaultCityCount', e.target.value)
                   }
                   className="w-14 rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-900"
-                  title="Initial target_count for locations created by Top up. Saved with the global Save button. Recommended 5."
+                  title="Initial target_count for newly generated CITY locations. Saved with the global Save button. Recommended 5 — enough for the trip page to read as the place."
+                />
+                landmark:
+                <input
+                  type="number"
+                  min={1}
+                  max={1000}
+                  value={draft.defaultLandmarkCount}
+                  onChange={(e) =>
+                    setField('defaultLandmarkCount', e.target.value)
+                  }
+                  className="w-14 rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-900"
+                  title="Initial target_count for newly generated LANDMARK locations. Saved with the global Save button. Recommended 1 — one strong landmark photo is usually enough; deeper Wikimedia hits tend to be diagrams."
                 />
               </span>
             </div>
