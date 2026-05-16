@@ -344,14 +344,16 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
               <span className="text-xs text-zinc-500">— runs each model twice</span>
             </label>
           </div>
-          {mode === 'photo_cleanup' && (
+          {(mode === 'photo_cleanup' || mode === 'both') && (
             <div className="mt-4 space-y-2 rounded border border-zinc-200 bg-zinc-50 p-3">
               <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
                 Hint (optional) — Pass-2 source context
               </div>
               <p className="text-xs text-zinc-600">
-                Mirrors the live cleanup hint block. Used ONLY to reject confident
-                wrong-location matches. Leave blank to skip the hint entirely.
+                Mirrors the live cleanup hint block — in production the collector
+                always seeds Pass-2 with the target context. Fill in to reproduce
+                that; leave blank to test the no-hint path. Hint is applied to the
+                Pass-2 leg only, never to Pass-1.
               </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <input
