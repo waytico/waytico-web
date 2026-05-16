@@ -87,9 +87,13 @@ export function TargetsPanel({ authedFetch }: Props) {
   const queryString = useMemo(() => {
     const sp = new URLSearchParams()
     if (filterCountry) sp.set('country', filterCountry)
+    // City picked → narrow the table to that exact row (city is a
+    // target name, not a foreign key). Server-side this hits the
+    // existing `name` exact-match filter.
+    if (filterCountry && city) sp.set('name', city)
     if (sort !== 'priority') sp.set('sort', sort)
     return sp.toString()
-  }, [filterCountry, sort])
+  }, [filterCountry, city, sort])
 
   // Country list — refreshed alongside the table so a freshly generated
   // country appears in the picker.
@@ -264,7 +268,10 @@ export function TargetsPanel({ authedFetch }: Props) {
             cities={citiesForCountry}
             disabled={!isSpecificCountry}
             country={isSpecificCountry ? filterCountry : null}
-            onChange={(v) => setCity(v)}
+            onChange={(v) => {
+              setCity(v)
+              setPage(1)
+            }}
           />
           <GeneratorControls
             authedFetch={authedFetch}
