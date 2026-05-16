@@ -77,6 +77,9 @@ export function LibraryPanel({
   const [reviewed, setReviewed] = useState<'true' | 'false' | 'all'>(
     initialReviewed ?? (idsActive ? 'all' : 'false'),
   )
+  const [status, setStatus] = useState<'active' | 'archived' | 'all'>(
+    idsActive ? 'all' : 'active',
+  )
   const debouncedSearch = useDebounced(search, 300)
 
   // ── Countries — load once on mount ──────────────────────────────
@@ -122,6 +125,7 @@ export function LibraryPanel({
   // ── Photo listing ───────────────────────────────────────────────
   const review = useAdminPhotoReview(authedFetch, {
     reviewed,
+    status,
     search: debouncedSearch,
     city: city || undefined,
     country: country || undefined,
@@ -206,7 +210,26 @@ export function LibraryPanel({
           <option value="true">Reviewed only</option>
           <option value="all">All</option>
         </select>
+
+        {/* 5. Archive status — Active hides already-archived (used-in-trips,
+            read-only) rows from the queue. Archived isolates them for audit. */}
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value as 'active' | 'archived' | 'all')}
+          className="h-9 rounded border border-zinc-300 bg-white px-2"
+          title="Archived = used in published trips, read-only"
+        >
+          <option value="active">Active</option>
+          <option value="archived">Archive</option>
+          <option value="all">Active + archive</option>
+        </select>
       </div>
+
+      {/* Keyboard shortcuts hint — surfaced above the grid where the
+          operator actually needs it. */}
+      <p className="mb-3 text-xs text-zinc-500">
+        Keyboard shortcuts on the focused card: Enter = Keep, Delete/Backspace = Delete.
+      </p>
 
       {review.loading && (
         <div className="flex items-center justify-center py-12 text-zinc-500">
@@ -246,7 +269,12 @@ export function LibraryPanel({
         </div>
       )}
 
-      <div className="mt-4 flex items-center justify-end gap-2 text-sm">
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-2 text-sm">
+        <span className="mr-auto text-zinc-600">
+          {review.totalCount.toLocaleString()} photo{review.totalCount === 1 ? '' : 's'}
+          {' · '}
+          Page {review.page} of {review.totalPages}
+        </span>
         <label className="text-zinc-600">Per page</label>
         <select
           value={review.perPage}
@@ -276,10 +304,6 @@ export function LibraryPanel({
           Next →
         </button>
       </div>
-
-      <p className="mt-3 text-xs text-zinc-500">
-        Keyboard shortcuts on the focused card: Enter = Keep, Delete/Backspace = Delete.
-      </p>
     </div>
   )
 }

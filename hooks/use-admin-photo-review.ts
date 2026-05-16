@@ -20,6 +20,9 @@ export type AuthedFetch = (path: string, init?: RequestInit) => Promise<Response
 
 export interface ReviewFilters {
   reviewed?: 'true' | 'false' | 'all'
+  /** Archive split. 'active' hides archived rows (default on backend),
+   *  'archived' shows only archived, 'all' shows both. */
+  status?: 'active' | 'archived' | 'all'
   search?: string
   city?: string
   country?: string
@@ -84,6 +87,7 @@ export function useAdminPhotoReview(
     try {
       const sp = new URLSearchParams()
       sp.set('reviewed', filters.reviewed ?? 'false')
+      if (filters.status) sp.set('status', filters.status)
       sp.set('page', String(page))
       sp.set('perPage', String(perPage))
       if (filters.search) sp.set('search', filters.search)
@@ -113,6 +117,7 @@ export function useAdminPhotoReview(
     page,
     perPage,
     filters.reviewed,
+    filters.status,
     filters.search,
     filters.city,
     filters.country,

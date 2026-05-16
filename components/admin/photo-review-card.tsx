@@ -72,6 +72,10 @@ export interface ReviewPhoto {
   /** Stage 11 — number of times this row was used in trip_media.
    *  Surfaced on the browse view as a "Used in N trips" badge. */
   usage_count?: number
+  /** Archive flag. TRUE = photo was already used in trip_media when a
+   *  delete attempt came in. Kept in DB read-only so the live trip page
+   *  keeps rendering; suggest engine skips it. Cannot be hard-deleted. */
+  keep_for_existing_trips?: boolean
 }
 
 export interface PhotoPatch {
@@ -189,6 +193,14 @@ export function PhotoReviewCard(props: PhotoReviewCardProps) {
         <span className="absolute left-1 top-1 rounded bg-zinc-900/75 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-white">
           {photo.license}
         </span>
+        {photo.keep_for_existing_trips && (
+          <span
+            title="Archived — used in published trips, read-only"
+            className="absolute right-1 top-7 inline-flex items-center gap-0.5 rounded bg-zinc-700/95 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white"
+          >
+            archived
+          </span>
+        )}
         {photo.is_hero_candidate && (
           <span
             title="Hero candidate"
@@ -307,9 +319,14 @@ export function PhotoReviewCard(props: PhotoReviewCardProps) {
         </button>
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || photo.keep_for_existing_trips}
           onClick={() => onDelete(photo.id)}
-          className="flex items-center justify-center gap-1 rounded bg-red-600 px-2 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          title={
+            photo.keep_for_existing_trips
+              ? 'Archived photos cannot be deleted — they are kept so already-published trip pages keep rendering.'
+              : undefined
+          }
+          className="flex items-center justify-center gap-1 rounded bg-red-600 px-2 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Trash2 className="h-3.5 w-3.5" /> Delete
         </button>

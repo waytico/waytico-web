@@ -242,8 +242,16 @@ export function PhotoDetailsModal(props: PhotoDetailsModalProps) {
           {/* Info side */}
           <div className="flex flex-col gap-3 overflow-y-auto p-4 text-sm">
             {/* Status pills */}
-            {(notClassified || photo.reviewed_at) && (
+            {(notClassified || photo.reviewed_at || photo.keep_for_existing_trips) && (
               <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                {photo.keep_for_existing_trips && (
+                  <span
+                    title="This photo is already used in one or more published trips. It stays in the bank read-only so those trips keep rendering."
+                    className="inline-flex items-center gap-1 rounded bg-zinc-800 px-2 py-1 font-medium uppercase tracking-wide text-white"
+                  >
+                    Archived
+                  </span>
+                )}
                 {notClassified && (
                   <span className="inline-flex items-center gap-1 rounded bg-rose-50 px-2 py-1 font-medium text-rose-800">
                     <AlertTriangle className="h-3 w-3" />
@@ -496,9 +504,14 @@ export function PhotoDetailsModal(props: PhotoDetailsModalProps) {
           </button>
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || photo.keep_for_existing_trips}
             onClick={() => onDelete(photo.id)}
-            className="inline-flex items-center gap-1 rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+            title={
+              photo.keep_for_existing_trips
+                ? 'Archived photos cannot be deleted — they are kept so already-published trip pages keep rendering.'
+                : undefined
+            }
+            className="inline-flex items-center gap-1 rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Trash2 className="h-3.5 w-3.5" /> Delete
           </button>
