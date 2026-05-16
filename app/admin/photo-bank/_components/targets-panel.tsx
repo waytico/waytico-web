@@ -226,30 +226,13 @@ export function TargetsPanel({ authedFetch }: Props) {
               setPage(1)
             }}
           />
-          <select
+          <CityDropdown
             value={city}
-            onChange={(e) => setCity(e.target.value)}
+            cities={citiesForCountry}
             disabled={!isSpecificCountry}
-            className="w-40 truncate rounded border border-zinc-300 px-2 py-1 text-sm disabled:bg-zinc-50 disabled:text-zinc-400"
-            title={
-              isSpecificCountry
-                ? `City scope for Top up · ${filterCountry}`
-                : 'Pick a country first'
-            }
-          >
-            {!isSpecificCountry ? (
-              <option value="">Pick a country first</option>
-            ) : (
-              <>
-                <option value="">{`Country-level (no city)`}</option>
-                {citiesForCountry.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </>
-            )}
-          </select>
+            country={isSpecificCountry ? filterCountry : null}
+            onChange={(v) => setCity(v)}
+          />
           <GeneratorControls
             authedFetch={authedFetch}
             country={country}
@@ -544,6 +527,134 @@ function CountryDropdown({
   )
 }
 
+/**
+ * City scope dropdown — popover with search, same shape as
+ * CountryDropdown so the two siblings in the toolbar look identical.
+ * Disabled until a specific country is picked; when active shows
+ * "Country-level (no city)" as the default option followed by every
+ * city in the country.
+ */
+function CityDropdown({
+  value,
+  cities,
+  disabled,
+  country,
+  onChange,
+}: {
+  value: string
+  cities: string[]
+  disabled: boolean
+  country: string | null
+  onChange: (v: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onMouseDown = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return cities
+    const q = query.trim().toLowerCase()
+    return cities.filter((n) => n.toLowerCase().includes(q))
+  }, [cities, query])
+
+  const display = disabled
+    ? 'Pick a country first'
+    : value === ''
+      ? 'Country-level (no city)'
+      : value
+
+  const pick = (v: string) => {
+    onChange(v)
+    setOpen(false)
+    setQuery('')
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => !disabled && setOpen((o) => !o)}
+        disabled={disabled}
+        title={
+          disabled
+            ? 'Pick a country first'
+            : country
+              ? `City scope for Top up · ${country}`
+              : ''
+        }
+        className={
+          'flex w-40 items-center justify-between gap-1 rounded border border-zinc-300 px-2 py-1 text-left text-sm leading-tight ' +
+          (disabled
+            ? 'bg-zinc-50 text-zinc-400'
+            : value === ''
+              ? 'text-zinc-500'
+              : 'text-zinc-900')
+        }
+      >
+        <span className="truncate">{display}</span>
+        <span className="text-xs text-zinc-400">▾</span>
+      </button>
+      {open && !disabled && (
+        <div className="absolute left-0 top-full z-20 mt-1 w-60 rounded border border-zinc-300 bg-white shadow-md">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search city…"
+            autoFocus
+            className="w-full border-b border-zinc-200 px-2 py-1 text-sm outline-none"
+          />
+          <div className="max-h-72 overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => pick('')}
+              className={
+                'block w-full whitespace-normal break-words px-2 py-1 text-left text-sm leading-tight hover:bg-zinc-50 ' +
+                (value === '' ? 'bg-zinc-100' : '')
+              }
+            >
+              <span className="text-zinc-500">Country-level (no city)</span>
+            </button>
+            {filtered.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => pick(n)}
+                className={
+                  'block w-full whitespace-normal break-words border-t border-zinc-100 px-2 py-1 text-left text-sm leading-tight hover:bg-zinc-50 ' +
+                  (value === n ? 'bg-zinc-100' : '')
+                }
+              >
+                {n}
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <div className="px-2 py-2 text-sm text-zinc-400">
+                No matches.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface GeneratorState {
   status: 'idle' | 'running' | 'completed' | 'cancelled' | 'failed'
   startedAt: string | null
@@ -775,6 +886,109 @@ function GeneratorControls({
         }
       >
         Top up
+      </button>
+      {err && <span className="text-xs text-rose-700">{err}</span>}
+      <span className="mx-1 text-xs uppercase tracking-wide text-zinc-400">or</span>
+      <ManualAddControl
+        authedFetch={authedFetch}
+        country={country}
+        onAfter={onAfter}
+      />
+    </>
+  )
+}
+
+/**
+ * Manual single-row add — for the rare case the AI generator missed a
+ * place or the admin wants a niche custom target. Uses the parent's
+ * country selection; disabled until a specific country is picked.
+ * Hits POST /photo-bank/targets and refreshes the table on success.
+ * 409 (already exists) surfaces as an inline message.
+ */
+function ManualAddControl({
+  authedFetch,
+  country,
+  onAfter,
+}: {
+  authedFetch: AuthedFetch
+  country: string
+  onAfter: () => void
+}) {
+  const [name, setName] = useState('')
+  const [kind, setKind] = useState<'city' | 'landmark'>('city')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const disabled =
+    busy || country === '' || country === ALL_COUNTRIES || name.trim() === ''
+  const title =
+    country === '' || country === ALL_COUNTRIES
+      ? 'Pick a specific country first'
+      : name.trim() === ''
+        ? 'Enter a location name'
+        : `Add "${name.trim()}" (${kind}) to ${country}`
+
+  const submit = async () => {
+    setErr(null)
+    setBusy(true)
+    try {
+      const res = await authedFetch(
+        `${API_URL}/api/admin/photo-bank/targets`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ country, name: name.trim(), kind }),
+        },
+      )
+      if (res.status === 409) {
+        setErr('Already exists')
+        return
+      }
+      if (!res.ok) {
+        setErr(`HTTP ${res.status}`)
+        return
+      }
+      setName('')
+      onAfter()
+    } catch (e: any) {
+      setErr(e?.message ?? 'Failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      <input
+        type="text"
+        placeholder="location name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        className="w-40 rounded border border-zinc-300 px-2 py-1 text-sm"
+        title="Exact name of the place to add"
+      />
+      <select
+        value={kind}
+        onChange={(e) => setKind(e.target.value as 'city' | 'landmark')}
+        className="rounded border border-zinc-300 px-2 py-1 text-sm"
+        title="Whether this is a city or a landmark"
+      >
+        <option value="city">city</option>
+        <option value="landmark">landmark</option>
+      </select>
+      <button
+        type="button"
+        onClick={() => void submit()}
+        disabled={disabled}
+        title={title}
+        className={
+          'rounded border px-3 py-1 text-sm ' +
+          (disabled
+            ? 'border-zinc-200 bg-zinc-50 text-zinc-400'
+            : 'border-emerald-400 bg-emerald-50 text-emerald-900 hover:bg-emerald-100')
+        }
+      >
+        {busy ? '…' : 'Add'}
       </button>
       {err && <span className="text-xs text-rose-700">{err}</span>}
     </>
