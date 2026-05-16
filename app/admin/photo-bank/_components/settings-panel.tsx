@@ -20,9 +20,10 @@
  *      country with landmarks ranging 5–15. Default-goal for newly
  *      generated locations sits in the same row but its value is part
  *      of the global Save below (not the bulk Apply).
- *   4. Pacing — Tick interval + Locations per cycle on top; the rarely
- *      touched Oversample / per-kind minimums sit in a nested
- *      `<details>` block (Advanced) — collapsed by default.
+ *   4. Pacing — Tick interval + Locations per cycle. Oversample factor
+ *      and per-kind exhaust minimums live on hardcoded defaults in
+ *      `collector-settings.ts` (config_settings keys exist but the UI
+ *      doesn't expose them).
  *   5. Save — persists all settings (pacing + priority + default
  *      goal). The bulk goal Apply has its own button next to its
  *      inputs and fires independently.
@@ -699,66 +700,6 @@ export function SettingsPanel({ authedFetch }: Props) {
                 </span>
               </label>
             </div>
-            <details className="mt-3 rounded border border-zinc-200">
-              <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-zinc-700">
-                Advanced — oversample &amp; exhaust minimums
-              </summary>
-              <div className="border-t border-zinc-200 px-3 py-3">
-                <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-3">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-zinc-800">
-                      Oversample factor
-                    </span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={draft.oversample}
-                      onChange={(e) => setField('oversample', e.target.value)}
-                      className="w-full rounded border border-zinc-300 px-2 py-1 text-sm"
-                    />
-                    <span className="text-xs text-zinc-500">
-                      Wikimedia search results requested vs photos still
-                      needed. Range 1–10. Recommended 3.
-                    </span>
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-zinc-800">
-                      Min photos — city
-                    </span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={100}
-                      value={draft.minCity}
-                      onChange={(e) => setField('minCity', e.target.value)}
-                      className="w-full rounded border border-zinc-300 px-2 py-1 text-sm"
-                    />
-                    <span className="text-xs text-zinc-500">
-                      Surviving photos before a city target may be marked
-                      exhausted. Range 1–100. Recommended 5.
-                    </span>
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-zinc-800">
-                      Min photos — landmark
-                    </span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={100}
-                      value={draft.minLandmark}
-                      onChange={(e) => setField('minLandmark', e.target.value)}
-                      className="w-full rounded border border-zinc-300 px-2 py-1 text-sm"
-                    />
-                    <span className="text-xs text-zinc-500">
-                      Surviving photos before a landmark target may be marked
-                      exhausted. Range 1–100. Recommended 3.
-                    </span>
-                  </label>
-                </div>
-              </div>
-            </details>
           </div>
 
           {/* ── 5. Save ───────────────────────────────────────────── */}
