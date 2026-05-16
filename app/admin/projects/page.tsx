@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { Loader2, FileText, X } from 'lucide-react'
+import { Loader2, FileText, X, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { NotifyToggle } from '../_components/notify-toggle'
 
@@ -52,6 +52,20 @@ function fmtDate(iso: string | null | undefined): string {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+  })
+}
+
+// Compact variant for in-row dates — drops the year when it matches the
+// current year so the cell stays on one line. Tooltips on the cell can
+// still show the full date if needed.
+function fmtDateCompact(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  const sameYear = d.getFullYear() === new Date().getFullYear()
+  return d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' }),
   })
 }
 
@@ -313,16 +327,16 @@ export default function AdminProjectsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs uppercase tracking-wider text-zinc-500">
-                <th className="px-3 py-2 text-left font-normal">Code</th>
-                <th className="px-3 py-2 text-left font-normal">Title</th>
-                <th className="px-3 py-2 text-left font-normal">Owner</th>
-                <th className="px-3 py-2 text-left font-normal">Client</th>
-                <th className="px-3 py-2 text-left font-normal">Status</th>
-                <th className="px-3 py-2 text-left font-normal">Viewed</th>
-                <th className="px-3 py-2 text-left font-normal">Mode</th>
-                <th className="px-3 py-2 text-right font-normal">Created</th>
-                <th className="px-3 py-2 text-right font-normal">Activated</th>
-                <th className="px-3 py-2 text-right font-normal">Actions</th>
+                <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Code</th>
+                <th className="px-3 py-2 text-left font-normal min-w-[220px]">Title</th>
+                <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Owner</th>
+                <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Client</th>
+                <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Status</th>
+                <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Viewed</th>
+                <th className="px-2 py-2 text-left font-normal whitespace-nowrap">Mode</th>
+                <th className="px-2 py-2 text-right font-normal whitespace-nowrap">Created</th>
+                <th className="px-2 py-2 text-right font-normal whitespace-nowrap">Activated</th>
+                <th className="px-2 py-2 text-right font-normal whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
@@ -331,26 +345,23 @@ export default function AdminProjectsPage() {
                 const hasBrief = !!(p.brief_text && p.brief_text.trim())
                 return (
                   <tr key={p.id} className="hover:bg-zinc-50">
-                    <td className="px-3 py-2 font-mono text-xs text-zinc-700">
+                    <td className="px-2 py-2 font-mono text-xs text-zinc-700 whitespace-nowrap">
                       {slugCode(p.slug)}
                     </td>
                     <td className="px-3 py-2">
                       <div className="font-medium text-zinc-900">
                         {titleLabel(p)}
                       </div>
-                      {p.slug && p.title && (
-                        <div className="text-xs text-zinc-500">{p.slug}</div>
-                      )}
                     </td>
-                    <td className="px-3 py-2 text-zinc-900">{ownerLabel(p)}</td>
-                    <td className="px-3 py-2 text-zinc-900">
+                    <td className="px-2 py-2 text-zinc-900 whitespace-nowrap">{ownerLabel(p)}</td>
+                    <td className="px-2 py-2 text-zinc-900 whitespace-nowrap">
                       {p.client_id ? (
                         clientLabel(p)
                       ) : (
                         <span className="text-zinc-400">—</span>
                       )}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-2 py-2 whitespace-nowrap">
                       <span
                         className={
                           'inline-block rounded-full px-2 py-0.5 text-xs ' +
@@ -361,20 +372,23 @@ export default function AdminProjectsPage() {
                       </span>
                       {deleted && (
                         <span className="ml-1 text-xs text-rose-600">
-                          (deleted)
+                          (del)
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="px-2 py-2 text-xs whitespace-nowrap">
                       {p.viewed_first_time_at ? (
-                        <span className="text-emerald-700">
-                          ✓ {fmtDate(p.viewed_first_time_at)}
+                        <span
+                          className="text-emerald-700"
+                          title={fmtDate(p.viewed_first_time_at)}
+                        >
+                          ✓ {fmtDateCompact(p.viewed_first_time_at)}
                         </span>
                       ) : (
                         <span className="text-zinc-400">—</span>
                       )}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-2 py-2 whitespace-nowrap">
                       <span
                         className={
                           'inline-block rounded-full px-2 py-0.5 text-xs ' +
@@ -384,37 +398,45 @@ export default function AdminProjectsPage() {
                         {p.pipeline_mode || '—'}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-right text-xs text-zinc-500">
-                      {fmtDate(p.created_at)}
+                    <td
+                      className="px-2 py-2 text-right text-xs text-zinc-500 whitespace-nowrap"
+                      title={fmtDate(p.created_at)}
+                    >
+                      {fmtDateCompact(p.created_at)}
                     </td>
-                    <td className="px-3 py-2 text-right text-xs text-zinc-500">
-                      {fmtDate(p.activated_at)}
+                    <td
+                      className="px-2 py-2 text-right text-xs text-zinc-500 whitespace-nowrap"
+                      title={p.activated_at ? fmtDate(p.activated_at) : undefined}
+                    >
+                      {fmtDateCompact(p.activated_at)}
                     </td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-2 py-2 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           type="button"
                           onClick={() => hasBrief && setBriefViewing(p)}
                           disabled={!hasBrief}
                           title={hasBrief ? 'View brief' : 'No brief'}
+                          aria-label="View brief"
                           className={
-                            'inline-flex items-center gap-1 rounded border px-2 py-1 text-xs ' +
+                            'inline-flex items-center justify-center rounded border p-1.5 ' +
                             (hasBrief
                               ? 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50'
                               : 'border-zinc-200 bg-zinc-50 text-zinc-300 cursor-not-allowed')
                           }
                         >
-                          <FileText className="h-3 w-3" />
-                          Brief
+                          <FileText className="h-3.5 w-3.5" />
                         </button>
                         {p.slug && (
                           <a
                             href={`https://waytico.com/t/${p.slug}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
+                            title="Open trip page"
+                            aria-label="Open trip page"
+                            className="inline-flex items-center justify-center rounded border border-zinc-300 bg-white p-1.5 text-zinc-700 hover:bg-zinc-50"
                           >
-                            Open
+                            <ExternalLink className="h-3.5 w-3.5" />
                           </a>
                         )}
                         {deleted && (
