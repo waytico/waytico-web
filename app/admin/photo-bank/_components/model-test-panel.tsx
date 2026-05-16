@@ -162,6 +162,12 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
   const [mode, setMode] = useState<RunMode>('photo_cleanup')
   const [running, setRunning] = useState(false)
   const [results, setResults] = useState<RunResult[] | null>(null)
+  // Pass-2 hint inputs — mirror the production cleanup hint block in
+  // services/global-bank/cleanup.service.ts. Only sent to the backend
+  // when mode === 'photo_cleanup'. The backend ignores them otherwise.
+  const [hintCountry, setHintCountry] = useState('')
+  const [hintCity, setHintCity] = useState('')
+  const [hintSearchQuery, setHintSearchQuery] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -269,6 +275,16 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
         fd.append('image', file)
         fd.append('models', JSON.stringify(modelsPayload))
         fd.append('prompt_key', promptKey)
+        // Hint fields are scoped to Pass-2. We still only send them when
+        // non-empty so the backend skips the hint block entirely on a
+        // bare Pass-2 run, matching the live cleanup behaviour when the
+        // collector didn't seed the row with target context.
+        if (promptKey === 'photo_cleanup') {
+          if (hintCountry.trim()) fd.append('hint_country', hintCountry.trim())
+          if (hintCity.trim()) fd.append('hint_city', hintCity.trim())
+          if (hintSearchQuery.trim())
+            fd.append('hint_search_query', hintSearchQuery.trim())
+        }
         const res = await authedFetch(`${API_URL}/api/admin/photo-bank/model-test`, {
           method: 'POST',
           body: fd,
@@ -285,7 +301,7 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
     } finally {
       setRunning(false)
     }
-  }, [authedFetch, file, mode, picked, visionModels])
+  }, [authedFetch, file, mode, picked, visionModels, hintCountry, hintCity, hintSearchQuery])
 
   return (
     <div className="space-y-4">
@@ -328,6 +344,40 @@ export function ModelTestPanel({ authedFetch }: { authedFetch: AuthedFetch }) {
               <span className="text-xs text-zinc-500">— runs each model twice</span>
             </label>
           </div>
+          {mode === 'photo_cleanup' && (
+            <div className="mt-4 space-y-2 rounded border border-zinc-200 bg-zinc-50 p-3">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+                Hint (optional) — Pass-2 source context
+              </div>
+              <p className="text-xs text-zinc-600">
+                Mirrors the live cleanup hint block. Used ONLY to reject confident
+                wrong-location matches. Leave blank to skip the hint entirely.
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <input
+                  type="text"
+                  value={hintCountry}
+                  onChange={(e) => setHintCountry(e.target.value)}
+                  placeholder="Country"
+                  className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs"
+                />
+                <input
+                  type="text"
+                  value={hintCity}
+                  onChange={(e) => setHintCity(e.target.value)}
+                  placeholder="City"
+                  className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs"
+                />
+                <input
+                  type="text"
+                  value={hintSearchQuery}
+                  onChange={(e) => setHintSearchQuery(e.target.value)}
+                  placeholder="Search query"
+                  className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs"
+                />
+              </div>
+            </div>
+          )}
           <div className="mt-4">
             <button
               type="button"
@@ -782,6 +832,11 @@ function ParsedOutput({
   const landmarks = arrayField(parsed, ['landmarks', 'ai_landmarks'])
   const quality = numberField(parsed, ['quality_score', 'quality', 'ai_quality_score'])
   const hero = boolField(parsed, ['is_hero_candidate', 'hero_candidate'])
+  // v4-specific L1 fields
+  const sceneType = stringField(parsed, ['scene_type'])
+  const season = stringField(parsed, ['season'])
+  const city = stringField(parsed, ['city'])
+  const country = stringField(parsed, ['country'])
 
   // Track which fields we've consumed so any extras can be dumped
   // below as raw key/value pairs.
@@ -792,10 +847,119 @@ function ParsedOutput({
     'landmarks', 'ai_landmarks',
     'quality_score', 'quality', 'ai_quality_score',
     'is_hero_candidate', 'hero_candidate',
+    'scene_type', 'season', 'city', 'country',
     'decision', 'keep', // both forms of Pass-2 verdict — surfaced via the badge
   ])
   const extras = Object.entries(parsed).filter(([k]) => !consumed.has(k))
 
+  // ── Pass-1 classify: render L1 (matcher signals) and L2 (shadow /
+  //    fallback) as two visually separated blocks, matching the v4
+  //    prompt's own tiering. Pass-2 cleanup falls through to the legacy
+  //    layout below (description + reason + extras), which is what the
+  //    operator already expects from the verdict-style output.
+  if (promptKey === 'photo_bank_classify') {
+    const hasL1 =
+      sceneType != null ||
+      season != null ||
+      city != null ||
+      country != null ||
+      (landmarks && landmarks.length > 0) ||
+      quality != null ||
+      hero != null
+    const hasL2 =
+      desc != null || (cats && cats.length > 0) || (tags && tags.length > 0)
+    return (
+      <div className="space-y-2 text-zinc-800">
+        {hasL1 && (
+          <div className="space-y-2 rounded border border-sky-200 bg-sky-50 p-2">
+            <div className="text-[10px] font-medium uppercase tracking-wider text-sky-700">
+              L1 — matcher signals
+            </div>
+            {(sceneType || season) && (
+              <div className="flex flex-wrap gap-2">
+                {sceneType && (
+                  <span className="inline-block rounded bg-white px-2 py-0.5 text-xs text-sky-800 ring-1 ring-sky-200">
+                    scene: {sceneType}
+                  </span>
+                )}
+                {season && (
+                  <span className="inline-block rounded bg-white px-2 py-0.5 text-xs text-sky-800 ring-1 ring-sky-200">
+                    season: {season}
+                  </span>
+                )}
+              </div>
+            )}
+            {(city || country) && (
+              <Field label="Place">
+                <span className="text-xs">
+                  {[city, country].filter(Boolean).join(', ')}
+                </span>
+              </Field>
+            )}
+            {landmarks && landmarks.length > 0 && (
+              <Field label="Landmarks">
+                <Chips items={landmarks} />
+              </Field>
+            )}
+            {(quality != null || hero != null) && (
+              <Field label="Quality">
+                <div className="flex flex-wrap gap-2">
+                  {quality != null && (
+                    <span className="inline-block rounded bg-white px-2 py-0.5 text-xs ring-1 ring-sky-200">
+                      score: {quality}
+                    </span>
+                  )}
+                  {hero === true && (
+                    <span className="inline-block rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+                      hero candidate
+                    </span>
+                  )}
+                </div>
+              </Field>
+            )}
+          </div>
+        )}
+        {hasL2 && (
+          <div className="space-y-2 rounded border border-zinc-200 bg-zinc-50 p-2">
+            <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+              L2 — shadow / fallback
+            </div>
+            {desc && (
+              <Field label="Description">
+                <p className="leading-snug">{desc}</p>
+              </Field>
+            )}
+            {cats && cats.length > 0 && (
+              <Field label="Categories">
+                <Chips items={cats} />
+              </Field>
+            )}
+            {tags && tags.length > 0 && (
+              <Field label="Tags">
+                <Chips items={tags} />
+              </Field>
+            )}
+          </div>
+        )}
+        {extras.length > 0 && (
+          <Field label="Other fields">
+            <dl className="space-y-1 text-xs">
+              {extras.map(([k, v]) => (
+                <div key={k} className="flex gap-2">
+                  <dt className="font-medium text-zinc-600">{k}:</dt>
+                  <dd className="text-zinc-800 break-words">{formatValue(v)}</dd>
+                </div>
+              ))}
+            </dl>
+          </Field>
+        )}
+      </div>
+    )
+  }
+
+  // Pass-2 cleanup / unknown — legacy flat layout. The verdict badge
+  // already surfaces keep/reject above this block; here we just show
+  // the reason plus anything else the model decided to return.
   return (
     <div className="space-y-2 text-zinc-800">
       {desc && (
