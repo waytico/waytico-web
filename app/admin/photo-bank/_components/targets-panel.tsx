@@ -143,35 +143,48 @@ export function TargetsPanel({ authedFetch }: Props) {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
+    const isFirstLoad = rows.length === 0
+    if (isFirstLoad) setLoading(true)
     const sp = new URLSearchParams(queryString)
     sp.set('page', String(page))
     sp.set('perPage', String(perPage))
-    authedFetch(`${API_URL}/api/admin/photo-bank/targets?${sp.toString()}`)
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return (await res.json()) as {
-          targets: TargetRow[]
-          totalCount: number
-          totalPages: number
-        }
-      })
-      .then((data) => {
-        if (cancelled) return
-        setRows(data.targets)
-        setTotalCount(data.totalCount)
-        setTotalPages(data.totalPages)
-        setError(null)
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err?.message || 'load failed')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+    const url = `${API_URL}/api/admin/photo-bank/targets?${sp.toString()}`
+    const fetchOnce = () =>
+      authedFetch(url)
+        .then(async (res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          return (await res.json()) as {
+            targets: TargetRow[]
+            totalCount: number
+            totalPages: number
+          }
+        })
+        .then((data) => {
+          if (cancelled) return
+          setRows(data.targets)
+          setTotalCount(data.totalCount)
+          setTotalPages(data.totalPages)
+          setError(null)
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err?.message || 'load failed')
+        })
+        .finally(() => {
+          if (!cancelled && isFirstLoad) setLoading(false)
+        })
+    fetchOnce()
+    // Silent 10s autopoll — collected_count and last_attempt_at change
+    // as the collector + Pass-2 cleanup work through targets. We do
+    // NOT reset loading=true on repeat ticks, so the table re-renders
+    // in place without flicker. Matches the Collector control panel
+    // and the Workers panel for a single consistent cadence across
+    // photo-bank admin.
+    const t = setInterval(fetchOnce, 10_000)
     return () => {
       cancelled = true
+      clearInterval(t)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authedFetch, page, perPage, queryString, refreshTick])
 
   const patch = useCallback(
@@ -1049,3 +1062,4 @@ function ManualAddControl({
     </>
   )
 }
+

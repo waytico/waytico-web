@@ -25,6 +25,10 @@ interface WorkerRow {
   photos_collected: number
   photos_ai_processed: number
   photos_ai_failed: number
+  /** Server-computed (collector only). Non-null when the collector is
+   *  running, ai_cleanup is paused, and the last-picked target still
+   *  has inflight rows that the cleanup worker would claim. */
+  blocked_target?: { id: string; name: string; country: string } | null
 }
 
 const WORKER_LABEL: Record<WorkerRow['kind'], string> = {
@@ -64,38 +68,42 @@ export function WorkersPanel({ authedFetch }: Props) {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    authedFetch(`${API_URL}/api/admin/photo-bank/workers`)
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return (await res.json()) as { workers: WorkerRow[] }
-      })
-      .then((data) => {
-        if (cancelled) return
-        setWorkers(
-          [...data.workers].sort(
-            (a, b) =>
-              WORKER_ORDER.indexOf(a.kind) - WORKER_ORDER.indexOf(b.kind),
-          ),
-        )
-        setError(null)
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err?.message || 'load failed')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+    const isFirstLoad = workers.length === 0
+    if (isFirstLoad) setLoading(true)
+    const fetchOnce = () =>
+      authedFetch(`${API_URL}/api/admin/photo-bank/workers`)
+        .then(async (res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          return (await res.json()) as { workers: WorkerRow[] }
+        })
+        .then((data) => {
+          if (cancelled) return
+          setWorkers(
+            [...data.workers].sort(
+              (a, b) =>
+                WORKER_ORDER.indexOf(a.kind) - WORKER_ORDER.indexOf(b.kind),
+            ),
+          )
+          setError(null)
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err?.message || 'load failed')
+        })
+        .finally(() => {
+          if (!cancelled && isFirstLoad) setLoading(false)
+        })
+    fetchOnce()
+    // Silent 10s autopoll. We do NOT reset loading=true on repeat
+    // ticks, so the panel re-renders in place without flicker even
+    // while both workers sit idle. Matches the Collector control
+    // panel's cadence so all three photo-bank panels feel consistent.
+    const t = setInterval(fetchOnce, 10_000)
     return () => {
       cancelled = true
+      clearInterval(t)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authedFetch, refreshTick])
-
-  // No auto-refresh: the panel loads once and after each pause/resume
-  // toggle. Use the Refresh button for an on-demand reload. The workers
-  // were polling every 10s before, which made the screen flicker even
-  // while both workers sat idle — pointless churn against a static
-  // backend.
 
   const toggle = useCallback(
     async (kind: WorkerRow['kind'], target: 'pause' | 'resume') => {
@@ -146,13 +154,6 @@ export function WorkersPanel({ authedFetch }: Props) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setRefreshTick((t) => t + 1)}
-            className="rounded border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50"
-          >
-            Refresh
-          </button>
-          <button
-            type="button"
             onClick={reclassifyAll}
             disabled={busy === 'reclassify-all'}
             className="rounded border border-amber-400 bg-amber-50 px-3 py-1 text-sm text-amber-900 hover:bg-amber-100 disabled:opacity-50"
@@ -161,6 +162,24 @@ export function WorkersPanel({ authedFetch }: Props) {
           </button>
         </div>
       </header>
+
+      {/* Blocked-on-cleanup banner. Surfaces the silent inflight skip
+          the collector would otherwise log only — admin sees concretely
+          which target is being held up and that resuming Pass-2 cleanup
+          will unblock the queue. */}
+      {(() => {
+        const c = workers.find((w) => w.kind === 'collector')
+        const bt = c?.blocked_target
+        if (!bt) return null
+        return (
+          <div className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Collector blocked on Pass-2 cleanup at{' '}
+            <strong>{bt.name}</strong>
+            {bt.country ? `, ${bt.country}` : ''}. Resume the Cleanup worker
+            below to drain inflight rows and unblock the queue.
+          </div>
+        )
+      })()}
 
       {error && (
         <div className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -257,3 +276,4 @@ export function WorkersPanel({ authedFetch }: Props) {
     </div>
   )
 }
+
