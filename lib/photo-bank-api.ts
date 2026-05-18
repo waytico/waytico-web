@@ -146,6 +146,55 @@ export async function listAdminCitiesByCountry(
 }
 
 // ─────────────────────────────────────────────────────────────────────
+// Bulk delete — runs one batch at a time, mirrors the Library panel's
+// filter contract. Caller loops until `remaining === 0`.
+// ─────────────────────────────────────────────────────────────────────
+
+export interface BulkDeleteFilters {
+  search?: string
+  category?: string
+  city?: string
+  country?: string
+  reviewed?: 'true' | 'false' | 'all'
+  status?: 'active' | 'archived' | 'all'
+  ids?: string[]
+}
+
+export interface BulkDeleteResult {
+  deletedNow: number
+  protectedNow: number
+  errors: number
+  totalMatched: number
+  remaining: number
+}
+
+export async function bulkDeleteAdminPhotos(
+  authedFetch: AuthedFetch,
+  filters: BulkDeleteFilters,
+  maxPerCall = 200,
+): Promise<BulkDeleteResult> {
+  const body: Record<string, unknown> = { max_per_call: maxPerCall }
+  if (filters.search) body.search = filters.search
+  if (filters.category) body.category = filters.category
+  if (filters.city) body.city = filters.city
+  if (filters.country) body.country = filters.country
+  if (filters.reviewed) body.reviewed = filters.reviewed
+  if (filters.status) body.status = filters.status
+  if (filters.ids && filters.ids.length > 0) body.ids = filters.ids.join(',')
+
+  const res = await authedFetch(
+    `${API_URL}/api/admin/global-bank/photos/bulk-delete`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  )
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return (await res.json()) as BulkDeleteResult
+}
+
+// ─────────────────────────────────────────────────────────────────────
 // Paid-bound user-bank wrappers (TZ Photo Bank Stage 2 endpoints).
 // Free users never call these; the dashboard gates by `plan === 'paid'`.
 // Stubs surface 403 cleanly so the upgrade-banner stays visible.
