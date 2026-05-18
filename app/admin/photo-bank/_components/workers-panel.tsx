@@ -4,10 +4,11 @@
  * Photo Bank v2 — admin Workers panel.
  *
  * Reads /api/admin/photo-bank/workers, renders one tile per worker
- * with status + last_tick_at + counters + pause/resume button. Also
- * exposes the "Reclassify all" action which flips ai_processed=FALSE
- * (and cleanup_processed=FALSE) across all eligible rows — the
- * ai_cleanup / ai_classify workers pick them up on their next tick.
+ * with status + last_tick_at + counters + pause/resume button.
+ *
+ * Reclassify is no longer a worker-panel action — it lives on the
+ * Library tab as "Reclassify matching (N)", scoped to the same filter
+ * strip the operator already uses to decide what they're looking at.
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -124,43 +125,10 @@ export function WorkersPanel({ authedFetch }: Props) {
     [authedFetch],
   )
 
-  const reclassifyAll = useCallback(async () => {
-    if (
-      !window.confirm(
-        'Mark all non-legacy global photos as ai_processed=FALSE? AI worker will reprocess them on the next tick.',
-      )
-    )
-      return
-    try {
-      setBusy('reclassify-all')
-      const res = await authedFetch(
-        `${API_URL}/api/admin/photo-bank/reclassify-all`,
-        { method: 'POST' },
-      )
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = (await res.json()) as { queued: number }
-      window.alert(`Queued ${data.queued} photos for reclassify.`)
-    } catch (err) {
-      setError((err as Error)?.message || 'reclassify failed')
-    } finally {
-      setBusy(null)
-    }
-  }, [authedFetch])
-
   return (
     <div>
       <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-lg font-medium">Photo bank — workers</h1>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={reclassifyAll}
-            disabled={busy === 'reclassify-all'}
-            className="rounded border border-amber-400 bg-amber-50 px-3 py-1 text-sm text-amber-900 hover:bg-amber-100 disabled:opacity-50"
-          >
-            Reclassify all
-          </button>
-        </div>
       </header>
 
       {/* Blocked-on-cleanup banner. Surfaces the silent inflight skip

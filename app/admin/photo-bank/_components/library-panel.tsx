@@ -31,11 +31,12 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Loader2, Trash2 } from 'lucide-react'
+import { Loader2, Trash2, RotateCw } from 'lucide-react'
 import {
   listAdminCountryStats,
   listAdminCitiesByCountry,
   bulkDeleteAdminPhotos,
+  reclassifyMatchingAdmin,
   type CountryStats,
   type CityStats,
 } from '@/lib/photo-bank-api'
@@ -246,6 +247,70 @@ export function LibraryPanel({
     review,
   ])
 
+  // ── Reclassify matching ──────────────────────────────────────────
+  //
+  // Same filter contract as bulk-delete. One synchronous PG UPDATE
+  // (no batching needed — AI worker processes asynchronously). Same
+  // two-step confirm pattern for big sweeps so an operator can't
+  // accidentally re-process the whole bank.
+  //
+  // Stylistically softer than delete (sky-blue instead of rose) —
+  // reclassify is destructive of AI metadata but not of the photo
+  // itself, and the operator can always trigger another pass.
+  const [reclassifyRunning, setReclassifyRunning] = useState(false)
+  const [reclassifyResult, setReclassifyResult] = useState<{ queued: number } | null>(null)
+  const [reclassifyError, setReclassifyError] = useState<string | null>(null)
+  const [reclassifyConfirmStep, setReclassifyConfirmStep] = useState<0 | 1 | 2>(0)
+
+  const reclassifyDisabled =
+    reclassifyRunning ||
+    review.loading ||
+    review.totalCount === 0 ||
+    status === 'archived' ||
+    !!idsActive
+
+  const openReclassifyConfirm = useCallback(() => {
+    setReclassifyError(null)
+    setReclassifyResult(null)
+    setReclassifyConfirmStep(1)
+  }, [])
+
+  const closeReclassifyConfirm = useCallback(() => {
+    if (reclassifyRunning) return
+    setReclassifyConfirmStep(0)
+    setReclassifyError(null)
+  }, [reclassifyRunning])
+
+  const runReclassify = useCallback(async () => {
+    setReclassifyRunning(true)
+    setReclassifyError(null)
+    setReclassifyResult(null)
+    try {
+      const out = await reclassifyMatchingAdmin(authedFetch, {
+        search: debouncedSearch || undefined,
+        city: city || undefined,
+        country: country || undefined,
+        reviewed,
+        status,
+      })
+      setReclassifyResult({ queued: out.queued })
+    } catch (err) {
+      setReclassifyError((err as Error)?.message || 'Reclassify failed')
+    } finally {
+      setReclassifyRunning(false)
+      setReclassifyConfirmStep(0)
+      review.refresh()
+    }
+  }, [
+    authedFetch,
+    debouncedSearch,
+    city,
+    country,
+    reviewed,
+    status,
+    review,
+  ])
+
   // ── Render ───────────────────────────────────────────────────────
   return (
     <div>
@@ -352,6 +417,27 @@ export function LibraryPanel({
           <Trash2 className="h-3.5 w-3.5" />
           Delete matching ({review.totalCount.toLocaleString()})
         </button>
+
+        {/* Reclassify matching — same filter, softer styling (we're
+            not destroying photos, just re-queuing them for AI). */}
+        <button
+          type="button"
+          onClick={openReclassifyConfirm}
+          disabled={reclassifyDisabled}
+          title={
+            status === 'archived'
+              ? 'Archived photos cannot be reclassified'
+              : idsActive
+                ? 'Reclassify is disabled in deeplink mode'
+                : review.totalCount === 0
+                  ? 'Nothing matches the current filter'
+                  : `Reclassify ${review.totalCount} photo${review.totalCount === 1 ? '' : 's'} matching this filter`
+          }
+          className="inline-flex h-9 items-center gap-1.5 rounded border border-sky-300 bg-sky-50 px-3 text-sky-800 hover:bg-sky-100 disabled:border-zinc-200 disabled:bg-zinc-50 disabled:text-zinc-400"
+        >
+          <RotateCw className="h-3.5 w-3.5" />
+          Reclassify matching ({review.totalCount.toLocaleString()})
+        </button>
       </div>
 
       {/* Bulk delete confirmation modal — single step for narrow
@@ -370,6 +456,25 @@ export function LibraryPanel({
           onNextStep={() => setBulkConfirmStep(2)}
           onConfirm={() => void runBulkDelete()}
           onCancel={closeBulkConfirm}
+        />
+      )}
+
+      {/* Reclassify confirmation modal — same shape as delete but in
+          a softer tone. */}
+      {reclassifyConfirmStep > 0 && (
+        <ReclassifyConfirm
+          step={reclassifyConfirmStep as 1 | 2}
+          big={isBigSweep}
+          country={country}
+          city={city}
+          search={debouncedSearch}
+          totalCount={review.totalCount}
+          running={reclassifyRunning}
+          result={reclassifyResult}
+          error={reclassifyError}
+          onNextStep={() => setReclassifyConfirmStep(2)}
+          onConfirm={() => void runReclassify()}
+          onCancel={closeReclassifyConfirm}
         />
       )}
 
@@ -613,6 +718,185 @@ function BulkDeleteConfirm({
                 className="rounded border border-rose-600 bg-rose-600 px-3 py-1.5 text-sm text-white hover:bg-rose-700"
               >
                 Yes, delete {totalCount.toLocaleString()}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+/**
+ * Confirmation overlay for "Reclassify matching". Same flow shape as
+ * BulkDeleteConfirm (single step for narrow filters, two for big
+ * sweeps) but in sky-blue rather than rose — reclassify isn't
+ * destructive of the photos themselves, only of their AI metadata,
+ * and a follow-up pass repairs anything that broke.
+ */
+function ReclassifyConfirm({
+  step,
+  big,
+  country,
+  city,
+  search,
+  totalCount,
+  running,
+  result,
+  error,
+  onNextStep,
+  onConfirm,
+  onCancel,
+}: {
+  step: 1 | 2
+  big: boolean
+  country: string
+  city: string
+  search: string
+  totalCount: number
+  running: boolean
+  result: { queued: number } | null
+  error: string | null
+  onNextStep: () => void
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const scopeParts: string[] = []
+  if (country) scopeParts.push(`country = ${country}`)
+  if (city) scopeParts.push(`city = ${city}`)
+  if (search) scopeParts.push(`search = "${search}"`)
+  if (scopeParts.length === 0) scopeParts.push('the entire bank')
+  const scope = scopeParts.join(' · ')
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="mb-2 text-base font-semibold text-zinc-900">
+          {running ? 'Reclassifying…' : 'Reclassify photos'}
+        </h2>
+
+        {running ? (
+          <div className="space-y-3">
+            <p className="text-sm text-zinc-700">
+              Queueing photos for the AI worker.
+            </p>
+            <div className="text-sm text-zinc-600">
+              <Loader2 className="mr-1 inline h-3.5 w-3.5 animate-spin" />
+              Working…
+            </div>
+          </div>
+        ) : result ? (
+          <div className="space-y-3">
+            <p className="text-sm text-zinc-900">
+              Queued{' '}
+              <span className="font-semibold text-sky-700">
+                {result.queued.toLocaleString()}
+              </span>{' '}
+              photo{result.queued === 1 ? '' : 's'} for reclassification. The
+              AI worker will pick them up on its next tick.
+            </p>
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="rounded border border-zinc-300 bg-white px-3 py-1.5 text-sm hover:bg-zinc-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        ) : step === 1 ? (
+          <div className="space-y-3">
+            <p className="text-sm text-zinc-700">
+              About to reclassify{' '}
+              <span className="font-semibold text-sky-700">
+                {totalCount.toLocaleString()} photo
+                {totalCount === 1 ? '' : 's'}
+              </span>{' '}
+              matching: <span className="text-zinc-900">{scope}</span>.
+            </p>
+            <p className="text-xs text-zinc-500">
+              Photos will be marked for re-processing by the AI worker (Pass-1
+              + Pass-2). Existing metadata is replaced on the next tick. The
+              photos themselves are not modified or removed.
+            </p>
+            {error && (
+              <p className="rounded bg-amber-50 p-2 text-xs text-amber-800">
+                {error}
+              </p>
+            )}
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="rounded border border-zinc-300 bg-white px-3 py-1.5 text-sm hover:bg-zinc-50"
+              >
+                Cancel
+              </button>
+              {big ? (
+                <button
+                  type="button"
+                  onClick={onNextStep}
+                  className="rounded border border-sky-300 bg-sky-50 px-3 py-1.5 text-sm text-sky-800 hover:bg-sky-100"
+                >
+                  Continue…
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onConfirm}
+                  className="rounded border border-sky-600 bg-sky-600 px-3 py-1.5 text-sm text-white hover:bg-sky-700"
+                >
+                  Reclassify {totalCount.toLocaleString()}
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-zinc-900">
+              Large reclassification: <span className="font-semibold">{scope}</span>.
+            </p>
+            <p className="text-sm text-zinc-700">
+              About to queue{' '}
+              <span className="font-semibold text-sky-700">
+                {totalCount.toLocaleString()} photo
+                {totalCount === 1 ? '' : 's'}
+              </span>{' '}
+              for AI re-processing. This will burn through the AI quota
+              accordingly.
+            </p>
+            <p className="text-xs text-zinc-500">
+              Photos themselves are not modified. Existing tags / landmarks /
+              scene types / descriptions are replaced once the worker ticks
+              through the queue.
+            </p>
+            {error && (
+              <p className="rounded bg-amber-50 p-2 text-xs text-amber-800">
+                {error}
+              </p>
+            )}
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="rounded border border-zinc-300 bg-white px-3 py-1.5 text-sm hover:bg-zinc-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onConfirm}
+                className="rounded border border-sky-600 bg-sky-600 px-3 py-1.5 text-sm text-white hover:bg-sky-700"
+              >
+                Yes, reclassify {totalCount.toLocaleString()}
               </button>
             </div>
           </div>

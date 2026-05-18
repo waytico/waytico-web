@@ -195,6 +195,43 @@ export async function bulkDeleteAdminPhotos(
 }
 
 // ─────────────────────────────────────────────────────────────────────
+// Reclassify matching — flips ai_processed=FALSE on every photo
+// under the same filter contract as Library. Empty filter = whole
+// bank (back-compat with the old "Reclassify all" button). One
+// synchronous PG UPDATE on the backend; AI worker picks the rows up
+// on its next tick.
+// ─────────────────────────────────────────────────────────────────────
+export interface ReclassifyResult {
+  ok: boolean
+  queued: number
+}
+
+export async function reclassifyMatchingAdmin(
+  authedFetch: AuthedFetch,
+  filters: BulkDeleteFilters,
+): Promise<ReclassifyResult> {
+  const body: Record<string, unknown> = {}
+  if (filters.search) body.search = filters.search
+  if (filters.category) body.category = filters.category
+  if (filters.city) body.city = filters.city
+  if (filters.country) body.country = filters.country
+  if (filters.reviewed) body.reviewed = filters.reviewed
+  if (filters.status) body.status = filters.status
+  if (filters.ids && filters.ids.length > 0) body.ids = filters.ids.join(',')
+
+  const res = await authedFetch(
+    `${API_URL}/api/admin/photo-bank/reclassify-all`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  )
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return (await res.json()) as ReclassifyResult
+}
+
+// ─────────────────────────────────────────────────────────────────────
 // Paid-bound user-bank wrappers (TZ Photo Bank Stage 2 endpoints).
 // Free users never call these; the dashboard gates by `plan === 'paid'`.
 // Stubs surface 403 cleanly so the upgrade-banner stays visible.
